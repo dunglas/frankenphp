@@ -35,7 +35,7 @@ make install
 brew install libiconv
 ./configure \
     --enable-zts \
-    --enable-embed=dylib \
+    --enable-embed=static \
     --with-iconv=/opt/homebrew/opt/libiconv/ \
     --without-pcre-jit
 make
