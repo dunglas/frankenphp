@@ -26,12 +26,15 @@ import (
 
 var started int32
 
-type CtxKey string
+type ContextKey string
 
-const CGICtxKey CtxKey = "cgi"
+const FrankenPHPContextKey ContextKey = "frankenphp"
 
 // FrankenPHP executes PHP scripts.
-type FrankenPHP struct {
+type FrankenPHPContext struct {
+	// The root directory of the PHP application.
+	DocumentRoot string
+
 	// The path in the URL will be split into two, with the first piece ending
 	// with the value of SplitPath. The first piece will be assumed as the
 	// actual resource (CGI script) name, and the second piece will be set to
@@ -50,12 +53,19 @@ type FrankenPHP struct {
 	// directive will set $_SERVER['DOCUMENT_ROOT'] to the real directory path.
 	ResolveRootSymlink bool
 
-	// Extra environment variables.
-	EnvVars map[string]string
+	// CGI-like environment variables that will be available in $_SERVER.
+	// This map is populated automatically, exisiting key are never replaced.
+	Env map[string]string
 }
 
-func NewFrankenPHP() *FrankenPHP {
-	return &FrankenPHP{SplitPath: []string{".php"}}
+func NewRequestWithContext(r *http.Request, documentRoot string) *http.Request {
+	ctx := context.WithValue(r.Context(), FrankenPHPContextKey, &FrankenPHPContext{
+		DocumentRoot: documentRoot,
+		SplitPath:    []string{".php"},
+		Env:          make(map[string]string),
+	})
+
+	return r.WithContext(ctx)
 }
 
 // Startup starts the PHP engine.
@@ -82,32 +92,30 @@ func Shutdown() {
 	atomic.StoreInt32(&started, 0)
 }
 
-func (f *FrankenPHP) ExecuteScript(documentRoot string, responseWriter http.ResponseWriter, request *http.Request, originalRequest *http.Request) error {
+func ExecuteScript(responseWriter http.ResponseWriter, request *http.Request) error {
 	if atomic.LoadInt32(&started) < 1 {
 		if err := Startup(); err != nil {
 			return err
 		}
 	}
 
-	cgiEnv, err := f.buildCGIEnv(documentRoot, request, originalRequest)
+	authPassword, err := populateEnv(request)
 	if err != nil {
 		return err
 	}
 
+	fc := request.Context().Value(FrankenPHPContextKey).(*FrankenPHPContext)
+
 	var cAuthUser, cAuthPassword *C.char
-	authUser, authPassword, ok := request.BasicAuth()
-	if ok {
-		cgiEnv["REMOTE_USER"] = authUser
-
-		cAuthUser = C.CString(authUser)
-		defer C.free(unsafe.Pointer(cAuthUser))
-
+	if authPassword != "" {
 		cAuthPassword = C.CString(authPassword)
-		defer C.free(unsafe.Pointer(cAuthPassword))
+		//defer C.free(unsafe.Pointer(cAuthPassword))
 	}
 
-	ctx := context.WithValue(request.Context(), CGICtxKey, cgiEnv)
-	request = request.WithContext(ctx)
+	if authUser := fc.Env["REMOTE_USER"]; authUser != "" {
+		cAuthUser = C.CString(authUser)
+		defer C.free(unsafe.Pointer(cAuthUser))
+	}
 
 	wh := cgo.NewHandle(responseWriter)
 	defer wh.Delete()
@@ -135,8 +143,8 @@ func (f *FrankenPHP) ExecuteScript(documentRoot string, responseWriter http.Resp
 	}
 
 	var cPathTranslated *C.char
-	if cgiEnv["PATH_TRANSLATED"] == "" {
-		cPathTranslated = C.CString(cgiEnv["PATH_TRANSLATED"])
+	if pathTranslated := fc.Env["PATH_TRANSLATED"]; pathTranslated != "" {
+		cPathTranslated = C.CString(pathTranslated)
 		defer C.free(unsafe.Pointer(cPathTranslated))
 	}
 
@@ -160,10 +168,10 @@ func (f *FrankenPHP) ExecuteScript(documentRoot string, responseWriter http.Resp
 		return fmt.Errorf("error during PHP request startup")
 	}
 
-	cFileName := C.CString(cgiEnv["SCRIPT_FILENAME"])
+	cFileName := C.CString(fc.Env["SCRIPT_FILENAME"])
 	defer C.free(unsafe.Pointer(cFileName))
-	C.frankenphp_execute_script(cFileName)
 
+	C.frankenphp_execute_script(cFileName)
 	C.frankenphp_request_shutdown()
 
 	return nil
@@ -172,39 +180,51 @@ func (f *FrankenPHP) ExecuteScript(documentRoot string, responseWriter http.Resp
 // buildEnv returns a set of CGI environment variables for the request.
 //
 // TODO: handle this case https://github.com/caddyserver/caddy/issues/3718
-// TODO: add Apache mod_ssl's like TLS versions
-// Adapted from https://github.com/caddyserver/caddy/blob/master/modules/caddyhttp/reverseproxy/fastcgi/fastcgi.go
-// Copyright 2015 Matthew Holt and The Caddy Authors
-func (f FrankenPHP) buildCGIEnv(documentRoot string, request *http.Request, originalRequest *http.Request) (map[string]string, error) {
-	if originalRequest == nil {
-		originalRequest = request
-	}
+// Inspired by https://github.com/caddyserver/caddy/blob/master/modules/caddyhttp/reverseproxy/fastcgi/fastcgi.go
+func populateEnv(request *http.Request) (authPassword string, err error) {
+	fc := request.Context().Value(FrankenPHPContextKey).(*FrankenPHPContext)
 
-	var env map[string]string
-
-	// Separate remote IP and port; more lenient than net.SplitHostPort
-	var ip, port string
-	if idx := strings.LastIndex(request.RemoteAddr, ":"); idx > -1 {
-		ip = request.RemoteAddr[:idx]
-		port = request.RemoteAddr[idx+1:]
-	} else {
-		ip = request.RemoteAddr
-	}
-
-	// Remove [] from IPv6 addresses
-	ip = strings.Replace(ip, "[", "", 1)
-	ip = strings.Replace(ip, "]", "", 1)
-
-	// make sure file root is absolute
-	root, err := filepath.Abs(documentRoot)
-	if err != nil {
-		return nil, err
-	}
-
-	if f.ResolveRootSymlink {
-		if root, err = filepath.EvalSymlinks(root); err != nil {
-			return nil, err
+	_, addrOk := fc.Env["REMOTE_ADDR"]
+	_, portOk := fc.Env["REMOTE_PORT"]
+	if !addrOk || !portOk {
+		// Separate remote IP and port; more lenient than net.SplitHostPort
+		var ip, port string
+		if idx := strings.LastIndex(request.RemoteAddr, ":"); idx > -1 {
+			ip = request.RemoteAddr[:idx]
+			port = request.RemoteAddr[idx+1:]
+		} else {
+			ip = request.RemoteAddr
 		}
+
+		// Remove [] from IPv6 addresses
+		ip = strings.Replace(ip, "[", "", 1)
+		ip = strings.Replace(ip, "]", "", 1)
+
+		if _, ok := fc.Env["REMOTE_ADDR"]; !ok {
+			fc.Env["REMOTE_ADDR"] = ip
+		}
+		if _, ok := fc.Env["REMOTE_HOST"]; !ok {
+			fc.Env["REMOTE_HOST"] = ip // For speed, remote host lookups disabled
+		}
+		if _, ok := fc.Env["REMOTE_PORT"]; !ok {
+			fc.Env["REMOTE_PORT"] = port
+		}
+	}
+
+	if _, ok := fc.Env["DOCUMENT_ROOT"]; !ok {
+		// make sure file root is absolute
+		root, err := filepath.Abs(fc.DocumentRoot)
+		if err != nil {
+			return "", err
+		}
+
+		if fc.ResolveRootSymlink {
+			if root, err = filepath.EvalSymlinks(root); err != nil {
+				return "", err
+			}
+		}
+
+		fc.Env["DOCUMENT_ROOT"] = root
 	}
 
 	fpath := request.URL.Path
@@ -212,17 +232,16 @@ func (f FrankenPHP) buildCGIEnv(documentRoot string, request *http.Request, orig
 
 	docURI := fpath
 	// split "actual path" from "path info" if configured
-	var pathInfo string
-	if splitPos := f.splitPos(fpath); splitPos > -1 {
+	if splitPos := splitPos(fc, fpath); splitPos > -1 {
 		docURI = fpath[:splitPos]
-		pathInfo = fpath[splitPos:]
+		fc.Env["PATH_INFO"] = fpath[splitPos:]
 
 		// Strip PATH_INFO from SCRIPT_NAME
-		scriptName = strings.TrimSuffix(scriptName, pathInfo)
+		scriptName = strings.TrimSuffix(scriptName, fc.Env["PATH_INFO"])
 	}
 
 	// SCRIPT_FILENAME is the absolute path of SCRIPT_NAME
-	scriptFilename := sanitizedPathJoin(root, scriptName)
+	scriptFilename := sanitizedPathJoin(fc.Env["DOCUMENT_ROOT"], scriptName)
 
 	// Ensure the SCRIPT_NAME has a leading slash for compliance with RFC3875
 	// Info: https://tools.ietf.org/html/rfc3875#section-4.1.13
@@ -230,98 +249,141 @@ func (f FrankenPHP) buildCGIEnv(documentRoot string, request *http.Request, orig
 		scriptName = "/" + scriptName
 	}
 
-	requestScheme := "http"
+	if _, ok := fc.Env["DOCUMENT_URI"]; !ok {
+		fc.Env["DOCUMENT_URI"] = docURI
+	}
+	if _, ok := fc.Env["SCRIPT_FILENAME"]; !ok {
+		fc.Env["SCRIPT_FILENAME"] = scriptFilename
+	}
+	if _, ok := fc.Env["SCRIPT_NAME"]; !ok {
+		fc.Env["SCRIPT_NAME"] = scriptName
+	}
+
+	if _, ok := fc.Env["REQUEST_SCHEME"]; !ok {
+		if request.TLS == nil {
+			fc.Env["REQUEST_SCHEME"] = "http"
+		} else {
+			fc.Env["REQUEST_SCHEME"] = "https"
+		}
+	}
+
 	if request.TLS != nil {
-		requestScheme = "https"
+		if _, ok := fc.Env["HTTPS"]; !ok {
+			fc.Env["HTTPS"] = "on"
+		}
+
+		// and pass the protocol details in a manner compatible with apache's mod_ssl
+		// (which is why these have a SSL_ prefix and not TLS_).
+		_, sslProtocolOk := fc.Env["SSL_PROTOCOL"]
+		v, versionOk := tlsProtocolStrings[request.TLS.Version]
+		if !sslProtocolOk && versionOk {
+			fc.Env["SSL_PROTOCOL"] = v
+		}
 	}
 
-	reqHost, reqPort, err := net.SplitHostPort(request.Host)
-	if err != nil {
-		// whatever, just assume there was no port
-		reqHost = request.Host
+	_, serverNameOk := fc.Env["SERVER_NAME"]
+	_, serverPortOk := fc.Env["SERVER_PORT"]
+	if !serverNameOk || !serverPortOk {
+		reqHost, reqPort, err := net.SplitHostPort(request.Host)
+		if err == nil {
+			if !serverNameOk {
+				fc.Env["SERVER_NAME"] = reqHost
+			}
+
+			// compliance with the CGI specification requires that
+			// SERVER_PORT should only exist if it's a valid numeric value.
+			// Info: https://www.ietf.org/rfc/rfc3875 Page 18
+			if !serverPortOk && reqPort != "" {
+				fc.Env["SERVER_PORT"] = reqPort
+			}
+		} else if !serverNameOk {
+			// whatever, just assume there was no port
+			fc.Env["SERVER_NAME"] = request.Host
+		}
 	}
 
+	// Variables defined in CGI 1.1 spec
 	// Some variables are unused but cleared explicitly to prevent
 	// the parent environment from interfering.
-	env = map[string]string{
-		// Variables defined in CGI 1.1 spec
-		"AUTH_TYPE":         "", // Not used
-		"CONTENT_LENGTH":    request.Header.Get("Content-Length"),
-		"CONTENT_TYPE":      request.Header.Get("Content-Type"),
-		"GATEWAY_INTERFACE": "CGI/1.1",
-		"PATH_INFO":         pathInfo,
-		"QUERY_STRING":      request.URL.RawQuery,
-		"REMOTE_ADDR":       ip,
-		"REMOTE_HOST":       ip, // For speed, remote host lookups disabled
-		"REMOTE_PORT":       port,
-		"REMOTE_IDENT":      "", // Not used
-		"REMOTE_USER":       "", // Will be set later
-		"REQUEST_METHOD":    request.Method,
-		"REQUEST_SCHEME":    requestScheme,
-		"SERVER_NAME":       reqHost,
-		"SERVER_PROTOCOL":   request.Proto,
-		"SERVER_SOFTWARE":   "FrankenPHP",
-
-		// Other variables
-		"DOCUMENT_ROOT":   root,
-		"DOCUMENT_URI":    docURI,
-		"HTTP_HOST":       request.Host, // added here, since not always part of headers
-		"REQUEST_URI":     originalRequest.URL.RequestURI(),
-		"SCRIPT_FILENAME": scriptFilename,
-		"SCRIPT_NAME":     scriptName,
+	// We never override an entry previously set
+	if _, ok := fc.Env["REMOTE_IDENT"]; !ok {
+		fc.Env["REMOTE_IDENT"] = "" // Not used
+	}
+	if _, ok := fc.Env["AUTH_TYPE"]; !ok {
+		fc.Env["AUTH_TYPE"] = "" // Not used
+	}
+	if _, ok := fc.Env["CONTENT_LENGTH"]; !ok {
+		fc.Env["CONTENT_LENGTH"] = request.Header.Get("Content-Length")
+	}
+	if _, ok := fc.Env["CONTENT_TYPE"]; !ok {
+		fc.Env["CONTENT_TYPE"] = request.Header.Get("Content-Type")
+	}
+	if _, ok := fc.Env["GATEWAY_INTERFACE"]; !ok {
+		fc.Env["GATEWAY_INTERFACE"] = "CGI/1.1"
+	}
+	if _, ok := fc.Env["QUERY_STRING"]; !ok {
+		fc.Env["QUERY_STRING"] = request.URL.RawQuery
+	}
+	if _, ok := fc.Env["QUERY_STRING"]; !ok {
+		fc.Env["QUERY_STRING"] = request.URL.RawQuery
+	}
+	if _, ok := fc.Env["REQUEST_METHOD"]; !ok {
+		fc.Env["REQUEST_METHOD"] = request.Method
+	}
+	if _, ok := fc.Env["SERVER_PROTOCOL"]; !ok {
+		fc.Env["SERVER_PROTOCOL"] = request.Proto
+	}
+	if _, ok := fc.Env["SERVER_SOFTWARE"]; !ok {
+		fc.Env["SERVER_SOFTWARE"] = "FrankenPHP"
+	}
+	if _, ok := fc.Env["HTTP_HOST"]; !ok {
+		fc.Env["HTTP_HOST"] = request.Host // added here, since not always part of headers
+	}
+	if _, ok := fc.Env["REQUEST_URI"]; !ok {
+		fc.Env["REQUEST_URI"] = request.URL.RequestURI()
 	}
 
 	// compliance with the CGI specification requires that
 	// PATH_TRANSLATED should only exist if PATH_INFO is defined.
 	// Info: https://www.ietf.org/rfc/rfc3875 Page 14
-	if env["PATH_INFO"] != "" {
-		env["PATH_TRANSLATED"] = sanitizedPathJoin(root, pathInfo) // Info: http://www.oreilly.com/openbook/cgi/ch02_04.html
-	}
-
-	// compliance with the CGI specification requires that
-	// SERVER_PORT should only exist if it's a valid numeric value.
-	// Info: https://www.ietf.org/rfc/rfc3875 Page 18
-	if reqPort != "" {
-		env["SERVER_PORT"] = reqPort
-	}
-
-	// Some web apps rely on knowing HTTPS or not
-	if request.TLS != nil {
-		env["HTTPS"] = "on"
-		// and pass the protocol details in a manner compatible with apache's mod_ssl
-		// (which is why these have a SSL_ prefix and not TLS_).
-		v, ok := tlsProtocolStrings[request.TLS.Version]
-		if ok {
-			env["SSL_PROTOCOL"] = v
-		}
-	}
-
-	// Add env variables from config
-	for key, value := range f.EnvVars {
-		env[key] = value
+	if fc.Env["PATH_INFO"] != "" {
+		fc.Env["PATH_TRANSLATED"] = sanitizedPathJoin(fc.Env["DOCUMENT_ROOT"], fc.Env["PATH_INFO"]) // Info: http://www.oreilly.com/openbook/cgi/ch02_04.html
 	}
 
 	// Add all HTTP headers to env variables
 	for field, val := range request.Header {
-		header := strings.ToUpper(field)
-		header = headerNameReplacer.Replace(header)
-		env["HTTP_"+header] = strings.Join(val, ", ")
+		k := "HTTP_" + headerNameReplacer.Replace(strings.ToUpper(field))
+		if _, ok := fc.Env[k]; !ok {
+			fc.Env[k] = strings.Join(val, ", ")
+		}
 	}
-	return env, nil
+
+	if _, ok := fc.Env["REMOTE_USER"]; !ok {
+		var (
+			authUser string
+			ok       bool
+		)
+		authUser, authPassword, ok = request.BasicAuth()
+		if ok {
+			fc.Env["REMOTE_USER"] = authUser
+		}
+	}
+
+	return authPassword, nil
 }
 
 // splitPos returns the index where path should
-// be split based on t.SplitPath.
+// be split based on SplitPath.
 //
 // Adapted from https://github.com/caddyserver/caddy/blob/master/modules/caddyhttp/reverseproxy/fastcgi/fastcgi.go
 // Copyright 2015 Matthew Holt and The Caddy Authors
-func (f FrankenPHP) splitPos(path string) int {
-	if len(f.SplitPath) == 0 {
+func splitPos(fc *FrankenPHPContext, path string) int {
+	if len(fc.SplitPath) == 0 {
 		return 0
 	}
 
 	lowerPath := strings.ToLower(path)
-	for _, split := range f.SplitPath {
+	for _, split := range fc.SplitPath {
 		if idx := strings.Index(lowerPath, strings.ToLower(split)); idx > -1 {
 			return idx + len(split)
 		}
@@ -381,7 +443,7 @@ func go_ub_write(wh C.uintptr_t, cString *C.char, length C.int) C.size_t {
 //export go_register_variables
 func go_register_variables(rh C.uintptr_t, trackVarsArray *C.zval) {
 	r := cgo.Handle(rh).Value().(*http.Request)
-	for k, v := range r.Context().Value(CGICtxKey).(map[string]string) {
+	for k, v := range r.Context().Value(FrankenPHPContextKey).(*FrankenPHPContext).Env {
 		ck := C.CString(k)
 		cv := C.CString(v)
 		C.php_register_variable_safe(ck, cv, C.size_t(len(v)), trackVarsArray)

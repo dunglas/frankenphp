@@ -26,7 +26,6 @@ type FrankenPHPModule struct {
 	SplitPath          []string          `json:"split_path,omitempty"`
 	ResolveRootSymlink bool              `json:"resolve_root_symlink,omitempty"`
 	Env                map[string]string `json:"env,omitempty"`
-	frankenphp         *frankenphp.FrankenPHP
 	logger             *zap.Logger
 }
 
@@ -64,11 +63,6 @@ func (f *FrankenPHPModule) Provision(ctx caddy.Context) error {
 		f.SplitPath = []string{".php"}
 	}
 
-	f.frankenphp = &frankenphp.FrankenPHP{}
-	f.frankenphp.SplitPath = f.SplitPath
-	f.frankenphp.ResolveRootSymlink = f.ResolveRootSymlink
-	f.frankenphp.EnvVars = f.Env
-
 	return nil
 }
 
@@ -85,7 +79,17 @@ func (f FrankenPHPModule) ServeHTTP(w http.ResponseWriter, r *http.Request, next
 	repl := r.Context().Value(caddy.ReplacerCtxKey).(*caddy.Replacer)
 
 	documentRoot := repl.ReplaceKnown(f.Root, "")
-	if err := f.frankenphp.ExecuteScript(documentRoot, w, r, &origReq); err != nil {
+	fr := frankenphp.NewRequestWithContext(r, documentRoot)
+	fc := fr.Context().Value(frankenphp.FrankenPHPContextKey).(*frankenphp.FrankenPHPContext)
+	fc.ResolveRootSymlink = f.ResolveRootSymlink
+	fc.SplitPath = f.SplitPath
+
+	fc.Env["REQUEST_URI"] = origReq.URL.RequestURI()
+	for k, v := range f.Env {
+		fc.Env[k] = repl.ReplaceKnown(v, "")
+	}
+
+	if err := frankenphp.ExecuteScript(w, fr); err != nil {
 		return err
 	}
 

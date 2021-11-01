@@ -19,13 +19,18 @@ func TestStartup(t *testing.T) {
 	assert.Nil(t, frankenphp.Startup())
 }
 
+func setRequestContext(t *testing.T, r *http.Request) *http.Request {
+	t.Helper()
+	cwd, _ := os.Getwd()
+
+	return frankenphp.NewRequestWithContext(r, cwd+"/testdata/")
+}
+
 func TestHelloWorld(t *testing.T) {
 	defer frankenphp.Shutdown()
 
-	f := frankenphp.NewFrankenPHP()
 	handler := func(w http.ResponseWriter, r *http.Request) {
-		cwd, _ := os.Getwd()
-		assert.Nil(t, f.ExecuteScript(cwd+"/testdata/", w, r, nil))
+		assert.Nil(t, frankenphp.ExecuteScript(w, setRequestContext(t, r)))
 	}
 
 	req := httptest.NewRequest("GET", "http://example.com/index.php", nil)
@@ -41,13 +46,12 @@ func TestHelloWorld(t *testing.T) {
 func TestServerVariable(t *testing.T) {
 	defer frankenphp.Shutdown()
 
-	f := frankenphp.NewFrankenPHP()
 	handler := func(w http.ResponseWriter, r *http.Request) {
-		cwd, _ := os.Getwd()
-		assert.Nil(t, f.ExecuteScript(cwd+"/testdata/", w, r, nil))
+		assert.Nil(t, frankenphp.ExecuteScript(w, setRequestContext(t, r)))
 	}
 
-	req := httptest.NewRequest("GET", "http://kevin:password@example.com/server-variable.php?foo=a&bar=b#hash", nil)
+	req := httptest.NewRequest("GET", "http://example.com/server-variable.php?foo=a&bar=b#hash", nil)
+	req.SetBasicAuth("kevin", "password")
 	w := httptest.NewRecorder()
 	handler(w, req)
 
@@ -57,7 +61,10 @@ func TestServerVariable(t *testing.T) {
 	strBody := string(body)
 
 	assert.Contains(t, strBody, "[REMOTE_HOST]")
-	assert.Contains(t, strBody, "[REMOTE_USER]")
+	assert.Contains(t, strBody, "[REMOTE_USER] => kevin")
+	assert.Contains(t, strBody, "[PHP_AUTH_USER] => kevin")
+	assert.Contains(t, strBody, "[PHP_AUTH_PW] => password")
+	assert.Contains(t, strBody, "[HTTP_AUTHORIZATION] => Basic a2V2aW46cGFzc3dvcmQ=")
 	assert.Contains(t, strBody, "[DOCUMENT_ROOT]")
 	assert.Contains(t, strBody, "[CONTENT_TYPE]")
 	assert.Contains(t, strBody, "[QUERY_STRING] => foo=a&bar=b#hash")
@@ -83,14 +90,12 @@ func TestServerVariable(t *testing.T) {
 func TestPathInfo(t *testing.T) {
 	defer frankenphp.Shutdown()
 
-	f := frankenphp.NewFrankenPHP()
 	handler := func(w http.ResponseWriter, r *http.Request) {
-		cwd, _ := os.Getwd()
-
-		rewriteRequest := r.Clone(context.TODO())
+		rewriteRequest := setRequestContext(t, r.Clone(context.TODO()))
 		rewriteRequest.URL.Path = "/server-variable.php/pathinfo"
+		rewriteRequest.Context().Value(frankenphp.FrankenPHPContextKey).(*frankenphp.FrankenPHPContext).Env["REQUEST_URI"] = r.URL.RequestURI()
 
-		assert.Nil(t, f.ExecuteScript(cwd+"/testdata/", w, rewriteRequest, r))
+		assert.Nil(t, frankenphp.ExecuteScript(w, rewriteRequest))
 	}
 
 	req := httptest.NewRequest("GET", "http://example.com/pathinfo", nil)
@@ -111,10 +116,8 @@ func TestPathInfo(t *testing.T) {
 func TestHeaders(t *testing.T) {
 	defer frankenphp.Shutdown()
 
-	f := frankenphp.NewFrankenPHP()
 	handler := func(w http.ResponseWriter, r *http.Request) {
-		cwd, _ := os.Getwd()
-		assert.Nil(t, f.ExecuteScript(cwd+"/testdata/", w, r, nil))
+		assert.Nil(t, frankenphp.ExecuteScript(w, setRequestContext(t, r)))
 	}
 
 	req := httptest.NewRequest("GET", "http://example.com/headers.php", nil)
@@ -133,10 +136,8 @@ func TestHeaders(t *testing.T) {
 func TestInput(t *testing.T) {
 	defer frankenphp.Shutdown()
 
-	f := frankenphp.NewFrankenPHP()
 	handler := func(w http.ResponseWriter, r *http.Request) {
-		cwd, _ := os.Getwd()
-		assert.Nil(t, f.ExecuteScript(cwd+"/testdata/", w, r, nil))
+		assert.Nil(t, frankenphp.ExecuteScript(w, setRequestContext(t, r)))
 	}
 
 	req := httptest.NewRequest("POST", "http://example.com/input.php", strings.NewReader("post data"))
@@ -153,10 +154,8 @@ func TestInput(t *testing.T) {
 func TestPostSuperGlobals(t *testing.T) {
 	defer frankenphp.Shutdown()
 
-	f := frankenphp.NewFrankenPHP()
 	handler := func(w http.ResponseWriter, r *http.Request) {
-		cwd, _ := os.Getwd()
-		assert.Nil(t, f.ExecuteScript(cwd+"/testdata/", w, r, nil))
+		assert.Nil(t, frankenphp.ExecuteScript(w, setRequestContext(t, r)))
 	}
 
 	formData := url.Values{"baz": {"bat"}}
@@ -175,10 +174,8 @@ func TestPostSuperGlobals(t *testing.T) {
 func TestCookies(t *testing.T) {
 	defer frankenphp.Shutdown()
 
-	f := frankenphp.NewFrankenPHP()
 	handler := func(w http.ResponseWriter, r *http.Request) {
-		cwd, _ := os.Getwd()
-		assert.Nil(t, f.ExecuteScript(cwd+"/testdata/", w, r, nil))
+		assert.Nil(t, frankenphp.ExecuteScript(w, setRequestContext(t, r)))
 	}
 
 	req := httptest.NewRequest("GET", "http://example.com/cookies.php", nil)

@@ -180,8 +180,10 @@ int frankenphp_request_startup(
 	SG(request_info).path_translated = path_translated;
 	SG(request_info).request_uri = request_uri;
 	SG(request_info).content_type = content_type;
-	SG(request_info).auth_user = auth_user;
-	SG(request_info).auth_password = auth_password;
+	if (auth_user != NULL)
+		SG(request_info).auth_user = estrdup(auth_user);
+	if (auth_password != NULL)
+		SG(request_info).auth_password = estrdup(auth_password);
 	SG(request_info).proto_num = proto_num;
 
 	if (php_request_startup() == FAILURE) {
