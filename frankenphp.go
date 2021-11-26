@@ -109,7 +109,7 @@ func ExecuteScript(responseWriter http.ResponseWriter, request *http.Request) er
 	var cAuthUser, cAuthPassword *C.char
 	if authPassword != "" {
 		cAuthPassword = C.CString(authPassword)
-		//defer C.free(unsafe.Pointer(cAuthPassword))
+		defer C.free(unsafe.Pointer(cAuthPassword))
 	}
 
 	if authUser := fc.Env["REMOTE_USER"]; authUser != "" {
