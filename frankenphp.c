@@ -7,6 +7,7 @@
 #include "SAPI.h"
 #include "php_main.h"
 #include "php_variables.h"
+#include "Zend/zend_alloc.h"
 
 typedef struct frankenphp_server_context {
 	uintptr_t response_writer;
@@ -164,7 +165,7 @@ int frankenphp_request_startup(
 
 	(void) ts_resource(0);
 
-	ctx = malloc(sizeof(frankenphp_server_context));
+	ctx = emalloc(sizeof(frankenphp_server_context));
 	if (ctx == NULL) {
 		return FAILURE;
 	}
@@ -218,6 +219,6 @@ void frankenphp_request_shutdown()
 	frankenphp_server_context *ctx = SG(server_context);
 	php_request_shutdown(NULL);
 	if (ctx->cookie_data != NULL) free(ctx->cookie_data);
-	free(ctx);
+	efree(ctx);
 	SG(server_context) = NULL;
 }
