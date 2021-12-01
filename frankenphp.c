@@ -147,55 +147,18 @@ void frankenphp_shutdown()
     tsrm_shutdown();
 }
 
-int frankenphp_request_startup(
-	uintptr_t response_writer,
-	uintptr_t request,
-
-	const char *request_method,
-	char *query_string,
-	zend_long content_length,
-	char *path_translated,
-	char *request_uri,
-	const char *content_type,
-	char *auth_user,
-	char *auth_password,
-	int proto_num
-) {
-	frankenphp_server_context *ctx;
-
-	(void) ts_resource(0);
-
-	ctx = emalloc(sizeof(frankenphp_server_context));
-	if (ctx == NULL) {
-		return FAILURE;
+int frankenphp_request_startup()
+{
+	if (php_request_startup() == SUCCESS) {
+		return SUCCESS;
 	}
 
-	ctx->response_writer = response_writer;
-	ctx->request = request;
+	php_request_shutdown(NULL);
+	frankenphp_server_context *ctx = SG(server_context);
+	SG(server_context) = NULL;
+	efree(ctx);
 
-	SG(server_context) = ctx;
-
-	SG(request_info).request_method = request_method;
-	SG(request_info).query_string = query_string;
-	SG(request_info).content_length = content_length;
-	SG(request_info).path_translated = path_translated;
-	SG(request_info).request_uri = request_uri;
-	SG(request_info).content_type = content_type;
-	if (auth_user != NULL)
-		SG(request_info).auth_user = estrdup(auth_user);
-	if (auth_password != NULL)
-		SG(request_info).auth_password = estrdup(auth_password);
-	SG(request_info).proto_num = proto_num;
-
-	if (php_request_startup() == FAILURE) {
-		php_request_shutdown(NULL);
-		SG(server_context) = NULL;
-		free(ctx);
-
-		return FAILURE;
-	}
-
-	return SUCCESS;
+	return FAILURE;
 }
 
 int frankenphp_execute_script(const char* file_name)
@@ -214,11 +177,76 @@ int frankenphp_execute_script(const char* file_name)
 	return status;
 }
 
+void frankenphp_clean_server_context(frankenphp_server_context *ctx) {
+	sapi_request_info ri = SG(request_info);
+	efree(ri.auth_password);
+	efree(ri.auth_user);
+	free((char *) ri.request_method);
+	free(ri.query_string);
+	free((char *) ri.content_type);
+	free(ri.path_translated);
+	free(ri.request_uri);
+
+	go_clean_server_context(ctx->response_writer, ctx->request);
+}
+
 void frankenphp_request_shutdown()
 {
-	frankenphp_server_context *ctx = SG(server_context);
 	php_request_shutdown(NULL);
-	if (ctx->cookie_data != NULL) free(ctx->cookie_data);
+
+	frankenphp_server_context *ctx = SG(server_context);
+
+	free(ctx->cookie_data);
+	frankenphp_clean_server_context(ctx);
+
 	efree(ctx);
 	SG(server_context) = NULL;
+}
+
+int frankenphp_create_server_context()
+{
+	frankenphp_server_context *ctx;
+
+	(void) ts_resource(0);
+
+	ctx = emalloc(sizeof(frankenphp_server_context));
+	if (ctx == NULL) {
+		return FAILURE;
+	}
+
+	SG(server_context) = ctx;
+
+	return SUCCESS;
+}
+
+void frankenphp_update_server_context(
+	uintptr_t response_writer,
+	uintptr_t request,
+
+	const char *request_method,
+	char *query_string,
+	zend_long content_length,
+	char *path_translated,
+	char *request_uri,
+	const char *content_type,
+	char *auth_user,
+	char *auth_password,
+	int proto_num
+) {
+	frankenphp_server_context *ctx = SG(server_context);
+
+	ctx->response_writer = response_writer;
+	ctx->request = request;
+
+	SG(request_info).auth_password = auth_password == NULL ? NULL : estrdup(auth_password);
+	free(auth_password);
+	SG(request_info).auth_user = auth_user == NULL ? NULL : estrdup(auth_user);
+	free(auth_user);
+	SG(request_info).request_method = request_method;
+	SG(request_info).query_string = query_string;
+	SG(request_info).content_type = content_type;
+	SG(request_info).content_length = content_length;
+	SG(request_info).path_translated = path_translated;
+	SG(request_info).request_uri = request_uri;
+	SG(request_info).proto_num = proto_num;
 }

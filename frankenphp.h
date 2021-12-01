@@ -6,7 +6,8 @@
 int frankenphp_init();
 void frankenphp_shutdown();
 
-int frankenphp_request_startup(
+int frankenphp_create_server_context();
+void frankenphp_update_server_context(
 	uintptr_t response_writer,
 	uintptr_t request,
 
@@ -20,8 +21,8 @@ int frankenphp_request_startup(
 	char *auth_password,
 	int proto_num
 );
-void frankenphp_request_shutdown();
-
+int frankenphp_request_startup();
 int frankenphp_execute_script(const char* file_name);
+void frankenphp_request_shutdown();
 
 #endif
