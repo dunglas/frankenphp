@@ -5,13 +5,15 @@
 #include "_cgo_export.h"
 #include "php.h"
 #include "SAPI.h"
+#include "ext/standard/head.h"
 #include "php_main.h"
 #include "php_variables.h"
+#include "php_output.h"
 #include "Zend/zend_alloc.h"
 
 typedef struct frankenphp_server_context {
-	uintptr_t response_writer;
 	uintptr_t request;
+	uintptr_t worker;
 	char *cookie_data;
 } frankenphp_server_context;
 
@@ -30,7 +32,9 @@ static size_t frankenphp_ub_write(const char *str, size_t str_length)
 {
 	frankenphp_server_context* ctx = SG(server_context);
 
-	return go_ub_write(ctx->response_writer, (char *) str, str_length);
+	if (ctx->request == 0) return 0; // TODO: write on stdout?
+
+	return go_ub_write(ctx->request, (char *) str, str_length);
 }
 
 static int frankenphp_send_headers(sapi_headers_struct *sapi_headers)
@@ -44,9 +48,11 @@ static int frankenphp_send_headers(sapi_headers_struct *sapi_headers)
 	int status;
 	frankenphp_server_context* ctx = SG(server_context);
 
+	if (ctx->request == 0) return SAPI_HEADER_SEND_FAILED;
+
 	h = zend_llist_get_first_ex(&sapi_headers->headers, &pos);
 	while (h) {
-		go_add_header(ctx->response_writer, h->header, h->header_len);
+		go_add_header(ctx->request, h->header, h->header_len);
 		h = zend_llist_get_next_ex(&sapi_headers->headers, &pos);
 	}
 
@@ -57,7 +63,7 @@ static int frankenphp_send_headers(sapi_headers_struct *sapi_headers)
 		status = atoi((SG(sapi_headers).http_status_line) + 9);
 	}
 
-	go_write_header(ctx->response_writer, status);
+	go_write_header(ctx->request, status);
 
 	return SAPI_HEADER_SENT_SUCCESSFULLY;
 }
@@ -66,12 +72,17 @@ static size_t frankenphp_read_post(char *buffer, size_t count_bytes)
 {
 	frankenphp_server_context* ctx = SG(server_context);
 
+	if (ctx->request == 0) return 0;
+
 	return go_read_post(ctx->request, buffer, count_bytes);
 }
 
 static char* frankenphp_read_cookies(void)
 {
 	frankenphp_server_context* ctx = SG(server_context);
+
+	if (ctx->request == 0) return NULL;
+
 	ctx->cookie_data = go_read_cookies(ctx->request);
 
 	return ctx->cookie_data;
@@ -81,6 +92,8 @@ static void frankenphp_register_variables(zval *track_vars_array)
 {
 	// https://www.php.net/manual/en/reserved.variables.server.php
 	frankenphp_server_context* ctx = SG(server_context);
+
+	if (ctx->request == 0) return;
 
 	//php_import_environment_variables(track_vars_array);
 
@@ -177,7 +190,10 @@ int frankenphp_execute_script(const char* file_name)
 	return status;
 }
 
-void frankenphp_clean_server_context(frankenphp_server_context *ctx) {
+void frankenphp_clean_server_context() {
+	frankenphp_server_context *ctx = SG(server_context);
+	if (ctx == NULL) return;
+
 	sapi_request_info ri = SG(request_info);
 	efree(ri.auth_password);
 	efree(ri.auth_user);
@@ -187,7 +203,7 @@ void frankenphp_clean_server_context(frankenphp_server_context *ctx) {
 	free(ri.path_translated);
 	free(ri.request_uri);
 
-	go_clean_server_context(ctx->response_writer, ctx->request);
+	if (ctx->request != 0) go_clean_server_context(ctx->request);
 }
 
 void frankenphp_request_shutdown()
@@ -197,13 +213,14 @@ void frankenphp_request_shutdown()
 	frankenphp_server_context *ctx = SG(server_context);
 
 	free(ctx->cookie_data);
-	frankenphp_clean_server_context(ctx);
+	frankenphp_clean_server_context();
 
 	efree(ctx);
 	SG(server_context) = NULL;
 }
 
-int frankenphp_create_server_context()
+// set worker to 0 if not in worker mode
+int frankenphp_create_server_context(uintptr_t worker)
 {
 	frankenphp_server_context *ctx;
 
@@ -214,13 +231,15 @@ int frankenphp_create_server_context()
 		return FAILURE;
 	}
 
+	ctx->worker = worker;
+	ctx->request = 0;
+
 	SG(server_context) = ctx;
 
 	return SUCCESS;
 }
 
 void frankenphp_update_server_context(
-	uintptr_t response_writer,
 	uintptr_t request,
 
 	const char *request_method,
@@ -235,7 +254,6 @@ void frankenphp_update_server_context(
 ) {
 	frankenphp_server_context *ctx = SG(server_context);
 
-	ctx->response_writer = response_writer;
 	ctx->request = request;
 
 	SG(request_info).auth_password = auth_password == NULL ? NULL : estrdup(auth_password);
@@ -249,4 +267,21 @@ void frankenphp_update_server_context(
 	SG(request_info).path_translated = path_translated;
 	SG(request_info).request_uri = request_uri;
 	SG(request_info).proto_num = proto_num;
+}
+
+PHP_FUNCTION(frankenphp_handle_request) {
+	frankenphp_server_context *ctx = SG(server_context);
+
+	if (zend_parse_parameters_none() == FAILURE) RETURN_THROWS();
+
+	if (SG(server_context) != NULL) {
+		php_output_end_all();
+		php_header();
+	}
+
+	if (go_frankenphp_handle_request(ctx->worker, ctx->request)) {
+		RETURN_TRUE;
+	}
+
+	RETURN_FALSE;
 }

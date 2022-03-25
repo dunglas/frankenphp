@@ -17,6 +17,7 @@ import (
 	"runtime/cgo"
 	"strconv"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"unsafe"
 )
@@ -53,6 +54,9 @@ type FrankenPHPContext struct {
 	// CGI-like environment variables that will be available in $_SERVER.
 	// This map is populated automatically, exisiting key are never replaced.
 	Env map[string]string
+
+	responseWriter http.ResponseWriter
+	done           chan interface{}
 }
 
 func NewRequestWithContext(r *http.Request, documentRoot string) *http.Request {
@@ -85,6 +89,13 @@ func Shutdown() {
 		return
 	}
 
+	workers.Range(func(k, v interface{}) bool {
+		close(v.(*worker).in)
+		workers.Delete(k)
+
+		return true
+	})
+
 	C.frankenphp_shutdown()
 	atomic.StoreInt32(&started, 0)
 }
@@ -98,7 +109,7 @@ php_output_activate()
 		php_hash_environment()
 */
 
-func UpdateScriptContext(responseWriter http.ResponseWriter, request *http.Request) error {
+func updateServerContext(request *http.Request) error {
 	authPassword, err := populateEnv(request)
 	if err != nil {
 		return err
@@ -115,7 +126,6 @@ func UpdateScriptContext(responseWriter http.ResponseWriter, request *http.Reque
 		cAuthUser = C.CString(authUser)
 	}
 
-	wh := cgo.NewHandle(responseWriter)
 	rh := cgo.NewHandle(request)
 
 	cMethod := C.CString(request.Method)
@@ -140,7 +150,6 @@ func UpdateScriptContext(responseWriter http.ResponseWriter, request *http.Reque
 	cRequestUri := C.CString(request.URL.RequestURI())
 
 	C.frankenphp_update_server_context(
-		C.uintptr_t(wh),
 		C.uintptr_t(rh),
 
 		cMethod,
@@ -157,15 +166,6 @@ func UpdateScriptContext(responseWriter http.ResponseWriter, request *http.Reque
 	return nil
 }
 
-func CleanScriptContext() {
-
-}
-
-func Suspend() {
-}
-
-func Resume(responseWriter http.ResponseWriter, request *http.Request) {}
-
 func ExecuteScript(responseWriter http.ResponseWriter, request *http.Request) error {
 	if atomic.LoadInt32(&started) < 1 {
 		if err := Startup(); err != nil {
@@ -173,11 +173,11 @@ func ExecuteScript(responseWriter http.ResponseWriter, request *http.Request) er
 		}
 	}
 
-	if C.frankenphp_create_server_context() < 0 {
+	if C.frankenphp_create_server_context(0) < 0 {
 		return fmt.Errorf("error during request context creation")
 	}
 
-	if err := UpdateScriptContext(responseWriter, request); err != nil {
+	if err := updateServerContext(request); err != nil {
 		return err
 	}
 
@@ -186,19 +186,85 @@ func ExecuteScript(responseWriter http.ResponseWriter, request *http.Request) er
 	}
 
 	fc := request.Context().Value(FrankenPHPContextKey).(*FrankenPHPContext)
+	fc.responseWriter = responseWriter
+
 	cFileName := C.CString(fc.Env["SCRIPT_FILENAME"])
 	defer C.free(unsafe.Pointer(cFileName))
 
-	C.frankenphp_execute_script(cFileName)
+	if C.frankenphp_execute_script(cFileName) < 0 {
+		return fmt.Errorf("error during PHP script execution")
+	}
 	C.frankenphp_request_shutdown()
 
 	return nil
 }
 
+func newWorker(fileName string, pool sync.Pool) *worker {
+	w := &worker{
+		pool,
+		make(chan *http.Request),
+	}
+	wh := cgo.NewHandle(w)
+
+	go func() {
+		if C.frankenphp_create_server_context(C.uintptr_t(wh)) < 0 {
+			panic(fmt.Errorf("error during request context creation"))
+		}
+
+		if C.frankenphp_request_startup() < 0 {
+			panic(fmt.Errorf("error during PHP request startup"))
+		}
+
+		// todo: maybe could we allocate this only once
+		cFileName := C.CString(fileName)
+		defer C.free(unsafe.Pointer(cFileName))
+
+		if C.frankenphp_execute_script(cFileName) < 0 {
+			panic(fmt.Errorf("error during PHP script execution"))
+		}
+		C.frankenphp_request_shutdown()
+	}()
+
+	return w
+}
+
+//export go_frankenphp_handle_request
+func go_frankenphp_handle_request(wh C.uintptr_t, previousRequest C.uintptr_t) bool {
+	if previousRequest != 0 {
+		pr := cgo.Handle(previousRequest).Value().(*http.Request)
+		pfc := pr.Context().Value(FrankenPHPContextKey).(*FrankenPHPContext)
+		close(pfc.done)
+	}
+
+	w := cgo.Handle(wh).Value().(*worker)
+	C.frankenphp_clean_server_context()
+
+	w.pool.Put(w)
+
+	// block until a new request comes
+	r, ok := <-w.in
+
+	// channel closed, server is shutting down
+	if !ok {
+		return false
+	}
+
+	if err := updateServerContext(r); err != nil {
+		// Unexpected error
+		log.Print(err)
+
+		return false
+	}
+
+	return true
+}
+
 //export go_ub_write
-func go_ub_write(wh C.uintptr_t, cString *C.char, length C.int) C.size_t {
-	w := cgo.Handle(wh).Value().(http.ResponseWriter)
-	i, _ := w.Write([]byte(C.GoStringN(cString, length)))
+func go_ub_write(rh C.uintptr_t, cString *C.char, length C.int) C.size_t {
+	r := cgo.Handle(rh).Value().(*http.Request)
+	fc := r.Context().Value(FrankenPHPContextKey).(*FrankenPHPContext)
+
+	i, _ := fc.responseWriter.Write([]byte(C.GoStringN(cString, length)))
 
 	return C.size_t(i)
 }
@@ -217,8 +283,9 @@ func go_register_variables(rh C.uintptr_t, trackVarsArray *C.zval) {
 }
 
 //export go_add_header
-func go_add_header(wh C.uintptr_t, cString *C.char, length C.int) {
-	w := cgo.Handle(wh).Value().(http.ResponseWriter)
+func go_add_header(rh C.uintptr_t, cString *C.char, length C.int) {
+	r := cgo.Handle(rh).Value().(*http.Request)
+	fc := r.Context().Value(FrankenPHPContextKey).(*FrankenPHPContext)
 
 	parts := strings.SplitN(C.GoStringN(cString, length), ": ", 2)
 	if len(parts) != 2 {
@@ -227,13 +294,15 @@ func go_add_header(wh C.uintptr_t, cString *C.char, length C.int) {
 		return
 	}
 
-	w.Header().Add(parts[0], parts[1])
+	fc.responseWriter.Header().Add(parts[0], parts[1])
 }
 
 //export go_write_header
-func go_write_header(wh C.uintptr_t, status C.int) {
-	w := cgo.Handle(wh).Value().(http.ResponseWriter)
-	w.WriteHeader(int(status))
+func go_write_header(rh C.uintptr_t, status C.int) {
+	r := cgo.Handle(rh).Value().(*http.Request)
+	fc := r.Context().Value(FrankenPHPContextKey).(*FrankenPHPContext)
+
+	fc.responseWriter.WriteHeader(int(status))
 }
 
 //export go_read_post
@@ -247,6 +316,7 @@ func go_read_post(rh C.uintptr_t, cBuf *C.char, countBytes C.size_t) C.size_t {
 	}
 
 	if readBytes != 0 {
+		//todo: memory leak?
 		C.memcpy(unsafe.Pointer(cBuf), unsafe.Pointer(&p[0]), C.size_t(readBytes))
 	}
 
@@ -274,7 +344,7 @@ func go_read_cookies(rh C.uintptr_t) *C.char {
 }
 
 //export go_clean_server_context
-func go_clean_server_context(wh C.uintptr_t, rh C.uintptr_t) {
-	cgo.Handle(wh).Delete()
+func go_clean_server_context(rh C.uintptr_t) {
+
 	cgo.Handle(rh).Delete()
 }
