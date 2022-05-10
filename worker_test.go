@@ -16,8 +16,8 @@ func TestWorker(t *testing.T) {
 	defer frankenphp.Shutdown()
 
 	handler := func(w http.ResponseWriter, r *http.Request) {
-		//assert.Nil(t, frankenphp.WorkerHandleRequest(w, setRequestContext(t, r)))
-		assert.Nil(t, frankenphp.ExecuteScript(w, setRequestContext(t, r)))
+		assert.Nil(t, frankenphp.WorkerHandleRequest(w, setRequestContext(t, r)))
+		//assert.Nil(t, frankenphp.ExecuteScript(w, setRequestContext(t, r)))
 	}
 
 	formData := url.Values{"baz": {"bat"}}
@@ -30,5 +30,15 @@ func TestWorker(t *testing.T) {
 	body, _ := io.ReadAll(resp.Body)
 
 	assert.Contains(t, string(body), "'foo' => 'bar'")
-	assert.Contains(t, string(body), "'baz' => 'bat'")
+	//assert.Contains(t, string(body), "'baz' => 'bat'")
+
+	req2 := httptest.NewRequest("GET", "http://example.com/worker.php?foo2=bar2", nil)
+	w2 := httptest.NewRecorder()
+	handler(w2, req2)
+
+	resp2 := w.Result()
+	body2, _ := io.ReadAll(resp2.Body)
+
+	assert.Contains(t, string(body2), "'foo2' => 'bar2'")
+
 }

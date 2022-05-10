@@ -14,6 +14,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"runtime"
 	"runtime/cgo"
 	"strconv"
 	"strings"
@@ -90,7 +91,8 @@ func Shutdown() {
 	}
 
 	workers.Range(func(k, v interface{}) bool {
-		close(v.(*worker).in)
+		// FIXME: sync.Pool() isn't the appropriate data structure here, as we need to be able to close the channels at shutdown
+		//close(... (*worker).in)
 		workers.Delete(k)
 
 		return true
@@ -102,11 +104,11 @@ func Shutdown() {
 
 /* Create a pool of request handlers
 php_output_activate()
-		// initialize global variables
-		PG(header_is_being_sent) = 0;
-		PG(connection_status) = PHP_CONNECTION_NORMAL;
+// initialize global variables
+PG(header_is_being_sent) = 0;
+PG(connection_status) = PHP_CONNECTION_NORMAL;
 
-		php_hash_environment()
+php_hash_environment()
 */
 
 func updateServerContext(request *http.Request) error {
@@ -173,6 +175,9 @@ func ExecuteScript(responseWriter http.ResponseWriter, request *http.Request) er
 		}
 	}
 
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
+
 	if C.frankenphp_create_server_context(0) < 0 {
 		return fmt.Errorf("error during request context creation")
 	}
@@ -233,6 +238,9 @@ func go_frankenphp_handle_request(wh C.uintptr_t, previousRequest C.uintptr_t) b
 	if previousRequest != 0 {
 		pr := cgo.Handle(previousRequest).Value().(*http.Request)
 		pfc := pr.Context().Value(FrankenPHPContextKey).(*FrankenPHPContext)
+		if pfc == nil || pfc.done == nil {
+			panic("not in worker mode")
+		}
 		close(pfc.done)
 	}
 
@@ -255,6 +263,8 @@ func go_frankenphp_handle_request(wh C.uintptr_t, previousRequest C.uintptr_t) b
 
 		return false
 	}
+
+	C.frankenphp_reset_server_context()
 
 	return true
 }

@@ -17,9 +17,144 @@ typedef struct frankenphp_server_context {
 	char *cookie_data;
 } frankenphp_server_context;
 
+PHP_FUNCTION(frankenphp_handle_request) {
+	frankenphp_server_context *ctx = SG(server_context);
+
+	if (zend_parse_parameters_none() == FAILURE) RETURN_THROWS();
+
+	if (SG(server_context) != NULL) {
+		php_output_end_all();
+		php_header();
+	}
+
+	if (go_frankenphp_handle_request(ctx->worker, ctx->request)) {
+		RETURN_TRUE;
+	}
+
+	RETURN_FALSE;
+}
+
+// Adapted from php_request_startup()
+void frankenphp_reset_server_context() {
+	php_output_activate();
+	PG(header_is_being_sent) = 0;
+	PG(connection_status) = PHP_CONNECTION_NORMAL;
+
+	if (PG(output_handler) && PG(output_handler)[0]) {
+		zval oh;
+
+		ZVAL_STRING(&oh, PG(output_handler));
+		php_output_start_user(&oh, 0, PHP_OUTPUT_HANDLER_STDFLAGS);
+		zval_ptr_dtor(&oh);
+	} else if (PG(output_buffering)) {
+		php_output_start_user(NULL, PG(output_buffering) > 1 ? PG(output_buffering) : 0, PHP_OUTPUT_HANDLER_STDFLAGS);
+	} else if (PG(implicit_flush)) {
+		php_output_set_implicit_flush(1);
+	}
+
+	php_hash_environment();
+}
+
+static const zend_function_entry frankenphp_ext_functions[] = {
+    PHP_FE(frankenphp_handle_request, NULL)
+    PHP_FE_END
+};
+
+static zend_module_entry frankenphp_module = {
+    STANDARD_MODULE_HEADER,
+    "frankenphp",
+    frankenphp_ext_functions,    /* function table */
+    NULL,  					     /* initialization */
+    NULL,                        /* shutdown */
+    NULL,                        /* request initialization */
+    NULL,                        /* request shutdown */
+    NULL,                        /* information */
+    "dev",
+    STANDARD_MODULE_PROPERTIES
+};
+
+void frankenphp_clean_server_context() {
+	frankenphp_server_context *ctx = SG(server_context);
+	if (ctx == NULL) return;
+
+	sapi_request_info ri = SG(request_info);
+	efree(ri.auth_password);
+	efree(ri.auth_user);
+	free((char *) ri.request_method);
+	free(ri.query_string);
+	free((char *) ri.content_type);
+	free(ri.path_translated);
+	free(ri.request_uri);
+
+	if (ctx->request != 0) go_clean_server_context(ctx->request);
+}
+
+void frankenphp_request_shutdown()
+{
+	php_request_shutdown(NULL);
+
+	frankenphp_server_context *ctx = SG(server_context);
+
+	free(ctx->cookie_data);
+	frankenphp_clean_server_context();
+
+	efree(ctx);
+	SG(server_context) = NULL;
+}
+
+// set worker to 0 if not in worker mode
+int frankenphp_create_server_context(uintptr_t worker)
+{
+	frankenphp_server_context *ctx;
+
+	(void) ts_resource(0);
+
+	ctx = emalloc(sizeof(frankenphp_server_context));
+	if (ctx == NULL) {
+		return FAILURE;
+	}
+
+	ctx->worker = worker;
+	ctx->request = 0;
+
+	SG(server_context) = ctx;
+
+	return SUCCESS;
+}
+
+void frankenphp_update_server_context(
+	uintptr_t request,
+
+	const char *request_method,
+	char *query_string,
+	zend_long content_length,
+	char *path_translated,
+	char *request_uri,
+	const char *content_type,
+	char *auth_user,
+	char *auth_password,
+	int proto_num
+) {
+	frankenphp_server_context *ctx = SG(server_context);
+
+	ctx->request = request;
+
+	SG(request_info).auth_password = auth_password == NULL ? NULL : estrdup(auth_password);
+	free(auth_password);
+	SG(request_info).auth_user = auth_user == NULL ? NULL : estrdup(auth_user);
+	free(auth_user);
+	SG(request_info).request_method = request_method;
+	SG(request_info).query_string = query_string;
+	SG(request_info).content_type = content_type;
+	SG(request_info).content_length = content_length;
+	SG(request_info).path_translated = path_translated;
+	SG(request_info).request_uri = request_uri;
+	SG(request_info).proto_num = proto_num;
+}
+
 static int frankenphp_startup(sapi_module_struct *sapi_module)
 {
-	return php_module_startup(sapi_module, NULL, 0);
+	return php_module_startup(sapi_module, &frankenphp_module, 1);
 }
 
 static int frankenphp_deactivate(void)
@@ -105,7 +240,7 @@ static void frankenphp_log_message(const char *message, int syslog_type_int)
 	// TODO: call Go logger
 }
 
-sapi_module_struct frankenphp_module = {
+sapi_module_struct frankenphp_sapi_module = {
 	"frankenphp",                       /* name */
 	"FrankenPHP", 						/* pretty name */
 
@@ -144,9 +279,9 @@ int frankenphp_init() {
 
     php_tsrm_startup();
     zend_signal_startup();
-    sapi_startup(&frankenphp_module);
+    sapi_startup(&frankenphp_sapi_module);
 
-	if (frankenphp_module.startup(&frankenphp_module) == FAILURE) {
+	if (frankenphp_sapi_module.startup(&frankenphp_sapi_module) == FAILURE) {
 		return FAILURE;
 	}
 
@@ -188,100 +323,4 @@ int frankenphp_execute_script(const char* file_name)
 	} zend_end_try();
 
 	return status;
-}
-
-void frankenphp_clean_server_context() {
-	frankenphp_server_context *ctx = SG(server_context);
-	if (ctx == NULL) return;
-
-	sapi_request_info ri = SG(request_info);
-	efree(ri.auth_password);
-	efree(ri.auth_user);
-	free((char *) ri.request_method);
-	free(ri.query_string);
-	free((char *) ri.content_type);
-	free(ri.path_translated);
-	free(ri.request_uri);
-
-	if (ctx->request != 0) go_clean_server_context(ctx->request);
-}
-
-void frankenphp_request_shutdown()
-{
-	php_request_shutdown(NULL);
-
-	frankenphp_server_context *ctx = SG(server_context);
-
-	free(ctx->cookie_data);
-	frankenphp_clean_server_context();
-
-	efree(ctx);
-	SG(server_context) = NULL;
-}
-
-// set worker to 0 if not in worker mode
-int frankenphp_create_server_context(uintptr_t worker)
-{
-	frankenphp_server_context *ctx;
-
-	(void) ts_resource(0);
-
-	ctx = emalloc(sizeof(frankenphp_server_context));
-	if (ctx == NULL) {
-		return FAILURE;
-	}
-
-	ctx->worker = worker;
-	ctx->request = 0;
-
-	SG(server_context) = ctx;
-
-	return SUCCESS;
-}
-
-void frankenphp_update_server_context(
-	uintptr_t request,
-
-	const char *request_method,
-	char *query_string,
-	zend_long content_length,
-	char *path_translated,
-	char *request_uri,
-	const char *content_type,
-	char *auth_user,
-	char *auth_password,
-	int proto_num
-) {
-	frankenphp_server_context *ctx = SG(server_context);
-
-	ctx->request = request;
-
-	SG(request_info).auth_password = auth_password == NULL ? NULL : estrdup(auth_password);
-	free(auth_password);
-	SG(request_info).auth_user = auth_user == NULL ? NULL : estrdup(auth_user);
-	free(auth_user);
-	SG(request_info).request_method = request_method;
-	SG(request_info).query_string = query_string;
-	SG(request_info).content_type = content_type;
-	SG(request_info).content_length = content_length;
-	SG(request_info).path_translated = path_translated;
-	SG(request_info).request_uri = request_uri;
-	SG(request_info).proto_num = proto_num;
-}
-
-PHP_FUNCTION(frankenphp_handle_request) {
-	frankenphp_server_context *ctx = SG(server_context);
-
-	if (zend_parse_parameters_none() == FAILURE) RETURN_THROWS();
-
-	if (SG(server_context) != NULL) {
-		php_output_end_all();
-		php_header();
-	}
-
-	if (go_frankenphp_handle_request(ctx->worker, ctx->request)) {
-		RETURN_TRUE;
-	}
-
-	RETURN_FALSE;
 }

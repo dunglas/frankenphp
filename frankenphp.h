@@ -21,6 +21,7 @@ void frankenphp_update_server_context(
 	int proto_num
 );
 void frankenphp_clean_server_context();
+void frankenphp_reset_server_context();
 int frankenphp_request_startup();
 int frankenphp_execute_script(const char* file_name);
 void frankenphp_request_shutdown();

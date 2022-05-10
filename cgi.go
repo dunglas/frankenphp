@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-// buildEnv returns a set of CGI environment variables for the request.
+// populateEnv returns a set of CGI environment variables for the request.
 //
 // TODO: handle this case https://github.com/caddyserver/caddy/issues/3718
 // Inspired by https://github.com/caddyserver/caddy/blob/master/modules/caddyhttp/reverseproxy/fastcgi/fastcgi.go
