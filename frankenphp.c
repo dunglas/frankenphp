@@ -17,46 +17,29 @@ typedef struct frankenphp_server_context {
 	char *cookie_data;
 } frankenphp_server_context;
 
+ZEND_BEGIN_ARG_INFO_EX(arginfo_frankenphp_handle_request, 0, 0, 1)
+    ZEND_ARG_CALLABLE_INFO(false, handler, false)
+ZEND_END_ARG_INFO()
+
 PHP_FUNCTION(frankenphp_handle_request) {
-	frankenphp_server_context *ctx = SG(server_context);
+	zend_fcall_info fci;
+	zend_fcall_info_cache fcc;
 
-	if (zend_parse_parameters_none() == FAILURE) RETURN_THROWS();
-
-	if (SG(server_context) != NULL) {
-		php_output_end_all();
-		php_header();
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "f", &fci, &fcc) == FAILURE) {
+		RETURN_THROWS();
 	}
 
-	if (go_frankenphp_handle_request(ctx->worker, ctx->request)) {
+	frankenphp_server_context *ctx = SG(server_context);
+
+	if (go_frankenphp_handle_request(ctx->worker)) {
 		RETURN_TRUE;
 	}
 
 	RETURN_FALSE;
 }
 
-// Adapted from php_request_startup()
-void frankenphp_reset_server_context() {
-	php_output_activate();
-	PG(header_is_being_sent) = 0;
-	PG(connection_status) = PHP_CONNECTION_NORMAL;
-
-	if (PG(output_handler) && PG(output_handler)[0]) {
-		zval oh;
-
-		ZVAL_STRING(&oh, PG(output_handler));
-		php_output_start_user(&oh, 0, PHP_OUTPUT_HANDLER_STDFLAGS);
-		zval_ptr_dtor(&oh);
-	} else if (PG(output_buffering)) {
-		php_output_start_user(NULL, PG(output_buffering) > 1 ? PG(output_buffering) : 0, PHP_OUTPUT_HANDLER_STDFLAGS);
-	} else if (PG(implicit_flush)) {
-		php_output_set_implicit_flush(1);
-	}
-
-	php_hash_environment();
-}
-
 static const zend_function_entry frankenphp_ext_functions[] = {
-    PHP_FE(frankenphp_handle_request, NULL)
+    PHP_FE(frankenphp_handle_request, arginfo_frankenphp_handle_request)
     PHP_FE_END
 };
 

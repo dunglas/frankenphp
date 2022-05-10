@@ -1,11 +1,8 @@
 <?php
 
-//echo 'Worker started...'.PHP_EOL;
+do {
+    $ok = frankenphp_handle_request(function (RequestWriter $rw, Request $r): void {
 
-while (frankenphp_handle_request()) {
-    echo 'Handling request...'.PHP_EOL;
-
-    include 'super-globals.php';
-}
-
-//echo 'Worker finishing...'.PHP_EOL;
+    });
+    echo 'Hey';
+} while ($ok);

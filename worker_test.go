@@ -29,16 +29,19 @@ func TestWorker(t *testing.T) {
 	resp := w.Result()
 	body, _ := io.ReadAll(resp.Body)
 
-	assert.Contains(t, string(body), "'foo' => 'bar'")
+	t.Log(string(body))
+
+	assert.Contains(t, string(body), "Hello from Go")
 	//assert.Contains(t, string(body), "'baz' => 'bat'")
 
 	req2 := httptest.NewRequest("GET", "http://example.com/worker.php?foo2=bar2", nil)
 	w2 := httptest.NewRecorder()
 	handler(w2, req2)
 
-	resp2 := w.Result()
+	resp2 := w2.Result()
 	body2, _ := io.ReadAll(resp2.Body)
 
-	assert.Contains(t, string(body2), "'foo2' => 'bar2'")
+	t.Log(string(body2))
 
+	assert.Contains(t, string(body2), "Hello from Go")
 }

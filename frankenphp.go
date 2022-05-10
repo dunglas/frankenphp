@@ -102,15 +102,6 @@ func Shutdown() {
 	atomic.StoreInt32(&started, 0)
 }
 
-/* Create a pool of request handlers
-php_output_activate()
-// initialize global variables
-PG(header_is_being_sent) = 0;
-PG(connection_status) = PHP_CONNECTION_NORMAL;
-
-php_hash_environment()
-*/
-
 func updateServerContext(request *http.Request) error {
 	authPassword, err := populateEnv(request)
 	if err != nil {
@@ -234,37 +225,23 @@ func newWorker(fileName string, pool sync.Pool) *worker {
 }
 
 //export go_frankenphp_handle_request
-func go_frankenphp_handle_request(wh C.uintptr_t, previousRequest C.uintptr_t) bool {
-	if previousRequest != 0 {
-		pr := cgo.Handle(previousRequest).Value().(*http.Request)
-		pfc := pr.Context().Value(FrankenPHPContextKey).(*FrankenPHPContext)
-		if pfc == nil || pfc.done == nil {
-			panic("not in worker mode")
-		}
-		close(pfc.done)
+func go_frankenphp_handle_request(wh C.uintptr_t) bool {
+	w := cgo.Handle(wh).Value().(*worker)
+	r, ok := <-w.in
+	if !ok {
+		// channel closed, server is shutting down
+		return false
 	}
 
-	w := cgo.Handle(wh).Value().(*worker)
-	C.frankenphp_clean_server_context()
+	fc := r.Context().Value(FrankenPHPContextKey).(*FrankenPHPContext)
+	if fc == nil || fc.responseWriter == nil {
+		panic("not in worker mode")
+	}
+
+	fc.responseWriter.Write([]byte(fmt.Sprintf("Hello from Go: %#v", r)))
+	close(fc.done)
 
 	w.pool.Put(w)
-
-	// block until a new request comes
-	r, ok := <-w.in
-
-	// channel closed, server is shutting down
-	if !ok {
-		return false
-	}
-
-	if err := updateServerContext(r); err != nil {
-		// Unexpected error
-		log.Print(err)
-
-		return false
-	}
-
-	C.frankenphp_reset_server_context()
 
 	return true
 }
