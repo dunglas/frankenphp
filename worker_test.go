@@ -13,6 +13,7 @@ import (
 )
 
 func TestWorker(t *testing.T) {
+	t.Skip()
 	defer frankenphp.Shutdown()
 
 	handler := func(w http.ResponseWriter, r *http.Request) {

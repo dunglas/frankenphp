@@ -15,7 +15,7 @@ docker build -t frankenphp .
 
 #### Install PHP
 
-Most distributions doesn't provide packages containing ZTS builds of PHP.
+Most distributions don't provide packages containing ZTS builds of PHP.
 Because the Go HTTP server uses goroutines, a ZTS build is needed.
 
 Start by [downloading the latest version of PHP](https://www.php.net/downloads.php),
@@ -24,40 +24,29 @@ then follow the instructions according to your operating system.
 ##### Linux
 
 ```
-./configure --enable-embed --enable-zts
-make
+./configure \
+    --enable-embed=static \
+    --enable-zts
+make -j6
 make install
 ```
 
 ##### Mac
 
+The instructions to build on Mac and Linux are similar.
+However, on Mac, you have to use the [Homebrew](https://brew.sh/) package manager to install `libiconv` and `bison`.
+You also need to slightly tweak the configuration.
+
 ```
-brew install libiconv
+brew install libiconv bison
+echo 'export PATH="/opt/homebrew/opt/bison/bin:$PATH"' >> ~/.zshrc
 ./configure \
-    --enable-zts \
     --enable-embed=static \
+    --enable-zts \
     --with-iconv=/opt/homebrew/opt/libiconv/ \
     --without-pcre-jit
-make
+make -j6
 make install
-```
-
-Then, you also need to build a Mac-compatible PHP shared library.
-As the standard PHP distribution doesn't provide one, you need to do a few extra steps:
-
-Start by adding those lines at the end of the `Makefile`:
-
-```
-libs/libphp.dylib: $(PHP_GLOBAL_OBJS) $(PHP_SAPI_OBJS)
-	$(LIBTOOL) --mode=link $(CC) -dynamiclib $(LIBPHP_CFLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) -rpath $(phptempdir) $(EXTRA_LDFLAGS) $(LDFLAGS) $(PHP_RPATHS) $(PHP_GLOBAL_OBJS) $(PHP_SAPI_OBJS) $(EXTRA_LIBS) $(ZEND_EXTRA_LIBS) -o $@
-	-@$(LIBTOOL) --silent --mode=install cp $@ $(phptempdir)/$@ >/dev/null 2>&1
-```
-
-Then run:
-
-```
-make libs/libphp.dylib
-sudo cp libs/libphp.dylib /usr/local/lib/
 ```
 
 #### Compile the Go App

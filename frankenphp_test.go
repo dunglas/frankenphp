@@ -188,3 +188,20 @@ func TestCookies(t *testing.T) {
 
 	assert.Contains(t, string(body), "'foo' => 'bar'")
 }
+
+func TestPhpInfo(t *testing.T) {
+	defer frankenphp.Shutdown()
+
+	handler := func(w http.ResponseWriter, r *http.Request) {
+		assert.Nil(t, frankenphp.ExecuteScript(w, setRequestContext(t, r)))
+	}
+
+	req := httptest.NewRequest("GET", "http://example.com/phpinfo.php", nil)
+	w := httptest.NewRecorder()
+	handler(w, req)
+
+	resp := w.Result()
+	body, _ := io.ReadAll(resp.Body)
+
+	assert.Contains(t, string(body), "frankenphp")
+}

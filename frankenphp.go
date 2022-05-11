@@ -2,7 +2,7 @@ package frankenphp
 
 // #cgo CFLAGS: -Wall -Wno-unused-variable
 // #cgo CFLAGS: -I/usr/local/include/php -I/usr/local/include/php/Zend -I/usr/local/include/php/TSRM -I/usr/local/include/php/main
-// #cgo LDFLAGS: -L/usr/local/lib -lphp
+// #cgo LDFLAGS: -L/usr/local/lib -L/opt/homebrew/opt/libiconv/lib -lphp -lxml2 -liconv -lresolv -lsqlite3
 // #include <stdlib.h>
 // #include <stdint.h>
 // #include "php_variables.h"
@@ -24,6 +24,7 @@ import (
 )
 
 var started int32
+var shutdown chan interface{}
 
 type ContextKey string
 
@@ -79,6 +80,8 @@ func Startup() error {
 	if C.frankenphp_init() < 0 {
 		return fmt.Errorf(`ZTS is not enabled, recompile PHP using the "--enable-zts" configuration option`)
 	}
+
+	shutdown = make(chan interface{})
 	atomic.StoreInt32(&started, 1)
 
 	return nil
@@ -90,13 +93,15 @@ func Shutdown() {
 		return
 	}
 
-	workers.Range(func(k, v interface{}) bool {
-		// FIXME: sync.Pool() isn't the appropriate data structure here, as we need to be able to close the channels at shutdown
-		//close(... (*worker).in)
-		workers.Delete(k)
+	close(shutdown)
+	// Give some time to workers to finish gracefuly
+	//time.Sleep(1 * time.Second)
+	/*
+		workers.Range(func(k, v interface{}) bool {
+			workers.Delete(k)
 
-		return true
-	})
+			return true
+		})*/
 
 	C.frankenphp_shutdown()
 	atomic.StoreInt32(&started, 0)
@@ -203,6 +208,9 @@ func newWorker(fileName string, pool sync.Pool) *worker {
 	wh := cgo.NewHandle(w)
 
 	go func() {
+		runtime.LockOSThread()
+		defer runtime.UnlockOSThread()
+
 		if C.frankenphp_create_server_context(C.uintptr_t(wh)) < 0 {
 			panic(fmt.Errorf("error during request context creation"))
 		}
@@ -227,21 +235,23 @@ func newWorker(fileName string, pool sync.Pool) *worker {
 //export go_frankenphp_handle_request
 func go_frankenphp_handle_request(wh C.uintptr_t) bool {
 	w := cgo.Handle(wh).Value().(*worker)
-	r, ok := <-w.in
-	if !ok {
+
+	select {
+	case <-shutdown:
 		// channel closed, server is shutting down
 		return false
+
+	case r := <-w.in:
+		fc := r.Context().Value(FrankenPHPContextKey).(*FrankenPHPContext)
+		if fc == nil || fc.responseWriter == nil {
+			panic("not in worker mode")
+		}
+
+		fc.responseWriter.Write([]byte(fmt.Sprintf("Hello from Go: %#v", r)))
+		close(fc.done)
+
+		w.pool.Put(w)
 	}
-
-	fc := r.Context().Value(FrankenPHPContextKey).(*FrankenPHPContext)
-	if fc == nil || fc.responseWriter == nil {
-		panic("not in worker mode")
-	}
-
-	fc.responseWriter.Write([]byte(fmt.Sprintf("Hello from Go: %#v", r)))
-	close(fc.done)
-
-	w.pool.Put(w)
 
 	return true
 }
@@ -332,6 +342,5 @@ func go_read_cookies(rh C.uintptr_t) *C.char {
 
 //export go_clean_server_context
 func go_clean_server_context(rh C.uintptr_t) {
-
 	cgo.Handle(rh).Delete()
 }

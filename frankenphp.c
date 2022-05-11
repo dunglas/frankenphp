@@ -81,7 +81,7 @@ void frankenphp_request_shutdown()
 	free(ctx->cookie_data);
 	frankenphp_clean_server_context();
 
-	efree(ctx);
+	free(ctx);
 	SG(server_context) = NULL;
 }
 
@@ -92,7 +92,7 @@ int frankenphp_create_server_context(uintptr_t worker)
 
 	(void) ts_resource(0);
 
-	ctx = emalloc(sizeof(frankenphp_server_context));
+	ctx = malloc(sizeof(frankenphp_server_context));
 	if (ctx == NULL) {
 		return FAILURE;
 	}
@@ -137,7 +137,7 @@ void frankenphp_update_server_context(
 
 static int frankenphp_startup(sapi_module_struct *sapi_module)
 {
-	return php_module_startup(sapi_module, &frankenphp_module, 1);
+	return php_module_startup(sapi_module, &frankenphp_module);
 }
 
 static int frankenphp_deactivate(void)
@@ -264,11 +264,7 @@ int frankenphp_init() {
     zend_signal_startup();
     sapi_startup(&frankenphp_sapi_module);
 
-	if (frankenphp_sapi_module.startup(&frankenphp_sapi_module) == FAILURE) {
-		return FAILURE;
-	}
-
-    return SUCCESS;
+	return frankenphp_sapi_module.startup(&frankenphp_sapi_module);
 }
 
 void frankenphp_shutdown()
@@ -287,7 +283,7 @@ int frankenphp_request_startup()
 	php_request_shutdown(NULL);
 	frankenphp_server_context *ctx = SG(server_context);
 	SG(server_context) = NULL;
-	efree(ctx);
+	free(ctx);
 
 	return FAILURE;
 }
