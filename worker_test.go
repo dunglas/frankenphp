@@ -13,9 +13,6 @@ import (
 )
 
 func TestWorker(t *testing.T) {
-	t.Skip()
-	defer frankenphp.Shutdown()
-
 	handler := func(w http.ResponseWriter, r *http.Request) {
 		assert.Nil(t, frankenphp.WorkerHandleRequest(w, setRequestContext(t, r)))
 		//assert.Nil(t, frankenphp.ExecuteScript(w, setRequestContext(t, r)))
@@ -45,4 +42,7 @@ func TestWorker(t *testing.T) {
 	t.Log(string(body2))
 
 	assert.Contains(t, string(body2), "Hello from Go")
+
+	frankenphp.Shutdown()
+
 }

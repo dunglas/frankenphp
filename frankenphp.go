@@ -20,6 +20,7 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+	"time"
 	"unsafe"
 )
 
@@ -77,7 +78,10 @@ func Startup() error {
 		return nil
 	}
 
+	runtime.LockOSThread()
+
 	if C.frankenphp_init() < 0 {
+		runtime.UnlockOSThread()
 		return fmt.Errorf(`ZTS is not enabled, recompile PHP using the "--enable-zts" configuration option`)
 	}
 
@@ -94,16 +98,23 @@ func Shutdown() {
 	}
 
 	close(shutdown)
-	// Give some time to workers to finish gracefuly
-	//time.Sleep(1 * time.Second)
-	/*
-		workers.Range(func(k, v interface{}) bool {
-			workers.Delete(k)
 
-			return true
-		})*/
+	var waitForWorkers bool
+	workers.Range(func(k, v interface{}) bool {
+		waitForWorkers = true
+		workers.Delete(k)
+
+		return true
+	})
+
+	if waitForWorkers {
+		// Give some time to workers to finish gracefuly
+		time.Sleep(1 * time.Second)
+	}
 
 	C.frankenphp_shutdown()
+	runtime.UnlockOSThread()
+
 	atomic.StoreInt32(&started, 0)
 }
 

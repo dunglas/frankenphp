@@ -74,9 +74,10 @@ void frankenphp_clean_server_context() {
 
 void frankenphp_request_shutdown()
 {
-	php_request_shutdown(NULL);
+	php_request_shutdown((void *) 0);
 
 	frankenphp_server_context *ctx = SG(server_context);
+
 
 	free(ctx->cookie_data);
 	frankenphp_clean_server_context();
@@ -280,7 +281,7 @@ int frankenphp_request_startup()
 		return SUCCESS;
 	}
 
-	php_request_shutdown(NULL);
+	php_request_shutdown((void *) 0);
 	frankenphp_server_context *ctx = SG(server_context);
 	SG(server_context) = NULL;
 	free(ctx);
