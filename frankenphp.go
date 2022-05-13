@@ -2,7 +2,7 @@ package frankenphp
 
 // #cgo CFLAGS: -Wall -Wno-unused-variable
 // #cgo CFLAGS: -I/usr/local/include/php -I/usr/local/include/php/Zend -I/usr/local/include/php/TSRM -I/usr/local/include/php/main
-// #cgo LDFLAGS: -L/usr/local/lib -L/opt/homebrew/opt/libiconv/lib -lphp -lxml2 -liconv -lresolv -lsqlite3
+// #cgo LDFLAGS: -L/usr/local/lib -L/opt/homebrew/opt/libiconv/lib -L/usr/lib -lphp -lxml2 -liconv -lresolv -lsqlite3
 // #include <stdlib.h>
 // #include <stdint.h>
 // #include "php_variables.h"
@@ -239,14 +239,14 @@ func newWorker(fileName string, pool sync.Pool) *worker {
 	return w
 }
 
-//export go_frankenphp_handle_request
-func go_frankenphp_handle_request(wh C.uintptr_t) bool {
+//export go_frankenphp_worker_handle_request_start
+func go_frankenphp_worker_handle_request_start(wh C.uintptr_t) C.uintptr_t {
 	w := cgo.Handle(wh).Value().(*worker)
 
 	select {
 	case <-shutdown:
 		// channel closed, server is shutting down
-		return false
+		return 0
 
 	case r := <-w.in:
 		fc := r.Context().Value(FrankenPHPContextKey).(*FrankenPHPContext)
@@ -254,13 +254,23 @@ func go_frankenphp_handle_request(wh C.uintptr_t) bool {
 			panic("not in worker mode")
 		}
 
-		fc.responseWriter.Write([]byte(fmt.Sprintf("Hello from Go: %#v", r)))
-		close(fc.done)
+		//fc.responseWriter.Write([]byte(fmt.Sprintf("Hello from Go: %#v", r)))
 
-		w.pool.Put(w)
+		return C.uintptr_t(cgo.NewHandle(r))
 	}
+}
 
-	return true
+//export go_frankenphp_worker_handle_request_end
+func go_frankenphp_worker_handle_request_end(wh, rh C.uintptr_t) {
+	rHandle := cgo.Handle(rh)
+	r := rHandle.Value().(*http.Request)
+	fc := r.Context().Value(FrankenPHPContextKey).(*FrankenPHPContext)
+
+	rHandle.Delete()
+	close(fc.done)
+
+	w := cgo.Handle(wh).Value().(*worker)
+	w.pool.Put(w)
 }
 
 //export go_ub_write

@@ -31,11 +31,42 @@ PHP_FUNCTION(frankenphp_handle_request) {
 
 	frankenphp_server_context *ctx = SG(server_context);
 
-	if (go_frankenphp_handle_request(ctx->worker)) {
-		RETURN_TRUE;
+	uintptr_t request = go_frankenphp_worker_handle_request_start(ctx->worker);
+	if (!request) {
+		RETURN_FALSE;
 	}
 
-	RETURN_FALSE;
+	// Call the PHP func
+	zval retval = {0};
+	fci.size = sizeof fci;
+	fci.retval = &retval;
+
+	zend_call_function(&fci, &fcc);
+
+	go_frankenphp_worker_handle_request_end(ctx->worker, request);
+
+	RETURN_TRUE;
+}
+
+// Adapted from php_request_startup()
+void frankenphp_worker_reset_server_context() {
+       php_output_activate();
+       PG(header_is_being_sent) = 0;
+       PG(connection_status) = PHP_CONNECTION_NORMAL;
+
+       if (PG(output_handler) && PG(output_handler)[0]) {
+               zval oh;
+
+               ZVAL_STRING(&oh, PG(output_handler));
+               php_output_start_user(&oh, 0, PHP_OUTPUT_HANDLER_STDFLAGS);
+               zval_ptr_dtor(&oh);
+       } else if (PG(output_buffering)) {
+               php_output_start_user(NULL, PG(output_buffering) > 1 ? PG(output_buffering) : 0, PHP_OUTPUT_HANDLER_STDFLAGS);
+       } else if (PG(implicit_flush)) {
+               php_output_set_implicit_flush(1);
+       }
+
+       php_hash_environment();
 }
 
 static const zend_function_entry frankenphp_ext_functions[] = {
@@ -94,9 +125,7 @@ int frankenphp_create_server_context(uintptr_t worker)
 
 	// todo: use a pool
 	ctx = malloc(sizeof(frankenphp_server_context));
-	if (ctx == NULL) {
-		return FAILURE;
-	}
+	if (ctx == NULL) return FAILURE;
 
 	ctx->request = 0;
 	ctx->worker = worker;

@@ -1,8 +1,7 @@
 <?php
 
 do {
-    $ok = frankenphp_handle_request(function (RequestWriter $rw, Request $r): void {
-
+    $ok = frankenphp_handle_request(function (/*RequestWriter $rw, Request $r*/): void {
+        echo 'Hey';
     });
-    echo 'Hey';
 } while ($ok);
