@@ -78,7 +78,6 @@ void frankenphp_request_shutdown()
 
 	frankenphp_server_context *ctx = SG(server_context);
 
-
 	free(ctx->cookie_data);
 	frankenphp_clean_server_context();
 
@@ -93,13 +92,15 @@ int frankenphp_create_server_context(uintptr_t worker)
 
 	(void) ts_resource(0);
 
+	// todo: use a pool
 	ctx = malloc(sizeof(frankenphp_server_context));
 	if (ctx == NULL) {
 		return FAILURE;
 	}
 
-	ctx->worker = worker;
 	ctx->request = 0;
+	ctx->worker = worker;
+	ctx->cookie_data = NULL;
 
 	SG(server_context) = ctx;
 
@@ -138,7 +139,7 @@ void frankenphp_update_server_context(
 
 static int frankenphp_startup(sapi_module_struct *sapi_module)
 {
-	return php_module_startup(sapi_module, &frankenphp_module);
+	return php_module_startup(sapi_module, &frankenphp_module, 1);
 }
 
 static int frankenphp_deactivate(void)
@@ -200,7 +201,7 @@ static char* frankenphp_read_cookies(void)
 {
 	frankenphp_server_context* ctx = SG(server_context);
 
-	if (ctx->request == 0) return NULL;
+	if (ctx->request == 0) return "";
 
 	ctx->cookie_data = go_read_cookies(ctx->request);
 

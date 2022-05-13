@@ -33,9 +33,7 @@ func getWorker(fileName string) *worker {
 
 func WorkerHandleRequest(responseWriter http.ResponseWriter, request *http.Request) error {
 	if atomic.LoadInt32(&started) < 1 {
-		if err := Startup(); err != nil {
-			return err
-		}
+		panic("FrankenPHP isn't started, call frankenphp.Startup()")
 	}
 
 	// todo: refactor to not call populateEnv twice

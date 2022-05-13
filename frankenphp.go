@@ -73,29 +73,31 @@ func NewRequestWithContext(r *http.Request, documentRoot string) *http.Request {
 }
 
 // Startup starts the PHP engine.
+// Startup and Shutdown must be called in the same goroutine (ideally in the main function).
 func Startup() error {
 	if atomic.LoadInt32(&started) > 0 {
 		return nil
 	}
+	atomic.StoreInt32(&started, 1)
 
 	runtime.LockOSThread()
 
 	if C.frankenphp_init() < 0 {
-		runtime.UnlockOSThread()
 		return fmt.Errorf(`ZTS is not enabled, recompile PHP using the "--enable-zts" configuration option`)
 	}
 
 	shutdown = make(chan interface{})
-	atomic.StoreInt32(&started, 1)
 
 	return nil
 }
 
 // Shutdown stops the PHP engine.
+// Shutdown and Startup must be called in the same goroutine (ideally in the main function).
 func Shutdown() {
 	if atomic.LoadInt32(&started) < 1 {
 		return
 	}
+	atomic.StoreInt32(&started, 0)
 
 	close(shutdown)
 
@@ -113,9 +115,6 @@ func Shutdown() {
 	}
 
 	C.frankenphp_shutdown()
-	runtime.UnlockOSThread()
-
-	atomic.StoreInt32(&started, 0)
 }
 
 func updateServerContext(request *http.Request) error {
@@ -177,13 +176,11 @@ func updateServerContext(request *http.Request) error {
 
 func ExecuteScript(responseWriter http.ResponseWriter, request *http.Request) error {
 	if atomic.LoadInt32(&started) < 1 {
-		if err := Startup(); err != nil {
-			return err
-		}
+		panic("FrankenPHP isn't started, call frankenphp.Startup()")
 	}
 
 	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
+	// todo: check if it's ok or not to call runtime.UnlockOSThread() to reuse this thread
 
 	if C.frankenphp_create_server_context(0) < 0 {
 		return fmt.Errorf("error during request context creation")
@@ -220,14 +217,13 @@ func newWorker(fileName string, pool sync.Pool) *worker {
 
 	go func() {
 		runtime.LockOSThread()
-		defer runtime.UnlockOSThread()
 
 		if C.frankenphp_create_server_context(C.uintptr_t(wh)) < 0 {
 			panic(fmt.Errorf("error during request context creation"))
 		}
 
 		if C.frankenphp_request_startup() < 0 {
-			panic(fmt.Errorf("error during PHP request startup"))
+			panic("error during PHP request startup")
 		}
 
 		// todo: maybe could we allocate this only once
@@ -235,7 +231,7 @@ func newWorker(fileName string, pool sync.Pool) *worker {
 		defer C.free(unsafe.Pointer(cFileName))
 
 		if C.frankenphp_execute_script(cFileName) < 0 {
-			panic(fmt.Errorf("error during PHP script execution"))
+			panic("error during PHP script execution")
 		}
 		C.frankenphp_request_shutdown()
 	}()

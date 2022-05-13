@@ -4,6 +4,7 @@ import (
 	"context"
 	"io"
 	"net/http"
+	"net/http/cookiejar"
 	"net/http/httptest"
 	"net/url"
 	"os"
@@ -17,6 +18,9 @@ import (
 func TestStartup(t *testing.T) {
 	defer frankenphp.Shutdown()
 	assert.Nil(t, frankenphp.Startup())
+	frankenphp.Shutdown()
+
+	assert.Nil(t, frankenphp.Startup())
 }
 
 func setRequestContext(t *testing.T, r *http.Request) *http.Request {
@@ -27,6 +31,7 @@ func setRequestContext(t *testing.T, r *http.Request) *http.Request {
 }
 
 func TestHelloWorld(t *testing.T) {
+	frankenphp.Startup()
 	defer frankenphp.Shutdown()
 
 	handler := func(w http.ResponseWriter, r *http.Request) {
@@ -44,6 +49,7 @@ func TestHelloWorld(t *testing.T) {
 }
 
 func TestServerVariable(t *testing.T) {
+	frankenphp.Startup()
 	defer frankenphp.Shutdown()
 
 	handler := func(w http.ResponseWriter, r *http.Request) {
@@ -88,6 +94,7 @@ func TestServerVariable(t *testing.T) {
 }
 
 func TestPathInfo(t *testing.T) {
+	frankenphp.Startup()
 	defer frankenphp.Shutdown()
 
 	handler := func(w http.ResponseWriter, r *http.Request) {
@@ -114,6 +121,7 @@ func TestPathInfo(t *testing.T) {
 }
 
 func TestHeaders(t *testing.T) {
+	frankenphp.Startup()
 	defer frankenphp.Shutdown()
 
 	handler := func(w http.ResponseWriter, r *http.Request) {
@@ -134,6 +142,7 @@ func TestHeaders(t *testing.T) {
 }
 
 func TestInput(t *testing.T) {
+	frankenphp.Startup()
 	defer frankenphp.Shutdown()
 
 	handler := func(w http.ResponseWriter, r *http.Request) {
@@ -152,6 +161,7 @@ func TestInput(t *testing.T) {
 }
 
 func TestPostSuperGlobals(t *testing.T) {
+	frankenphp.Startup()
 	defer frankenphp.Shutdown()
 
 	handler := func(w http.ResponseWriter, r *http.Request) {
@@ -172,6 +182,7 @@ func TestPostSuperGlobals(t *testing.T) {
 }
 
 func TestCookies(t *testing.T) {
+	frankenphp.Startup()
 	defer frankenphp.Shutdown()
 
 	handler := func(w http.ResponseWriter, r *http.Request) {
@@ -189,7 +200,41 @@ func TestCookies(t *testing.T) {
 	assert.Contains(t, string(body), "'foo' => 'bar'")
 }
 
+func TestSession(t *testing.T) {
+	frankenphp.Startup()
+	defer frankenphp.Shutdown()
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Nil(t, frankenphp.ExecuteScript(w, setRequestContext(t, r)))
+	}))
+	defer ts.Close()
+
+	jar, err := cookiejar.New(&cookiejar.Options{})
+	if err != nil {
+		panic(err)
+	}
+
+	client := &http.Client{Jar: jar}
+
+	resp1, err := client.Get(ts.URL + "/session.php")
+	if err != nil {
+		panic(err)
+	}
+
+	body1, _ := io.ReadAll(resp1.Body)
+	assert.Equal(t, "Count: 0\n", string(body1))
+
+	resp2, err := client.Get(ts.URL + "/session.php")
+	if err != nil {
+		panic(err)
+	}
+
+	body2, _ := io.ReadAll(resp2.Body)
+	assert.Equal(t, "Count: 1\n", string(body2))
+}
+
 func TestPhpInfo(t *testing.T) {
+	frankenphp.Startup()
 	defer frankenphp.Shutdown()
 
 	handler := func(w http.ResponseWriter, r *http.Request) {

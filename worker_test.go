@@ -13,6 +13,9 @@ import (
 )
 
 func TestWorker(t *testing.T) {
+	frankenphp.Startup()
+	defer frankenphp.Shutdown()
+
 	handler := func(w http.ResponseWriter, r *http.Request) {
 		assert.Nil(t, frankenphp.WorkerHandleRequest(w, setRequestContext(t, r)))
 		//assert.Nil(t, frankenphp.ExecuteScript(w, setRequestContext(t, r)))
@@ -30,7 +33,6 @@ func TestWorker(t *testing.T) {
 	t.Log(string(body))
 
 	assert.Contains(t, string(body), "Hello from Go")
-	//assert.Contains(t, string(body), "'baz' => 'bat'")
 
 	req2 := httptest.NewRequest("GET", "http://example.com/worker.php?foo2=bar2", nil)
 	w2 := httptest.NewRecorder()
@@ -42,7 +44,4 @@ func TestWorker(t *testing.T) {
 	t.Log(string(body2))
 
 	assert.Contains(t, string(body2), "Hello from Go")
-
-	frankenphp.Shutdown()
-
 }
