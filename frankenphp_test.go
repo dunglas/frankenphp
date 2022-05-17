@@ -251,41 +251,39 @@ func testCookies(t *testing.T, scriptName string) {
 
 func TestSession_module(t *testing.T) { testSession(t, "") }
 func TestSession_worker(t *testing.T) {
-	t.Skip()
 	testSession(t, "session.php")
 }
 func testSession(t *testing.T, scriptName string) {
 	shutdown, handler, iterations := createTestHandler(t, scriptName)
 	defer shutdown()
 
+	ts := httptest.NewServer(http.HandlerFunc(handler))
+	defer ts.Close()
+
 	for i := 0; i < iterations; i++ {
-		func() {
-			ts := httptest.NewServer(http.HandlerFunc(handler))
-			defer ts.Close()
+		jar, err := cookiejar.New(&cookiejar.Options{})
+		if err != nil {
+			panic(err)
+		}
 
-			jar, err := cookiejar.New(&cookiejar.Options{})
-			if err != nil {
-				panic(err)
-			}
+		client := &http.Client{Jar: jar}
 
-			client := &http.Client{Jar: jar}
+		resp1, err := client.Get(ts.URL + "/session.php")
+		if err != nil {
+			panic(err)
+		}
 
-			resp1, err := client.Get(ts.URL + "/session.php")
-			if err != nil {
-				panic(err)
-			}
+		body1, _ := io.ReadAll(resp1.Body)
+		t.Log(string(body1))
+		assert.Equal(t, "Count: 0\n", string(body1))
 
-			body1, _ := io.ReadAll(resp1.Body)
-			assert.Equal(t, "Count: 0\n", string(body1))
+		resp2, err := client.Get(ts.URL + "/session.php")
+		if err != nil {
+			panic(err)
+		}
 
-			resp2, err := client.Get(ts.URL + "/session.php")
-			if err != nil {
-				panic(err)
-			}
-
-			body2, _ := io.ReadAll(resp2.Body)
-			assert.Equal(t, "Count: 1\n", string(body2))
-		}()
+		body2, _ := io.ReadAll(resp2.Body)
+		assert.Equal(t, "Count: 1\n", string(body2))
 	}
 }
 

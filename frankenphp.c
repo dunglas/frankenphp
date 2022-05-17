@@ -6,6 +6,7 @@
 #include "php.h"
 #include "SAPI.h"
 #include "ext/standard/head.h"
+#include "ext/session/php_session.h"
 #include "php_main.h"
 #include "php_variables.h"
 #include "php_output.h"
@@ -63,6 +64,59 @@ static inline void php_register_server_variables(void)
 	php_register_variable_quick("REQUEST_TIME", sizeof("REQUEST_TIME")-1, &tmp, ht);
 }
 
+
+// ext/session/php_session.c
+
+/* Initialized in MINIT, readonly otherwise. */
+static int my_module_number = 0;
+
+/* Dispatched by RINIT and by php_session_destroy */
+static inline void php_rinit_session_globals(void) /* {{{ */
+{
+	/* Do NOT init PS(mod_user_names) here! */
+	/* TODO: These could be moved to MINIT and removed. These should be initialized by php_rshutdown_session_globals() always when execution is finished. */
+	PS(id) = NULL;
+	PS(session_status) = php_session_none;
+	PS(in_save_handler) = 0;
+	PS(set_handler) = 0;
+	PS(mod_data) = NULL;
+	PS(mod_user_is_open) = 0;
+	PS(define_sid) = 1;
+	PS(session_vars) = NULL;
+	PS(module_number) = my_module_number;
+	ZVAL_UNDEF(&PS(http_session_vars));
+}
+/* }}} */
+
+/* Dispatched by RSHUTDOWN and by php_session_destroy */
+static inline void php_rshutdown_session_globals(void) /* {{{ */
+{
+	/* Do NOT destroy PS(mod_user_names) here! */
+	if (!Z_ISUNDEF(PS(http_session_vars))) {
+		zval_ptr_dtor(&PS(http_session_vars));
+		ZVAL_UNDEF(&PS(http_session_vars));
+	}
+	if (PS(mod_data) || PS(mod_user_implemented)) {
+		zend_try {
+			PS(mod)->s_close(&PS(mod_data));
+		} zend_end_try();
+	}
+	if (PS(id)) {
+		zend_string_release_ex(PS(id), 0);
+		PS(id) = NULL;
+	}
+
+	if (PS(session_vars)) {
+		zend_string_release_ex(PS(session_vars), 0);
+		PS(session_vars) = NULL;
+	}
+
+	/* User save handlers may end up directly here by misuse, bugs in user script, etc. */
+	/* Set session status to prevent error while restoring save handler INI value. */
+	PS(session_status) = php_session_none;
+}
+/* }}} */
+
 // End of copied functions
 
 typedef struct frankenphp_server_context {
@@ -98,6 +152,8 @@ PHP_FUNCTION(frankenphp_handle_request) {
 
 	zend_call_function(&fci, &fcc);
 
+	php_session_flush(1);
+
 	go_frankenphp_worker_handle_request_end(request);
 
 	// Adapted from php_request_shutdown
@@ -110,6 +166,9 @@ PHP_FUNCTION(frankenphp_handle_request) {
 	zend_try {
 		php_output_deactivate();
 	} zend_end_try();
+
+	php_rshutdown_session_globals();
+	php_rinit_session_globals();
 	
 	RETURN_TRUE;
 }
