@@ -19,13 +19,11 @@ func WorkerHandleRequest(responseWriter http.ResponseWriter, request *http.Reque
 		panic("FrankenPHP isn't started, call frankenphp.Startup()")
 	}
 
-	// todo: refactor to not call populateEnv twice
-	_, err := populateEnv(request)
-	if err != nil {
+	if err := populateEnv(request); err != nil {
 		return err
 	}
 
-	fc := request.Context().Value(contextKey).(*FrankenPHPContext)
+	fc, _ := FromContext(request.Context())
 	v, ok := requestsChans.Load(fc.Env["SCRIPT_FILENAME"])
 	if !ok {
 		panic(fmt.Errorf("No worker started for script %s", fc.Env["SCRIPT_FILENAME"]))
@@ -45,7 +43,7 @@ func WorkerHandleRequest(responseWriter http.ResponseWriter, request *http.Reque
 
 func StartWorkers(fileName string, nbWorkers int) {
 	if _, ok := requestsChans.Load(fileName); ok {
-		panic(fmt.Errorf("Workers already started for script %s", fileName))
+		panic(fmt.Errorf("workers %q: already started", fileName))
 	}
 
 	rc := make(chan *http.Request)

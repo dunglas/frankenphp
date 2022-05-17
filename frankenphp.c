@@ -98,8 +98,8 @@ PHP_FUNCTION(frankenphp_handle_request) {
 
 	zend_call_function(&fci, &fcc);
 
-	go_frankenphp_worker_handle_request_end(ctx->requests_chan, request);
-	
+	go_frankenphp_worker_handle_request_end(request);
+
 	// Adapted from php_request_shutdown
 
 	zend_try {
@@ -199,33 +199,49 @@ static zend_module_entry frankenphp_module = {
     STANDARD_MODULE_PROPERTIES
 };
 
-void frankenphp_clean_server_context() {
+uintptr_t frankenphp_clean_server_context() {
 	frankenphp_server_context *ctx = SG(server_context);
-	if (ctx == NULL) return;
+	if (ctx == NULL) return 0;
 
-	sapi_request_info ri = SG(request_info);
-	efree(ri.auth_password);
-	efree(ri.auth_user);
-	free((char *) ri.request_method);
-	free(ri.query_string);
-	free((char *) ri.content_type);
-	free(ri.path_translated);
-	free(ri.request_uri);
+	free(SG(request_info.auth_password));
+	SG(request_info.auth_password) = NULL;
 
-	if (ctx->request != 0) go_clean_server_context(ctx->request);
+	free(SG(request_info.auth_user));
+	SG(request_info.auth_user) = NULL;
+
+	free((char *) SG(request_info.request_method));
+	SG(request_info.request_method) = NULL;
+
+	free(SG(request_info.query_string));
+	SG(request_info.query_string) = NULL;
+
+	free((char *) SG(request_info.content_type));
+	SG(request_info.content_type) = NULL;
+
+	free(SG(request_info.path_translated));
+	SG(request_info.path_translated) = NULL;
+
+	free(SG(request_info.request_uri));
+	SG(request_info.request_uri) = NULL;
+
+	return ctx->request;
 }
 
-void frankenphp_request_shutdown()
+uintptr_t frankenphp_request_shutdown()
 {
 	php_request_shutdown((void *) 0);
 
 	frankenphp_server_context *ctx = SG(server_context);
 
 	free(ctx->cookie_data);
-	frankenphp_clean_server_context();
+	((frankenphp_server_context*) SG(server_context))->cookie_data = NULL;
+
+	uintptr_t rh = frankenphp_clean_server_context();
 
 	free(ctx);
 	SG(server_context) = NULL;
+
+	return rh;
 }
 
 // set worker to 0 if not in worker mode
@@ -266,10 +282,8 @@ void frankenphp_update_server_context(
 
 	ctx->request = request;
 
-	SG(request_info).auth_password = auth_password == NULL ? NULL : estrdup(auth_password);
-	free(auth_password);
-	SG(request_info).auth_user = auth_user == NULL ? NULL : estrdup(auth_user);
-	free(auth_user);
+	SG(request_info).auth_password = auth_password;
+	SG(request_info).auth_user = auth_user;
 	SG(request_info).request_method = request_method;
 	SG(request_info).query_string = query_string;
 	SG(request_info).content_type = content_type;

@@ -59,6 +59,9 @@ type FrankenPHPContext struct {
 	// This map is populated automatically, exisiting key are never replaced.
 	Env map[string]string
 
+	populated    bool
+	authPassword string
+
 	responseWriter http.ResponseWriter
 	done           chan interface{}
 }
@@ -107,8 +110,7 @@ func Shutdown() {
 }
 
 func updateServerContext(request *http.Request) error {
-	authPassword, err := populateEnv(request)
-	if err != nil {
+	if err := populateEnv(request); err != nil {
 		return err
 	}
 
@@ -118,8 +120,8 @@ func updateServerContext(request *http.Request) error {
 	}
 
 	var cAuthUser, cAuthPassword *C.char
-	if authPassword != "" {
-		cAuthPassword = C.CString(authPassword)
+	if fc.authPassword != "" {
+		cAuthPassword = C.CString(fc.authPassword)
 	}
 
 	if authUser := fc.Env["REMOTE_USER"]; authUser != "" {
@@ -195,7 +197,11 @@ func ExecuteScript(responseWriter http.ResponseWriter, request *http.Request) er
 	if C.frankenphp_execute_script(cFileName) < 0 {
 		return fmt.Errorf("error during PHP script execution")
 	}
+
+	rh := C.frankenphp_clean_server_context()
 	C.frankenphp_request_shutdown()
+
+	cgo.Handle(rh).Delete()
 
 	return nil
 }
@@ -231,19 +237,21 @@ func newWorker(fileName string, requestsChanHandle cgo.Handle) {
 func go_frankenphp_worker_handle_request_start(rch C.uintptr_t) C.uintptr_t {
 	rc := cgo.Handle(rch).Value().(chan *http.Request)
 
-	log.Print("worker waiting for request")
+	log.Print("worker: waiting for request")
 	r, ok := <-rc
 	if !ok {
 		// channel closed, server is shutting down
+		log.Print("worker: shutting down")
+
 		return 0
 	}
 
+	log.Printf("worker: handling request %#v", r)
+
 	fc := r.Context().Value(contextKey).(*FrankenPHPContext)
 	if fc == nil || fc.responseWriter == nil {
-		panic("not in worker mode")
+		panic("worker: not a valid worker request")
 	}
-
-	C.frankenphp_clean_server_context()
 
 	if err := updateServerContext(r); err != nil {
 		// Unexpected error
@@ -254,18 +262,18 @@ func go_frankenphp_worker_handle_request_start(rch C.uintptr_t) C.uintptr_t {
 
 	C.frankenphp_worker_reset_server_context()
 
-	//fc.responseWriter.Write([]byte(fmt.Sprintf("Hello from Go: %#v", r)))
-
 	return C.uintptr_t(cgo.NewHandle(r))
 }
 
 //export go_frankenphp_worker_handle_request_end
-func go_frankenphp_worker_handle_request_end(wh, rh C.uintptr_t) {
+func go_frankenphp_worker_handle_request_end(rh C.uintptr_t) {
 	rHandle := cgo.Handle(rh)
 	r := rHandle.Value().(*http.Request)
 	fc := r.Context().Value(contextKey).(*FrankenPHPContext)
 
-	rHandle.Delete()
+	C.frankenphp_clean_server_context()
+	cgo.Handle(rh).Delete()
+
 	close(fc.done)
 }
 
@@ -362,9 +370,4 @@ func go_read_cookies(rh C.uintptr_t) *C.char {
 	// freed in frankenphp_request_shutdown()
 
 	return cCookie
-}
-
-//export go_clean_server_context
-func go_clean_server_context(rh C.uintptr_t) {
-	cgo.Handle(rh).Delete()
 }

@@ -12,11 +12,14 @@ import (
 //
 // TODO: handle this case https://github.com/caddyserver/caddy/issues/3718
 // Inspired by https://github.com/caddyserver/caddy/blob/master/modules/caddyhttp/reverseproxy/fastcgi/fastcgi.go
-func populateEnv(request *http.Request) (authPassword string, err error) {
-	fc := request.Context().Value(contextKey).(*FrankenPHPContext)
+func populateEnv(request *http.Request) error {
 	fc, ok := FromContext(request.Context())
 	if !ok {
 		panic("not a FrankenPHP request")
+	}
+
+	if fc.populated {
+		return nil
 	}
 
 	_, addrOk := fc.Env["REMOTE_ADDR"]
@@ -50,12 +53,12 @@ func populateEnv(request *http.Request) (authPassword string, err error) {
 		// make sure file root is absolute
 		root, err := filepath.Abs(fc.DocumentRoot)
 		if err != nil {
-			return "", err
+			return err
 		}
 
 		if fc.ResolveRootSymlink {
 			if root, err = filepath.EvalSymlinks(root); err != nil {
-				return "", err
+				return err
 			}
 		}
 
@@ -198,13 +201,15 @@ func populateEnv(request *http.Request) (authPassword string, err error) {
 			authUser string
 			ok       bool
 		)
-		authUser, authPassword, ok = request.BasicAuth()
+		authUser, fc.authPassword, ok = request.BasicAuth()
 		if ok {
 			fc.Env["REMOTE_USER"] = authUser
 		}
 	}
 
-	return authPassword, nil
+	fc.populated = true
+
+	return nil
 }
 
 // splitPos returns the index where path should

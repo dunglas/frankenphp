@@ -86,7 +86,6 @@ func testHelloWorld(t *testing.T, scriptName string) {
 
 func TestServerVariable_module(t *testing.T) { testServerVariable(t, "") }
 func TestServerVariable_worker(t *testing.T) {
-	t.Skip()
 	testServerVariable(t, "server-variable.php")
 }
 func testServerVariable(t *testing.T, scriptName string) {
