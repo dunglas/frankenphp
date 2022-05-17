@@ -1,5 +1,9 @@
 <?php
 
-header('Foo: bar');
+require_once __DIR__.'/_executor.php';
 
-echo file_get_contents('php://input');
+return function () {
+    header('Foo: bar');
+
+    echo file_get_contents('php://input');
+};

@@ -2,34 +2,17 @@ package frankenphp
 
 import (
 	"C"
+	"fmt"
 	"net/http"
 	"sync"
 	"sync/atomic"
 )
+import (
+	"runtime/cgo"
+)
 
-var workers sync.Map
-
-type worker struct {
-	pool sync.Pool
-	in   chan *http.Request
-}
-
-func getWorker(fileName string) *worker {
-	var pool sync.Pool
-	p, ok := workers.Load(fileName)
-	if ok {
-		pool = p.(sync.Pool)
-	} else {
-		pool = sync.Pool{}
-		pool.New = func() interface{} {
-			return newWorker(fileName, pool)
-		}
-
-		workers.Store(fileName, pool)
-	}
-
-	return pool.Get().(*worker)
-}
+var requestsChans sync.Map // map[fileName]cgo.NewHandle(chan *http.Request)
+var workersWaitGroup sync.WaitGroup
 
 func WorkerHandleRequest(responseWriter http.ResponseWriter, request *http.Request) error {
 	if atomic.LoadInt32(&started) < 1 {
@@ -42,14 +25,46 @@ func WorkerHandleRequest(responseWriter http.ResponseWriter, request *http.Reque
 		return err
 	}
 
-	fc := request.Context().Value(FrankenPHPContextKey).(*FrankenPHPContext)
+	fc := request.Context().Value(contextKey).(*FrankenPHPContext)
+	v, ok := requestsChans.Load(fc.Env["SCRIPT_FILENAME"])
+	if !ok {
+		panic(fmt.Errorf("No worker started for script %s", fc.Env["SCRIPT_FILENAME"]))
+	}
+	rch := v.(cgo.Handle)
+	rc := rch.Value().(chan *http.Request)
+
 	fc.responseWriter = responseWriter
 	fc.done = make(chan interface{})
+	fc.Env["FRANKENPHP_WORKER"] = "1"
 
-	worker := getWorker(fc.Env["SCRIPT_FILENAME"])
-
-	worker.in <- request
+	rc <- request
 	<-fc.done
 
 	return nil
+}
+
+func StartWorkers(fileName string, nbWorkers int) {
+	if _, ok := requestsChans.Load(fileName); ok {
+		panic(fmt.Errorf("Workers already started for script %s", fileName))
+	}
+
+	rc := make(chan *http.Request)
+	rch := cgo.NewHandle(rc)
+
+	requestsChans.Store(fileName, rch)
+
+	for i := 0; i < nbWorkers; i++ {
+		newWorker(fileName, rch)
+	}
+}
+
+func StopWorkers() {
+	requestsChans.Range(func(k, v any) bool {
+		close(v.(cgo.Handle).Value().(chan *http.Request))
+		requestsChans.Delete(k)
+
+		return true
+	})
+
+	workersWaitGroup.Wait()
 }

@@ -13,7 +13,8 @@
 
 typedef struct frankenphp_server_context {
 	uintptr_t request;
-	uintptr_t worker;
+	uintptr_t requests_chan;
+	char *worker_filename;
 	char *cookie_data;
 } frankenphp_server_context;
 
@@ -31,7 +32,7 @@ PHP_FUNCTION(frankenphp_handle_request) {
 
 	frankenphp_server_context *ctx = SG(server_context);
 
-	uintptr_t request = go_frankenphp_worker_handle_request_start(ctx->worker);
+	uintptr_t request = go_frankenphp_worker_handle_request_start(ctx->requests_chan);
 	if (!request) {
 		RETURN_FALSE;
 	}
@@ -43,30 +44,84 @@ PHP_FUNCTION(frankenphp_handle_request) {
 
 	zend_call_function(&fci, &fcc);
 
-	go_frankenphp_worker_handle_request_end(ctx->worker, request);
+	go_frankenphp_worker_handle_request_end(ctx->requests_chan, request);
+	
+	// Adapted from php_request_shutdown
 
+	zend_try {
+		php_output_end_all();
+	} zend_end_try();
+
+
+	zend_try {
+		php_output_deactivate();
+	} zend_end_try();
+	
 	RETURN_TRUE;
 }
 
 // Adapted from php_request_startup()
-void frankenphp_worker_reset_server_context() {
-       php_output_activate();
-       PG(header_is_being_sent) = 0;
-       PG(connection_status) = PHP_CONNECTION_NORMAL;
+int frankenphp_worker_reset_server_context() {
+	int retval = SUCCESS;
 
-       if (PG(output_handler) && PG(output_handler)[0]) {
-               zval oh;
+	zend_try {	
+		//PG(in_error_log) = 0;
+		//PG(during_request_startup) = 1;
 
-               ZVAL_STRING(&oh, PG(output_handler));
-               php_output_start_user(&oh, 0, PHP_OUTPUT_HANDLER_STDFLAGS);
-               zval_ptr_dtor(&oh);
-       } else if (PG(output_buffering)) {
-               php_output_start_user(NULL, PG(output_buffering) > 1 ? PG(output_buffering) : 0, PHP_OUTPUT_HANDLER_STDFLAGS);
-       } else if (PG(implicit_flush)) {
-               php_output_set_implicit_flush(1);
-       }
+		php_output_activate();
 
-       php_hash_environment();
+		/* initialize global variables */
+		//PG(modules_activated) = 0;
+		PG(header_is_being_sent) = 0;
+		PG(connection_status) = PHP_CONNECTION_NORMAL;
+		//PG(in_user_include) = 0;
+
+		// Keep the current execution context
+		//zend_activate();
+		sapi_activate();
+
+#ifdef ZEND_SIGNALS
+		//zend_signal_activate();
+#endif
+
+		if (PG(max_input_time) == -1) {
+			zend_set_timeout(EG(timeout_seconds), 1);
+		} else {
+			zend_set_timeout(PG(max_input_time), 1);
+		}
+
+		/* Disable realpath cache if an open_basedir is set */
+		//if (PG(open_basedir) && *PG(open_basedir)) {
+		//	CWDG(realpath_cache_size_limit) = 0;
+		//}
+
+		if (PG(expose_php)) {
+			sapi_add_header(SAPI_PHP_VERSION_HEADER, sizeof(SAPI_PHP_VERSION_HEADER)-1, 1);
+		}
+
+		if (PG(output_handler) && PG(output_handler)[0]) {
+			zval oh;
+
+			ZVAL_STRING(&oh, PG(output_handler));
+			php_output_start_user(&oh, 0, PHP_OUTPUT_HANDLER_STDFLAGS);
+			zval_ptr_dtor(&oh);
+		} else if (PG(output_buffering)) {
+			php_output_start_user(NULL, PG(output_buffering) > 1 ? PG(output_buffering) : 0, PHP_OUTPUT_HANDLER_STDFLAGS);
+		} else if (PG(implicit_flush)) {
+			php_output_set_implicit_flush(1);
+		}
+
+		/* We turn this off in php_execute_script() */
+		/* PG(during_request_startup) = 0; */
+		
+		//php_startup_auto_globals();
+		fprintf(stderr, "call php_hash_environment\n");
+		php_hash_environment();
+	} zend_catch {
+		retval = FAILURE;
+	} zend_end_try();
+
+	return retval;
 }
 
 static const zend_function_entry frankenphp_ext_functions[] = {
@@ -117,7 +172,7 @@ void frankenphp_request_shutdown()
 }
 
 // set worker to 0 if not in worker mode
-int frankenphp_create_server_context(uintptr_t worker)
+int frankenphp_create_server_context(uintptr_t requests_chan, char* worker_filename)
 {
 	frankenphp_server_context *ctx;
 
@@ -128,7 +183,8 @@ int frankenphp_create_server_context(uintptr_t worker)
 	if (ctx == NULL) return FAILURE;
 
 	ctx->request = 0;
-	ctx->worker = worker;
+	ctx->requests_chan = requests_chan;
+	ctx->worker_filename = worker_filename;
 	ctx->cookie_data = NULL;
 
 	SG(server_context) = ctx;
@@ -242,8 +298,12 @@ static void frankenphp_register_variables(zval *track_vars_array)
 	// https://www.php.net/manual/en/reserved.variables.server.php
 	frankenphp_server_context* ctx = SG(server_context);
 
-	if (ctx->request == 0) return;
+	if (ctx->worker_filename != NULL) {
+		// todo: also register PHP_SELF etc
+		php_register_variable_safe("SCRIPT_FILENAME", ctx->worker_filename, strlen(ctx->worker_filename), track_vars_array);
+	}
 
+	// todo: import or not environment variables set in the parent process?
 	//php_import_environment_variables(track_vars_array);
 
 	go_register_variables(ctx->request, track_vars_array);
@@ -329,7 +389,7 @@ int frankenphp_execute_script(const char* file_name)
 	zend_first_try {
 		status = php_execute_script(&file_handle);
 	} zend_catch {
-    	/* int exit_status = EG(exit_status); */ \
+    	/* int exit_status = EG(exit_status); */
 	} zend_end_try();
 
 	return status;

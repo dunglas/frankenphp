@@ -80,7 +80,7 @@ func (f FrankenPHPModule) ServeHTTP(w http.ResponseWriter, r *http.Request, next
 
 	documentRoot := repl.ReplaceKnown(f.Root, "")
 	fr := frankenphp.NewRequestWithContext(r, documentRoot)
-	fc := fr.Context().Value(frankenphp.FrankenPHPContextKey).(*frankenphp.FrankenPHPContext)
+	fc, _ := frankenphp.FromContext(fr.Context())
 	fc.ResolveRootSymlink = f.ResolveRootSymlink
 	fc.SplitPath = f.SplitPath
 

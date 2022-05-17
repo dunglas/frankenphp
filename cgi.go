@@ -13,7 +13,11 @@ import (
 // TODO: handle this case https://github.com/caddyserver/caddy/issues/3718
 // Inspired by https://github.com/caddyserver/caddy/blob/master/modules/caddyhttp/reverseproxy/fastcgi/fastcgi.go
 func populateEnv(request *http.Request) (authPassword string, err error) {
-	fc := request.Context().Value(FrankenPHPContextKey).(*FrankenPHPContext)
+	fc := request.Context().Value(contextKey).(*FrankenPHPContext)
+	fc, ok := FromContext(request.Context())
+	if !ok {
+		panic("not a FrankenPHP request")
+	}
 
 	_, addrOk := fc.Env["REMOTE_ADDR"]
 	_, portOk := fc.Env["REMOTE_PORT"]

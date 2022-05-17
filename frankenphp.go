@@ -18,18 +18,15 @@ import (
 	"runtime/cgo"
 	"strconv"
 	"strings"
-	"sync"
 	"sync/atomic"
-	"time"
 	"unsafe"
 )
 
 var started int32
-var shutdown chan interface{}
 
-type ContextKey string
+type key int
 
-const FrankenPHPContextKey ContextKey = "frankenphp"
+var contextKey key
 
 // FrankenPHP executes PHP scripts.
 type FrankenPHPContext struct {
@@ -63,13 +60,18 @@ type FrankenPHPContext struct {
 }
 
 func NewRequestWithContext(r *http.Request, documentRoot string) *http.Request {
-	ctx := context.WithValue(r.Context(), FrankenPHPContextKey, &FrankenPHPContext{
+	ctx := context.WithValue(r.Context(), contextKey, &FrankenPHPContext{
 		DocumentRoot: documentRoot,
 		SplitPath:    []string{".php"},
 		Env:          make(map[string]string),
 	})
 
 	return r.WithContext(ctx)
+}
+
+func FromContext(ctx context.Context) (fctx *FrankenPHPContext, ok bool) {
+	fctx, ok = ctx.Value(contextKey).(*FrankenPHPContext)
+	return
 }
 
 // Startup starts the PHP engine.
@@ -86,8 +88,6 @@ func Startup() error {
 		return fmt.Errorf(`ZTS is not enabled, recompile PHP using the "--enable-zts" configuration option`)
 	}
 
-	shutdown = make(chan interface{})
-
 	return nil
 }
 
@@ -99,21 +99,6 @@ func Shutdown() {
 	}
 	atomic.StoreInt32(&started, 0)
 
-	close(shutdown)
-
-	var waitForWorkers bool
-	workers.Range(func(k, v interface{}) bool {
-		waitForWorkers = true
-		workers.Delete(k)
-
-		return true
-	})
-
-	if waitForWorkers {
-		// Give some time to workers to finish gracefuly
-		time.Sleep(1 * time.Second)
-	}
-
 	C.frankenphp_shutdown()
 }
 
@@ -123,7 +108,10 @@ func updateServerContext(request *http.Request) error {
 		return err
 	}
 
-	fc := request.Context().Value(FrankenPHPContextKey).(*FrankenPHPContext)
+	fc, ok := FromContext(request.Context())
+	if !ok {
+		panic("not a FrankenPHP request")
+	}
 
 	var cAuthUser, cAuthPassword *C.char
 	if authPassword != "" {
@@ -157,6 +145,7 @@ func updateServerContext(request *http.Request) error {
 
 	cRequestUri := C.CString(request.URL.RequestURI())
 
+	log.Print("update server context")
 	C.frankenphp_update_server_context(
 		C.uintptr_t(rh),
 
@@ -182,7 +171,7 @@ func ExecuteScript(responseWriter http.ResponseWriter, request *http.Request) er
 	runtime.LockOSThread()
 	// todo: check if it's ok or not to call runtime.UnlockOSThread() to reuse this thread
 
-	if C.frankenphp_create_server_context(0) < 0 {
+	if C.frankenphp_create_server_context(0, nil) < 0 {
 		return fmt.Errorf("error during request context creation")
 	}
 
@@ -194,7 +183,7 @@ func ExecuteScript(responseWriter http.ResponseWriter, request *http.Request) er
 		return fmt.Errorf("error during PHP request startup")
 	}
 
-	fc := request.Context().Value(FrankenPHPContextKey).(*FrankenPHPContext)
+	fc := request.Context().Value(contextKey).(*FrankenPHPContext)
 	fc.responseWriter = responseWriter
 
 	cFileName := C.CString(fc.Env["SCRIPT_FILENAME"])
@@ -208,17 +197,17 @@ func ExecuteScript(responseWriter http.ResponseWriter, request *http.Request) er
 	return nil
 }
 
-func newWorker(fileName string, pool sync.Pool) *worker {
-	w := &worker{
-		pool,
-		make(chan *http.Request),
-	}
-	wh := cgo.NewHandle(w)
-
+func newWorker(fileName string, requestsChanHandle cgo.Handle) {
 	go func() {
+		workersWaitGroup.Add(1)
 		runtime.LockOSThread()
 
-		if C.frankenphp_create_server_context(C.uintptr_t(wh)) < 0 {
+		log.Printf("creating new worker: %s", fileName)
+
+		cFileName := C.CString(fileName)
+		defer C.free(unsafe.Pointer(cFileName))
+
+		if C.frankenphp_create_server_context(C.uintptr_t(requestsChanHandle), cFileName) < 0 {
 			panic(fmt.Errorf("error during request context creation"))
 		}
 
@@ -226,57 +215,61 @@ func newWorker(fileName string, pool sync.Pool) *worker {
 			panic("error during PHP request startup")
 		}
 
-		// todo: maybe could we allocate this only once
-		cFileName := C.CString(fileName)
-		defer C.free(unsafe.Pointer(cFileName))
-
 		if C.frankenphp_execute_script(cFileName) < 0 {
 			panic("error during PHP script execution")
 		}
-		C.frankenphp_request_shutdown()
-	}()
 
-	return w
+		C.frankenphp_request_shutdown()
+		workersWaitGroup.Done()
+	}()
 }
 
 //export go_frankenphp_worker_handle_request_start
-func go_frankenphp_worker_handle_request_start(wh C.uintptr_t) C.uintptr_t {
-	w := cgo.Handle(wh).Value().(*worker)
+func go_frankenphp_worker_handle_request_start(rch C.uintptr_t) C.uintptr_t {
+	rc := cgo.Handle(rch).Value().(chan *http.Request)
 
-	select {
-	case <-shutdown:
+	log.Print("waiting for request...")
+	r, ok := <-rc
+	if !ok {
 		// channel closed, server is shutting down
 		return 0
-
-	case r := <-w.in:
-		fc := r.Context().Value(FrankenPHPContextKey).(*FrankenPHPContext)
-		if fc == nil || fc.responseWriter == nil {
-			panic("not in worker mode")
-		}
-
-		//fc.responseWriter.Write([]byte(fmt.Sprintf("Hello from Go: %#v", r)))
-
-		return C.uintptr_t(cgo.NewHandle(r))
 	}
+
+	fc := r.Context().Value(contextKey).(*FrankenPHPContext)
+	if fc == nil || fc.responseWriter == nil {
+		panic("not in worker mode")
+	}
+
+	C.frankenphp_clean_server_context()
+
+	if err := updateServerContext(r); err != nil {
+		// Unexpected error
+		log.Print(err)
+
+		return 0
+	}
+
+	C.frankenphp_worker_reset_server_context()
+
+	//fc.responseWriter.Write([]byte(fmt.Sprintf("Hello from Go: %#v", r)))
+
+	return C.uintptr_t(cgo.NewHandle(r))
 }
 
 //export go_frankenphp_worker_handle_request_end
 func go_frankenphp_worker_handle_request_end(wh, rh C.uintptr_t) {
 	rHandle := cgo.Handle(rh)
 	r := rHandle.Value().(*http.Request)
-	fc := r.Context().Value(FrankenPHPContextKey).(*FrankenPHPContext)
+	fc := r.Context().Value(contextKey).(*FrankenPHPContext)
 
 	rHandle.Delete()
 	close(fc.done)
-
-	w := cgo.Handle(wh).Value().(*worker)
-	w.pool.Put(w)
 }
 
 //export go_ub_write
 func go_ub_write(rh C.uintptr_t, cString *C.char, length C.int) C.size_t {
 	r := cgo.Handle(rh).Value().(*http.Request)
-	fc := r.Context().Value(FrankenPHPContextKey).(*FrankenPHPContext)
+	fc := r.Context().Value(contextKey).(*FrankenPHPContext)
 
 	i, _ := fc.responseWriter.Write([]byte(C.GoStringN(cString, length)))
 
@@ -285,8 +278,17 @@ func go_ub_write(rh C.uintptr_t, cString *C.char, length C.int) C.size_t {
 
 //export go_register_variables
 func go_register_variables(rh C.uintptr_t, trackVarsArray *C.zval) {
-	r := cgo.Handle(rh).Value().(*http.Request)
-	for k, v := range r.Context().Value(FrankenPHPContextKey).(*FrankenPHPContext).Env {
+	log.Printf("go_register_variables %d", rh)
+	var env map[string]string
+	if rh == 0 {
+		// Worker mode, waiting for a request, initialize some useful variables
+		env = map[string]string{"FRANKENPHP_WORKER": "1"}
+	} else {
+		r := cgo.Handle(rh).Value().(*http.Request)
+		env = r.Context().Value(contextKey).(*FrankenPHPContext).Env
+	}
+
+	for k, v := range env {
 		ck := C.CString(k)
 		cv := C.CString(v)
 		C.php_register_variable_safe(ck, cv, C.size_t(len(v)), trackVarsArray)
@@ -299,7 +301,7 @@ func go_register_variables(rh C.uintptr_t, trackVarsArray *C.zval) {
 //export go_add_header
 func go_add_header(rh C.uintptr_t, cString *C.char, length C.int) {
 	r := cgo.Handle(rh).Value().(*http.Request)
-	fc := r.Context().Value(FrankenPHPContextKey).(*FrankenPHPContext)
+	fc := r.Context().Value(contextKey).(*FrankenPHPContext)
 
 	parts := strings.SplitN(C.GoStringN(cString, length), ": ", 2)
 	if len(parts) != 2 {
@@ -314,7 +316,7 @@ func go_add_header(rh C.uintptr_t, cString *C.char, length C.int) {
 //export go_write_header
 func go_write_header(rh C.uintptr_t, status C.int) {
 	r := cgo.Handle(rh).Value().(*http.Request)
-	fc := r.Context().Value(FrankenPHPContextKey).(*FrankenPHPContext)
+	fc := r.Context().Value(contextKey).(*FrankenPHPContext)
 
 	fc.responseWriter.WriteHeader(int(status))
 }
@@ -330,7 +332,7 @@ func go_read_post(rh C.uintptr_t, cBuf *C.char, countBytes C.size_t) C.size_t {
 	}
 
 	if readBytes != 0 {
-		//todo: memory leak?
+		// todo: memory leak?
 		C.memcpy(unsafe.Pointer(cBuf), unsafe.Pointer(&p[0]), C.size_t(readBytes))
 	}
 
