@@ -28,6 +28,10 @@ type key int
 
 var contextKey key
 
+func init() {
+	log.SetFlags(log.LstdFlags | log.Lshortfile)
+}
+
 // FrankenPHP executes PHP scripts.
 type FrankenPHPContext struct {
 	// The root directory of the PHP application.
@@ -145,7 +149,6 @@ func updateServerContext(request *http.Request) error {
 
 	cRequestUri := C.CString(request.URL.RequestURI())
 
-	log.Print("update server context")
 	C.frankenphp_update_server_context(
 		C.uintptr_t(rh),
 
@@ -202,8 +205,6 @@ func newWorker(fileName string, requestsChanHandle cgo.Handle) {
 		workersWaitGroup.Add(1)
 		runtime.LockOSThread()
 
-		log.Printf("creating new worker: %s", fileName)
-
 		cFileName := C.CString(fileName)
 		defer C.free(unsafe.Pointer(cFileName))
 
@@ -214,6 +215,8 @@ func newWorker(fileName string, requestsChanHandle cgo.Handle) {
 		if C.frankenphp_request_startup() < 0 {
 			panic("error during PHP request startup")
 		}
+
+		log.Printf("new worker started: %q", fileName)
 
 		if C.frankenphp_execute_script(cFileName) < 0 {
 			panic("error during PHP script execution")
@@ -228,7 +231,7 @@ func newWorker(fileName string, requestsChanHandle cgo.Handle) {
 func go_frankenphp_worker_handle_request_start(rch C.uintptr_t) C.uintptr_t {
 	rc := cgo.Handle(rch).Value().(chan *http.Request)
 
-	log.Print("waiting for request...")
+	log.Print("worker waiting for request")
 	r, ok := <-rc
 	if !ok {
 		// channel closed, server is shutting down
@@ -278,7 +281,6 @@ func go_ub_write(rh C.uintptr_t, cString *C.char, length C.int) C.size_t {
 
 //export go_register_variables
 func go_register_variables(rh C.uintptr_t, trackVarsArray *C.zval) {
-	log.Printf("go_register_variables %d", rh)
 	var env map[string]string
 	if rh == 0 {
 		// Worker mode, waiting for a request, initialize some useful variables
@@ -288,10 +290,13 @@ func go_register_variables(rh C.uintptr_t, trackVarsArray *C.zval) {
 		env = r.Context().Value(contextKey).(*FrankenPHPContext).Env
 	}
 
+	env[fmt.Sprintf("REQUEST_%d", rh)] = "on"
+
 	for k, v := range env {
 		ck := C.CString(k)
 		cv := C.CString(v)
-		C.php_register_variable_safe(ck, cv, C.size_t(len(v)), trackVarsArray)
+
+		C.php_register_variable(ck, cv, trackVarsArray)
 
 		C.free(unsafe.Pointer(ck))
 		C.free(unsafe.Pointer(cv))

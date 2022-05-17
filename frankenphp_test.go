@@ -73,7 +73,6 @@ func testHelloWorld(t *testing.T, scriptName string) {
 	defer shutdown()
 
 	for i := 0; i < iterations; i++ {
-		t.Log("in loop")
 		req := httptest.NewRequest("GET", "http://example.com/index.php", nil)
 		w := httptest.NewRecorder()
 		handler(w, req)
@@ -135,7 +134,6 @@ func testServerVariable(t *testing.T, scriptName string) {
 
 func TestPathInfo_module(t *testing.T) { testPathInfo(t, "") }
 func TestPathInfo_worker(t *testing.T) {
-	t.Skip()
 	testPathInfo(t, "server-variable.php")
 }
 func testPathInfo(t *testing.T, scriptName string) {

@@ -11,6 +11,60 @@
 #include "php_output.h"
 #include "Zend/zend_alloc.h"
 
+
+// Helper functions copied from the PHP source code
+
+#include "php.h"
+#include "SAPI.h"
+
+// main/php_variables.c
+
+static zend_always_inline void php_register_variable_quick(const char *name, size_t name_len, zval *val, HashTable *ht)
+{
+	zend_string *key = zend_string_init_interned(name, name_len, 0);
+
+	zend_hash_update_ind(ht, key, val);
+	zend_string_release_ex(key, 0);
+}
+
+static inline void php_register_server_variables(void)
+{
+	zval tmp;
+	zval *arr = &PG(http_globals)[TRACK_VARS_SERVER];
+	HashTable *ht;
+
+	zval_ptr_dtor_nogc(arr);
+	array_init(arr);
+
+	/* Server variables */
+	if (sapi_module.register_server_variables) {
+		sapi_module.register_server_variables(arr);
+	}
+	ht = Z_ARRVAL_P(arr);
+
+	/* PHP Authentication support */
+	if (SG(request_info).auth_user) {
+		ZVAL_STRING(&tmp, SG(request_info).auth_user);
+		php_register_variable_quick("PHP_AUTH_USER", sizeof("PHP_AUTH_USER")-1, &tmp, ht);
+	}
+	if (SG(request_info).auth_password) {
+		ZVAL_STRING(&tmp, SG(request_info).auth_password);
+		php_register_variable_quick("PHP_AUTH_PW", sizeof("PHP_AUTH_PW")-1, &tmp, ht);
+	}
+	if (SG(request_info).auth_digest) {
+		ZVAL_STRING(&tmp, SG(request_info).auth_digest);
+		php_register_variable_quick("PHP_AUTH_DIGEST", sizeof("PHP_AUTH_DIGEST")-1, &tmp, ht);
+	}
+
+	/* store request init time */
+	ZVAL_DOUBLE(&tmp, sapi_get_request_time());
+	php_register_variable_quick("REQUEST_TIME_FLOAT", sizeof("REQUEST_TIME_FLOAT")-1, &tmp, ht);
+	ZVAL_LONG(&tmp, zend_dval_to_lval(Z_DVAL(tmp)));
+	php_register_variable_quick("REQUEST_TIME", sizeof("REQUEST_TIME")-1, &tmp, ht);
+}
+
+// End of copied functions
+
 typedef struct frankenphp_server_context {
 	uintptr_t request;
 	uintptr_t requests_chan;
@@ -113,9 +167,12 @@ int frankenphp_worker_reset_server_context() {
 
 		/* We turn this off in php_execute_script() */
 		/* PG(during_request_startup) = 0; */
-		
-		//php_startup_auto_globals();
-		fprintf(stderr, "call php_hash_environment\n");
+
+		php_register_server_variables();
+
+		zend_hash_update(&EG(symbol_table), ZSTR_KNOWN(ZEND_STR_AUTOGLOBAL_SERVER), &PG(http_globals)[TRACK_VARS_SERVER]);
+		Z_ADDREF(PG(http_globals)[TRACK_VARS_SERVER]);
+
 		php_hash_environment();
 	} zend_catch {
 		retval = FAILURE;
@@ -298,7 +355,7 @@ static void frankenphp_register_variables(zval *track_vars_array)
 	// https://www.php.net/manual/en/reserved.variables.server.php
 	frankenphp_server_context* ctx = SG(server_context);
 
-	if (ctx->worker_filename != NULL) {
+	if (ctx->request == 0 && ctx->worker_filename != NULL) {
 		// todo: also register PHP_SELF etc
 		php_register_variable_safe("SCRIPT_FILENAME", ctx->worker_filename, strlen(ctx->worker_filename), track_vars_array);
 	}
@@ -370,6 +427,8 @@ int frankenphp_request_startup()
 	if (php_request_startup() == SUCCESS) {
 		return SUCCESS;
 	}
+
+	fprintf(stderr, "problem in php_request_startup\n");
 
 	php_request_shutdown((void *) 0);
 	frankenphp_server_context *ctx = SG(server_context);
