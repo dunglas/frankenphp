@@ -6,17 +6,12 @@
 #include "php.h"
 #include "SAPI.h"
 #include "ext/standard/head.h"
-#include "ext/session/php_session.h"
 #include "php_main.h"
 #include "php_variables.h"
 #include "php_output.h"
 #include "Zend/zend_alloc.h"
 
-
 // Helper functions copied from the PHP source code
-
-#include "php.h"
-#include "SAPI.h"
 
 // main/php_variables.c
 
@@ -64,59 +59,6 @@ static inline void php_register_server_variables(void)
 	php_register_variable_quick("REQUEST_TIME", sizeof("REQUEST_TIME")-1, &tmp, ht);
 }
 
-
-// ext/session/php_session.c
-
-/* Initialized in MINIT, readonly otherwise. */
-static int my_module_number = 0;
-
-/* Dispatched by RINIT and by php_session_destroy */
-static inline void php_rinit_session_globals(void) /* {{{ */
-{
-	/* Do NOT init PS(mod_user_names) here! */
-	/* TODO: These could be moved to MINIT and removed. These should be initialized by php_rshutdown_session_globals() always when execution is finished. */
-	PS(id) = NULL;
-	PS(session_status) = php_session_none;
-	PS(in_save_handler) = 0;
-	PS(set_handler) = 0;
-	PS(mod_data) = NULL;
-	PS(mod_user_is_open) = 0;
-	PS(define_sid) = 1;
-	PS(session_vars) = NULL;
-	PS(module_number) = my_module_number;
-	ZVAL_UNDEF(&PS(http_session_vars));
-}
-/* }}} */
-
-/* Dispatched by RSHUTDOWN and by php_session_destroy */
-static inline void php_rshutdown_session_globals(void) /* {{{ */
-{
-	/* Do NOT destroy PS(mod_user_names) here! */
-	if (!Z_ISUNDEF(PS(http_session_vars))) {
-		zval_ptr_dtor(&PS(http_session_vars));
-		ZVAL_UNDEF(&PS(http_session_vars));
-	}
-	if (PS(mod_data) || PS(mod_user_implemented)) {
-		zend_try {
-			PS(mod)->s_close(&PS(mod_data));
-		} zend_end_try();
-	}
-	if (PS(id)) {
-		zend_string_release_ex(PS(id), 0);
-		PS(id) = NULL;
-	}
-
-	if (PS(session_vars)) {
-		zend_string_release_ex(PS(session_vars), 0);
-		PS(session_vars) = NULL;
-	}
-
-	/* User save handlers may end up directly here by misuse, bugs in user script, etc. */
-	/* Set session status to prevent error while restoring save handler INI value. */
-	PS(session_status) = php_session_none;
-}
-/* }}} */
-
 // End of copied functions
 
 typedef struct frankenphp_server_context {
@@ -126,76 +68,109 @@ typedef struct frankenphp_server_context {
 	char *cookie_data;
 } frankenphp_server_context;
 
-ZEND_BEGIN_ARG_INFO_EX(arginfo_frankenphp_handle_request, 0, 0, 1)
-    ZEND_ARG_CALLABLE_INFO(false, handler, false)
-ZEND_END_ARG_INFO()
+// Adapted from php_request_shutdown
+void frankenphp_worker_request_shutdown(uintptr_t request) {
+	/* 0. skipped: Call any open observer end handlers that are still open after a zend_bailout */
+	/* 1. skipped: Call all possible shutdown functions registered with register_shutdown_function() */
+	/* 2. skipped: Call all possible __destruct() functions */
 
-PHP_FUNCTION(frankenphp_handle_request) {
-	zend_fcall_info fci;
-	zend_fcall_info_cache fcc;
-
-	if (zend_parse_parameters(ZEND_NUM_ARGS(), "f", &fci, &fcc) == FAILURE) {
-		RETURN_THROWS();
-	}
-
-	frankenphp_server_context *ctx = SG(server_context);
-
-	uintptr_t request = go_frankenphp_worker_handle_request_start(ctx->requests_chan);
-	if (!request) {
-		RETURN_FALSE;
-	}
-
-	// Call the PHP func
-	zval retval = {0};
-	fci.size = sizeof fci;
-	fci.retval = &retval;
-
-	zend_call_function(&fci, &fcc);
-
-	php_session_flush(1);
-
-	go_frankenphp_worker_handle_request_end(request);
-
-	// Adapted from php_request_shutdown
-
+	/* 3. Flush all output buffers */
 	zend_try {
 		php_output_end_all();
 	} zend_end_try();
 
+	/* 4. Reset max_execution_time (no longer executing php code after response sent) */
+	zend_try {
+		zend_unset_timeout();
+	} zend_end_try();
 
+	/* 5. Call all extensions RSHUTDOWN functions */
+	if (PG(modules_activated)) {
+		zend_deactivate_modules();
+	}
+
+	/* 6. Shutdown output layer (send the set HTTP headers, cleanup output handlers, etc.) */
 	zend_try {
 		php_output_deactivate();
 	} zend_end_try();
-
-	php_rshutdown_session_globals();
-	php_rinit_session_globals();
 	
-	RETURN_TRUE;
+	/* 8. Destroy super-globals */
+	zend_try {
+		int i;
+
+		for (i=0; i<NUM_TRACK_VARS; i++) {
+			zval_ptr_dtor(&PG(http_globals)[i]);
+		}
+	} zend_end_try();
+
+	/* 9. skipped: Shutdown scanner/executor/compiler and restore ini entries */
+
+	/* 10. free request-bound globals */
+	// todo: check if it's a good idea
+	// php_free_request_globals()
+	// clear_last_error()
+	if (PG(last_error_message)) {
+		zend_string_release(PG(last_error_message));
+		PG(last_error_message) = NULL;
+	}
+	if (PG(last_error_file)) {
+		zend_string_release(PG(last_error_file));
+		PG(last_error_file) = NULL;
+	}
+	if (PG(php_sys_temp_dir)) {
+		efree(PG(php_sys_temp_dir));
+		PG(php_sys_temp_dir) = NULL;
+	}
+
+	/* 11. Call all extensions post-RSHUTDOWN functions */
+	zend_try {
+		zend_post_deactivate_modules();
+	} zend_end_try();
+
+	/* 13. skipped: free virtual CWD memory */
+
+	/* 12. SAPI related shutdown (free stuff) */
+	frankenphp_clean_server_context();
+	zend_try {
+		sapi_deactivate();
+	} zend_end_try();
+
+	if (request != 0) go_frankenphp_worker_handle_request_end(request);
+
+	/* 14. Destroy stream hashes */
+	// todo: check if it's a good idea
+	zend_try {
+		php_shutdown_stream_hashes();
+	} zend_end_try();
+
+	/* 15. skipped: Free Willy (here be crashes) */
+
+	zend_set_memory_limit(PG(memory_limit));
 }
 
 // Adapted from php_request_startup()
-int frankenphp_worker_reset_server_context() {
+int frankenphp_worker_request_startup() {
 	int retval = SUCCESS;
 
 	zend_try {	
-		//PG(in_error_log) = 0;
-		//PG(during_request_startup) = 1;
+		PG(in_error_log) = 0;
+		PG(during_request_startup) = 1;
 
 		php_output_activate();
 
 		/* initialize global variables */
-		//PG(modules_activated) = 0;
+		PG(modules_activated) = 0;
 		PG(header_is_being_sent) = 0;
 		PG(connection_status) = PHP_CONNECTION_NORMAL;
-		//PG(in_user_include) = 0;
+		PG(in_user_include) = 0;
 
 		// Keep the current execution context
 		//zend_activate();
 		sapi_activate();
 
-#ifdef ZEND_SIGNALS
-		//zend_signal_activate();
-#endif
+/*#ifdef ZEND_SIGNALS
+		zend_signal_activate();
+#endif*/
 
 		if (PG(max_input_time) == -1) {
 			zend_set_timeout(EG(timeout_seconds), 1);
@@ -224,20 +199,67 @@ int frankenphp_worker_reset_server_context() {
 			php_output_set_implicit_flush(1);
 		}
 
-		/* We turn this off in php_execute_script() */
-		/* PG(during_request_startup) = 0; */
-
-		php_register_server_variables();
-
-		zend_hash_update(&EG(symbol_table), ZSTR_KNOWN(ZEND_STR_AUTOGLOBAL_SERVER), &PG(http_globals)[TRACK_VARS_SERVER]);
-		Z_ADDREF(PG(http_globals)[TRACK_VARS_SERVER]);
+		PG(during_request_startup) = 0;
 
 		php_hash_environment();
+
+		// todo: find what we need to call php_register_server_variables();
+		php_register_server_variables();
+		zend_hash_update(&EG(symbol_table), ZSTR_KNOWN(ZEND_STR_AUTOGLOBAL_SERVER), &PG(http_globals)[TRACK_VARS_SERVER]);
+		Z_ADDREF(PG(http_globals)[TRACK_VARS_SERVER]);
+		HT_ALLOW_COW_VIOLATION(Z_ARRVAL(PG(http_globals)[TRACK_VARS_SERVER]));
+
+		zend_activate_modules();
+		PG(modules_activated)=1;
 	} zend_catch {
 		retval = FAILURE;
 	} zend_end_try();
 
+	SG(sapi_started) = 1;
+
 	return retval;
+}
+
+ZEND_BEGIN_ARG_INFO_EX(arginfo_frankenphp_handle_request, 0, 0, 1)
+    ZEND_ARG_CALLABLE_INFO(false, handler, false)
+ZEND_END_ARG_INFO()
+
+PHP_FUNCTION(frankenphp_handle_request) {
+	zend_fcall_info fci;
+	zend_fcall_info_cache fcc;
+
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "f", &fci, &fcc) == FAILURE) {
+		RETURN_THROWS();
+	}
+
+	frankenphp_server_context *ctx = SG(server_context);
+
+	if (ctx->request == 0) {
+		// Clean the first dummy request created to initialize the worker
+		frankenphp_worker_request_shutdown(0);	
+	}
+
+	uintptr_t request = go_frankenphp_worker_handle_request_start(ctx->requests_chan);
+	if (!request) {
+		// Shutting down, re-create a dummy request to make the real php_request_shutdown() function happy
+		frankenphp_worker_request_startup();
+
+		RETURN_FALSE;
+	}
+
+	if (frankenphp_worker_request_startup() == FAILURE) {
+		RETURN_FALSE;
+	}
+
+	// Call the PHP func
+	zval retval = {0};
+	fci.size = sizeof fci;
+	fci.retval = &retval;
+	zend_call_function(&fci, &fcc);
+
+	frankenphp_worker_request_shutdown(request);
+
+	RETURN_TRUE;
 }
 
 static const zend_function_entry frankenphp_ext_functions[] = {

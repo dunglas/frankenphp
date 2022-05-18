@@ -86,13 +86,15 @@ func newWorker(fileName string, requestsChanHandle cgo.Handle) {
 			panic("error during PHP request startup")
 		}
 
-		log.Printf("new worker started: %q", fileName)
+		log.Printf("worker %q: started", fileName)
 
 		if C.frankenphp_execute_script(cFileName) < 0 {
 			panic("error during PHP script execution")
 		}
 
 		C.frankenphp_request_shutdown()
+
+		log.Printf("worker %q: shutting down", fileName)
 		workersWaitGroup.Done()
 	}()
 }
@@ -105,7 +107,7 @@ func go_frankenphp_worker_handle_request_start(rch C.uintptr_t) C.uintptr_t {
 	r, ok := <-rc
 	if !ok {
 		// channel closed, server is shutting down
-		log.Print("worker: shutting down")
+		log.Print("worker: breaking from the main loop")
 
 		return 0
 	}
@@ -124,8 +126,6 @@ func go_frankenphp_worker_handle_request_start(rch C.uintptr_t) C.uintptr_t {
 		return 0
 	}
 
-	C.frankenphp_worker_reset_server_context()
-
 	return C.uintptr_t(cgo.NewHandle(r))
 }
 
@@ -135,7 +135,6 @@ func go_frankenphp_worker_handle_request_end(rh C.uintptr_t) {
 	r := rHandle.Value().(*http.Request)
 	fc := r.Context().Value(contextKey).(*FrankenPHPContext)
 
-	C.frankenphp_clean_server_context()
 	cgo.Handle(rh).Delete()
 
 	close(fc.done)
