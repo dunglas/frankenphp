@@ -1,6 +1,6 @@
 FROM golang
 
-ARG PHP_VERSION=8.0.11
+ARG PHP_VERSION=8.1.5
 
 # Sury doesn't provide ZTS builds for now
 #RUN apt-get update && \
@@ -8,7 +8,7 @@ ARG PHP_VERSION=8.0.11
 #    wget -O /etc/apt/trusted.gpg.d/php.gpg https://packages.sury.org/php/apt.gpg && \
 #    sh -c 'echo "deb https://packages.sury.org/php/ $(lsb_release -sc) main" > /etc/apt/sources.list.d/php.list' && \
 #    apt-get update && \
-#    apt-get -y --no-install-recommends install php8.0-dev && \
+#    apt-get -y --no-install-recommends install php8.1-dev && \
 #    apt-get -y remove apt-transport-https lsb-release && \
 #    apt-get clean all
 #ENV CGO_CFLAGS="-I /usr/include/php/20200930 -I /usr/include/php/20200930/Zend -I /usr/include/php/20200930/TSRM -I /usr/include/php/20200930/main -I /usr/include/php/20200930/sapi/embed"
@@ -32,7 +32,7 @@ WORKDIR /go/src/app
 COPY . .
 
 RUN go get -d -v ./...
-#RUN go build -v
+RUN go build -v
 #RUN cd cmd/frankenphp && go install -v ./...
 
 #CMD ["frankenphp"]

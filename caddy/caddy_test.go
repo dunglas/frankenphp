@@ -31,7 +31,7 @@ func TestPHP(t *testing.T) {
 			}
 			rewrite @indexFiles {http.matchers.file.relative}
 
-			# Proxy PHP files to the FastCGI responder
+			# Handle PHP files with FrankenPHP
 			@phpFiles path *.php
 			php @phpFiles
 	
