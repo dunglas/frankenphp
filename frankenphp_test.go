@@ -2,6 +2,7 @@ package frankenphp_test
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/cookiejar"
@@ -93,7 +94,7 @@ func testServerVariable(t *testing.T, scriptName string) {
 	defer shutdown()
 
 	for i := 0; i < iterations; i++ {
-		req := httptest.NewRequest("GET", "http://example.com/server-variable.php?foo=a&bar=b#hash", nil)
+		req := httptest.NewRequest("GET", fmt.Sprintf("http://example.com/server-variable.php?foo=a&bar=b&i=%d#hash", i), nil)
 		req.SetBasicAuth("kevin", "password")
 		w := httptest.NewRecorder()
 		handler(w, req)
@@ -110,8 +111,8 @@ func testServerVariable(t *testing.T, scriptName string) {
 		assert.Contains(t, strBody, "[HTTP_AUTHORIZATION] => Basic a2V2aW46cGFzc3dvcmQ=")
 		assert.Contains(t, strBody, "[DOCUMENT_ROOT]")
 		assert.Contains(t, strBody, "[CONTENT_TYPE]")
-		assert.Contains(t, strBody, "[QUERY_STRING] => foo=a&bar=b#hash")
-		assert.Contains(t, strBody, "[REQUEST_URI] => /server-variable.php?foo=a&bar=b#hash")
+		assert.Contains(t, strBody, fmt.Sprintf("[QUERY_STRING] => foo=a&bar=b&i=%d#hash", i))
+		assert.Contains(t, strBody, fmt.Sprintf("[REQUEST_URI] => /server-variable.php?foo=a&bar=b&i=%d#hash", i))
 		assert.Contains(t, strBody, "[SCRIPT_NAME]")
 		assert.Contains(t, strBody, "[CONTENT_LENGTH]")
 		assert.Contains(t, strBody, "[REMOTE_ADDR]")
@@ -274,7 +275,6 @@ func testSession(t *testing.T, scriptName string) {
 		}
 
 		body1, _ := io.ReadAll(resp1.Body)
-		t.Log(string(body1))
 		assert.Equal(t, "Count: 0\n", string(body1))
 
 		resp2, err := client.Get(ts.URL + "/session.php")
