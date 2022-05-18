@@ -50,6 +50,7 @@ func (f *FrankenPHPModule) Provision(ctx caddy.Context) error {
 	f.logger = ctx.Logger(f)
 
 	_, _, err := php.LoadOrNew("php", func() (caddy.Destructor, error) {
+		frankenphp.Startup()
 		return &phpDestructor{}, nil
 	})
 	if err != nil {
