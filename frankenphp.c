@@ -12,6 +12,7 @@
 #include <Zend/zend_types.h>
 #include <Zend/zend_exceptions.h>
 #include <Zend/zend_interfaces.h>
+#include <sapi/embed/php_embed.h>
 #include <ext/standard/head.h>
 #include <ext/spl/spl_exceptions.h>
 
@@ -660,6 +661,21 @@ int frankenphp_execute_script(const char* file_name)
 	} zend_end_try();
 
 	zend_destroy_file_handle(&file_handle);
+
+	return status;
+}
+
+int frankenphp_execute_script_cli(char *script, int argc, char **argv) {
+	int status;
+
+	PHP_EMBED_START_BLOCK(argc, argv)
+
+	zend_file_handle file_handle;
+	zend_stream_init_filename(&file_handle, script);
+
+	status = php_execute_script(&file_handle);
+
+	PHP_EMBED_END_BLOCK()
 
 	return status;
 }

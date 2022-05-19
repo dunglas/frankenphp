@@ -588,3 +588,9 @@ func testFiberNoCgo(t *testing.T, opts *testOptions) {
 		assert.Equal(t, string(body), fmt.Sprintf("Fiber %d", i))
 	}, opts)
 }
+
+func TestExecuteScriptCLI(t *testing.T) {
+	cwd, _ := os.Getwd()
+
+	assert.Nil(t, frankenphp.ExecuteScriptCLI(cwd+"/testdata/command.php", []string{"foo", "bar"}))
+}
