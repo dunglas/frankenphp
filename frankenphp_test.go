@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"net/http/cookiejar"
 	"net/http/httptest"
@@ -303,4 +304,18 @@ func testPhpInfo(t *testing.T, scriptName string) {
 
 		assert.Contains(t, string(body), "frankenphp")
 	}
+}
+
+func Example() {
+	frankenphp.Startup()
+	defer frankenphp.Shutdown()
+
+	phpHandler := func(w http.ResponseWriter, req *http.Request) {
+		if err := frankenphp.ExecuteScript(w, req); err != nil {
+			log.Print(fmt.Errorf("error executing PHP script: %w", err))
+		}
+	}
+
+	http.HandleFunc("/", phpHandler)
+	log.Fatal(http.ListenAndServe(":8080", nil))
 }
