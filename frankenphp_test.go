@@ -306,6 +306,12 @@ func testPhpInfo(t *testing.T, scriptName string) {
 	}
 }
 
+func TestExecuteScriptCLI(t *testing.T) {
+	cwd, _ := os.Getwd()
+
+	assert.Nil(t, frankenphp.ExecuteScriptCLI(cwd+"/testdata/command.php", []string{"foo", "bar"}))
+}
+
 func ExampleExecuteScript() {
 	frankenphp.Startup()
 	defer frankenphp.Shutdown()

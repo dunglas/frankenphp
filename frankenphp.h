@@ -26,4 +26,6 @@ int frankenphp_request_startup();
 int frankenphp_execute_script(const char *file_name);
 uintptr_t frankenphp_request_shutdown();
 
+int frankenphp_execute_script_cli(char *script, int argc, char **argv);
+
 #endif

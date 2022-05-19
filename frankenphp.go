@@ -168,6 +168,25 @@ func updateServerContext(request *http.Request) error {
 	return nil
 }
 
+func ExecuteScriptCLI(script string, args []string) error {
+	cScript := C.CString(script)
+	defer C.free(unsafe.Pointer(cScript))
+
+	argc := C.int(len(args))
+	argv := make([]*C.char, argc)
+	for i, arg := range args {
+		argv[i] = C.CString(arg)
+	}
+
+	runtime.LockOSThread()
+
+	if C.frankenphp_execute_script_cli(cScript, argc, (**C.char)(unsafe.Pointer(&argv[0]))) == -1 {
+		return fmt.Errorf("error exuction script %s", script)
+	}
+
+	return nil
+}
+
 func ExecuteScript(responseWriter http.ResponseWriter, request *http.Request) error {
 	if atomic.LoadInt32(&started) < 1 {
 		panic("FrankenPHP isn't started, call frankenphp.Startup()")

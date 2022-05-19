@@ -9,6 +9,7 @@
 #include <php_variables.h>
 #include <php_output.h>
 #include <Zend/zend_alloc.h>
+#include <sapi/embed/php_embed.h>
 #include "_cgo_export.h"
 
 // Helper functions copied from the PHP source code
@@ -545,4 +546,19 @@ int frankenphp_execute_script(const char* file_name)
 	} zend_end_try();
 
 	return status;
+}
+
+int frankenphp_execute_script_cli(char *script, int argc, char **argv) {
+	PHP_EMBED_START_BLOCK(argc, argv)
+
+	zend_file_handle file_handle;
+	zend_stream_init_filename(&file_handle, script);
+
+	if (php_execute_script(&file_handle) == FAILURE) {
+		return FAILURE;
+	}
+
+	PHP_EMBED_END_BLOCK()
+
+	return SUCCESS;
 }
