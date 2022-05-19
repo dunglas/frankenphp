@@ -11,7 +11,7 @@ The easiest way to get started is to use our Docker image:
 docker build -t frankenphp .
 ```
 
-### Compile fron Sources
+### Compile From Sources
 
 #### Install PHP
 

@@ -2,14 +2,14 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <php.h>
+#include <SAPI.h>
+#include <ext/standard/head.h>
+#include <php_main.h>
+#include <php_variables.h>
+#include <php_output.h>
+#include <Zend/zend_alloc.h>
 #include "_cgo_export.h"
-#include "php.h"
-#include "SAPI.h"
-#include "ext/standard/head.h"
-#include "php_main.h"
-#include "php_variables.h"
-#include "php_output.h"
-#include "Zend/zend_alloc.h"
 
 // Helper functions copied from the PHP source code
 

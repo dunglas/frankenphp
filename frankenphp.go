@@ -5,7 +5,7 @@ package frankenphp
 // #cgo LDFLAGS: -L/usr/local/lib -L/opt/homebrew/opt/libiconv/lib -L/usr/lib -lphp -lxml2 -liconv -lresolv -lsqlite3
 // #include <stdlib.h>
 // #include <stdint.h>
-// #include "php_variables.h"
+// #include <php_variables.h>
 // #include "frankenphp.h"
 import "C"
 import (
