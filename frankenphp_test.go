@@ -306,7 +306,7 @@ func testPhpInfo(t *testing.T, scriptName string) {
 	}
 }
 
-func Example() {
+func ExampleExecuteScript() {
 	frankenphp.Startup()
 	defer frankenphp.Shutdown()
 

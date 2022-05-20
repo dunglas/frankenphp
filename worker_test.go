@@ -3,11 +3,14 @@ package frankenphp_test
 import (
 	"fmt"
 	"io"
+	"log"
+	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"strings"
 	"testing"
 
+	"github.com/dunglas/frankenphp"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -39,4 +42,20 @@ func TestWorker(t *testing.T) {
 
 		assert.Contains(t, string(body2), fmt.Sprintf("Requests handled: %d", i*2+1))
 	}
+}
+
+func ExampleWorkerHandleRequest() {
+	frankenphp.Startup()
+	defer frankenphp.Shutdown()
+
+	frankenphp.StartWorkers("worker.php", 5)
+
+	phpHandler := func(w http.ResponseWriter, req *http.Request) {
+		if err := frankenphp.WorkerHandleRequest(w, req); err != nil {
+			log.Print(fmt.Errorf("error executing PHP script: %w", err))
+		}
+	}
+
+	http.HandleFunc("/", phpHandler)
+	log.Fatal(http.ListenAndServe(":8080", nil))
 }
