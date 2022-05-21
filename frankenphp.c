@@ -359,9 +359,7 @@ void frankenphp_update_server_context(
 	char *auth_password,
 	int proto_num
 ) {
-	frankenphp_server_context *ctx = SG(server_context);
-
-	ctx->request = request;
+	((frankenphp_server_context*) SG(server_context))->request = request;
 
 	SG(request_info).auth_password = auth_password;
 	SG(request_info).auth_user = auth_user;

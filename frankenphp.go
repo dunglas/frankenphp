@@ -209,7 +209,7 @@ func ExecuteScript(responseWriter http.ResponseWriter, request *http.Request) er
 //export go_ub_write
 func go_ub_write(rh C.uintptr_t, cString *C.char, length C.int) C.size_t {
 	r := cgo.Handle(rh).Value().(*http.Request)
-	fc := r.Context().Value(contextKey).(*FrankenPHPContext)
+	fc, _ := FromContext(r.Context())
 
 	i, _ := fc.responseWriter.Write([]byte(C.GoStringN(cString, length)))
 
