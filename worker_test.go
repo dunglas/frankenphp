@@ -15,10 +15,7 @@ import (
 )
 
 func TestWorker(t *testing.T) {
-	shutdown, handler, iterations := createTestHandler(t, "worker.php")
-	defer shutdown()
-
-	for i := 0; i < iterations; i++ {
+	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
 		formData := url.Values{"baz": {"bat"}}
 		req := httptest.NewRequest("POST", "http://example.com/worker.php?foo=bar", strings.NewReader(formData.Encode()))
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
@@ -41,7 +38,7 @@ func TestWorker(t *testing.T) {
 		body2, _ := io.ReadAll(resp2.Body)
 
 		assert.Contains(t, string(body2), fmt.Sprintf("Requests handled: %d", i*2+1))
-	}
+	}, &testOptions{workerScript: "worker.php", nbWorkers: 1, nbParrallelRequests: 1})
 }
 
 func ExampleWorkerHandleRequest() {
