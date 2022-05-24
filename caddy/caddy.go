@@ -4,9 +4,14 @@
 package caddy
 
 import (
+	"bytes"
+	"log"
 	"net/http"
+	"runtime"
+	"strconv"
 
 	"github.com/caddyserver/caddy/v2"
+	"github.com/caddyserver/caddy/v2/caddyconfig"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile"
 	"github.com/caddyserver/caddy/v2/modules/caddyhttp"
@@ -14,11 +19,55 @@ import (
 	"go.uber.org/zap"
 )
 
-var php = caddy.NewUsagePool()
-
 func init() {
+	frankenphp.Startup()
+
+	caddy.RegisterModule(&FrankenPHPApp{})
 	caddy.RegisterModule(FrankenPHPModule{})
+	httpcaddyfile.RegisterGlobalOption("frankenphp", parseGlobalOption)
 	httpcaddyfile.RegisterHandlerDirective("php", parseCaddyfile)
+}
+
+type FrankenPHPApp struct{}
+
+// CaddyModule returns the Caddy module information.
+func (a *FrankenPHPApp) CaddyModule() caddy.ModuleInfo {
+	return caddy.ModuleInfo{
+		ID:  "frankenphp",
+		New: func() caddy.Module { return a },
+	}
+}
+
+func getGID() uint64 {
+	b := make([]byte, 64)
+	b = b[:runtime.Stack(b, false)]
+	b = bytes.TrimPrefix(b, []byte("goroutine "))
+	b = b[:bytes.IndexByte(b, ' ')]
+	n, _ := strconv.ParseUint(string(b), 10, 64)
+	return n
+}
+
+func (*FrankenPHPApp) Start() error {
+	log.Printf("started! %d", getGID())
+	return frankenphp.Startup()
+}
+
+func (*FrankenPHPApp) Stop() error {
+	log.Printf("stoped!")
+
+	frankenphp.Shutdown()
+
+	return nil
+}
+
+func parseGlobalOption(d *caddyfile.Dispenser, _ interface{}) (interface{}, error) {
+	app := &FrankenPHPApp{}
+
+	// tell Caddyfile adapter that this is the JSON for an app
+	return httpcaddyfile.App{
+		Name:  "frankenphp",
+		Value: caddyconfig.JSON(app, nil),
+	}, nil
 }
 
 type FrankenPHPModule struct {
@@ -37,25 +86,9 @@ func (FrankenPHPModule) CaddyModule() caddy.ModuleInfo {
 	}
 }
 
-type phpDestructor struct{}
-
-func (phpDestructor) Destruct() error {
-	frankenphp.Shutdown()
-
-	return nil
-}
-
 // Provision sets up the module.
 func (f *FrankenPHPModule) Provision(ctx caddy.Context) error {
 	f.logger = ctx.Logger(f)
-
-	_, _, err := php.LoadOrNew("php", func() (caddy.Destructor, error) {
-		frankenphp.Startup()
-		return &phpDestructor{}, nil
-	})
-	if err != nil {
-		return err //nolint:wrapcheck
-	}
 
 	if f.Root == "" {
 		f.Root = "{http.vars.root}"
@@ -65,12 +98,6 @@ func (f *FrankenPHPModule) Provision(ctx caddy.Context) error {
 	}
 
 	return nil
-}
-
-func (f *FrankenPHPModule) Cleanup() error {
-	_, err := php.Delete("php")
-
-	return err
 }
 
 // ServeHTTP implements caddyhttp.MiddlewareHandler.
@@ -146,8 +173,8 @@ func parseCaddyfile(h httpcaddyfile.Helper) (caddyhttp.MiddlewareHandler, error)
 
 // Interface guards
 var (
+	_ caddy.App                   = (*FrankenPHPApp)(nil)
 	_ caddy.Provisioner           = (*FrankenPHPModule)(nil)
-	_ caddy.CleanerUpper          = (*FrankenPHPModule)(nil)
 	_ caddyhttp.MiddlewareHandler = (*FrankenPHPModule)(nil)
 	_ caddyfile.Unmarshaler       = (*FrankenPHPModule)(nil)
 )

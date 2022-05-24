@@ -11,6 +11,10 @@
 #include <Zend/zend_alloc.h>
 #include "_cgo_export.h"
 
+#if defined(PHP_WIN32) && defined(ZTS)
+ZEND_TSRMLS_CACHE_DEFINE()
+#endif
+
 // Helper functions copied from the PHP source code
 
 // main/php_variables.c
@@ -60,6 +64,18 @@ static inline void php_register_server_variables(void)
 }
 
 // End of copied functions
+
+int frankenphp_check_version() {
+#ifndef ZTS
+    return -1;
+#endif
+
+	if (PHP_VERSION_ID <= 80100 || PHP_VERSION_ID >= 80200) {
+		return -2;
+	}
+
+	return SUCCESS;
+}
 
 typedef struct frankenphp_server_context {
 	uintptr_t request;
@@ -328,20 +344,20 @@ uintptr_t frankenphp_request_shutdown()
 // set worker to 0 if not in worker mode
 int frankenphp_create_server_context(uintptr_t requests_chan, char* worker_filename)
 {
-	frankenphp_server_context *ctx;
-
-	(void) ts_resource(0);
+	/* initial resource fetch */
+	(void)ts_resource(0);
+#ifdef PHP_WIN32
+	ZEND_TSRMLS_CACHE_UPDATE();
+#endif
 
 	// todo: use a pool
-	ctx = malloc(sizeof(frankenphp_server_context));
+	frankenphp_server_context *ctx = SG(server_context) = malloc(sizeof(frankenphp_server_context));
 	if (ctx == NULL) return FAILURE;
 
 	ctx->request = 0;
 	ctx->requests_chan = requests_chan;
 	ctx->worker_filename = worker_filename;
 	ctx->cookie_data = NULL;
-
-	SG(server_context) = ctx;
 
 	return SUCCESS;
 }
@@ -497,12 +513,12 @@ sapi_module_struct frankenphp_sapi_module = {
 };
 
 int frankenphp_init() {
-    #ifndef ZTS
-    return FAILURE;
-    #endif
+	php_tsrm_startup();
+#ifdef PHP_WIN32
+	ZEND_TSRMLS_CACHE_UPDATE();
+#endif
 
-    php_tsrm_startup();
-    zend_signal_startup();
+	zend_signal_startup();
     sapi_startup(&frankenphp_sapi_module);
 
 	return frankenphp_sapi_module.startup(&frankenphp_sapi_module);
