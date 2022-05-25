@@ -43,7 +43,7 @@ func runTest(t *testing.T, test func(func(http.ResponseWriter, *http.Request), *
 		opts.nbWorkers = 2
 	}
 	if opts.nbParrallelRequests == 0 {
-		opts.nbParrallelRequests = 5
+		opts.nbParrallelRequests = 40
 	}
 
 	cwd, _ := os.Getwd()

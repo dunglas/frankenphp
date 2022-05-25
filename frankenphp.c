@@ -344,10 +344,12 @@ uintptr_t frankenphp_request_shutdown()
 // set worker to 0 if not in worker mode
 int frankenphp_create_server_context(uintptr_t requests_chan, char* worker_filename)
 {
+#ifdef ZTS
 	/* initial resource fetch */
 	(void)ts_resource(0);
-#ifdef PHP_WIN32
+# ifdef PHP_WIN32
 	ZEND_TSRMLS_CACHE_UPDATE();
+# endif
 #endif
 
 	// todo: use a pool
@@ -513,9 +515,11 @@ sapi_module_struct frankenphp_sapi_module = {
 };
 
 int frankenphp_init() {
+#ifdef ZTS
 	php_tsrm_startup();
-#ifdef PHP_WIN32
+# ifdef PHP_WIN32
 	ZEND_TSRMLS_CACHE_UPDATE();
+# endif
 #endif
 
 	zend_signal_startup();
@@ -526,9 +530,12 @@ int frankenphp_init() {
 
 void frankenphp_shutdown()
 {
-    php_module_shutdown();
+	frankenphp_sapi_module.shutdown(&frankenphp_sapi_module);
+
 	sapi_shutdown();
-    tsrm_shutdown();
+#ifdef ZTS
+	tsrm_shutdown();
+#endif
 }
 
 int frankenphp_request_startup()
