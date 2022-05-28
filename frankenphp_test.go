@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"os"
+	"runtime"
 	"strings"
 	"sync"
 	"testing"
@@ -25,6 +26,7 @@ type testOptions struct {
 }
 
 func TestMain(m *testing.M) {
+	runtime.LockOSThread()
 	if err := frankenphp.Init(); err != nil {
 		panic(err)
 	}
@@ -39,11 +41,14 @@ func runTest(t *testing.T, test func(func(http.ResponseWriter, *http.Request), *
 	if opts == nil {
 		opts = &testOptions{}
 	}
+	if opts.workerScript != "" {
+		t.SkipNow()
+	}
 	if opts.nbWorkers == 0 {
 		opts.nbWorkers = 2
 	}
 	if opts.nbParrallelRequests == 0 {
-		opts.nbParrallelRequests = 40
+		opts.nbParrallelRequests = 5
 	}
 
 	cwd, _ := os.Getwd()
