@@ -338,6 +338,8 @@ uintptr_t frankenphp_request_shutdown()
 	free(ctx);
 	SG(server_context) = NULL;
 
+	ts_free_thread();
+
 	return rh;
 }
 
@@ -353,13 +355,15 @@ int frankenphp_create_server_context(uintptr_t requests_chan, char* worker_filen
 #endif
 
 	// todo: use a pool
-	frankenphp_server_context *ctx = SG(server_context) = malloc(sizeof(frankenphp_server_context));
+	frankenphp_server_context *ctx = calloc(1, sizeof(frankenphp_server_context));
 	if (ctx == NULL) return FAILURE;
 
 	ctx->request = 0;
 	ctx->requests_chan = requests_chan;
 	ctx->worker_filename = worker_filename;
 	ctx->cookie_data = NULL;
+
+	SG(server_context) = ctx;
 
 	return SUCCESS;
 }
@@ -546,10 +550,11 @@ int frankenphp_request_startup()
 
 	fprintf(stderr, "problem in php_request_startup\n");
 
-	php_request_shutdown((void *) 0);
 	frankenphp_server_context *ctx = SG(server_context);
 	SG(server_context) = NULL;
 	free(ctx);
+
+	php_request_shutdown((void *) 0);
 
 	return FAILURE;
 }

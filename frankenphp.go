@@ -20,6 +20,8 @@ import (
 	"strconv"
 	"strings"
 	"unsafe"
+	// debug
+	//_ "github.com/ianlancetaylor/cgosymbolizer"
 )
 
 type key int
