@@ -42,9 +42,6 @@ func TestWorker(t *testing.T) {
 }
 
 func ExampleWorkerHandleRequest() {
-	frankenphp.Startup()
-	defer frankenphp.Shutdown()
-
 	frankenphp.StartWorkers("worker.php", 5)
 
 	phpHandler := func(w http.ResponseWriter, req *http.Request) {

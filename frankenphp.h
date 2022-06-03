@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 
+int frankenphp_check_version();
+
 int frankenphp_init();
 void frankenphp_shutdown();
 

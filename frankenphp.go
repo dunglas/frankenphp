@@ -10,6 +10,7 @@ package frankenphp
 import "C"
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -18,18 +19,20 @@ import (
 	"runtime/cgo"
 	"strconv"
 	"strings"
-	"sync/atomic"
 	"unsafe"
+	// debug
+	//_ "github.com/ianlancetaylor/cgosymbolizer"
 )
-
-var started int32
 
 type key int
 
 var contextKey key
 
 func init() {
-	log.SetFlags(log.LstdFlags | log.Lshortfile)
+	// Make sure the main goroutine is bound to the main thread.
+	runtime.LockOSThread()
+
+	log.SetFlags(log.LstdFlags | log.Lshortfile) // TODO: switch to Zap
 }
 
 // FrankenPHP executes PHP scripts.
@@ -81,30 +84,31 @@ func FromContext(ctx context.Context) (fctx *FrankenPHPContext, ok bool) {
 	return
 }
 
-// Startup starts the PHP engine.
-// Startup and Shutdown must be called in the same goroutine (ideally in the main function).
-func Startup() error {
-	if atomic.LoadInt32(&started) > 0 {
-		return nil
-	}
-	atomic.StoreInt32(&started, 1)
+// Init initializes the PHP engine.
+// Init and Shutdown must be called in the main function.
+func Init() error {
+	switch C.frankenphp_check_version() {
+	case -1:
+		return errors.New(`ZTS is not enabled, recompile PHP using the "--enable-zts" configuration option`)
 
-	runtime.LockOSThread()
+	case -2:
+		return errors.New(`FrankenPHP is only compatible with PHP 8.1`)
+	}
 
 	if C.frankenphp_init() < 0 {
-		return fmt.Errorf(`ZTS is not enabled, recompile PHP using the "--enable-zts" configuration option`)
+		return errors.New("error initializing PHP")
 	}
 
 	return nil
 }
 
 // Shutdown stops the PHP engine.
-// Shutdown and Startup must be called in the same goroutine (ideally in the main function).
+// Init and Shutdown must be called in the main function.
 func Shutdown() {
-	if atomic.LoadInt32(&started) < 1 {
-		return
-	}
-	atomic.StoreInt32(&started, 0)
+	//if atomic.LoadInt32(&started) < 1 {
+	//	return
+	//}
+	//atomic.StoreInt32(&started, 0)
 
 	C.frankenphp_shutdown()
 }
@@ -169,11 +173,8 @@ func updateServerContext(request *http.Request) error {
 }
 
 func ExecuteScript(responseWriter http.ResponseWriter, request *http.Request) error {
-	if atomic.LoadInt32(&started) < 1 {
-		panic("FrankenPHP isn't started, call frankenphp.Startup()")
-	}
-
 	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
 	// todo: check if it's ok or not to call runtime.UnlockOSThread() to reuse this thread
 
 	if C.frankenphp_create_server_context(0, nil) < 0 {

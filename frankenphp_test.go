@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"os"
+	"runtime"
 	"strings"
 	"sync"
 	"testing"
@@ -24,22 +25,34 @@ type testOptions struct {
 	realServer          bool
 }
 
+func TestMain(m *testing.M) {
+	runtime.LockOSThread()
+	if err := frankenphp.Init(); err != nil {
+		panic(err)
+	}
+
+	code := m.Run()
+
+	frankenphp.Shutdown()
+	os.Exit(code)
+}
+
 func runTest(t *testing.T, test func(func(http.ResponseWriter, *http.Request), *httptest.Server, int), opts *testOptions) {
 	if opts == nil {
 		opts = &testOptions{}
+	}
+	if opts.workerScript != "" {
+		t.SkipNow()
 	}
 	if opts.nbWorkers == 0 {
 		opts.nbWorkers = 2
 	}
 	if opts.nbParrallelRequests == 0 {
-		opts.nbParrallelRequests = 5
+		opts.nbParrallelRequests = 10
 	}
 
 	cwd, _ := os.Getwd()
 	testDataDir := cwd + "/testdata/"
-
-	assert.Nil(t, frankenphp.Startup())
-	defer frankenphp.Shutdown()
 
 	if opts.workerScript != "" {
 		frankenphp.StartWorkers(testDataDir+opts.workerScript, opts.nbWorkers)
@@ -75,14 +88,6 @@ func runTest(t *testing.T, test func(func(http.ResponseWriter, *http.Request), *
 	}
 
 	wg.Wait()
-}
-
-func TestStartup(t *testing.T) {
-	defer frankenphp.Shutdown()
-	assert.Nil(t, frankenphp.Startup())
-	frankenphp.Shutdown()
-
-	assert.Nil(t, frankenphp.Startup())
 }
 
 func TestHelloWorld_module(t *testing.T) { testHelloWorld(t, nil) }
@@ -311,7 +316,7 @@ func testPhpInfo(t *testing.T, opts *testOptions) {
 }
 
 func ExampleExecuteScript() {
-	frankenphp.Startup()
+	frankenphp.Init()
 	defer frankenphp.Shutdown()
 
 	phpHandler := func(w http.ResponseWriter, req *http.Request) {

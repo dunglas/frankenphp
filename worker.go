@@ -10,7 +10,6 @@ import (
 	"runtime"
 	"runtime/cgo"
 	"sync"
-	"sync/atomic"
 	"unsafe"
 )
 
@@ -18,10 +17,6 @@ var requestsChans sync.Map // map[fileName]cgo.NewHandle(chan *http.Request)
 var workersWaitGroup sync.WaitGroup
 
 func WorkerHandleRequest(responseWriter http.ResponseWriter, request *http.Request) error {
-	if atomic.LoadInt32(&started) < 1 {
-		panic("FrankenPHP isn't started, call frankenphp.Startup()")
-	}
-
 	if err := populateEnv(request); err != nil {
 		return err
 	}
