@@ -13,7 +13,7 @@ import (
 	"unsafe"
 )
 
-var requestsChans sync.Map // map[fileName]cgo.NewHandle(chan *http.Request)
+var workersRequestChans sync.Map // map[fileName]cgo.NewHandle(chan *http.Request)
 var workersWaitGroup sync.WaitGroup
 
 func WorkerHandleRequest(responseWriter http.ResponseWriter, request *http.Request) error {
@@ -22,7 +22,7 @@ func WorkerHandleRequest(responseWriter http.ResponseWriter, request *http.Reque
 	}
 
 	fc, _ := FromContext(request.Context())
-	v, ok := requestsChans.Load(fc.Env["SCRIPT_FILENAME"])
+	v, ok := workersRequestChans.Load(fc.Env["SCRIPT_FILENAME"])
 	if !ok {
 		panic(fmt.Errorf("No worker started for script %s", fc.Env["SCRIPT_FILENAME"]))
 	}
@@ -40,14 +40,14 @@ func WorkerHandleRequest(responseWriter http.ResponseWriter, request *http.Reque
 }
 
 func StartWorkers(fileName string, nbWorkers int) {
-	if _, ok := requestsChans.Load(fileName); ok {
+	if _, ok := workersRequestChans.Load(fileName); ok {
 		panic(fmt.Errorf("workers %q: already started", fileName))
 	}
 
 	rc := make(chan *http.Request)
 	rch := cgo.NewHandle(rc)
 
-	requestsChans.Store(fileName, rch)
+	workersRequestChans.Store(fileName, rch)
 
 	for i := 0; i < nbWorkers; i++ {
 		newWorker(fileName, rch)
@@ -55,9 +55,9 @@ func StartWorkers(fileName string, nbWorkers int) {
 }
 
 func StopWorkers() {
-	requestsChans.Range(func(k, v any) bool {
+	workersRequestChans.Range(func(k, v any) bool {
 		close(v.(cgo.Handle).Value().(chan *http.Request))
-		requestsChans.Delete(k)
+		workersRequestChans.Delete(k)
 
 		return true
 	})

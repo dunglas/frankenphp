@@ -9,13 +9,13 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"os"
-	"runtime"
 	"strings"
 	"sync"
 	"testing"
 
 	"github.com/dunglas/frankenphp"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type testOptions struct {
@@ -23,18 +23,6 @@ type testOptions struct {
 	nbWorkers           int
 	nbParrallelRequests int
 	realServer          bool
-}
-
-func TestMain(m *testing.M) {
-	runtime.LockOSThread()
-	if err := frankenphp.Init(); err != nil {
-		panic(err)
-	}
-
-	code := m.Run()
-
-	frankenphp.Shutdown()
-	os.Exit(code)
 }
 
 func runTest(t *testing.T, test func(func(http.ResponseWriter, *http.Request), *httptest.Server, int), opts *testOptions) {
@@ -48,7 +36,7 @@ func runTest(t *testing.T, test func(func(http.ResponseWriter, *http.Request), *
 		opts.nbWorkers = 2
 	}
 	if opts.nbParrallelRequests == 0 {
-		opts.nbParrallelRequests = 10
+		opts.nbParrallelRequests = 100
 	}
 
 	cwd, _ := os.Getwd()
@@ -59,12 +47,16 @@ func runTest(t *testing.T, test func(func(http.ResponseWriter, *http.Request), *
 		defer frankenphp.StopWorkers()
 	}
 
+	err := frankenphp.NewInit(0)
+	require.Nil(t, err)
+	defer frankenphp.NewShutdown()
+
 	handler := func(w http.ResponseWriter, r *http.Request) {
 		var err error
 
 		req := frankenphp.NewRequestWithContext(r, testDataDir)
 		if opts.workerScript == "" {
-			err = frankenphp.ExecuteScript(w, req)
+			frankenphp.NewExecuteScript(w, req)
 		} else {
 			err = frankenphp.WorkerHandleRequest(w, req)
 		}
@@ -100,7 +92,6 @@ func testHelloWorld(t *testing.T, opts *testOptions) {
 
 		resp := w.Result()
 		body, _ := io.ReadAll(resp.Body)
-
 		assert.Equal(t, fmt.Sprintf("I am by birth a Genevese (%d)", i), string(body))
 	}, opts)
 }
@@ -165,7 +156,7 @@ func testPathInfo(t *testing.T, opts *testOptions) {
 			fc.Env["REQUEST_URI"] = r.URL.RequestURI()
 
 			if opts == nil {
-				assert.Nil(t, frankenphp.ExecuteScript(w, rewriteRequest))
+				frankenphp.NewExecuteScript(w, rewriteRequest)
 			} else {
 				assert.Nil(t, frankenphp.WorkerHandleRequest(w, rewriteRequest))
 			}

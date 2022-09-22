@@ -4,6 +4,7 @@
 #include <stdint.h>
 
 int frankenphp_check_version();
+int fp_init(int num_threads);
 
 int frankenphp_init();
 void frankenphp_shutdown();

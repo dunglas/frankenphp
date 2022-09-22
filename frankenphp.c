@@ -9,6 +9,8 @@
 #include <php_variables.h>
 #include <php_output.h>
 #include <Zend/zend_alloc.h>
+#include "C-Thread-Pool/thpool.h"
+#include "C-Thread-Pool/thpool.c"
 #include "_cgo_export.h"
 
 #if defined(PHP_WIN32) && defined(ZTS)
@@ -65,6 +67,43 @@ static inline void php_register_server_variables(void)
 
 // End of copied functions
 
+void *manager_thread(void *arg) {
+	frankenphp_init();
+
+	threadpool thpool = thpool_init(*((int *) arg));
+	free(arg);
+
+	uintptr_t rh;
+	while ((rh = go_fetch_request())) {
+		thpool_add_work(thpool, go_execute_script, (void *) rh);
+	}
+
+	// channel closed, shutdown gracefully
+	thpool_wait(thpool);
+	thpool_destroy(thpool);
+
+	frankenphp_shutdown();
+
+	go_shutdown();
+
+	return NULL;
+}
+
+int fp_init(int num_threads) {
+	pthread_t thread;
+
+	int *num_threads_ptr = calloc(1, sizeof(int));
+	*num_threads_ptr = num_threads;
+
+    if (pthread_create(&thread, NULL, *manager_thread, (void *) num_threads_ptr) != 0) {
+		go_shutdown();
+
+		return -1;
+	}
+
+	return pthread_detach(thread);
+}
+
 int frankenphp_check_version() {
 #ifndef ZTS
     return -1;
@@ -76,6 +115,8 @@ int frankenphp_check_version() {
 
 	return SUCCESS;
 }
+
+
 
 typedef struct frankenphp_server_context {
 	uintptr_t request;
@@ -521,6 +562,7 @@ sapi_module_struct frankenphp_sapi_module = {
 int frankenphp_init() {
 #ifdef ZTS
 	php_tsrm_startup();
+	//tsrm_error_set(TSRM_ERROR_LEVEL_INFO, NULL);
 # ifdef PHP_WIN32
 	ZEND_TSRMLS_CACHE_UPDATE();
 # endif
@@ -547,8 +589,6 @@ int frankenphp_request_startup()
 	if (php_request_startup() == SUCCESS) {
 		return SUCCESS;
 	}
-
-	fprintf(stderr, "problem in php_request_startup\n");
 
 	frankenphp_server_context *ctx = SG(server_context);
 	SG(server_context) = NULL;

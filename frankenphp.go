@@ -2,7 +2,8 @@ package frankenphp
 
 // #cgo CFLAGS: -Wall -Wno-unused-variable
 // #cgo CFLAGS: -I/usr/local/include/php -I/usr/local/include/php/Zend -I/usr/local/include/php/TSRM -I/usr/local/include/php/main
-// #cgo LDFLAGS: -L/usr/local/lib -L/opt/homebrew/opt/libiconv/lib -L/usr/lib -lphp -lxml2 -liconv -lresolv -lsqlite3
+// #cgo LDFLAGS: -L/usr/local/lib -L/opt/homebrew/opt/libiconv/lib -L/usr/lib -lphp -lxml2 -lresolv -lsqlite3 -ldl -lm -lutil
+// #cgo darwin LDFLAGS: -liconv
 // #include <stdlib.h>
 // #include <stdint.h>
 // #include <php_variables.h>
@@ -19,6 +20,7 @@ import (
 	"runtime/cgo"
 	"strconv"
 	"strings"
+	"sync"
 	"unsafe"
 	// debug
 	//_ "github.com/ianlancetaylor/cgosymbolizer"
@@ -28,9 +30,12 @@ type key int
 
 var contextKey key
 
+var requestChan chan *http.Request
+var shutdownWG sync.WaitGroup
+
 func init() {
 	// Make sure the main goroutine is bound to the main thread.
-	runtime.LockOSThread()
+	//runtime.LockOSThread()
 
 	log.SetFlags(log.LstdFlags | log.Lshortfile) // TODO: switch to Zap
 }
@@ -84,7 +89,46 @@ func FromContext(ctx context.Context) (fctx *FrankenPHPContext, ok bool) {
 	return
 }
 
-// Init initializes the PHP engine.
+func NewInit(numThreads int) error {
+	if requestChan != nil {
+		return errors.New("FrankenPHP is already started")
+	}
+
+	switch C.frankenphp_check_version() {
+	case -1:
+		numThreads = 1
+		log.Print(`ZTS is not enabled, recompile PHP using the "--enable-zts" configuration option or performance will be degraded`)
+
+	case -2:
+		return errors.New(`FrankenPHP is only compatible with PHP 8.1`)
+	}
+
+	shutdownWG.Add(1)
+	requestChan = make(chan *http.Request)
+
+	if numThreads < 1 {
+		numThreads = runtime.NumCPU()
+	}
+
+	if C.fp_init(C.int(numThreads)) != 0 {
+		return errors.New("error creating the main thread")
+	}
+
+	return nil
+}
+
+func NewShutdown() {
+	close(requestChan)
+	shutdownWG.Wait()
+	requestChan = nil
+}
+
+//export go_shutdown
+func go_shutdown() {
+	shutdownWG.Done()
+}
+
+// Init initializes the PHP engine and the thread pool.
 // Init and Shutdown must be called in the main function.
 func Init() error {
 	switch C.frankenphp_check_version() {
@@ -170,6 +214,66 @@ func updateServerContext(request *http.Request) error {
 	)
 
 	return nil
+}
+
+func NewExecuteScript(responseWriter http.ResponseWriter, request *http.Request) {
+	fc, ok := FromContext(request.Context())
+	if !ok {
+		panic("not a FrankenPHP request")
+	}
+	fc.responseWriter = responseWriter
+	fc.done = make(chan interface{})
+
+	shutdownWG.Add(1)
+	defer shutdownWG.Done()
+
+	requestChan <- request
+	<-fc.done
+}
+
+//export go_fetch_request
+func go_fetch_request() C.uintptr_t {
+	r, ok := <-requestChan
+	if !ok {
+		return 0
+	}
+
+	return C.uintptr_t(cgo.NewHandle(r))
+}
+
+//export go_execute_script
+func go_execute_script(rh unsafe.Pointer) {
+	handle := cgo.Handle(rh)
+	defer handle.Delete()
+
+	request := handle.Value().(*http.Request)
+	fc, ok := FromContext(request.Context())
+	if !ok {
+		panic("not a FrankenPHP request")
+	}
+	defer close(fc.done)
+
+	if C.frankenphp_create_server_context(0, nil) < 0 {
+		panic("error during request context creation")
+	}
+
+	if err := updateServerContext(request); err != nil {
+		panic(err)
+	}
+
+	if C.frankenphp_request_startup() < 0 {
+		panic("error during PHP request startup")
+	}
+
+	cFileName := C.CString(fc.Env["SCRIPT_FILENAME"])
+	defer C.free(unsafe.Pointer(cFileName))
+
+	if C.frankenphp_execute_script(cFileName) < 0 {
+		panic("error during PHP script execution")
+	}
+
+	C.frankenphp_clean_server_context()
+	C.frankenphp_request_shutdown()
 }
 
 func ExecuteScript(responseWriter http.ResponseWriter, request *http.Request) error {
