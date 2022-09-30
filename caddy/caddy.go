@@ -4,11 +4,8 @@
 package caddy
 
 import (
-	"bytes"
 	"log"
 	"net/http"
-	"runtime"
-	"strconv"
 
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig"
@@ -20,15 +17,36 @@ import (
 )
 
 func init() {
-	frankenphp.Startup()
-
 	caddy.RegisterModule(&FrankenPHPApp{})
 	caddy.RegisterModule(FrankenPHPModule{})
 	httpcaddyfile.RegisterGlobalOption("frankenphp", parseGlobalOption)
 	httpcaddyfile.RegisterHandlerDirective("php", parseCaddyfile)
 }
 
-type FrankenPHPApp struct{}
+type mainPHPinterpreterKeyType int
+
+var mainPHPInterpreterKey mainPHPinterpreterKeyType
+
+var phpInterpreter = caddy.NewUsagePool()
+
+type phpInterpreterDestructor struct{}
+
+func (phpInterpreterDestructor) Destruct() error {
+	log.Print("Destructor called")
+	frankenphp.Shutdown()
+
+	return nil
+}
+
+type workerConfig struct {
+	FileName string `json:"file_name,omitempty"`
+	Num      int    `json:"num,omitempty"`
+}
+
+type FrankenPHPApp struct {
+	NumThreads int            `json:"num_threads,omitempty"`
+	Workers    []workerConfig `json:"workers,omitempty"`
+}
 
 // CaddyModule returns the Caddy module information.
 func (a *FrankenPHPApp) CaddyModule() caddy.ModuleInfo {
@@ -38,24 +56,47 @@ func (a *FrankenPHPApp) CaddyModule() caddy.ModuleInfo {
 	}
 }
 
-func getGID() uint64 {
-	b := make([]byte, 64)
-	b = b[:runtime.Stack(b, false)]
-	b = bytes.TrimPrefix(b, []byte("goroutine "))
-	b = b[:bytes.IndexByte(b, ' ')]
-	n, _ := strconv.ParseUint(string(b), 10, 64)
-	return n
-}
+func (f *FrankenPHPApp) Start() error {
+	var opts []frankenphp.Option
+	if f.NumThreads != 0 {
+		opts = append(opts, frankenphp.WithNumThreads(f.NumThreads))
+	}
 
-func (*FrankenPHPApp) Start() error {
-	log.Printf("started! %d", getGID())
-	return frankenphp.Startup()
+	for _, w := range f.Workers {
+		num := 1
+		if w.Num > 1 {
+			num = w.Num
+		}
+
+		opts = append(opts, frankenphp.WithWorkers(w.FileName, num))
+	}
+
+	_, loaded, err := phpInterpreter.LoadOrNew(mainPHPInterpreterKey, func() (caddy.Destructor, error) {
+		if err := frankenphp.Init(opts...); err != nil {
+			return nil, err
+		}
+
+		return phpInterpreterDestructor{}, nil
+	})
+	if err != nil {
+		return err
+	}
+
+	if loaded {
+		frankenphp.Shutdown()
+		if err := frankenphp.Init(opts...); err != nil {
+			return err
+		}
+	}
+
+	log.Print("FrankenPHP started")
+
+	return nil
 }
 
 func (*FrankenPHPApp) Stop() error {
-	log.Printf("stoped!")
-
-	frankenphp.Shutdown()
+	//frankenphp.Shutdown()
+	log.Print("FrankenPHP stopped")
 
 	return nil
 }
@@ -117,11 +158,7 @@ func (f FrankenPHPModule) ServeHTTP(w http.ResponseWriter, r *http.Request, next
 		fc.Env[k] = repl.ReplaceKnown(v, "")
 	}
 
-	if err := frankenphp.ExecuteScript(w, fr); err != nil {
-		return err
-	}
-
-	return nil
+	return frankenphp.ServeHTTP(w, fr)
 }
 
 // UnmarshalCaddyfile implements caddyfile.Unmarshaler.

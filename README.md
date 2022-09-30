@@ -24,9 +24,7 @@ then follow the instructions according to your operating system.
 ##### Linux
 
 ```
-./configure \
-    --enable-embed=static \
-    --enable-zts
+./configure --enable-embed=static --enable-zts
 make -j6
 make install
 ```
@@ -43,10 +41,9 @@ echo 'export PATH="/opt/homebrew/opt/bison/bin:$PATH"' >> ~/.zshrc
 ./configure \
     --enable-embed=static \
     --enable-zts \
-    --with-iconv=/opt/homebrew/opt/libiconv/ \
-    --without-pcre-jit
+    --with-iconv=/opt/homebrew/opt/libiconv/
 make -j6
-make install
+sudo make install
 ```
 
 #### Compile the Go App

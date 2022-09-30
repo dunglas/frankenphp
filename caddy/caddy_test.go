@@ -11,37 +11,17 @@ import (
 
 func TestPHP(t *testing.T) {
 	var wg sync.WaitGroup
+	caddytest.Default.AdminPort = 2019
 	tester := caddytest.NewTester(t)
 	tester.InitServer(`
 		{
-			http_port     9080
-			https_port    9443
-
-			#frankenphp
+			admin localhost:2999
+			http_port 9080
+			https_port 9443
 		}
+
 		localhost:9080 {
-			route {
-				root * {env.PWD}/../testdata
-				# Add trailing slash for directory requests
-				@canonicalPath {
-					file {path}/index.php
-					not path */
-				}
-				redir @canonicalPath {path}/ 308
-
-				# If the requested file does not exist, try index files
-				@indexFiles file {
-					try_files {path} {path}/index.php index.php
-					split_path .php
-				}
-				rewrite @indexFiles {http.matchers.file.relative}
-
-				# Handle PHP files with FrankenPHP
-				@phpFiles path *.php
-				php @phpFiles
-		
-				respond 404
-			}
+			respond "Hello"
 		}
 		`, "caddyfile")
 
@@ -53,4 +33,18 @@ func TestPHP(t *testing.T) {
 		}(i)
 	}
 	wg.Wait()
+}
+
+func TestAutoHTTPtoHTTPSRedirectsImplicitPort(t *testing.T) {
+	tester := caddytest.NewTester(t)
+	tester.InitServer(`
+	{
+		http_port     9080
+		https_port    9443
+	}
+	localhost
+	respond "Yahaha! You found me!"
+  `, "caddyfile")
+
+	tester.AssertRedirect("http://localhost:9080/", "https://localhost/", http.StatusPermanentRedirect)
 }
