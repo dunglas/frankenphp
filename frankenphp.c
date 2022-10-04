@@ -345,7 +345,9 @@ uintptr_t frankenphp_request_shutdown()
 	free(ctx);
 	SG(server_context) = NULL;
 
+#if defined(ZTS)
 	ts_free_thread();
+#endif
 
 	return rh;
 }
@@ -533,7 +535,9 @@ void *manager_thread(void *arg) {
 # endif
 #endif
 
+#ifdef ZEND_SIGNALS
 	zend_signal_startup();
+#endif
     sapi_startup(&frankenphp_sapi_module);
 
 	frankenphp_sapi_module.startup(&frankenphp_sapi_module);
@@ -598,12 +602,15 @@ int frankenphp_execute_script(const char* file_name)
 
 	zend_file_handle file_handle;
 	zend_stream_init_filename(&file_handle, file_name);
+	file_handle.primary_script = 1;
 
 	zend_first_try {
 		status = php_execute_script(&file_handle);
 	} zend_catch {
     	/* int exit_status = EG(exit_status); */
 	} zend_end_try();
+
+	zend_destroy_file_handle(&file_handle);
 
 	return status;
 }

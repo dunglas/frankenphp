@@ -6,6 +6,7 @@ package caddy
 import (
 	"log"
 	"net/http"
+	"strconv"
 
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig"
@@ -101,8 +102,51 @@ func (*FrankenPHPApp) Stop() error {
 	return nil
 }
 
+// UnmarshalCaddyfile implements caddyfile.Unmarshaler.
+func (f *FrankenPHPApp) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
+	for d.Next() {
+		for d.NextBlock(0) {
+			switch d.Val() {
+			case "num_threads":
+				if !d.NextArg() {
+					return d.ArgErr()
+				}
+
+				v, err := strconv.Atoi(d.Val())
+				if err != nil {
+					return err
+				}
+
+				f.NumThreads = v
+
+			case "worker":
+				if !d.NextArg() {
+					return d.ArgErr()
+				}
+
+				wc := workerConfig{FileName: d.Val()}
+				if d.NextArg() {
+					v, err := strconv.Atoi(d.Val())
+					if err != nil {
+						return err
+					}
+
+					wc.Num = v
+				}
+
+				f.Workers = append(f.Workers, wc)
+			}
+		}
+	}
+
+	return nil
+}
+
 func parseGlobalOption(d *caddyfile.Dispenser, _ interface{}) (interface{}, error) {
 	app := &FrankenPHPApp{}
+	if err := app.UnmarshalCaddyfile(d); err != nil {
+		return nil, err
+	}
 
 	// tell Caddyfile adapter that this is the JSON for an app
 	return httpcaddyfile.App{

@@ -15,42 +15,69 @@ docker build -t frankenphp .
 
 #### Install PHP
 
-Most distributions don't provide packages containing ZTS builds of PHP.
-Because the Go HTTP server uses goroutines, a ZTS build is needed.
+To use FrankenPHP, you currently need to compile a fork of PHP.
+Patches have been contributed upstream, and some have already
+been merged. It will be possible to use the vanilla version of PHP
+starting with version 8.3.
 
-Start by [downloading the latest version of PHP](https://www.php.net/downloads.php),
-then follow the instructions according to your operating system.
-
-##### Linux
+First, get our PHP fork and prepare it:
 
 ```
-./configure --enable-embed=static --enable-zts
-make -j6
-make install
+git clone https://github.com/dunglas/php-src.git
+cd php-src
+git checkout frankenphp-8.2
+./buildconf
 ```
 
-##### Mac
+Then, configure PHP for your platform:
 
-The instructions to build on Mac and Linux are similar.
-However, on Mac, you have to use the [Homebrew](https://brew.sh/) package manager to install `libiconv` and `bison`.
-You also need to slightly tweak the configuration.
+**Linux**:
+
+```
+./configure \
+    --enable-embed \
+    --enable-zts \
+    --disable-zend-signals
+```
+
+**Mac**:
+
+Use the [Homebrew](https://brew.sh/) package manager to install
+`libiconv` and `bison`:
 
 ```
 brew install libiconv bison
 echo 'export PATH="/opt/homebrew/opt/bison/bin:$PATH"' >> ~/.zshrc
+```
+
+Then run the configure script:
+
+```
 ./configure \
     --enable-embed=static \
     --enable-zts \
+    --disable-zend-signals \
+    --disable-opcache-jit \
     --with-iconv=/opt/homebrew/opt/libiconv/
+```
+
+These flags are required, but you can add other flags (extra extensions...)
+if needed.
+
+Finally, compile PHP:
+
+```
 make -j6
-sudo make install
+make install
 ```
 
 #### Compile the Go App
 
+You can now use the Go lib and compile our Caddy build:
+
 ```
-go get -d -v ./...
-go build -v
+cd caddy/frankenphp
+go build
 ```
 
 ## Misc Dev Resources

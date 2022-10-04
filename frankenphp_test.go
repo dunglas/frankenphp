@@ -50,7 +50,9 @@ func runTest(t *testing.T, test func(func(http.ResponseWriter, *http.Request), *
 
 	handler := func(w http.ResponseWriter, r *http.Request) {
 		req := frankenphp.NewRequestWithContext(r, testDataDir)
-		frankenphp.ServeHTTP(w, req)
+		if err := frankenphp.ServeHTTP(w, req); err != nil {
+			panic(err)
+		}
 	}
 
 	var ts *httptest.Server

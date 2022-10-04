@@ -1,11 +1,13 @@
 {
-	frankenphp
+	frankenphp {
+		worker /Users/dunglas/workspace/frankenphp/testdata/index.php
+	}
 }
 
 localhost {
 	log
 	route {
-		root * public/
+		root * . 
 		# Add trailing slash for directory requests
 		@canonicalPath {
 			file {path}/index.php
