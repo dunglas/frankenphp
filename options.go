@@ -1,6 +1,10 @@
 package frankenphp
 
-import "runtime"
+import (
+	"runtime"
+
+	"go.uber.org/zap"
+)
 
 // Option instances allow to configure the SAP.
 type Option func(h *opt) error
@@ -11,6 +15,7 @@ type Option func(h *opt) error
 type opt struct {
 	numThreads int
 	workers    []workerOpt
+	logger     *zap.Logger
 }
 
 type workerOpt struct {
@@ -32,6 +37,15 @@ func WithWorkers(fileName string, num int) Option {
 	return func(o *opt) error {
 		o.workers = append(o.workers, workerOpt{fileName, num})
 		o.numThreads += num
+
+		return nil
+	}
+}
+
+// WithLogger sets the global logger to use
+func WithLogger(l *zap.Logger) Option {
+	return func(o *opt) error {
+		o.logger = l
 
 		return nil
 	}

@@ -51,7 +51,7 @@ func ExampleWorkerHandleRequest() {
 	defer frankenphp.Shutdown()
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		req := frankenphp.NewRequestWithContext(r, "/path/to/document/root")
+		req := frankenphp.NewRequestWithContext(r, "/path/to/document/root", nil)
 		if err := frankenphp.ServeHTTP(w, req); err != nil {
 			panic(err)
 		}

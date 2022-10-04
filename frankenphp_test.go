@@ -49,7 +49,7 @@ func runTest(t *testing.T, test func(func(http.ResponseWriter, *http.Request), *
 	defer frankenphp.Shutdown()
 
 	handler := func(w http.ResponseWriter, r *http.Request) {
-		req := frankenphp.NewRequestWithContext(r, testDataDir)
+		req := frankenphp.NewRequestWithContext(r, testDataDir, nil)
 		if err := frankenphp.ServeHTTP(w, req); err != nil {
 			panic(err)
 		}
@@ -142,7 +142,7 @@ func testPathInfo(t *testing.T, opts *testOptions) {
 			testDataDir := cwd + "/testdata/"
 
 			requestURI := r.URL.RequestURI()
-			rewriteRequest := frankenphp.NewRequestWithContext(r, testDataDir)
+			rewriteRequest := frankenphp.NewRequestWithContext(r, testDataDir, nil)
 			rewriteRequest.URL.Path = "/server-variable.php/pathinfo"
 			fc, _ := frankenphp.FromContext(rewriteRequest.Context())
 			fc.Env["REQUEST_URI"] = requestURI
@@ -301,7 +301,7 @@ func ExampleExecuteScript() {
 	defer frankenphp.Shutdown()
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		req := frankenphp.NewRequestWithContext(r, "/path/to/document/root")
+		req := frankenphp.NewRequestWithContext(r, "/path/to/document/root", nil)
 		if err := frankenphp.ServeHTTP(w, req); err != nil {
 			panic(err)
 		}

@@ -10,11 +10,11 @@ package frankenphp
 // #include "frankenphp.h"
 import "C"
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"runtime"
 	"runtime/cgo"
@@ -22,6 +22,8 @@ import (
 	"strings"
 	"sync"
 	"unsafe"
+
+	"go.uber.org/zap"
 	// debug on Linux
 	//_ "github.com/ianlancetaylor/cgosymbolizer"
 )
@@ -41,11 +43,10 @@ var (
 
 	requestChan chan *http.Request
 	shutdownWG  sync.WaitGroup
-)
 
-func init() {
-	log.SetFlags(log.LstdFlags | log.Lshortfile) // TODO: switch to Zap
-}
+	loggerMu sync.RWMutex
+	logger   *zap.Logger
+)
 
 // FrankenPHP executes PHP scripts.
 type FrankenPHPContext struct {
@@ -74,6 +75,8 @@ type FrankenPHPContext struct {
 	// This map is populated automatically, exisiting key are never replaced.
 	Env map[string]string
 
+	Logger *zap.Logger
+
 	populated    bool
 	authPassword string
 
@@ -81,11 +84,16 @@ type FrankenPHPContext struct {
 	done           chan interface{}
 }
 
-func NewRequestWithContext(r *http.Request, documentRoot string) *http.Request {
+func NewRequestWithContext(r *http.Request, documentRoot string, l *zap.Logger) *http.Request {
+	if l == nil {
+		l = getLogger()
+	}
+
 	ctx := context.WithValue(r.Context(), contextKey, &FrankenPHPContext{
 		DocumentRoot: documentRoot,
 		SplitPath:    []string{".php"},
 		Env:          make(map[string]string),
+		Logger:       l,
 	})
 
 	return r.WithContext(ctx)
@@ -108,6 +116,21 @@ func Init(options ...Option) error {
 		}
 	}
 
+	if opt.logger == nil {
+		l, err := zap.NewDevelopment()
+		if err != nil {
+			return err
+		}
+
+		loggerMu.Lock()
+		logger = l
+		loggerMu.Unlock()
+	} else {
+		loggerMu.Lock()
+		logger = opt.logger
+		loggerMu.Unlock()
+	}
+
 	if opt.numThreads == 0 {
 		opt.numThreads = 1
 	}
@@ -116,7 +139,7 @@ func Init(options ...Option) error {
 	case -1:
 		if opt.numThreads != 1 {
 			opt.numThreads = 1
-			log.Print(`ZTS is not enabled, only 1 thread will be available, recompile PHP using the "--enable-zts" configuration option or performance will be degraded`)
+			logger.Warn(`ZTS is not enabled, only 1 thread will be available, recompile PHP using the "--enable-zts" configuration option or performance will be degraded`)
 		}
 
 	case -2:
@@ -141,7 +164,7 @@ func Init(options ...Option) error {
 }
 
 func Shutdown() {
-	log.Printf("Shutdown called ")
+	logger.Debug("FrankenPHP shutting down")
 	stopWorkers()
 	close(requestChan)
 	shutdownWG.Wait()
@@ -151,6 +174,13 @@ func Shutdown() {
 //export go_shutdown
 func go_shutdown() {
 	shutdownWG.Done()
+}
+
+func getLogger() *zap.Logger {
+	loggerMu.RLock()
+	defer loggerMu.RUnlock()
+
+	return logger
 }
 
 func updateServerContext(request *http.Request) error {
@@ -301,13 +331,18 @@ func go_ub_write(rh C.uintptr_t, cString *C.char, length C.int) C.size_t {
 
 	var writer io.Writer
 	if fc.responseWriter == nil {
+		var b bytes.Buffer
 		// log the output of the
-		writer = log.Writer()
+		writer = &b
 	} else {
 		writer = fc.responseWriter
 	}
 
 	i, _ := writer.Write([]byte(C.GoStringN(cString, length)))
+
+	if fc.responseWriter == nil {
+		fc.Logger.Info(writer.(*bytes.Buffer).String())
+	}
 
 	return C.size_t(i)
 }
@@ -339,7 +374,7 @@ func go_add_header(rh C.uintptr_t, cString *C.char, length C.int) {
 
 	parts := strings.SplitN(C.GoStringN(cString, length), ": ", 2)
 	if len(parts) != 2 {
-		log.Printf(`invalid header "%s"`+"\n", parts[0])
+		fc.Logger.Debug("invalid header", zap.String("header", parts[0]))
 
 		return
 	}
