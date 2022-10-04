@@ -58,6 +58,8 @@ func (a *FrankenPHPApp) CaddyModule() caddy.ModuleInfo {
 }
 
 func (f *FrankenPHPApp) Start() error {
+	repl := caddy.NewReplacer()
+
 	var opts []frankenphp.Option
 	if f.NumThreads != 0 {
 		opts = append(opts, frankenphp.WithNumThreads(f.NumThreads))
@@ -69,7 +71,7 @@ func (f *FrankenPHPApp) Start() error {
 			num = w.Num
 		}
 
-		opts = append(opts, frankenphp.WithWorkers(w.FileName, num))
+		opts = append(opts, frankenphp.WithWorkers(repl.ReplaceKnown(w.FileName, ""), num))
 	}
 
 	_, loaded, err := phpInterpreter.LoadOrNew(mainPHPInterpreterKey, func() (caddy.Destructor, error) {
@@ -96,7 +98,6 @@ func (f *FrankenPHPApp) Start() error {
 }
 
 func (*FrankenPHPApp) Stop() error {
-	//frankenphp.Shutdown()
 	log.Print("FrankenPHP stopped")
 
 	return nil
