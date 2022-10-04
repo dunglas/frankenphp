@@ -4,13 +4,12 @@
 #include <stdint.h>
 
 int frankenphp_check_version();
+int frankenphp_init(int num_threads);
 
-int frankenphp_init();
-void frankenphp_shutdown();
-
-int frankenphp_create_server_context(uintptr_t requests_chan, char *worker_filename);
+int frankenphp_create_server_context();
 void frankenphp_update_server_context(
-	uintptr_t request,
+	uintptr_t current_request,
+	uintptr_t main_request,
 
 	const char *request_method,
 	char *query_string,

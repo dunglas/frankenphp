@@ -1,2 +1,3 @@
 .vscode/
 /caddy/frankenphp/frankenphp
+/internal/testserver/testserver

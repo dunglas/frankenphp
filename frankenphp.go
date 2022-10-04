@@ -1,8 +1,9 @@
 package frankenphp
 
-// #cgo CFLAGS: -Wall -Wno-unused-variable
+// #cgo CFLAGS: -Wall
 // #cgo CFLAGS: -I/usr/local/include/php -I/usr/local/include/php/Zend -I/usr/local/include/php/TSRM -I/usr/local/include/php/main
-// #cgo LDFLAGS: -L/usr/local/lib -L/opt/homebrew/opt/libiconv/lib -L/usr/lib -lphp -lxml2 -liconv -lresolv -lsqlite3
+// #cgo LDFLAGS: -L/usr/local/lib -L/opt/homebrew/opt/libiconv/lib -L/usr/lib -lphp -lxml2 -lresolv -lsqlite3 -ldl -lm -lutil
+// #cgo darwin LDFLAGS: -liconv
 // #include <stdlib.h>
 // #include <stdint.h>
 // #include <php_variables.h>
@@ -19,8 +20,9 @@ import (
 	"runtime/cgo"
 	"strconv"
 	"strings"
+	"sync"
 	"unsafe"
-	// debug
+	// debug on Linux
 	//_ "github.com/ianlancetaylor/cgosymbolizer"
 )
 
@@ -28,10 +30,20 @@ type key int
 
 var contextKey key
 
-func init() {
-	// Make sure the main goroutine is bound to the main thread.
-	runtime.LockOSThread()
+var (
+	InvalidRequestError         = errors.New("not a FrankenPHP request")
+	AlreaydStartedError         = errors.New("FrankenPHP is already started")
+	InvalidPHPVersionError      = errors.New("FrankenPHP is only compatible with PHP 8.2+")
+	MainThreadCreationError     = errors.New("error creating the main thread")
+	RequestContextCreationError = errors.New("error during request context creation")
+	RequestStartupError         = errors.New("error during PHP request startup")
+	ScriptExecutionError        = errors.New("error during PHP script execution")
 
+	requestChan chan *http.Request
+	shutdownWG  sync.WaitGroup
+)
+
+func init() {
 	log.SetFlags(log.LstdFlags | log.Lshortfile) // TODO: switch to Zap
 }
 
@@ -84,43 +96,67 @@ func FromContext(ctx context.Context) (fctx *FrankenPHPContext, ok bool) {
 	return
 }
 
-// Init initializes the PHP engine.
-// Init and Shutdown must be called in the main function.
-func Init() error {
-	switch C.frankenphp_check_version() {
-	case -1:
-		return errors.New(`ZTS is not enabled, recompile PHP using the "--enable-zts" configuration option`)
-
-	case -2:
-		return errors.New(`FrankenPHP is only compatible with PHP 8.1`)
+func Init(options ...Option) error {
+	if requestChan != nil {
+		return AlreaydStartedError
 	}
 
-	if C.frankenphp_init() < 0 {
-		return errors.New("error initializing PHP")
+	opt := &opt{numThreads: runtime.NumCPU()}
+	for _, o := range options {
+		if err := o(opt); err != nil {
+			return err
+		}
+	}
+
+	if opt.numThreads == 0 {
+		opt.numThreads = 1
+	}
+
+	switch C.frankenphp_check_version() {
+	case -1:
+		if opt.numThreads != 1 {
+			opt.numThreads = 1
+			log.Print(`ZTS is not enabled, only 1 thread will be available, recompile PHP using the "--enable-zts" configuration option or performance will be degraded`)
+		}
+
+	case -2:
+		return InvalidPHPVersionError
+	}
+
+	shutdownWG.Add(1)
+	requestChan = make(chan *http.Request)
+
+	if C.frankenphp_init(C.int(opt.numThreads)) != 0 {
+		return MainThreadCreationError
+	}
+
+	for _, w := range opt.workers {
+		// TODO: start all the worker in parallell to reduce the boot time
+		if err := startWorkers(w.fileName, w.num); err != nil {
+			return err
+		}
 	}
 
 	return nil
 }
 
-// Shutdown stops the PHP engine.
-// Init and Shutdown must be called in the main function.
 func Shutdown() {
-	//if atomic.LoadInt32(&started) < 1 {
-	//	return
-	//}
-	//atomic.StoreInt32(&started, 0)
+	log.Printf("Shutdown called ")
+	stopWorkers()
+	close(requestChan)
+	shutdownWG.Wait()
+	requestChan = nil
+}
 
-	C.frankenphp_shutdown()
+//export go_shutdown
+func go_shutdown() {
+	shutdownWG.Done()
 }
 
 func updateServerContext(request *http.Request) error {
-	if err := populateEnv(request); err != nil {
-		return err
-	}
-
 	fc, ok := FromContext(request.Context())
 	if !ok {
-		panic("not a FrankenPHP request")
+		return InvalidRequestError
 	}
 
 	var cAuthUser, cAuthPassword *C.char
@@ -132,14 +168,16 @@ func updateServerContext(request *http.Request) error {
 		cAuthUser = C.CString(authUser)
 	}
 
-	rh := cgo.NewHandle(request)
-
 	cMethod := C.CString(request.Method)
 	cQueryString := C.CString(request.URL.RawQuery)
 	contentLengthStr := request.Header.Get("Content-Length")
 	contentLength := 0
 	if contentLengthStr != "" {
-		contentLength, _ = strconv.Atoi(contentLengthStr)
+		var err error
+		contentLength, err = strconv.Atoi(contentLengthStr)
+		if err != nil {
+			return fmt.Errorf("invalid Content-Length header: %w", err)
+		}
 	}
 
 	contentType := request.Header.Get("Content-Type")
@@ -155,8 +193,16 @@ func updateServerContext(request *http.Request) error {
 
 	cRequestUri := C.CString(request.URL.RequestURI())
 
+	var rh, mwrh cgo.Handle
+	if fc.responseWriter == nil {
+		mwrh = cgo.NewHandle(request)
+	} else {
+		rh = cgo.NewHandle(request)
+	}
+
 	C.frankenphp_update_server_context(
 		C.uintptr_t(rh),
+		C.uintptr_t(mwrh),
 
 		cMethod,
 		cQueryString,
@@ -172,39 +218,80 @@ func updateServerContext(request *http.Request) error {
 	return nil
 }
 
-func ExecuteScript(responseWriter http.ResponseWriter, request *http.Request) error {
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-	// todo: check if it's ok or not to call runtime.UnlockOSThread() to reuse this thread
+func ServeHTTP(responseWriter http.ResponseWriter, request *http.Request) error {
+	shutdownWG.Add(1)
+	defer shutdownWG.Done()
 
-	if C.frankenphp_create_server_context(0, nil) < 0 {
-		return fmt.Errorf("error during request context creation")
+	fc, ok := FromContext(request.Context())
+	if !ok {
+		return InvalidRequestError
 	}
 
-	if err := updateServerContext(request); err != nil {
+	if err := populateEnv(request); err != nil {
 		return err
 	}
 
-	if C.frankenphp_request_startup() < 0 {
-		return fmt.Errorf("error during PHP request startup")
+	fc.responseWriter = responseWriter
+	fc.done = make(chan interface{})
+
+	rc := requestChan
+	// Detect if a worker is available to handle this request
+	if nil == fc.responseWriter {
+		fc.Env["FRANKENPHP_WORKER"] = "1"
+	} else if v, ok := workersRequestChans.Load(fc.Env["SCRIPT_FILENAME"]); ok {
+		fc.Env["FRANKENPHP_WORKER"] = "1"
+		rc = v.(chan *http.Request)
 	}
 
-	fc := request.Context().Value(contextKey).(*FrankenPHPContext)
-	fc.responseWriter = responseWriter
+	rc <- request
+	<-fc.done
+
+	return nil
+}
+
+//export go_fetch_request
+func go_fetch_request() C.uintptr_t {
+	r, ok := <-requestChan
+	if !ok {
+		return 0
+	}
+
+	return C.uintptr_t(cgo.NewHandle(r))
+}
+
+//export go_execute_script
+func go_execute_script(rh unsafe.Pointer) {
+	handle := cgo.Handle(rh)
+	defer handle.Delete()
+
+	request := handle.Value().(*http.Request)
+	fc, ok := FromContext(request.Context())
+	if !ok {
+		panic(InvalidRequestError)
+	}
+	defer close(fc.done)
+
+	if C.frankenphp_create_server_context() < 0 {
+		panic(RequestContextCreationError)
+	}
+
+	if err := updateServerContext(request); err != nil {
+		panic(err)
+	}
+
+	if C.frankenphp_request_startup() < 0 {
+		panic(RequestStartupError)
+	}
 
 	cFileName := C.CString(fc.Env["SCRIPT_FILENAME"])
 	defer C.free(unsafe.Pointer(cFileName))
 
 	if C.frankenphp_execute_script(cFileName) < 0 {
-		return fmt.Errorf("error during PHP script execution")
+		panic(ScriptExecutionError)
 	}
 
-	rh := C.frankenphp_clean_server_context()
+	C.frankenphp_clean_server_context()
 	C.frankenphp_request_shutdown()
-
-	cgo.Handle(rh).Delete()
-
-	return nil
 }
 
 //export go_ub_write
@@ -212,7 +299,15 @@ func go_ub_write(rh C.uintptr_t, cString *C.char, length C.int) C.size_t {
 	r := cgo.Handle(rh).Value().(*http.Request)
 	fc, _ := FromContext(r.Context())
 
-	i, _ := fc.responseWriter.Write([]byte(C.GoStringN(cString, length)))
+	var writer io.Writer
+	if fc.responseWriter == nil {
+		// log the output of the
+		writer = log.Writer()
+	} else {
+		writer = fc.responseWriter
+	}
+
+	i, _ := writer.Write([]byte(C.GoStringN(cString, length)))
 
 	return C.size_t(i)
 }
@@ -220,15 +315,11 @@ func go_ub_write(rh C.uintptr_t, cString *C.char, length C.int) C.size_t {
 //export go_register_variables
 func go_register_variables(rh C.uintptr_t, trackVarsArray *C.zval) {
 	var env map[string]string
-	if rh == 0 {
-		// Worker mode, waiting for a request, initialize some useful variables
-		env = map[string]string{"FRANKENPHP_WORKER": "1"}
-	} else {
-		r := cgo.Handle(rh).Value().(*http.Request)
-		env = r.Context().Value(contextKey).(*FrankenPHPContext).Env
-	}
+	r := cgo.Handle(rh).Value().(*http.Request)
+	env = r.Context().Value(contextKey).(*FrankenPHPContext).Env
 
-	env[fmt.Sprintf("REQUEST_%d", rh)] = "on"
+	// FIXME: remove this debug statement
+	env[fmt.Sprintf("REQUEST_%d", rh)] = "1"
 
 	for k, v := range env {
 		ck := C.CString(k)

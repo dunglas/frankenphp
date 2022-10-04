@@ -42,14 +42,19 @@ func TestWorker(t *testing.T) {
 }
 
 func ExampleWorkerHandleRequest() {
-	frankenphp.StartWorkers("worker.php", 5)
-
-	phpHandler := func(w http.ResponseWriter, req *http.Request) {
-		if err := frankenphp.WorkerHandleRequest(w, req); err != nil {
-			log.Print(fmt.Errorf("error executing PHP script: %w", err))
-		}
+	if err := frankenphp.Init(
+		frankenphp.WithWorkers("worker1.php", 4),
+		frankenphp.WithWorkers("worker2.php", 2),
+	); err != nil {
+		panic(err)
 	}
+	defer frankenphp.Shutdown()
 
-	http.HandleFunc("/", phpHandler)
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		req := frankenphp.NewRequestWithContext(r, "/path/to/document/root")
+		if err := frankenphp.ServeHTTP(w, req); err != nil {
+			panic(err)
+		}
+	})
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }

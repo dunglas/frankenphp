@@ -1,0 +1,4 @@
+[submodule "C-Thread-Pool"]
+	path = C-Thread-Pool
+	url = https://github.com/dunglas/C-Thread-Pool
+	branch = feat/mac-os-compat

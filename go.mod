@@ -1,8 +1,11 @@
 module github.com/dunglas/frankenphp
 
-go 1.18
+go 1.19
 
-require github.com/stretchr/testify v1.7.1
+require (
+	github.com/ianlancetaylor/cgosymbolizer v0.0.0-20220405231054-a1ae3e4bba26
+	github.com/stretchr/testify v1.7.1
+)
 
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect

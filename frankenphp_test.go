@@ -9,13 +9,13 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"os"
-	"runtime"
 	"strings"
 	"sync"
 	"testing"
 
 	"github.com/dunglas/frankenphp"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type testOptions struct {
@@ -25,51 +25,34 @@ type testOptions struct {
 	realServer          bool
 }
 
-func TestMain(m *testing.M) {
-	runtime.LockOSThread()
-	if err := frankenphp.Init(); err != nil {
-		panic(err)
-	}
-
-	code := m.Run()
-
-	frankenphp.Shutdown()
-	os.Exit(code)
-}
-
 func runTest(t *testing.T, test func(func(http.ResponseWriter, *http.Request), *httptest.Server, int), opts *testOptions) {
 	if opts == nil {
 		opts = &testOptions{}
-	}
-	if opts.workerScript != "" {
-		t.SkipNow()
 	}
 	if opts.nbWorkers == 0 {
 		opts.nbWorkers = 2
 	}
 	if opts.nbParrallelRequests == 0 {
-		opts.nbParrallelRequests = 10
+		opts.nbParrallelRequests = 100
 	}
 
 	cwd, _ := os.Getwd()
 	testDataDir := cwd + "/testdata/"
 
+	initOpts := make([]frankenphp.Option, 0, 1)
 	if opts.workerScript != "" {
-		frankenphp.StartWorkers(testDataDir+opts.workerScript, opts.nbWorkers)
-		defer frankenphp.StopWorkers()
+		initOpts = append(initOpts, frankenphp.WithWorkers(testDataDir+opts.workerScript, opts.nbWorkers))
 	}
 
+	err := frankenphp.Init(initOpts...)
+	require.Nil(t, err)
+	defer frankenphp.Shutdown()
+
 	handler := func(w http.ResponseWriter, r *http.Request) {
-		var err error
-
 		req := frankenphp.NewRequestWithContext(r, testDataDir)
-		if opts.workerScript == "" {
-			err = frankenphp.ExecuteScript(w, req)
-		} else {
-			err = frankenphp.WorkerHandleRequest(w, req)
+		if err := frankenphp.ServeHTTP(w, req); err != nil {
+			panic(err)
 		}
-
-		assert.Nil(t, err)
 	}
 
 	var ts *httptest.Server
@@ -100,7 +83,6 @@ func testHelloWorld(t *testing.T, opts *testOptions) {
 
 		resp := w.Result()
 		body, _ := io.ReadAll(resp.Body)
-
 		assert.Equal(t, fmt.Sprintf("I am by birth a Genevese (%d)", i), string(body))
 	}, opts)
 }
@@ -159,16 +141,13 @@ func testPathInfo(t *testing.T, opts *testOptions) {
 			cwd, _ := os.Getwd()
 			testDataDir := cwd + "/testdata/"
 
+			requestURI := r.URL.RequestURI()
 			rewriteRequest := frankenphp.NewRequestWithContext(r, testDataDir)
 			rewriteRequest.URL.Path = "/server-variable.php/pathinfo"
 			fc, _ := frankenphp.FromContext(rewriteRequest.Context())
-			fc.Env["REQUEST_URI"] = r.URL.RequestURI()
+			fc.Env["REQUEST_URI"] = requestURI
 
-			if opts == nil {
-				assert.Nil(t, frankenphp.ExecuteScript(w, rewriteRequest))
-			} else {
-				assert.Nil(t, frankenphp.WorkerHandleRequest(w, rewriteRequest))
-			}
+			frankenphp.ServeHTTP(w, rewriteRequest)
 		}
 
 		req := httptest.NewRequest("GET", fmt.Sprintf("http://example.com/pathinfo/%d", i), nil)
@@ -316,15 +295,16 @@ func testPhpInfo(t *testing.T, opts *testOptions) {
 }
 
 func ExampleExecuteScript() {
-	frankenphp.Init()
+	if err := frankenphp.Init(); err != nil {
+		panic(err)
+	}
 	defer frankenphp.Shutdown()
 
-	phpHandler := func(w http.ResponseWriter, req *http.Request) {
-		if err := frankenphp.ExecuteScript(w, req); err != nil {
-			log.Print(fmt.Errorf("error executing PHP script: %w", err))
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		req := frankenphp.NewRequestWithContext(r, "/path/to/document/root")
+		if err := frankenphp.ServeHTTP(w, req); err != nil {
+			panic(err)
 		}
-	}
-
-	http.HandleFunc("/", phpHandler)
+	})
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
