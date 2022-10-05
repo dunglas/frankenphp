@@ -64,6 +64,7 @@ func startWorkers(fileName string, nbWorkers int) error {
 
 				return
 			}
+			// TODO: check if the termination is expected
 			l.Debug("terminated", zap.String("worker", fileName))
 		}()
 	}

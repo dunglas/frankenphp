@@ -294,6 +294,26 @@ func testPhpInfo(t *testing.T, opts *testOptions) {
 	}, opts)
 }
 
+func TestPersistentObject_module(t *testing.T) { testPersistentObject(t, nil) }
+func TestPersistentObject_worker(t *testing.T) {
+	testPersistentObject(t, &testOptions{workerScript: "persistent-object.php"})
+}
+func testPersistentObject(t *testing.T, opts *testOptions) {
+	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
+		req := httptest.NewRequest("GET", fmt.Sprintf("http://example.com/persistent-object.php?i=%d", i), nil)
+		w := httptest.NewRecorder()
+		handler(w, req)
+
+		resp := w.Result()
+		body, _ := io.ReadAll(resp.Body)
+
+		assert.Equal(t, string(body), fmt.Sprintf(`request: %d
+class exists: 1
+id: obj1
+object id: 1`, i))
+	}, opts)
+}
+
 func ExampleExecuteScript() {
 	if err := frankenphp.Init(); err != nil {
 		panic(err)
