@@ -307,10 +307,28 @@ func testPersistentObject(t *testing.T, opts *testOptions) {
 		resp := w.Result()
 		body, _ := io.ReadAll(resp.Body)
 
-		assert.Equal(t, string(body), fmt.Sprintf(`request: %d
+		assert.Equal(t, fmt.Sprintf(`request: %d
 class exists: 1
 id: obj1
-object id: 1`, i))
+object id: 1`, i), string(body))
+	}, opts)
+}
+
+func TestAutoloader_module(t *testing.T) { testAutoloader(t, nil) }
+func TestAutoloader_worker(t *testing.T) {
+	testAutoloader(t, &testOptions{workerScript: "autoloader.php"})
+}
+func testAutoloader(t *testing.T, opts *testOptions) {
+	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
+		req := httptest.NewRequest("GET", fmt.Sprintf("http://example.com/autoloader.php?i=%d", i), nil)
+		w := httptest.NewRecorder()
+		handler(w, req)
+
+		resp := w.Result()
+		body, _ := io.ReadAll(resp.Body)
+
+		assert.Equal(t, fmt.Sprintf(`request %d
+my_autoloader`, i), string(body))
 	}, opts)
 }
 

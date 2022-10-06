@@ -83,6 +83,7 @@ typedef struct frankenphp_server_context {
 	uintptr_t current_request;
 	uintptr_t main_request; // Only available during worker initialization
 	char *cookie_data;
+	HashTable *autoload_functions;
 } frankenphp_server_context;
 
 // Adapted from php_request_shutdown
@@ -112,13 +113,13 @@ void frankenphp_worker_request_shutdown(uintptr_t current_request) {
 	} zend_end_try();
 	
 	/* 8. Destroy super-globals */
-	zend_try {
+	/*zend_try {
 		int i;
 
 		for (i=0; i<NUM_TRACK_VARS; i++) {
 			zval_ptr_dtor(&PG(http_globals)[i]);
 		}
-	} zend_end_try();
+	} zend_end_try();*/
 
 	/* 9. skipped: Shutdown scanner/executor/compiler and restore ini entries */
 
@@ -126,7 +127,7 @@ void frankenphp_worker_request_shutdown(uintptr_t current_request) {
 	// todo: check if it's a good idea
 	// php_free_request_globals()
 	// clear_last_error()
-	if (PG(last_error_message)) {
+	/*if (PG(last_error_message)) {
 		zend_string_release(PG(last_error_message));
 		PG(last_error_message) = NULL;
 	}
@@ -137,7 +138,7 @@ void frankenphp_worker_request_shutdown(uintptr_t current_request) {
 	if (PG(php_sys_temp_dir)) {
 		efree(PG(php_sys_temp_dir));
 		PG(php_sys_temp_dir) = NULL;
-	}
+	}*/
 
 	/* 11. Call all extensions post-RSHUTDOWN functions */
 	zend_try {
@@ -156,9 +157,9 @@ void frankenphp_worker_request_shutdown(uintptr_t current_request) {
 
 	/* 14. Destroy stream hashes */
 	// todo: check if it's a good idea
-	zend_try {
+	/*zend_try {
 		php_shutdown_stream_hashes();
-	} zend_end_try();
+	} zend_end_try();*/
 
 	/* 15. skipped: Free Willy (here be crashes) */
 
@@ -237,6 +238,46 @@ int frankenphp_worker_request_startup() {
 	return retval;
 }
 
+void save_autload_functions() {
+	zval retval = {0};
+	zend_fcall_info fci = {0};
+	zend_fcall_info_cache fci_cache = {0};
+
+	zend_string *func_name = zend_string_init(ZEND_STRL("spl_autoload_functions"), 0);
+	ZVAL_STR(&fci.function_name, func_name);
+
+	fci.size = sizeof fci;
+	fci.retval = &retval;
+
+	zend_call_function(&fci, &fci_cache);
+
+	zend_string_release(func_name);
+
+	((frankenphp_server_context *) SG(server_context))->autoload_functions = Z_ARRVAL_P(fci.retval);
+}
+
+void restore_autoload_functions() {
+	HashTable *functions = ((frankenphp_server_context *) SG(server_context))->autoload_functions;
+
+	zval *val;
+	zval retval = {0};
+	zend_fcall_info fci = {0};
+	zend_fcall_info_cache fci_cache = {0};
+
+	zend_string *func_name = zend_string_init(ZEND_STRL("spl_autoload_register"), 0);
+	ZVAL_STR(&fci.function_name, func_name);
+
+	fci.size = sizeof fci;
+	fci.retval = &retval;
+	fci.param_count = 1;
+
+	ZEND_HASH_FOREACH_VAL(functions, val) {
+		fci.params = val;
+
+		zend_call_function(&fci, &fci_cache);
+	} ZEND_HASH_FOREACH_END();
+}
+
 ZEND_BEGIN_ARG_INFO_EX(arginfo_frankenphp_handle_request, 0, 0, 1)
     ZEND_ARG_CALLABLE_INFO(false, handler, false)
 ZEND_END_ARG_INFO()
@@ -253,6 +294,9 @@ PHP_FUNCTION(frankenphp_handle_request) {
 
 	uintptr_t previous_request = ctx->current_request;
 	if (ctx->main_request) {
+		// Save the main autoloader
+		save_autload_functions();
+
 		// Clean the first dummy request created to initialize the worker
 		frankenphp_worker_request_shutdown(0);
 
@@ -273,6 +317,8 @@ PHP_FUNCTION(frankenphp_handle_request) {
 	if (frankenphp_worker_request_startup() == FAILURE) {
 		RETURN_FALSE;
 	}
+
+	restore_autoload_functions();
 
 	// Call the PHP func
 	zval retval = {0};

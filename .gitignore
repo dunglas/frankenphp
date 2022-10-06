@@ -1,3 +1,4 @@
-.vscode/
 /caddy/frankenphp/frankenphp
 /internal/testserver/testserver
+.vscode/
+__debug_bin
