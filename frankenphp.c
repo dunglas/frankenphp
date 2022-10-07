@@ -369,7 +369,7 @@ static void frankenphp_register_variables(zval *track_vars_array)
 
 static void frankenphp_log_message(const char *message, int syslog_type_int)
 {
-	// TODO: call Go logger
+	go_log((char *) message, syslog_type_int);
 }
 
 sapi_module_struct frankenphp_sapi_module = {

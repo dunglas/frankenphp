@@ -427,3 +427,26 @@ func go_read_cookies(rh C.uintptr_t) *C.char {
 
 	return cCookie
 }
+
+//export go_log
+func go_log(message *C.char, level C.int) {
+	l := getLogger()
+	m := C.GoString(message)
+
+	switch level {
+	case 0, 1, 2:
+		l.DPanic(m)
+
+	case 3:
+		l.Error(m)
+
+	case 4:
+		l.Warn(m)
+
+	case 7:
+		l.Debug(m)
+
+	default:
+		l.Info(m)
+	}
+}
