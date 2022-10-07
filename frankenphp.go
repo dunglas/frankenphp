@@ -332,7 +332,7 @@ func go_ub_write(rh C.uintptr_t, cString *C.char, length C.int) C.size_t {
 	var writer io.Writer
 	if fc.responseWriter == nil {
 		var b bytes.Buffer
-		// log the output of the
+		// log the output of the worker
 		writer = &b
 	} else {
 		writer = fc.responseWriter

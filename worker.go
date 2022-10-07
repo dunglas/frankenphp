@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"path/filepath"
 	"runtime/cgo"
 	"sync"
 
@@ -20,11 +21,16 @@ var (
 )
 
 func startWorkers(fileName string, nbWorkers int) error {
-	if _, ok := workersRequestChans.Load(fileName); ok {
-		panic(fmt.Errorf("workers %q: already started", fileName))
+	absFileName, err := filepath.Abs(fileName)
+	if err != nil {
+		return fmt.Errorf("workers %q: %w", fileName, err)
 	}
 
-	workersRequestChans.Store(fileName, make(chan *http.Request))
+	if _, ok := workersRequestChans.Load(absFileName); ok {
+		return fmt.Errorf("workers %q: already started", absFileName)
+	}
+
+	workersRequestChans.Store(absFileName, make(chan *http.Request))
 	shutdownWG.Add(nbWorkers)
 	workersReadyWG.Add(nbWorkers)
 
@@ -43,7 +49,7 @@ func startWorkers(fileName string, nbWorkers int) error {
 			if err != nil {
 				m.Lock()
 				defer m.Unlock()
-				errors = append(errors, fmt.Errorf("workers %q: unable to create main worker request: %w", fileName, err))
+				errors = append(errors, fmt.Errorf("workers %q: unable to create main worker request: %w", absFileName, err))
 
 				return
 			}
@@ -52,20 +58,20 @@ func startWorkers(fileName string, nbWorkers int) error {
 				r.Context(),
 				contextKey,
 				&FrankenPHPContext{
-					Env: map[string]string{"SCRIPT_FILENAME": fileName},
+					Env: map[string]string{"SCRIPT_FILENAME": absFileName},
 				},
 			)
 
-			l.Debug("starting", zap.String("worker", fileName))
+			l.Debug("starting", zap.String("worker", absFileName))
 			if err := ServeHTTP(nil, r.WithContext(ctx)); err != nil {
 				m.Lock()
 				defer m.Unlock()
-				errors = append(errors, fmt.Errorf("workers %q: unable to start: %w", fileName, err))
+				errors = append(errors, fmt.Errorf("workers %q: unable to start: %w", absFileName, err))
 
 				return
 			}
 			// TODO: check if the termination is expected
-			l.Debug("terminated", zap.String("worker", fileName))
+			l.Debug("terminated", zap.String("worker", absFileName))
 		}()
 	}
 

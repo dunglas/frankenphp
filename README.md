@@ -58,9 +58,7 @@ Then run the configure script:
     --enable-zts \
     --disable-zend-signals \
     --disable-opcache-jit \
-    --with-iconv=/opt/homebrew/opt/libiconv/ \
-    --enable-static \
-    --enable-shared=no
+    --with-iconv=/opt/homebrew/opt/libiconv/
 ```
 
 These flags are required, but you can add other flags (extra extensions...)
