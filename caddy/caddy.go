@@ -4,7 +4,6 @@
 package caddy
 
 import (
-	"log"
 	"net/http"
 	"strconv"
 
@@ -33,7 +32,6 @@ var phpInterpreter = caddy.NewUsagePool()
 type phpInterpreterDestructor struct{}
 
 func (phpInterpreterDestructor) Destruct() error {
-	log.Print("Destructor called")
 	frankenphp.Shutdown()
 
 	return nil
@@ -58,7 +56,10 @@ func (a *FrankenPHPApp) CaddyModule() caddy.ModuleInfo {
 }
 
 func (f *FrankenPHPApp) Start() error {
-	var opts []frankenphp.Option
+	repl := caddy.NewReplacer()
+	logger := caddy.Log()
+
+	opts := []frankenphp.Option{frankenphp.WithLogger(logger)}
 	if f.NumThreads != 0 {
 		opts = append(opts, frankenphp.WithNumThreads(f.NumThreads))
 	}
@@ -69,7 +70,7 @@ func (f *FrankenPHPApp) Start() error {
 			num = w.Num
 		}
 
-		opts = append(opts, frankenphp.WithWorkers(w.FileName, num))
+		opts = append(opts, frankenphp.WithWorkers(repl.ReplaceKnown(w.FileName, ""), num))
 	}
 
 	_, loaded, err := phpInterpreter.LoadOrNew(mainPHPInterpreterKey, func() (caddy.Destructor, error) {
@@ -90,14 +91,13 @@ func (f *FrankenPHPApp) Start() error {
 		}
 	}
 
-	log.Print("FrankenPHP started")
+	logger.Info("FrankenPHP started 🐘")
 
 	return nil
 }
 
 func (*FrankenPHPApp) Stop() error {
-	//frankenphp.Shutdown()
-	log.Print("FrankenPHP stopped")
+	caddy.Log().Info("FrankenPHP stopped 🐘")
 
 	return nil
 }
@@ -192,7 +192,7 @@ func (f FrankenPHPModule) ServeHTTP(w http.ResponseWriter, r *http.Request, next
 	repl := r.Context().Value(caddy.ReplacerCtxKey).(*caddy.Replacer)
 
 	documentRoot := repl.ReplaceKnown(f.Root, "")
-	fr := frankenphp.NewRequestWithContext(r, documentRoot)
+	fr := frankenphp.NewRequestWithContext(r, documentRoot, f.logger)
 	fc, _ := frankenphp.FromContext(fr.Context())
 	fc.ResolveRootSymlink = f.ResolveRootSymlink
 	fc.SplitPath = f.SplitPath

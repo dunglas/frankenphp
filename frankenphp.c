@@ -17,56 +17,6 @@
 ZEND_TSRMLS_CACHE_DEFINE()
 #endif
 
-// Helper functions copied from the PHP source code
-
-// main/php_variables.c
-
-static zend_always_inline void php_register_variable_quick(const char *name, size_t name_len, zval *val, HashTable *ht)
-{
-	zend_string *key = zend_string_init_interned(name, name_len, 0);
-
-	zend_hash_update_ind(ht, key, val);
-	zend_string_release_ex(key, 0);
-}
-
-static inline void php_register_server_variables(void)
-{
-	zval tmp;
-	zval *arr = &PG(http_globals)[TRACK_VARS_SERVER];
-	HashTable *ht;
-
-	zval_ptr_dtor_nogc(arr);
-	array_init(arr);
-
-	/* Server variables */
-	if (sapi_module.register_server_variables) {
-		sapi_module.register_server_variables(arr);
-	}
-	ht = Z_ARRVAL_P(arr);
-
-	/* PHP Authentication support */
-	if (SG(request_info).auth_user) {
-		ZVAL_STRING(&tmp, SG(request_info).auth_user);
-		php_register_variable_quick("PHP_AUTH_USER", sizeof("PHP_AUTH_USER")-1, &tmp, ht);
-	}
-	if (SG(request_info).auth_password) {
-		ZVAL_STRING(&tmp, SG(request_info).auth_password);
-		php_register_variable_quick("PHP_AUTH_PW", sizeof("PHP_AUTH_PW")-1, &tmp, ht);
-	}
-	if (SG(request_info).auth_digest) {
-		ZVAL_STRING(&tmp, SG(request_info).auth_digest);
-		php_register_variable_quick("PHP_AUTH_DIGEST", sizeof("PHP_AUTH_DIGEST")-1, &tmp, ht);
-	}
-
-	/* store request init time */
-	ZVAL_DOUBLE(&tmp, sapi_get_request_time());
-	php_register_variable_quick("REQUEST_TIME_FLOAT", sizeof("REQUEST_TIME_FLOAT")-1, &tmp, ht);
-	ZVAL_LONG(&tmp, zend_dval_to_lval(Z_DVAL(tmp)));
-	php_register_variable_quick("REQUEST_TIME", sizeof("REQUEST_TIME")-1, &tmp, ht);
-}
-
-// End of copied functions
-
 int frankenphp_check_version() {
 #ifndef ZTS
     return -1;
@@ -83,84 +33,33 @@ typedef struct frankenphp_server_context {
 	uintptr_t current_request;
 	uintptr_t main_request; // Only available during worker initialization
 	char *cookie_data;
+	zend_module_entry *session_module;
 } frankenphp_server_context;
 
 // Adapted from php_request_shutdown
 void frankenphp_worker_request_shutdown(uintptr_t current_request) {
-	/* 0. skipped: Call any open observer end handlers that are still open after a zend_bailout */
-	/* 1. skipped: Call all possible shutdown functions registered with register_shutdown_function() */
-	/* 2. skipped: Call all possible __destruct() functions */
-
-	/* 3. Flush all output buffers */
+	/* Flush all output buffers */
 	zend_try {
 		php_output_end_all();
 	} zend_end_try();
 
-	/* 4. Reset max_execution_time (no longer executing php code after response sent) */
+	/* Reset max_execution_time (no longer executing php code after response sent) */
 	zend_try {
 		zend_unset_timeout();
 	} zend_end_try();
 
-	/* 5. Call all extensions RSHUTDOWN functions */
-	if (PG(modules_activated)) {
-		zend_deactivate_modules();
-	}
-
-	/* 6. Shutdown output layer (send the set HTTP headers, cleanup output handlers, etc.) */
+	/* Shutdown output layer (send the set HTTP headers, cleanup output handlers, etc.) */
 	zend_try {
 		php_output_deactivate();
 	} zend_end_try();
-	
-	/* 8. Destroy super-globals */
-	zend_try {
-		int i;
 
-		for (i=0; i<NUM_TRACK_VARS; i++) {
-			zval_ptr_dtor(&PG(http_globals)[i]);
-		}
-	} zend_end_try();
-
-	/* 9. skipped: Shutdown scanner/executor/compiler and restore ini entries */
-
-	/* 10. free request-bound globals */
-	// todo: check if it's a good idea
-	// php_free_request_globals()
-	// clear_last_error()
-	if (PG(last_error_message)) {
-		zend_string_release(PG(last_error_message));
-		PG(last_error_message) = NULL;
-	}
-	if (PG(last_error_file)) {
-		zend_string_release(PG(last_error_file));
-		PG(last_error_file) = NULL;
-	}
-	if (PG(php_sys_temp_dir)) {
-		efree(PG(php_sys_temp_dir));
-		PG(php_sys_temp_dir) = NULL;
-	}
-
-	/* 11. Call all extensions post-RSHUTDOWN functions */
-	zend_try {
-		zend_post_deactivate_modules();
-	} zend_end_try();
-
-	/* 13. skipped: free virtual CWD memory */
-
-	/* 12. SAPI related shutdown (free stuff) */
+	/* SAPI related shutdown (free stuff) */
 	frankenphp_clean_server_context();
 	zend_try {
 		sapi_deactivate();
 	} zend_end_try();
 
 	if (current_request != 0) go_frankenphp_worker_handle_request_end(current_request);
-
-	/* 14. Destroy stream hashes */
-	// todo: check if it's a good idea
-	zend_try {
-		php_shutdown_stream_hashes();
-	} zend_end_try();
-
-	/* 15. skipped: Free Willy (here be crashes) */
 
 	zend_set_memory_limit(PG(memory_limit));
 }
@@ -176,29 +75,17 @@ int frankenphp_worker_request_startup() {
 		php_output_activate();
 
 		/* initialize global variables */
-		PG(modules_activated) = 0;
 		PG(header_is_being_sent) = 0;
 		PG(connection_status) = PHP_CONNECTION_NORMAL;
-		PG(in_user_include) = 0;
 
 		// Keep the current execution context
-		//zend_activate();
 		sapi_activate();
-
-/*#ifdef ZEND_SIGNALS
-		zend_signal_activate();
-#endif*/
 
 		if (PG(max_input_time) == -1) {
 			zend_set_timeout(EG(timeout_seconds), 1);
 		} else {
 			zend_set_timeout(PG(max_input_time), 1);
 		}
-
-		/* Disable realpath cache if an open_basedir is set */
-		//if (PG(open_basedir) && *PG(open_basedir)) {
-		//	CWDG(realpath_cache_size_limit) = 0;
-		//}
 
 		if (PG(expose_php)) {
 			sapi_add_header(SAPI_PHP_VERSION_HEADER, sizeof(SAPI_PHP_VERSION_HEADER)-1, 1);
@@ -216,18 +103,10 @@ int frankenphp_worker_request_startup() {
 			php_output_set_implicit_flush(1);
 		}
 
-		PG(during_request_startup) = 0;
-
 		php_hash_environment();
 
-		// todo: find what we need to call php_register_server_variables();
-		php_register_server_variables();
-		zend_hash_update(&EG(symbol_table), ZSTR_KNOWN(ZEND_STR_AUTOGLOBAL_SERVER), &PG(http_globals)[TRACK_VARS_SERVER]);
-		Z_ADDREF(PG(http_globals)[TRACK_VARS_SERVER]);
-		HT_ALLOW_COW_VIOLATION(Z_ARRVAL(PG(http_globals)[TRACK_VARS_SERVER]));
-
-		zend_activate_modules();
-		PG(modules_activated)=1;
+		// Re-populate $_SERVER
+		zend_is_auto_global(ZSTR_KNOWN(ZEND_STR_AUTOGLOBAL_SERVER));
 	} zend_catch {
 		retval = FAILURE;
 	} zend_end_try();
@@ -253,6 +132,9 @@ PHP_FUNCTION(frankenphp_handle_request) {
 
 	uintptr_t previous_request = ctx->current_request;
 	if (ctx->main_request) {
+		// Store a pointer to the session module
+		ctx->session_module = zend_hash_str_find_ptr(&module_registry, "session", sizeof("session") -1);
+
 		// Clean the first dummy request created to initialize the worker
 		frankenphp_worker_request_shutdown(0);
 
@@ -274,11 +156,19 @@ PHP_FUNCTION(frankenphp_handle_request) {
 		RETURN_FALSE;
 	}
 
+	// Call session module's rinit
+	if (ctx->session_module)
+		ctx->session_module->request_startup_func(ctx->session_module->type, ctx->session_module->module_number);
+
 	// Call the PHP func
 	zval retval = {0};
 	fci.size = sizeof fci;
 	fci.retval = &retval;
 	zend_call_function(&fci, &fcc);
+
+	// Call session module's rshutdown
+	if (ctx->session_module)
+		ctx->session_module->request_shutdown_func(ctx->session_module->type, ctx->session_module->module_number);
 
 	frankenphp_worker_request_shutdown(next_request);
 
@@ -339,7 +229,6 @@ uintptr_t frankenphp_request_shutdown()
 
 	free(ctx->cookie_data);
 	((frankenphp_server_context*) SG(server_context))->cookie_data = NULL;
-
 	uintptr_t rh = frankenphp_clean_server_context();
 
 	free(ctx);
@@ -476,15 +365,6 @@ static void frankenphp_register_variables(zval *track_vars_array)
 {
 	// https://www.php.net/manual/en/reserved.variables.server.php
 	frankenphp_server_context* ctx = SG(server_context);
-
-	// todo: remove this
-	/*if (ctx->current_request == 0 && ctx->worker_filename != NULL) {
-		// todo: also register PHP_SELF etc
-		php_register_variable_safe("SCRIPT_FILENAME", ctx->worker_filename, strlen(ctx->worker_filename), track_vars_array);
-	}*/
-
-	// todo: import or not environment variables set in the parent process?
-	//php_import_environment_variables(track_vars_array);
 
 	go_register_variables(ctx->current_request ? ctx->current_request : ctx->main_request, track_vars_array);
 }

@@ -49,7 +49,7 @@ func runTest(t *testing.T, test func(func(http.ResponseWriter, *http.Request), *
 	defer frankenphp.Shutdown()
 
 	handler := func(w http.ResponseWriter, r *http.Request) {
-		req := frankenphp.NewRequestWithContext(r, testDataDir)
+		req := frankenphp.NewRequestWithContext(r, testDataDir, nil)
 		if err := frankenphp.ServeHTTP(w, req); err != nil {
 			panic(err)
 		}
@@ -142,7 +142,7 @@ func testPathInfo(t *testing.T, opts *testOptions) {
 			testDataDir := cwd + "/testdata/"
 
 			requestURI := r.URL.RequestURI()
-			rewriteRequest := frankenphp.NewRequestWithContext(r, testDataDir)
+			rewriteRequest := frankenphp.NewRequestWithContext(r, testDataDir, nil)
 			rewriteRequest.URL.Path = "/server-variable.php/pathinfo"
 			fc, _ := frankenphp.FromContext(rewriteRequest.Context())
 			fc.Env["REQUEST_URI"] = requestURI
@@ -294,6 +294,44 @@ func testPhpInfo(t *testing.T, opts *testOptions) {
 	}, opts)
 }
 
+func TestPersistentObject_module(t *testing.T) { testPersistentObject(t, nil) }
+func TestPersistentObject_worker(t *testing.T) {
+	testPersistentObject(t, &testOptions{workerScript: "persistent-object.php"})
+}
+func testPersistentObject(t *testing.T, opts *testOptions) {
+	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
+		req := httptest.NewRequest("GET", fmt.Sprintf("http://example.com/persistent-object.php?i=%d", i), nil)
+		w := httptest.NewRecorder()
+		handler(w, req)
+
+		resp := w.Result()
+		body, _ := io.ReadAll(resp.Body)
+
+		assert.Equal(t, fmt.Sprintf(`request: %d
+class exists: 1
+id: obj1
+object id: 1`, i), string(body))
+	}, opts)
+}
+
+func TestAutoloader_module(t *testing.T) { testAutoloader(t, nil) }
+func TestAutoloader_worker(t *testing.T) {
+	testAutoloader(t, &testOptions{workerScript: "autoloader.php"})
+}
+func testAutoloader(t *testing.T, opts *testOptions) {
+	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
+		req := httptest.NewRequest("GET", fmt.Sprintf("http://example.com/autoloader.php?i=%d", i), nil)
+		w := httptest.NewRecorder()
+		handler(w, req)
+
+		resp := w.Result()
+		body, _ := io.ReadAll(resp.Body)
+
+		assert.Equal(t, fmt.Sprintf(`request %d
+my_autoloader`, i), string(body))
+	}, opts)
+}
+
 func ExampleExecuteScript() {
 	if err := frankenphp.Init(); err != nil {
 		panic(err)
@@ -301,7 +339,7 @@ func ExampleExecuteScript() {
 	defer frankenphp.Shutdown()
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		req := frankenphp.NewRequestWithContext(r, "/path/to/document/root")
+		req := frankenphp.NewRequestWithContext(r, "/path/to/document/root", nil)
 		if err := frankenphp.ServeHTTP(w, req); err != nil {
 			panic(err)
 		}

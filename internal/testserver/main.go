@@ -1,15 +1,20 @@
 package main
 
 import (
-	"log"
 	"net/http"
 	"os"
 
 	"github.com/dunglas/frankenphp"
+	"go.uber.org/zap"
 )
 
 func main() {
-	if err := frankenphp.Init(); err != nil {
+	logger, err := zap.NewDevelopment()
+	if err != nil {
+		panic(err)
+	}
+
+	if err := frankenphp.Init(frankenphp.WithLogger(logger)); err != nil {
 		panic(err)
 	}
 	defer frankenphp.Shutdown()
@@ -20,7 +25,7 @@ func main() {
 			panic(err)
 		}
 
-		req := frankenphp.NewRequestWithContext(r, cwd)
+		req := frankenphp.NewRequestWithContext(r, cwd, nil)
 		if err := frankenphp.ServeHTTP(w, req); err != nil {
 			panic(err)
 		}
@@ -31,5 +36,5 @@ func main() {
 		port = "8080"
 	}
 
-	log.Fatal(http.ListenAndServe(":"+port, nil))
+	logger.Fatal("server error", zap.Error(http.ListenAndServe(":"+port, nil)))
 }

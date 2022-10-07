@@ -30,6 +30,7 @@ RUN apt-get update && \
     gdb \
     valgrind \
     neovim && \
+    zsh && \
     echo 'set auto-load safe-path /' > /root/.gdbinit && \
     echo '* soft core unlimited' >> /etc/security/limits.conf \
     && \
@@ -40,7 +41,7 @@ RUN git clone https://github.com/dunglas/php-src.git && \
     git checkout frankenphp-8.2 && \
     # --enable-embed is only necessary to generate libphp.so, we don't use this SAPI directly
     ./buildconf && \
-    ./configure --enable-embed=static --enable-zts --disable-zend-signals --enable-static --enable-debug && \
+    ./configure --enable-embed=static --enable-zts --disable-zend-signals --enable-debug && \
     make -j6 && \
     make install && \
     #rm -Rf php-src/ && \
