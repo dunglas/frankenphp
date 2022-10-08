@@ -16,6 +16,9 @@ import (
 	"github.com/dunglas/frankenphp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zaptest"
+	"go.uber.org/zap/zaptest/observer"
 )
 
 type testOptions struct {
@@ -23,6 +26,8 @@ type testOptions struct {
 	nbWorkers           int
 	nbParrallelRequests int
 	realServer          bool
+	logger              *zap.Logger
+	initOpts            []frankenphp.Option
 }
 
 func runTest(t *testing.T, test func(func(http.ResponseWriter, *http.Request), *httptest.Server, int), opts *testOptions) {
@@ -39,10 +44,15 @@ func runTest(t *testing.T, test func(func(http.ResponseWriter, *http.Request), *
 	cwd, _ := os.Getwd()
 	testDataDir := cwd + "/testdata/"
 
-	initOpts := make([]frankenphp.Option, 0, 1)
+	if opts.logger == nil {
+		opts.logger = zaptest.NewLogger(t)
+	}
+
+	initOpts := []frankenphp.Option{frankenphp.WithLogger(opts.logger)}
 	if opts.workerScript != "" {
 		initOpts = append(initOpts, frankenphp.WithWorkers(testDataDir+opts.workerScript, opts.nbWorkers))
 	}
+	initOpts = append(initOpts, opts.initOpts...)
 
 	err := frankenphp.Init(initOpts...)
 	require.Nil(t, err)
@@ -329,6 +339,32 @@ func testAutoloader(t *testing.T, opts *testOptions) {
 
 		assert.Equal(t, fmt.Sprintf(`request %d
 my_autoloader`, i), string(body))
+	}, opts)
+}
+
+func TestLog_module(t *testing.T) { testLog(t, &testOptions{}) }
+func TestLog_worker(t *testing.T) {
+	testLog(t, &testOptions{workerScript: "log.php"})
+}
+func testLog(t *testing.T, opts *testOptions) {
+	logger, logs := observer.New(zap.InfoLevel)
+	opts.logger = zap.New(logger)
+
+	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
+		req := httptest.NewRequest("GET", fmt.Sprintf("http://example.com/log.php?i=%d", i), nil)
+		w := httptest.NewRecorder()
+		handler(w, req)
+
+		var found bool
+		searched := fmt.Sprintf("request %d", i)
+		for _, entry := range logs.All() {
+			if entry.Message == searched {
+				found = true
+				break
+			}
+		}
+
+		assert.True(t, found)
 	}, opts)
 }
 

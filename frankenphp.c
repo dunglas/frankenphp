@@ -68,10 +68,7 @@ void frankenphp_worker_request_shutdown(uintptr_t current_request) {
 int frankenphp_worker_request_startup() {
 	int retval = SUCCESS;
 
-	zend_try {	
-		PG(in_error_log) = 0;
-		PG(during_request_startup) = 1;
-
+	zend_try {
 		php_output_activate();
 
 		/* initialize global variables */
@@ -148,6 +145,7 @@ PHP_FUNCTION(frankenphp_handle_request) {
 	if (!next_request) {
 		// Shutting down, re-create a dummy request to make the real php_request_shutdown() function happy
 		frankenphp_worker_request_startup();
+		ctx->current_request = 0;
 
 		RETURN_FALSE;
 	}
@@ -371,7 +369,7 @@ static void frankenphp_register_variables(zval *track_vars_array)
 
 static void frankenphp_log_message(const char *message, int syslog_type_int)
 {
-	// TODO: call Go logger
+	go_log((char *) message, syslog_type_int);
 }
 
 sapi_module_struct frankenphp_sapi_module = {

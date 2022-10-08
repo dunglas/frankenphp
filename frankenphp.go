@@ -48,6 +48,41 @@ var (
 	logger   *zap.Logger
 )
 
+type syslogLevel int
+
+const (
+	emerg   syslogLevel = iota /* system is unusable */
+	alert                      /* action must be taken immediately */
+	crit                       /* critical conditions */
+	err                        /* error conditions */
+	warning                    /* warning conditions */
+	notice                     /* normal but significant condition */
+	info                       /* informational */
+	debug                      /* debug-level messages */
+
+)
+
+func (l syslogLevel) String() string {
+	switch l {
+	case emerg:
+		return "emerg"
+	case alert:
+		return "alert"
+	case crit:
+		return "crit"
+	case err:
+		return "err"
+	case warning:
+		return "warning"
+	case notice:
+		return "notice"
+	case debug:
+		return "debug"
+	default:
+		return "info"
+	}
+}
+
 // FrankenPHP executes PHP scripts.
 type FrankenPHPContext struct {
 	// The root directory of the PHP application.
@@ -160,15 +195,18 @@ func Init(options ...Option) error {
 		}
 	}
 
+	logger.Debug("FrankenPHP started")
+
 	return nil
 }
 
 func Shutdown() {
-	logger.Debug("FrankenPHP shutting down")
 	stopWorkers()
 	close(requestChan)
 	shutdownWG.Wait()
 	requestChan = nil
+
+	logger.Debug("FrankenPHP shut down")
 }
 
 //export go_shutdown
@@ -426,4 +464,24 @@ func go_read_cookies(rh C.uintptr_t) *C.char {
 	// freed in frankenphp_request_shutdown()
 
 	return cCookie
+}
+
+//export go_log
+func go_log(message *C.char, level C.int) {
+	l := getLogger()
+	m := C.GoString(message)
+
+	switch level {
+	case 0, 1, 2, 3:
+		l.Error(m, zap.Stringer("syslog_level", syslogLevel(level)))
+
+	case 4:
+		l.Warn(m, zap.Stringer("syslog_level", syslogLevel(level)))
+
+	case 7:
+		l.Debug(m, zap.Stringer("syslog_level", syslogLevel(level)))
+
+	default:
+		l.Info(m, zap.Stringer("syslog_level", syslogLevel(level)))
+	}
 }
