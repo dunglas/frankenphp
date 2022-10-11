@@ -368,6 +368,24 @@ func testLog(t *testing.T, opts *testOptions) {
 	}, opts)
 }
 
+func TestException_module(t *testing.T) { testException(t, &testOptions{}) }
+func TestException_worker(t *testing.T) {
+	testException(t, &testOptions{workerScript: "exception.php"})
+}
+func testException(t *testing.T, opts *testOptions) {
+	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
+		req := httptest.NewRequest("GET", fmt.Sprintf("http://example.com/exception.php?i=%d", i), nil)
+		w := httptest.NewRecorder()
+		handler(w, req)
+
+		resp := w.Result()
+		body, _ := io.ReadAll(resp.Body)
+
+		assert.Contains(t, string(body), "hello")
+		assert.Contains(t, string(body), fmt.Sprintf(`Uncaught Exception: request %d`, i))
+	}, opts)
+}
+
 func ExampleExecuteScript() {
 	if err := frankenphp.Init(); err != nil {
 		panic(err)
