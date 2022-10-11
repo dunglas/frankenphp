@@ -16,6 +16,7 @@
 #include "C-Thread-Pool/thpool.h"
 #include "C-Thread-Pool/thpool.c"
 
+#include "frankenphp_arginfo.h"
 #include "_cgo_export.h"
 
 #if defined(PHP_WIN32) && defined(ZTS)
@@ -118,10 +119,6 @@ int frankenphp_worker_request_startup() {
 	return retval;
 }
 
-ZEND_BEGIN_ARG_INFO_EX(arginfo_frankenphp_handle_request, 0, 0, 1)
-    ZEND_ARG_CALLABLE_INFO(false, handler, false)
-ZEND_END_ARG_INFO()
-
 PHP_FUNCTION(frankenphp_handle_request) {
 	zend_fcall_info fci;
 	zend_fcall_info_cache fcc;
@@ -193,20 +190,15 @@ PHP_FUNCTION(frankenphp_handle_request) {
 	RETURN_TRUE;
 }
 
-static const zend_function_entry frankenphp_ext_functions[] = {
-    PHP_FE(frankenphp_handle_request, arginfo_frankenphp_handle_request)
-    PHP_FE_END
-};
-
 static zend_module_entry frankenphp_module = {
     STANDARD_MODULE_HEADER,
     "frankenphp",
-    frankenphp_ext_functions,	/* function table */
-    NULL,						/* initialization */
-    NULL,						/* shutdown */
-    NULL,						/* request initialization */
-    NULL,						/* request shutdown */
-    NULL,						/* information */
+    ext_functions,	/* function table */
+    NULL,			/* initialization */
+    NULL,			/* shutdown */
+    NULL,			/* request initialization */
+    NULL,			/* request shutdown */
+    NULL,			/* information */
     "dev",
     STANDARD_MODULE_PROPERTIES
 };
