@@ -59,7 +59,6 @@ const (
 	notice                     /* normal but significant condition */
 	info                       /* informational */
 	debug                      /* debug-level messages */
-
 )
 
 func (l syslogLevel) String() string {
@@ -311,8 +310,10 @@ func ServeHTTP(responseWriter http.ResponseWriter, request *http.Request) error 
 		rc = v.(chan *http.Request)
 	}
 
-	rc <- request
-	<-fc.done
+	if rc != nil {
+		rc <- request
+		<-fc.done
+	}
 
 	return nil
 }
@@ -471,14 +472,21 @@ func go_log(message *C.char, level C.int) {
 	l := getLogger()
 	m := C.GoString(message)
 
-	switch level {
-	case 0, 1, 2, 3:
+	var le syslogLevel
+	if level < C.int(emerg) || level > C.int(debug) {
+		le = info
+	} else {
+		le = syslogLevel(level)
+	}
+
+	switch le {
+	case emerg, alert, crit, err:
 		l.Error(m, zap.Stringer("syslog_level", syslogLevel(level)))
 
-	case 4:
+	case warning:
 		l.Warn(m, zap.Stringer("syslog_level", syslogLevel(level)))
 
-	case 7:
+	case debug:
 		l.Debug(m, zap.Stringer("syslog_level", syslogLevel(level)))
 
 	default:

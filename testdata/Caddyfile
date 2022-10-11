@@ -1,6 +1,7 @@
 {
+	debug
 	frankenphp {
-		worker /Users/dunglas/workspace/frankenphp/testdata/index.php
+		worker ./error.php
 	}
 }
 

@@ -9,8 +9,13 @@
 #include <php_variables.h>
 #include <php_output.h>
 #include <Zend/zend_alloc.h>
+#include <Zend/zend_types.h>
+#include <Zend/zend_exceptions.h>
+#include <Zend/zend_interfaces.h>
+
 #include "C-Thread-Pool/thpool.h"
 #include "C-Thread-Pool/thpool.c"
+
 #include "_cgo_export.h"
 
 #if defined(PHP_WIN32) && defined(ZTS)
@@ -31,12 +36,12 @@ int frankenphp_check_version() {
 
 typedef struct frankenphp_server_context {
 	uintptr_t current_request;
-	uintptr_t main_request; // Only available during worker initialization
+	uintptr_t main_request;				/* Only available during worker initialization */
 	char *cookie_data;
 	zend_module_entry *session_module;
 } frankenphp_server_context;
 
-// Adapted from php_request_shutdown
+/* Adapted from php_request_shutdown */
 void frankenphp_worker_request_shutdown(uintptr_t current_request) {
 	/* Flush all output buffers */
 	zend_try {
@@ -64,7 +69,7 @@ void frankenphp_worker_request_shutdown(uintptr_t current_request) {
 	zend_set_memory_limit(PG(memory_limit));
 }
 
-// Adapted from php_request_startup()
+/* Adapted from php_request_startup() */
 int frankenphp_worker_request_startup() {
 	int retval = SUCCESS;
 
@@ -75,7 +80,7 @@ int frankenphp_worker_request_startup() {
 		PG(header_is_being_sent) = 0;
 		PG(connection_status) = PHP_CONNECTION_NORMAL;
 
-		// Keep the current execution context
+		/* Keep the current execution context */
 		sapi_activate();
 
 		if (PG(max_input_time) == -1) {
@@ -102,7 +107,7 @@ int frankenphp_worker_request_startup() {
 
 		php_hash_environment();
 
-		// Re-populate $_SERVER
+		/* Re-populate $_SERVER */
 		zend_is_auto_global(ZSTR_KNOWN(ZEND_STR_AUTOGLOBAL_SERVER));
 	} zend_catch {
 		retval = FAILURE;
@@ -129,21 +134,21 @@ PHP_FUNCTION(frankenphp_handle_request) {
 
 	uintptr_t previous_request = ctx->current_request;
 	if (ctx->main_request) {
-		// Store a pointer to the session module
+		/* Store a pointer to the session module */
 		ctx->session_module = zend_hash_str_find_ptr(&module_registry, "session", sizeof("session") -1);
 
-		// Clean the first dummy request created to initialize the worker
+		/* Clean the first dummy request created to initialize the worker */
 		frankenphp_worker_request_shutdown(0);
 
 		previous_request = ctx->main_request;
 
-		// Mark the worker as ready to handle requests
+		/* Mark the worker as ready to handle requests */
 		go_frankenphp_worker_ready();
 	}
 
 	uintptr_t next_request = go_frankenphp_worker_handle_request_start(previous_request);
 	if (!next_request) {
-		// Shutting down, re-create a dummy request to make the real php_request_shutdown() function happy
+		/* Shutting down, re-create a dummy request to make the real php_request_shutdown() function happy */
 		frankenphp_worker_request_startup();
 		ctx->current_request = 0;
 
@@ -154,17 +159,32 @@ PHP_FUNCTION(frankenphp_handle_request) {
 		RETURN_FALSE;
 	}
 
-	// Call session module's rinit
+	/* Call session module's rinit */
 	if (ctx->session_module)
 		ctx->session_module->request_startup_func(ctx->session_module->type, ctx->session_module->module_number);
 
-	// Call the PHP func
+
+	
+	/* Call the PHP func */
 	zval retval = {0};
 	fci.size = sizeof fci;
 	fci.retval = &retval;
-	zend_call_function(&fci, &fcc);
+	if (zend_call_function(&fci, &fcc)) {
+		zval_ptr_dtor(&retval);
+	}
 
-	// Call session module's rshutdown
+	/* Catch all exceptions and turn them in warnings to keep the script running */
+	if (EG(exception)) {
+		char *trace;
+		spprintf(&trace, 0, "exception caught while running a worker script: %s", ZSTR_VAL(EG(exception)->ce->name));
+		sapi_module.log_message(trace, LOG_ERR);
+		efree(trace);
+
+		zend_exception_error(EG(exception), E_WARNING);
+		zend_clear_exception();
+	}
+
+	/* Call session module's rshutdown */
 	if (ctx->session_module)
 		ctx->session_module->request_shutdown_func(ctx->session_module->type, ctx->session_module->module_number);
 
@@ -181,12 +201,12 @@ static const zend_function_entry frankenphp_ext_functions[] = {
 static zend_module_entry frankenphp_module = {
     STANDARD_MODULE_HEADER,
     "frankenphp",
-    frankenphp_ext_functions,    /* function table */
-    NULL,  					     /* initialization */
-    NULL,                        /* shutdown */
-    NULL,                        /* request initialization */
-    NULL,                        /* request shutdown */
-    NULL,                        /* information */
+    frankenphp_ext_functions,	/* function table */
+    NULL,						/* initialization */
+    NULL,						/* shutdown */
+    NULL,						/* request initialization */
+    NULL,						/* request shutdown */
+    NULL,						/* information */
     "dev",
     STANDARD_MODULE_PROPERTIES
 };
@@ -249,7 +269,7 @@ int frankenphp_create_server_context()
 # endif
 #endif
 
-	// todo: use a pool
+	/* todo: use a pool */
 	frankenphp_server_context *ctx = calloc(1, sizeof(frankenphp_server_context));
 	if (ctx == NULL) return FAILURE;
 
@@ -276,8 +296,10 @@ void frankenphp_update_server_context(
 	char *auth_password,
 	int proto_num
 ) {
-	((frankenphp_server_context*) SG(server_context))->main_request = main_request;
-	((frankenphp_server_context*) SG(server_context))->current_request = current_request;
+	frankenphp_server_context *ctx = SG(server_context);
+
+	ctx->main_request = main_request;
+	ctx->current_request = current_request;
 
 	SG(request_info).auth_password = auth_password;
 	SG(request_info).auth_user = auth_user;
@@ -297,7 +319,7 @@ static int frankenphp_startup(sapi_module_struct *sapi_module)
 
 static int frankenphp_deactivate(void)
 {
-    // TODO: flush everything
+    /* TODO: flush everything */
     return SUCCESS;
 }
 
@@ -361,7 +383,7 @@ static char* frankenphp_read_cookies(void)
 
 static void frankenphp_register_variables(zval *track_vars_array)
 {
-	// https://www.php.net/manual/en/reserved.variables.server.php
+	/* https://www.php.net/manual/en/reserved.variables.server.php */
 	frankenphp_server_context* ctx = SG(server_context);
 
 	go_register_variables(ctx->current_request ? ctx->current_request : ctx->main_request, track_vars_array);
@@ -407,7 +429,7 @@ sapi_module_struct frankenphp_sapi_module = {
 void *manager_thread(void *arg) {
 #ifdef ZTS
 	php_tsrm_startup();
-	//tsrm_error_set(TSRM_ERROR_LEVEL_INFO, NULL);
+	/*tsrm_error_set(TSRM_ERROR_LEVEL_INFO, NULL);*/
 # ifdef PHP_WIN32
 	ZEND_TSRMLS_CACHE_UPDATE();
 # endif
@@ -428,7 +450,7 @@ void *manager_thread(void *arg) {
 		thpool_add_work(thpool, go_execute_script, (void *) rh);
 	}
 
-	// channel closed, shutdown gracefully
+	/* channel closed, shutdown gracefully */
 	thpool_wait(thpool);
 	thpool_destroy(thpool);
 

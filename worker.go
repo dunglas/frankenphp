@@ -44,32 +44,42 @@ func startWorkers(fileName string, nbWorkers int) error {
 		go func() {
 			defer shutdownWG.Done()
 
-			// Create main dummy request
-			r, err := http.NewRequest("GET", "", nil)
-			if err != nil {
-				m.Lock()
-				defer m.Unlock()
-				errors = append(errors, fmt.Errorf("workers %q: unable to create main worker request: %w", absFileName, err))
+			for {
+				// Create main dummy request
+				r, err := http.NewRequest("GET", "", nil)
+				if err != nil {
+					m.Lock()
+					defer m.Unlock()
+					errors = append(errors, fmt.Errorf("workers %q: unable to create main worker request: %w", absFileName, err))
 
-				return
+					return
+				}
+
+				ctx := context.WithValue(
+					r.Context(),
+					contextKey,
+					&FrankenPHPContext{
+						Env: map[string]string{"SCRIPT_FILENAME": absFileName},
+					},
+				)
+
+				l.Debug("starting", zap.String("worker", absFileName))
+				if err := ServeHTTP(nil, r.WithContext(ctx)); err != nil {
+					m.Lock()
+					defer m.Unlock()
+					errors = append(errors, fmt.Errorf("workers %q: unable to start: %w", absFileName, err))
+
+					return
+				}
+
+				// TODO: make the max restart configurable
+				if _, ok := workersRequestChans.Load(absFileName); ok {
+					l.Error("unexpected termination, restarting", zap.String("worker", absFileName))
+				} else {
+					break
+				}
 			}
 
-			ctx := context.WithValue(
-				r.Context(),
-				contextKey,
-				&FrankenPHPContext{
-					Env: map[string]string{"SCRIPT_FILENAME": absFileName},
-				},
-			)
-
-			l.Debug("starting", zap.String("worker", absFileName))
-			if err := ServeHTTP(nil, r.WithContext(ctx)); err != nil {
-				m.Lock()
-				defer m.Unlock()
-				errors = append(errors, fmt.Errorf("workers %q: unable to start: %w", absFileName, err))
-
-				return
-			}
 			// TODO: check if the termination is expected
 			l.Debug("terminated", zap.String("worker", absFileName))
 		}()
@@ -89,8 +99,8 @@ func startWorkers(fileName string, nbWorkers int) error {
 
 func stopWorkers() {
 	workersRequestChans.Range(func(k, v any) bool {
-		close(v.(chan *http.Request))
 		workersRequestChans.Delete(k)
+		close(v.(chan *http.Request))
 
 		return true
 	})
