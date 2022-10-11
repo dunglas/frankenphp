@@ -10,6 +10,9 @@
 #include <php_output.h>
 #include <Zend/zend_alloc.h>
 #include <Zend/zend_types.h>
+#include <Zend/zend_exceptions.h>
+#include <Zend/zend_interfaces.h>
+
 #include "C-Thread-Pool/thpool.h"
 #include "C-Thread-Pool/thpool.c"
 
@@ -32,7 +35,6 @@ int frankenphp_check_version() {
 }
 
 typedef struct frankenphp_server_context {
-	bool worker;
 	uintptr_t current_request;
 	uintptr_t main_request;				/* Only available during worker initialization */
 	char *cookie_data;
@@ -161,11 +163,26 @@ PHP_FUNCTION(frankenphp_handle_request) {
 	if (ctx->session_module)
 		ctx->session_module->request_startup_func(ctx->session_module->type, ctx->session_module->module_number);
 
+
+	
 	/* Call the PHP func */
 	zval retval = {0};
 	fci.size = sizeof fci;
 	fci.retval = &retval;
-	zend_call_function(&fci, &fcc);
+	if (zend_call_function(&fci, &fcc)) {
+		zval_ptr_dtor(&retval);
+	}
+
+	/* Catch all exceptions and turn them in warnings to keep the script running */
+	if (EG(exception)) {
+		char *trace;
+		spprintf(&trace, 0, "exception caught while running a worker script: %s", ZSTR_VAL(EG(exception)->ce->name));
+		sapi_module.log_message(trace, LOG_ERR);
+		efree(trace);
+
+		zend_exception_error(EG(exception), E_WARNING);
+		zend_clear_exception();
+	}
 
 	/* Call session module's rshutdown */
 	if (ctx->session_module)
@@ -176,41 +193,6 @@ PHP_FUNCTION(frankenphp_handle_request) {
 	RETURN_TRUE;
 }
 
-ZEND_DECLARE_MODULE_GLOBALS(frankenphp)
-
-static void (*old_error_handler)(int, zend_string *, const uint32_t, zend_string *);
-
-static void frankenphp_error_handler(int error_num, zend_string *error_filename, const uint32_t error_lineno, zend_string *message) /* {{{ */
-{
-	sapi_module.log_message("in error handler",-1);
-
-	frankenphp_server_context *ctx = SG(server_context);
-
-	if (ctx->worker) {
-		sapi_module.log_message("don't kill the script", -1);
-
-		return;
-	}
-
-	old_error_handler(error_num, error_filename, error_lineno, message);
-}
-/* }}} */
-
-static PHP_MINIT_FUNCTION(frankenphp)
-{
-	old_error_handler = zend_error_cb;
-	zend_error_cb = frankenphp_error_handler;
-
-	return SUCCESS;
-}
-
-PHP_MSHUTDOWN_FUNCTION(frankenphp)
-{
-	zend_error_cb = old_error_handler;
-
-	return SUCCESS;
-}
-
 static const zend_function_entry frankenphp_ext_functions[] = {
     PHP_FE(frankenphp_handle_request, arginfo_frankenphp_handle_request)
     PHP_FE_END
@@ -219,12 +201,12 @@ static const zend_function_entry frankenphp_ext_functions[] = {
 static zend_module_entry frankenphp_module = {
     STANDARD_MODULE_HEADER,
     "frankenphp",
-    frankenphp_ext_functions,			/* function table */
-    PHP_MINIT(frankenphp),				/* initialization */
-    PHP_MSHUTDOWN(frankenphp),			/* shutdown */
-    NULL,								/* request initialization */
-    NULL,								/* request shutdown */
-    NULL,								/* information */
+    frankenphp_ext_functions,	/* function table */
+    NULL,						/* initialization */
+    NULL,						/* shutdown */
+    NULL,						/* request initialization */
+    NULL,						/* request shutdown */
+    NULL,						/* information */
     "dev",
     STANDARD_MODULE_PROPERTIES
 };
@@ -291,7 +273,6 @@ int frankenphp_create_server_context()
 	frankenphp_server_context *ctx = calloc(1, sizeof(frankenphp_server_context));
 	if (ctx == NULL) return FAILURE;
 
-	ctx->worker = false;
 	ctx->current_request = 0;
 	ctx->main_request = 0;
 	ctx->cookie_data = NULL;
@@ -317,7 +298,6 @@ void frankenphp_update_server_context(
 ) {
 	frankenphp_server_context *ctx = SG(server_context);
 
-	ctx->worker = main_request != 0;
 	ctx->main_request = main_request;
 	ctx->current_request = current_request;
 

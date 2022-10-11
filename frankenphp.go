@@ -310,8 +310,10 @@ func ServeHTTP(responseWriter http.ResponseWriter, request *http.Request) error 
 		rc = v.(chan *http.Request)
 	}
 
-	rc <- request
-	<-fc.done
+	if rc != nil {
+		rc <- request
+		<-fc.done
+	}
 
 	return nil
 }
