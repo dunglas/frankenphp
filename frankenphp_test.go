@@ -7,8 +7,11 @@ import (
 	"net/http"
 	"net/http/cookiejar"
 	"net/http/httptest"
+	"net/http/httptrace"
+	"net/textproto"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -383,6 +386,38 @@ func testException(t *testing.T, opts *testOptions) {
 
 		assert.Contains(t, string(body), "hello")
 		assert.Contains(t, string(body), fmt.Sprintf(`Uncaught Exception: request %d`, i))
+	}, opts)
+}
+
+func TestEarlyHints_module(t *testing.T) { testEarlyHints(t, &testOptions{}) }
+func TestEarlyHints_worker(t *testing.T) {
+	testEarlyHints(t, &testOptions{workerScript: "early-hints.php"})
+}
+func testEarlyHints(t *testing.T, opts *testOptions) {
+	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
+		var earlyHintReceived bool
+		trace := &httptrace.ClientTrace{
+			Got1xxResponse: func(code int, header textproto.MIMEHeader) error {
+				switch code {
+				case http.StatusEarlyHints:
+					assert.Equal(t, "</style.css>; rel=preload; as=style", header.Get("Link"))
+					assert.Equal(t, strconv.Itoa(i), header.Get("Request"))
+
+					earlyHintReceived = true
+				}
+
+				return nil
+			},
+		}
+		req := httptest.NewRequest("GET", fmt.Sprintf("http://example.com/early-hints.php?i=%d", i), nil)
+		w := NewRecorder()
+		w.ClientTrace = trace
+		handler(w, req)
+
+		assert.Equal(t, strconv.Itoa(i), w.Header().Get("Request"))
+		assert.Equal(t, "", w.Header().Get("Link"))
+
+		assert.True(t, earlyHintReceived)
 	}, opts)
 }
 

@@ -123,9 +123,9 @@ PHP_FUNCTION(frankenphp_handle_request) {
 	zend_fcall_info fci;
 	zend_fcall_info_cache fcc;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS(), "f", &fci, &fcc) == FAILURE) {
-		RETURN_THROWS();
-	}
+	ZEND_PARSE_PARAMETERS_START(1, 1)
+		Z_PARAM_FUNC(fci, fcc)
+	ZEND_PARSE_PARAMETERS_END();
 
 	frankenphp_server_context *ctx = SG(server_context);
 
@@ -159,8 +159,6 @@ PHP_FUNCTION(frankenphp_handle_request) {
 	/* Call session module's rinit */
 	if (ctx->session_module)
 		ctx->session_module->request_startup_func(ctx->session_module->type, ctx->session_module->module_number);
-
-
 	
 	/* Call the PHP func */
 	zval retval = {0};
@@ -188,6 +186,27 @@ PHP_FUNCTION(frankenphp_handle_request) {
 	frankenphp_worker_request_shutdown(next_request);
 
 	RETURN_TRUE;
+}
+
+PHP_FUNCTION(headers_send) {
+	zend_long response_code = 200;
+
+	ZEND_PARSE_PARAMETERS_START(0, 1)
+		Z_PARAM_OPTIONAL
+		Z_PARAM_LONG(response_code)
+	ZEND_PARSE_PARAMETERS_END();
+
+	int previous_status_code = SG(sapi_headers).http_response_code;
+	SG(sapi_headers).http_response_code = response_code;
+
+	if (response_code >= 100 && response_code < 200) {
+		int ret = sapi_module.send_headers(&SG(sapi_headers));
+		SG(sapi_headers).http_response_code = previous_status_code;
+
+		RETURN_LONG(ret);
+	}
+	
+	RETURN_LONG(sapi_send_headers());
 }
 
 static zend_module_entry frankenphp_module = {

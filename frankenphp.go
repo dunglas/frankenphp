@@ -426,7 +426,19 @@ func go_write_header(rh C.uintptr_t, status C.int) {
 	r := cgo.Handle(rh).Value().(*http.Request)
 	fc := r.Context().Value(contextKey).(*FrankenPHPContext)
 
+	if fc.responseWriter == nil {
+		return
+	}
+
 	fc.responseWriter.WriteHeader(int(status))
+
+	if status >= 100 && status < 200 {
+		// Clear headers, it's not automatically done by ResponseWriter.WriteHeader() for 1xx responses
+		h := fc.responseWriter.Header()
+		for k := range h {
+			delete(h, k)
+		}
+	}
 }
 
 //export go_read_post

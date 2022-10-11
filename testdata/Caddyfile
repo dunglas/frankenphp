@@ -1,7 +1,7 @@
 {
 	debug
 	frankenphp {
-		worker ./error.php
+		#worker ./error.php
 	}
 }
 
