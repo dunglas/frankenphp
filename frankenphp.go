@@ -143,7 +143,7 @@ func Init(options ...Option) error {
 		return AlreaydStartedError
 	}
 
-	opt := &opt{numThreads: runtime.NumCPU()}
+	opt := &opt{}
 	for _, o := range options {
 		if err := o(opt); err != nil {
 			return err
@@ -165,8 +165,24 @@ func Init(options ...Option) error {
 		loggerMu.Unlock()
 	}
 
-	if opt.numThreads == 0 {
-		opt.numThreads = 1
+	numCPU := runtime.NumCPU()
+
+	var numWorkers int
+	for i, w := range opt.workers {
+		if w.num <= 0 {
+			opt.workers[i].num = numCPU
+		}
+
+		numWorkers += w.num
+	}
+
+	if opt.numThreads <= 0 {
+		if numWorkers >= numCPU {
+			// Keep a free thread to handle requests not handled by a worker
+			opt.numThreads = numCPU + 1
+		} else {
+			opt.numThreads = numCPU
+		}
 	}
 
 	switch C.frankenphp_check_version() {

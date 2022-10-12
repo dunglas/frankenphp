@@ -1,8 +1,6 @@
 package frankenphp
 
 import (
-	"runtime"
-
 	"go.uber.org/zap"
 )
 
@@ -26,7 +24,7 @@ type workerOpt struct {
 // WithNumThreads allows to configure the number of PHP threads to start (worker threads excluded).
 func WithNumThreads(numThreads int) Option {
 	return func(o *opt) error {
-		o.numThreads += -runtime.NumCPU() + numThreads
+		o.numThreads = numThreads
 
 		return nil
 	}
@@ -36,7 +34,6 @@ func WithNumThreads(numThreads int) Option {
 func WithWorkers(fileName string, num int) Option {
 	return func(o *opt) error {
 		o.workers = append(o.workers, workerOpt{fileName, num})
-		o.numThreads += num
 
 		return nil
 	}

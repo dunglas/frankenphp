@@ -59,18 +59,9 @@ func (f *FrankenPHPApp) Start() error {
 	repl := caddy.NewReplacer()
 	logger := caddy.Log()
 
-	opts := []frankenphp.Option{frankenphp.WithLogger(logger)}
-	if f.NumThreads != 0 {
-		opts = append(opts, frankenphp.WithNumThreads(f.NumThreads))
-	}
-
+	opts := []frankenphp.Option{frankenphp.WithNumThreads(f.NumThreads), frankenphp.WithLogger(logger)}
 	for _, w := range f.Workers {
-		num := 1
-		if w.Num > 1 {
-			num = w.Num
-		}
-
-		opts = append(opts, frankenphp.WithWorkers(repl.ReplaceKnown(w.FileName, ""), num))
+		opts = append(opts, frankenphp.WithWorkers(repl.ReplaceKnown(w.FileName, ""), w.Num))
 	}
 
 	_, loaded, err := phpInterpreter.LoadOrNew(mainPHPInterpreterKey, func() (caddy.Destructor, error) {
