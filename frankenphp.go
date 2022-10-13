@@ -1,6 +1,6 @@
 package frankenphp
 
-// #cgo CFLAGS: -Wall
+// #cgo CFLAGS: -DNO_SIGPROF -Wall
 // #cgo CFLAGS: -I/usr/local/include/php -I/usr/local/include/php/Zend -I/usr/local/include/php/TSRM -I/usr/local/include/php/main
 // #cgo LDFLAGS: -L/usr/local/lib -L/opt/homebrew/opt/libiconv/lib -L/usr/lib -lphp -lxml2 -lresolv -lsqlite3 -ldl -lm -lutil
 // #cgo darwin LDFLAGS: -liconv
