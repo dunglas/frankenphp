@@ -1,11 +1,11 @@
 {
 	debug
 	frankenphp {
-		#worker ./error.php
+		worker ./index.php
 	}
 }
 
-localhost {
+http:// {
 	log
 	route {
 		root * . 

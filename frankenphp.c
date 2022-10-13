@@ -43,7 +43,7 @@ typedef struct frankenphp_server_context {
 } frankenphp_server_context;
 
 /* Adapted from php_request_shutdown */
-void frankenphp_worker_request_shutdown(uintptr_t current_request) {
+static void frankenphp_worker_request_shutdown(uintptr_t current_request) {
 	/* Flush all output buffers */
 	zend_try {
 		php_output_end_all();
@@ -71,7 +71,7 @@ void frankenphp_worker_request_shutdown(uintptr_t current_request) {
 }
 
 /* Adapted from php_request_startup() */
-int frankenphp_worker_request_startup() {
+static int frankenphp_worker_request_startup() {
 	int retval = SUCCESS;
 
 	zend_try {
@@ -149,6 +149,9 @@ PHP_FUNCTION(frankenphp_handle_request) {
 		frankenphp_worker_request_startup();
 		ctx->current_request = 0;
 
+		// FIXME: definitely not a good idea!
+		//PG(report_memleaks) = 0;
+
 		RETURN_FALSE;
 	}
 
@@ -164,7 +167,7 @@ PHP_FUNCTION(frankenphp_handle_request) {
 	zval retval = {0};
 	fci.size = sizeof fci;
 	fci.retval = &retval;
-	if (zend_call_function(&fci, &fcc)) {
+	if (zend_call_function(&fci, &fcc) == SUCCESS) {
 		zval_ptr_dtor(&retval);
 	}
 
@@ -437,7 +440,7 @@ sapi_module_struct frankenphp_sapi_module = {
 	STANDARD_SAPI_MODULE_PROPERTIES
 };
 
-void *manager_thread(void *arg) {
+static void *manager_thread(void *arg) {
 #ifdef ZTS
 	php_tsrm_startup();
 	/*tsrm_error_set(TSRM_ERROR_LEVEL_INFO, NULL);*/
