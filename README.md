@@ -16,7 +16,7 @@ FrankenPHP can also be used as a standalone Go library to embed PHP in any app u
 
 ## Getting Started
 
-☢️ FrankenPHP is very experimental, don't use it in production yet, [fill bugs](https://github.com/dunglas/frankenphp/issues) and write patches! ☢️
+☢️ FrankenPHP is very experimental, don't use it in production yet, [file bugs](https://github.com/dunglas/frankenphp/issues) and write patches! ☢️
 
 ```
 docker run -v $PWD:/app/public \
