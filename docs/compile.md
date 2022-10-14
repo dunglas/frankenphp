@@ -4,8 +4,7 @@
 
 To use FrankenPHP, you currently need to compile a fork of PHP.
 Patches have been contributed upstream, and some have already
-been merged. It will be possible to use the vanilla version of PHP
-starting with version 8.3.
+been merged. It will be possible to use the vanilla PHP interpreter starting with version 8.3.
 
 First, get our PHP fork and prepare it:
 

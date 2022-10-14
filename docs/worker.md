@@ -1,5 +1,8 @@
 # Using FrankenPHP Workers
 
+Boot your application once and keep it in memory.
+FrankenPHP will handle incoming requests in a few milliseconds.
+
 ## Custom Apps
 
 ```php

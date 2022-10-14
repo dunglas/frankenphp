@@ -1,6 +1,6 @@
 # Early Hints
 
-FrankenPHP natively supports the [103 Early Hints status code]().
+FrankenPHP natively supports the [103 Early Hints status code](https://developer.chrome.com/blog/early-hints/).
 Using Early Hints can improve the load of your web pages by 30%.
 
 ```php
