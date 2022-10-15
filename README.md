@@ -26,6 +26,8 @@ docker run -v $PWD:/app/public \
 
 Go to `https://localhost`, and enjoy!
 
+> Note: do not attempt to use `https://127.0.0.1`. Use `localhost` and accept the self-signed certificate. Caddy has an automatic TLS handling that auto-trusts some local-based hostnames like `localhost`, but it does not apply to IP addresses. More details [on Caddy's "automatic https" docs](https://caddyserver.com/docs/automatic-https#hostname-requirements).
+
 ## Docs
 
 * [The worker mode](docs/worker.md)
