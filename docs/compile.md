@@ -50,7 +50,7 @@ export CFLAGS="-DNO_SIGPROF"
     --with-iconv=/opt/homebrew/opt/libiconv/
 ```
 
-These flags are required, but you can add other flags (extra extensions...)
+These flags are required, but you can add other flags (e.g. extra extensions)
 if needed.
 
 ## Compile PHP
