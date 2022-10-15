@@ -10,7 +10,7 @@ FrankenPHP works with any PHP app and makes your Symfony projects faster than ev
 
 FrankenPHP can also be used as a standalone Go library to embed PHP in any app using `net/http`.
 
-[**Learn more** on *frankenphp.dev*](https://frankenphp.dev) and in this slide deck:
+[**Learn more** on *frankenphp.dev*](https://frankenphp.dev) in this slide deck:
 
 <a href="https://dunglas.dev/2022/10/frankenphp-the-modern-php-app-server-written-in-go/"><img src="https://dunglas.dev/wp-content/uploads/2022/10/frankenphp.png" alt="Slides" width="600"></a>
 
