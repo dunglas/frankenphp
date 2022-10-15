@@ -37,7 +37,7 @@ RUN git clone --depth=1 --single-branch --branch=frankenphp-8.2 https://github.c
         --enable-embed=static \
         --enable-zts \
         --disable-zend-signals && \
-    make -j6 && \
+    make -j$(nproc) && \
     make install && \
     rm -Rf php-src/ && \
     ldconfig && \
