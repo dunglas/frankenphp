@@ -1,4 +1,4 @@
-// Package frankenphp provides a PHP module for Caddy.
+// Package caddy provides a PHP module for the Caddy web server.
 // FrankenPHP embeds the PHP interpreter directly in Caddy, giving it the ability to run your PHP scripts directly.
 // No PHP FPM required!
 package caddy

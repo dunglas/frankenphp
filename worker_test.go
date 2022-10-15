@@ -41,7 +41,7 @@ func TestWorker(t *testing.T) {
 	}, &testOptions{workerScript: "worker.php", nbWorkers: 1, nbParrallelRequests: 1})
 }
 
-func ExampleWorkerHandleRequest() {
+func ExampleServeHTTP_workers() {
 	if err := frankenphp.Init(
 		frankenphp.WithWorkers("worker1.php", 4),
 		frankenphp.WithWorkers("worker2.php", 2),

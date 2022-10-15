@@ -4,7 +4,7 @@ import (
 	"go.uber.org/zap"
 )
 
-// Option instances allow to configure the SAP.
+// Option instances allow to configure FrankenPHP.
 type Option func(h *opt) error
 
 // opt contains the available options.
@@ -21,7 +21,7 @@ type workerOpt struct {
 	num      int
 }
 
-// WithNumThreads allows to configure the number of PHP threads to start (worker threads excluded).
+// WithNumThreads configures the number of PHP threads to start.
 func WithNumThreads(numThreads int) Option {
 	return func(o *opt) error {
 		o.numThreads = numThreads
@@ -30,7 +30,7 @@ func WithNumThreads(numThreads int) Option {
 	}
 }
 
-// WithWorkers allow to start worker goroutines.
+// WithWorkers configures the PHP workers to start.
 func WithWorkers(fileName string, num int) Option {
 	return func(o *opt) error {
 		o.workers = append(o.workers, workerOpt{fileName, num})
@@ -39,7 +39,7 @@ func WithWorkers(fileName string, num int) Option {
 	}
 }
 
-// WithLogger sets the global logger to use
+// WithLogger configures the global logger to use.
 func WithLogger(l *zap.Logger) Option {
 	return func(o *opt) error {
 		o.logger = l

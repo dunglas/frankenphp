@@ -1,3 +1,8 @@
+// Package frankenphp embeds PHP in Go projects and provides a SAPI for net/http.
+//
+// This is the core of the [FrankenPHP app server], and can be used in any Go program.
+//
+// [FrankenPHP app server]: https://frankenphp.dev
 package frankenphp
 
 // #cgo CFLAGS: -DNO_SIGPROF -Wall
@@ -51,14 +56,14 @@ var (
 type syslogLevel int
 
 const (
-	emerg   syslogLevel = iota /* system is unusable */
-	alert                      /* action must be taken immediately */
-	crit                       /* critical conditions */
-	err                        /* error conditions */
-	warning                    /* warning conditions */
-	notice                     /* normal but significant condition */
-	info                       /* informational */
-	debug                      /* debug-level messages */
+	emerg   syslogLevel = iota // system is unusable
+	alert                      // action must be taken immediately
+	crit                       // critical conditions
+	err                        // error conditions
+	warning                    // warning conditions
+	notice                     // normal but significant condition
+	info                       // informational
+	debug                      // debug-level messages
 )
 
 func (l syslogLevel) String() string {
@@ -82,7 +87,7 @@ func (l syslogLevel) String() string {
 	}
 }
 
-// FrankenPHP executes PHP scripts.
+// FrankenPHPContext provides contextual information about the Request to handle.
 type FrankenPHPContext struct {
 	// The root directory of the PHP application.
 	DocumentRoot string
@@ -109,6 +114,7 @@ type FrankenPHPContext struct {
 	// This map is populated automatically, exisiting key are never replaced.
 	Env map[string]string
 
+	// The logger associated with the current request
 	Logger *zap.Logger
 
 	populated    bool
@@ -118,6 +124,7 @@ type FrankenPHPContext struct {
 	done           chan interface{}
 }
 
+// NewRequestWithContext creates a new FrankenPHP request context.
 func NewRequestWithContext(r *http.Request, documentRoot string, l *zap.Logger) *http.Request {
 	if l == nil {
 		l = getLogger()
@@ -133,11 +140,13 @@ func NewRequestWithContext(r *http.Request, documentRoot string, l *zap.Logger) 
 	return r.WithContext(ctx)
 }
 
+// FromContext extracts the FrankenPHPContext from a context.
 func FromContext(ctx context.Context) (fctx *FrankenPHPContext, ok bool) {
 	fctx, ok = ctx.Value(contextKey).(*FrankenPHPContext)
 	return
 }
 
+// Init starts the PHP runtime and the configured workers.
 func Init(options ...Option) error {
 	if requestChan != nil {
 		return AlreaydStartedError
@@ -215,6 +224,7 @@ func Init(options ...Option) error {
 	return nil
 }
 
+// Shutdown stops the workers and the PHP runtime.
 func Shutdown() {
 	stopWorkers()
 	close(requestChan)
@@ -301,6 +311,7 @@ func updateServerContext(request *http.Request) error {
 	return nil
 }
 
+// ServeHTTP executes a PHP script according to the given context.
 func ServeHTTP(responseWriter http.ResponseWriter, request *http.Request) error {
 	shutdownWG.Add(1)
 	defer shutdownWG.Done()
