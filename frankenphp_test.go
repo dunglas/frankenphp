@@ -160,7 +160,8 @@ func testPathInfo(t *testing.T, opts *testOptions) {
 			fc, _ := frankenphp.FromContext(rewriteRequest.Context())
 			fc.Env["REQUEST_URI"] = requestURI
 
-			frankenphp.ServeHTTP(w, rewriteRequest)
+			err := frankenphp.ServeHTTP(w, rewriteRequest)
+			assert.NoError(t, err)
 		}
 
 		req := httptest.NewRequest("GET", fmt.Sprintf("http://example.com/pathinfo/%d", i), nil)
@@ -421,7 +422,7 @@ func testEarlyHints(t *testing.T, opts *testOptions) {
 	}, opts)
 }
 
-func ExampleExecuteScript() {
+func ExampleServeHTTP() {
 	if err := frankenphp.Init(); err != nil {
 		panic(err)
 	}
