@@ -4,14 +4,15 @@
 
     go test -race -v ./...
 
-## Testing in live
+## Debugging
 ### With Docker (Linux)
 
-Prepare a dev Docker image:
+Build the dev Docker image:
 
-    docker build -t frankenphp .
-    docker run -p 8080:8080 -p 443:443 -v $PWD:/go/src/app -it frankenphp bash
+    docker build -t frankenphp-dev Dockerfile.dev 
+    docker run -p 8080:8080 -p 443:443 -v $PWD:/go/src/app -it frankenphp-dev bash
 
+The image contains the usual development tools (Go, GDB, Valgrind, Neovim...).
 #### Caddy module
 
 Build Caddy with the FrankenPHP Caddy module:

@@ -35,3 +35,4 @@ Go to `https://localhost`, and enjoy!
 * [Demo app (Symfony) and benchmarks](https://github.com/dunglas/frankenphp-demo)
 * [Compile from sources](docs/compile.md)
 * [Go library documentation](https://pkg.go.dev/github.com/dunglas/frankenphp)
+* [Contributing and debugging](CONTRIBUTING.md)
