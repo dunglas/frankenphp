@@ -24,20 +24,76 @@ RUN apt-get update && \
     libssl-dev \
     libxml2-dev \
     zlib1g-dev \
+    libbz2-dev \
+    libenchant-2-dev \
+    libpng-dev \
+    libgmp-dev \
+    libavif-dev \
+    libwebp-dev \
+    libjpeg-dev \
+    libfreetype-dev \
+    libldap-dev \
+    libpq-dev \
+    libxslt1-dev \
+    libzip-dev \
+    libicu-dev \
     bison \
     && \
-    apt-get clean 
+    apt-get clean
 
-RUN git clone --depth=1 --single-branch --branch=frankenphp-8.2 https://github.com/dunglas/php-src.git && \
-    cd php-src && \
-    #export CFLAGS="-DNO_SIGPROF" && \
-    # --enable-embed is only necessary to generate libphp.so, we don't use this SAPI directly
-    ./buildconf && \
+RUN git clone --depth=1 --single-branch --branch=frankenphp-8.2 https://github.com/dunglas/php-src.git
+
+RUN cd php-src && ./buildconf
+
+RUN cd php-src && \
+    `# --enable-embed is only necessary to generate libphp.so, we don't use this SAPI directly` \
     ./configure \
-        --enable-embed=static \
-        --enable-zts \
+        --disable-fpm \
         --disable-zend-signals \
-        --with-config-file-scan-dir=/usr/local/lib/php/ && \
+        --enable-fileinfo \
+        --enable-dom \
+        --enable-filter \
+        --with-libxml \
+        --with-iconv \
+        --enable-bcmath \
+        --enable-calendar \
+        --enable-embed=static \
+        --enable-exif \
+        --enable-ftp \
+        --enable-gd \
+        --enable-intl \
+        --enable-mbstring \
+        --enable-pcntl \
+        --enable-shmop \
+        --enable-sigchild \
+        --enable-soap \
+        --enable-sockets \
+        --enable-sysvmsg \
+        --enable-sysvsem \
+        --enable-sysvshm \
+        --enable-zts \
+        --with-avif \
+        --with-bz2 \
+        --with-curl \
+        --with-ffi \
+        --with-freetype \
+        --with-gettext \
+        --with-gmp \
+        --with-jpeg \
+        --with-ldap \
+        --with-mysqli \
+        --with-openssl \
+        --with-password-argon2 \
+        --with-pdo-mysql \
+        --with-pdo-pgsql \
+        --with-pdo-sqlite \
+        --with-sodium \
+        --with-webp \
+        --with-xsl \
+        --with-zip \
+        --with-zlib \
+        --with-config-file-scan-dir=/usr/local/lib/php/ \
+    && \
     make -j$(nproc) && \
     make install && \
     rm -Rf php-src/ && \
