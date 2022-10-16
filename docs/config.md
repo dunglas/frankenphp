@@ -14,7 +14,7 @@ When using the Docker image, set the `DEBUG` environment variable to `debug` to 
 
 ```
 docker run -v $PWD:/app/public \
-    -e DEBUG=debug
+    -e DEBUG=debug \
     -p 80:80 -p 443:443 \
     dunglas/frankenphp
 ```
