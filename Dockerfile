@@ -1,13 +1,8 @@
 FROM php:8.2.0RC4-zts-bullseye AS php-base
 
 COPY --from=mlocati/php-extension-installer /usr/bin/install-php-extensions /usr/local/bin/
-ADD https://github.com/dunglas/php-src/archive/refs/heads/frankenphp-8.2.zip /frankenphp-8.2.zip
 
-RUN apt update && \
-    apt install -y unzip && \
-    unzip frankenphp-8.2.zip && \
-    tar -c -f /usr/src/php.tar.xz -J /php-src-frankenphp-8.2/ && \
-    rm -rf /frankenphp-8.2.zip /php-src-frankenphp-8.2
+RUN rm -Rf /usr/local/include/php/ /usr/local/lib/libphp.* /usr/local/lib/php/ /usr/local/php/ /usr/local/bin/*
 
 ENV PHPIZE_DEPS \
     autoconf \
@@ -77,13 +72,14 @@ RUN git clone --depth=1 --single-branch --branch=frankenphp-8.2 https://github.c
     make -j$(nproc) && \
     make install && \
     rm -Rf php-src/ && \
+    tar -c -f /usr/src/php.tar.xz -J /php-src/ && \
     ldconfig && \
-    install-php-extensions opcache && \
+    #install-php-extensions opcache && \
     php --version
 
 #RUN echo "zend_extension=opcache.so\nopcache.enable=1" > /usr/local/lib/php.ini
 
-FROM golang AS server
+FROM golang:bullseye AS builder
 
 ENV PHPIZE_DEPS \
     autoconf \
@@ -112,22 +108,12 @@ RUN apt-get update && \
     && \
     apt-get clean
 
-RUN git clone --depth=1 --single-branch --branch=frankenphp-8.2 https://github.com/dunglas/php-src.git && \
-    cd php-src && \
-    #export CFLAGS="-DNO_SIGPROF" && \
-    # --enable-embed is only necessary to generate libphp.so, we don't use this SAPI directly
-    ./buildconf && \
-    ./configure \
-        --enable-embed=static \
-        --enable-zts \
-        --disable-zend-signals \
-        --with-config-file-path="$PHP_INI_DIR" \
-        --with-config-file-scan-dir="$PHP_INI_DIR/conf.d" && \
-    make -j$(nproc) && \
-    make install && \
-    rm -Rf php-src/ && \
-    ldconfig && \
-    php --version
+COPY --from=php-base /usr/local/include/php/ /usr/local/include/php
+COPY --from=php-base /usr/local/lib/libphp.* /usr/local/lib
+COPY --from=php-base /usr/local/lib/php/ /usr/local/lib/php
+COPY --from=php-base /usr/local/php/ /usr/local/php
+COPY --from=php-base /usr/local/bin/ /usr/local/bin
+COPY --from=php-base /usr/src /usr/src
 
 WORKDIR /go/src/app
 
@@ -148,8 +134,6 @@ RUN cd caddy/frankenphp && \
     cp /go/src/app/caddy/frankenphp/Caddyfile /etc/Caddyfile && \
     rm -Rf /go
 
-CMD [ "frankenphp", "run", "--config", "/etc/Caddyfile" ]
-
 FROM php-base AS final
 
 WORKDIR /app
@@ -157,8 +141,8 @@ WORKDIR /app
 RUN mkdir -p /app/public
 RUN echo '<?php phpinfo();' > /app/public/index.php
 
-COPY --from=server /usr/local/bin/frankenphp /usr/local/bin/frankenphp
-COPY --from=server /etc/Caddyfile /etc/Caddyfile
+COPY --from=builder /usr/local/bin/frankenphp /usr/local/bin/frankenphp
+COPY --from=builder /etc/Caddyfile /etc/Caddyfile
 
 RUN install-php-extensions pdo_mysql
 
