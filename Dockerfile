@@ -18,6 +18,7 @@ RUN apt-get update && \
     libargon2-dev \
     libcurl4-openssl-dev \
     libonig-dev \
+    php-mysql \
     libreadline-dev \
     libsodium-dev \
     libsqlite3-dev \
