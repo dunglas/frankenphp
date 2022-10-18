@@ -50,13 +50,3 @@ jobs:
         run: |
           docker load -i /tmp/.builder.tar
           docker run --rm ${{secrets.REGISTRY_LOGIN_SERVER}}/${{ secrets.REGISTRY_USERNAME }}/frankenphp:${{ github.sha }}-builder go test
-  native tests:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - name: Set up Go
-        uses: actions/setup-go@v2
-        with:
-          go-version: 1.19.2
-      - name: Run tests
-        run: go test
