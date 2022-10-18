@@ -122,5 +122,6 @@ COPY --from=php-base /usr/local/php/ /usr/local/php
 COPY --from=php-base /usr/local/bin/ /usr/local/bin
 COPY --from=php-base /usr/src /usr/src
 
-ENTRYPOINT [ "frankenphp" ]
-CMD [ "run", "--config", "/etc/Caddyfile" ]
+RUN sed -i 's/php/frankenphp run/g' /usr/local/bin/docker-php-entrypoint
+
+CMD [ "--config", "/etc/Caddyfile" ]
