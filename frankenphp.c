@@ -23,6 +23,11 @@
 ZEND_TSRMLS_CACHE_DEFINE()
 #endif
 
+/* Timeouts are currently fundamentally broken with ZTS: https://bugs.php.net/bug.php?id=79464 */
+const char HARDCODED_INI[] =
+	"max_execution_time=0\n"
+	"max_input_time=-1\n\0";
+
 int frankenphp_check_version() {
 #ifndef ZTS
     return -1;
@@ -31,6 +36,10 @@ int frankenphp_check_version() {
 	if (PHP_VERSION_ID < 80200) {
 		return -2;
 	}
+
+#ifdef ZEND_SIGNALS
+	return -3;
+#endif
 
 	return SUCCESS;
 }
@@ -50,9 +59,9 @@ static void frankenphp_worker_request_shutdown(uintptr_t current_request) {
 	} zend_end_try();
 
 	/* Reset max_execution_time (no longer executing php code after response sent) */
-	zend_try {
+	/*zend_try {
 		zend_unset_timeout();
-	} zend_end_try();
+	} zend_end_try();*/
 
 	/* Shutdown output layer (send the set HTTP headers, cleanup output handlers, etc.) */
 	zend_try {
@@ -84,11 +93,15 @@ static int frankenphp_worker_request_startup() {
 		/* Keep the current execution context */
 		sapi_activate();
 
-		if (PG(max_input_time) == -1) {
-			zend_set_timeout(EG(timeout_seconds), 1);
-		} else {
-			zend_set_timeout(PG(max_input_time), 1);
-		}
+		/*
+		 * Timeouts are currently fundamentally broken with ZTS: https://bugs.php.net/bug.php?id=79464
+		 *
+		 *if (PG(max_input_time) == -1) {
+		 *	zend_set_timeout(EG(timeout_seconds), 1);
+		 *} else {
+		 *	zend_set_timeout(PG(max_input_time), 1);
+		 *}
+		 */
 
 		if (PG(expose_php)) {
 			sapi_add_header(SAPI_PHP_VERSION_HEADER, sizeof(SAPI_PHP_VERSION_HEADER)-1, 1);
@@ -449,10 +462,10 @@ static void *manager_thread(void *arg) {
 # endif
 #endif
 
-#ifdef ZEND_SIGNALS
-	zend_signal_startup();
-#endif
     sapi_startup(&frankenphp_sapi_module);
+
+	frankenphp_sapi_module.ini_entries = malloc(sizeof(HARDCODED_INI));
+	memcpy(frankenphp_sapi_module.ini_entries, HARDCODED_INI, sizeof(HARDCODED_INI));
 
 	frankenphp_sapi_module.startup(&frankenphp_sapi_module);
 
@@ -474,6 +487,11 @@ static void *manager_thread(void *arg) {
 #ifdef ZTS
 	tsrm_shutdown();
 #endif
+
+	if (frankenphp_sapi_module.ini_entries) {
+		free(frankenphp_sapi_module.ini_entries);
+		frankenphp_sapi_module.ini_entries = NULL;
+	}
 
 	go_shutdown();
 

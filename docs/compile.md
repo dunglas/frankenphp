@@ -39,7 +39,6 @@ echo 'export PATH="/opt/homebrew/opt/bison/bin:$PATH"' >> ~/.zshrc
 Then run the configure script:
 
 ```
-export CFLAGS="-DNO_SIGPROF"
 ./configure \
     --enable-embed=static \
     --enable-zts \
@@ -58,7 +57,7 @@ if needed.
 Finally, compile PHP:
 
 ```
-make -j6
+make -j$(nproc)
 make install
 ```
 

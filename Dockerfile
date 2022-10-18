@@ -30,11 +30,10 @@ RUN apt-get update && \
 
 RUN git clone --depth=1 --single-branch --branch=frankenphp-8.2 https://github.com/dunglas/php-src.git && \
     cd php-src && \
-    #export CFLAGS="-DNO_SIGPROF" && \
     # --enable-embed is only necessary to generate libphp.so, we don't use this SAPI directly
     ./buildconf && \
     ./configure \
-        --enable-embed=static \
+        --enable-embed \
         --enable-zts \
         --disable-zend-signals && \
     make -j$(nproc) && \

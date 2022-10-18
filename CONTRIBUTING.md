@@ -1,63 +1,56 @@
 # Contributing
 
-## Running the test suite
-
-    go test -race -v ./...
-
-## Debugging
+## Compiling PHP
 ### With Docker (Linux)
 
 Build the dev Docker image:
 
-    docker build -t frankenphp-dev Dockerfile.dev 
-    docker run -p 8080:8080 -p 443:443 -v $PWD:/go/src/app -it frankenphp-dev bash
+    docker -t frankenphp-dev -f Dockerfile.dev .
+    docker run -p 8080:8080 -p 443:443 -v $PWD:/go/src/app -it frankenphp-dev
 
 The image contains the usual development tools (Go, GDB, Valgrind, Neovim...).
-#### Caddy module
-
-Build Caddy with the FrankenPHP Caddy module:
-
-    cd /go/src/app/caddy/frankenphp/
-    go build
-
-Run the Caddy with the FrankenPHP Caddy module:
-
-    cd /go/src/app/testdata/
-    ../caddy/frankenphp/frankenphp run
-
-#### Minimal test server
-
-Build the minimal test server:
-
-    cd /go/src/app/internal/testserver/
-    go build
-
-Run the test server:
-
-    cd /go/src/app/testdata/
-    ../internal/testserver/testserver
-
-The server is listening on `127.0.0.1:8080`:
-
-    curl http://127.0.0.1:8080/phpinfo.php
 
 ### Without Docker (Linux and macOS)
 
-Compile PHP:
+[Follow the instructions to compile from sources](docs/compile.md) and pass the `--debug` configuration flag.
 
-    ./configure --enable-debug --enable-zts
-    make -j6
-    sudo make install
+## Running the test suite
+
+    go test -race -v ./...
+
+## Caddy module
+
+Build Caddy with the FrankenPHP Caddy module:
+
+    cd caddy/frankenphp/
+    go build
+    cd ../../
+
+Run the Caddy with the FrankenPHP Caddy module:
+
+    cd testdata/
+    ../caddy/frankenphp/frankenphp run
+
+The server is listening on `127.0.0.1:8080`:
+
+    curl -vk https://localhosy/phpinfo.php
+
+## Minimal test server
 
 Build the minimal test server:
 
     cd internal/testserver/
     go build
+    cd ../../
 
-Run the test app:
+Run the test server:
 
-    cd ../../testdata/
+    cd testdata/
     ../internal/testserver/testserver
+
+The server is listening on `127.0.0.1:8080`:
+
+    curl -v http://127.0.0.1:8080/phpinfo.php
 
 ## Misc Dev Resources
 
