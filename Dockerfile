@@ -101,7 +101,7 @@ ENV CGO_LDFLAGS="-lssl -lcrypto -lreadline -largon2 -lcurl -lonig -lz $PHP_LDFLA
 RUN cd caddy/frankenphp && \
     go build && \
     cp frankenphp /usr/local/bin && \
-    cp /go/src/app/caddy/frankenphp/Caddyfile /etc/Caddyfile \
+    cp /go/src/app/caddy/frankenphp/Caddyfile /etc/Caddyfile
 
 ENTRYPOINT ["/bin/bash","-c"]
 
