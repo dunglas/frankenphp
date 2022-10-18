@@ -7,7 +7,7 @@ on:
     branches:
       - main
 jobs:
-  docker tests:
+  docker-tests:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -44,7 +44,7 @@ jobs:
         run: |
           docker load -i /tmp/.builder.tar
           docker run --rm ${{secrets.REGISTRY_LOGIN_SERVER}}/${{ secrets.REGISTRY_USERNAME }}/frankenphp:${{ github.sha }}-builder go test
-  push image:
+  push-image:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
