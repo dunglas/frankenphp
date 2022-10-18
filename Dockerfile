@@ -1,8 +1,8 @@
 FROM php:8.2.0RC4-zts-bullseye AS php-base
 
-COPY --from=mlocati/php-extension-installer /usr/bin/install-php-extensions /usr/local/bin/
+# Note that this image is based on the official PHP image, once 8.3 is released, this stage can likely be removed
 
-RUN rm -Rf /usr/local/include/php/ /usr/local/lib/libphp.* /usr/local/lib/php/ /usr/local/php/ /usr/local/bin/*
+RUN rm -Rf /usr/local/include/php/ /usr/local/lib/libphp.* /usr/local/lib/php/ /usr/local/php/
 
 ENV PHPIZE_DEPS \
     autoconf \
@@ -72,48 +72,15 @@ RUN git clone --depth=1 --single-branch --branch=frankenphp-8.2 https://github.c
     make -j$(nproc) && \
     make install && \
     rm -Rf php-src/ && \
+    echo "Creating src archive for building extensions\n" && \
     tar -c -f /usr/src/php.tar.xz -J /php-src/ && \
     ldconfig && \
-    #install-php-extensions opcache && \
     php --version
 
-#RUN echo "zend_extension=opcache.so\nopcache.enable=1" > /usr/local/lib/php.ini
+FROM php-base AS builder
 
-FROM golang:bullseye AS builder
-
-ENV PHPIZE_DEPS \
-    autoconf \
-    dpkg-dev \
-    file \
-    g++ \
-    gcc \
-    libc-dev \
-    make \
-    pkg-config \
-    re2c
-
-RUN apt-get update && \
-    apt-get -y --no-install-recommends install \
-    $PHPIZE_DEPS \
-    libargon2-dev \
-    libcurl4-openssl-dev \
-    libonig-dev \
-    libreadline-dev \
-    libsodium-dev \
-    libsqlite3-dev \
-    libssl-dev \
-    libxml2-dev \
-    zlib1g-dev \
-    bison \
-    && \
-    apt-get clean
-
-COPY --from=php-base /usr/local/include/php/ /usr/local/include/php
-COPY --from=php-base /usr/local/lib/libphp.* /usr/local/lib
-COPY --from=php-base /usr/local/lib/php/ /usr/local/lib/php
-COPY --from=php-base /usr/local/php/ /usr/local/php
-COPY --from=php-base /usr/local/bin/ /usr/local/bin
-COPY --from=php-base /usr/src /usr/src
+COPY --from=golang:bullseye /usr/local/go/bin/go /usr/local/bin/go
+COPY --from=golang:bullseye /usr/local/go /usr/local/go
 
 WORKDIR /go/src/app
 
@@ -123,18 +90,22 @@ RUN go get -v ./...
 RUN mkdir caddy && cd caddy
 COPY go.mod go.sum ./
 
-RUN go get -v ./... && \
-    cd ..
+RUN go get -v ./...
 
 COPY . .
+
+# todo: automate this?
+# see https://github.com/docker-library/php/blob/master/8.2-rc/bullseye/zts/Dockerfile#L57-L59 for php values
+ENV CGO_LDFLAGS="-lssl -lcrypto -lreadline -largon2 -lcurl -lonig -lz $PHP_LDFLAGS" CGO_CFLAGS=$PHP_CFLAGS CGO_CPPFLAGS=$PHP_CPPFLAGS
 
 RUN cd caddy/frankenphp && \
     go build && \
     cp frankenphp /usr/local/bin && \
-    cp /go/src/app/caddy/frankenphp/Caddyfile /etc/Caddyfile && \
-    rm -Rf /go
+    cp /go/src/app/caddy/frankenphp/Caddyfile /etc/Caddyfile
 
-FROM php-base AS final
+FROM php:8.2.0RC4-zts-bullseye AS final
+
+COPY --from=mlocati/php-extension-installer /usr/bin/install-php-extensions /usr/local/bin/
 
 WORKDIR /app
 
@@ -144,6 +115,11 @@ RUN echo '<?php phpinfo();' > /app/public/index.php
 COPY --from=builder /usr/local/bin/frankenphp /usr/local/bin/frankenphp
 COPY --from=builder /etc/Caddyfile /etc/Caddyfile
 
-RUN install-php-extensions pdo_mysql
+COPY --from=php-base /usr/local/include/php/ /usr/local/include/php
+COPY --from=php-base /usr/local/lib/libphp.* /usr/local/lib
+COPY --from=php-base /usr/local/lib/php/ /usr/local/lib/php
+COPY --from=php-base /usr/local/php/ /usr/local/php
+COPY --from=php-base /usr/local/bin/ /usr/local/bin
+COPY --from=php-base /usr/src /usr/src
 
 ENTRYPOINT [ "frankenphp", "run", "--config", "/etc/Caddyfile" ]
