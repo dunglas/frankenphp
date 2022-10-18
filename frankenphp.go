@@ -6,8 +6,8 @@
 package frankenphp
 
 // #cgo CFLAGS: -DNO_SIGPROF -Wall
-// #cgo CFLAGS: -I/usr/local/include/php -I/usr/local/include/php/Zend -I/usr/local/include/php/TSRM -I/usr/local/include/php/main
-// #cgo LDFLAGS: -L/usr/local/lib -L/opt/homebrew/opt/libiconv/lib -L/usr/lib -lphp -lxml2 -lresolv -lsqlite3 -ldl -lm -lutil
+// #cgo CFLAGS: -w -I/usr/local/include/php -I/usr/local/include/php/Zend -I/usr/local/include/php/TSRM -I/usr/local/include/php/main -I/usr/include/unicode -I/usr/include/valgrind -I/var/www/php-src/ext/date/lib -I/usr/include/libxml2 -I/usr/include/x86_64-linux-gnu -I/usr/include/libpng16 -I/usr/include/freetype2 -I/var/www/php-src/ext/mbstring/libmbfl -I/var/www/php-src/ext/mbstring/libmbfl/mbfl -I/usr/include/postgresql
+// #cgo LDFLAGS: -L/usr/local/lib -L/opt/homebrew/opt/libiconv/lib -L/usr/lib -lphp -largon2 -lavif -lbz2 -lcrypt -lcrypto -lcurl -ldl -lexslt -lffi -lfreetype -lgmp -licudata -licui18n -licuio -licuuc -ljpeg -llber -lldap -lm -lonig -lpng16 -lpq -lpthread -lresolv -lrt -lsodium -lsqlite3 -lssl -lstdc++ -lutil -lwebp -lxml2 -lxslt -lz -lzip
 // #cgo darwin LDFLAGS: -liconv
 // #include <stdlib.h>
 // #include <stdint.h>

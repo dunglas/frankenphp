@@ -37,9 +37,8 @@ RUN apt-get update && \
     libxslt1-dev \
     libzip-dev \
     libicu-dev \
-    bison \
-    && \
-    apt-get clean
+    libicu67 \
+    bison
 
 RUN git clone --depth=1 --single-branch --branch=frankenphp-8.2 https://github.com/dunglas/php-src.git
 
