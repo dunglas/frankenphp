@@ -96,7 +96,7 @@ COPY *.* .
 COPY caddy caddy
 COPY C-Thread-Pool C-Thread-Pool
 COPY internal internal
-COPY testdata testadata
+COPY testdata testdata
 
 # todo: automate this?
 # see https://github.com/docker-library/php/blob/master/8.2-rc/bullseye/zts/Dockerfile#L57-L59 for php values
