@@ -59,18 +59,12 @@ To start any Symfony application in a worker, install the FrankenPHP package of 
 composer require runtime/frankenphp-symfony
 ```
 
-Then set the `APP_RUNTIME` environment variable to use the FrankenPHP Symfony Runtime:
-
-```sh
-# .env
-APP_RUNTIME='Runtime\FrankenPhpSymfony\Runtime'
-```
-
-Finally, start your app server:
+Start your app server by defining the `APP_RUNTIME` environment variable to use the FrankenPHP Symfony Runtime
 
 ```sh
 docker run \
     -e FRANKENPHP_CONFIG="worker ./public/index.php" \
+    -e APP_RUNTIME=Runtime\\FrankenPhpSymfony\\Runtime \
     -v $PWD:/app \
     -p 80:80 -p 443:443 \
     dunglas/frankenphp
