@@ -85,18 +85,15 @@ COPY --from=golang:bullseye /usr/local/go /usr/local/go
 WORKDIR /go/src/app
 
 COPY go.mod go.sum ./
-RUN go get -v ./...
+RUN go mod graph | awk '{if ($1 !~ "@") print $2}' | xargs go get
 
 RUN mkdir caddy && cd caddy
-COPY go.mod go.sum ./
+COPY caddy/go.mod caddy/go.sum ./caddy/
 
-RUN go get -v ./...
+RUN cd caddy && go mod graph | awk '{if ($1 !~ "@") print $2}' | xargs go get
 
 COPY *.* .
 COPY caddy caddy
-
-RUN cd caddy/frankenphp && go get -v ./...
-
 COPY C-Thread-Pool C-Thread-Pool
 COPY internal internal
 COPY testdata testadata
