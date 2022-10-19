@@ -17,14 +17,6 @@ jobs:
         with:
           install: true
 
-      - name: Cache Docker layers
-        uses: actions/cache@v2
-        with:
-          path: /tmp/.docker-cache
-          key: ${{ runner.os }}-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-
-
       - name: Build test image
         uses: docker/build-push-action@v2
         with:
