@@ -9,7 +9,7 @@ jobs:
   docker-tests:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           submodules: recursive
 
@@ -20,7 +20,7 @@ jobs:
           install: true
 
       - name: Build test image
-        uses: docker/build-push-action@v2
+        uses: docker/build-push-action@v3
         with:
           context: ./
           file: Dockerfile
@@ -40,7 +40,7 @@ jobs:
   push-image:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           submodules: recursive
 
@@ -78,7 +78,7 @@ jobs:
         uses: docker/setup-qemu-action@v1
 
       - name: Build and Push Image
-        uses: docker/build-push-action@v2
+        uses: docker/build-push-action@v3
         with:
           context: ./
           file: Dockerfile
