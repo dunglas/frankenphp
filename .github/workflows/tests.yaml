@@ -35,8 +35,7 @@ jobs:
           target: builder
           tags: ${{secrets.REGISTRY_LOGIN_SERVER}}/${{ secrets.REGISTRY_USERNAME }}/frankenphp:${{ github.sha }}-builder
           builder: ${{ steps.buildx.outputs.name }}
-          cache-from: type=local,src=/tmp/.docker-cache
-          cache-to: type=local,mode=max,dest=/tmp/.docker-cache
+          cache-from: type=registry,ref=${{ secrets.REGISTRY_LOGIN_SERVER }}/${{ secrets.REGISTRY_REPO }}/frankenphp:buildcache
           outputs: type=docker,dest=/tmp/.builder.tar
 
       - name: Run tests
