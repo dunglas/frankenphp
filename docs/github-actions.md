@@ -22,6 +22,7 @@ In the repository settings, under secrets, add the following secrets:
 
 1. Once the pull request is merged, GitHub Actions will again run the tests and build a new image.
 2. If the build is successful, the `main` tag will be updated in the Docker registry.
+3. TEST CHANGE
 
 ## Releases
 
