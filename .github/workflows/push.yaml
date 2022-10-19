@@ -19,14 +19,6 @@ jobs:
         with:
           install: true
 
-      - name: Cache Docker layers
-        uses: actions/cache@v2
-        with:
-          path: /tmp/.docker-cache
-          key: ${{ runner.os }}-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-
-
       - name: Build test image
         uses: docker/build-push-action@v2
         with:
@@ -37,8 +29,7 @@ jobs:
           target: builder
           tags: ${{secrets.REGISTRY_LOGIN_SERVER}}/${{ secrets.REGISTRY_USERNAME }}/frankenphp:${{ github.sha }}-builder
           builder: ${{ steps.buildx.outputs.name }}
-          cache-from: type=local,src=/tmp/.docker-cache
-          cache-to: type=local,mode=max,dest=/tmp/.docker-cache
+          cache-from: type=registry,ref=${{ secrets.REGISTRY_LOGIN_SERVER }}/${{ secrets.REGISTRY_REPO }}/frankenphp:buildcache
           outputs: type=docker,dest=/tmp/.builder.tar
 
       - name: Run tests
@@ -85,14 +76,6 @@ jobs:
       - name: Setup QEMU
         uses: docker/setup-qemu-action@v1
 
-      - name: Cache Docker layers
-        uses: actions/cache@v2
-        with:
-          path: /tmp/.docker-cache
-          key: ${{ runner.os }}-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-
-
       - name: Build and Push Image
         uses: docker/build-push-action@v2
         with:
@@ -104,5 +87,5 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           builder: ${{ steps.buildx.outputs.name }}
-          cache-from: type=local,src=/tmp/.docker-cache
-          cache-to: type=local,mode=max,dest=/tmp/.docker-cache
+          cache-from: type=registry,ref=${{ secrets.REGISTRY_LOGIN_SERVER }}/${{ secrets.REGISTRY_REPO }}/frankenphp:buildcache
+          cache-to: type=registry,ref=${{ secrets.REGISTRY_LOGIN_SERVER }}/${{ secrets.REGISTRY_REPO }}/frankenphp:buildcache,mode=max
