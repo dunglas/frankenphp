@@ -5,7 +5,7 @@
 // [FrankenPHP app server]: https://frankenphp.dev
 package frankenphp
 
-// #cgo CFLAGS: -DNO_SIGPROF -Wall
+// #cgo CFLAGS: -Wall
 // #cgo CFLAGS: -I/usr/local/include/php -I/usr/local/include/php/Zend -I/usr/local/include/php/TSRM -I/usr/local/include/php/main
 // #cgo LDFLAGS: -L/usr/local/lib -L/opt/homebrew/opt/libiconv/lib -L/usr/lib -lphp -lxml2 -lresolv -lsqlite3 -ldl -lm -lutil
 // #cgo darwin LDFLAGS: -liconv
@@ -41,6 +41,7 @@ var (
 	InvalidRequestError         = errors.New("not a FrankenPHP request")
 	AlreaydStartedError         = errors.New("FrankenPHP is already started")
 	InvalidPHPVersionError      = errors.New("FrankenPHP is only compatible with PHP 8.2+")
+	ZendSignalsError            = errors.New("Zend Signals are enabled, recompible PHP with --disable-zend-signals")
 	MainThreadCreationError     = errors.New("error creating the main thread")
 	RequestContextCreationError = errors.New("error during request context creation")
 	RequestStartupError         = errors.New("error during PHP request startup")
@@ -203,6 +204,9 @@ func Init(options ...Option) error {
 
 	case -2:
 		return InvalidPHPVersionError
+
+	case -3:
+		return ZendSignalsError
 	}
 
 	shutdownWG.Add(1)

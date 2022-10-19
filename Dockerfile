@@ -34,11 +34,10 @@ RUN apt-get update && \
 
 RUN git clone --depth=1 --single-branch --branch=frankenphp-8.2 https://github.com/dunglas/php-src.git && \
     cd php-src && \
-    #export CFLAGS="-DNO_SIGPROF" && \
     # --enable-embed is only necessary to generate libphp.so, we don't use this SAPI directly
     ./buildconf && \
     ./configure \
-        --enable-embed=static \
+        --enable-embed \
         --enable-zts \
         --disable-zend-signals \
     	# --enable-mysqlnd is included here because it's harder to compile after the fact than extensions are (since it's a plugin for several extensions, not an extension in itself)
