@@ -1,4 +1,4 @@
-# Contributing
+# Contributing...
 
 ## Running the test suite
 
