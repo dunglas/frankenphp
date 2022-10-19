@@ -92,7 +92,14 @@ COPY go.mod go.sum ./
 
 RUN go get -v ./...
 
-COPY . .
+COPY *.* .
+COPY caddy caddy
+
+RUN cd caddy/frankenphp && go get -v ./...
+
+COPY C-Thread-Pool C-Thread-Pool
+COPY internal internal
+COPY testdata testadata
 
 # todo: automate this?
 # see https://github.com/docker-library/php/blob/master/8.2-rc/bullseye/zts/Dockerfile#L57-L59 for php values
