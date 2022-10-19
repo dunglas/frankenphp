@@ -43,7 +43,7 @@ jobs:
           submodules: recursive
 
       - name: Docker Login
-        uses: docker/login-action@v1
+        uses: docker/login-action@v2
         with:
           registry: ${{secrets.REGISTRY_LOGIN_SERVER}}
           username: ${{secrets.REGISTRY_USERNAME}}
@@ -73,7 +73,7 @@ jobs:
           install: true
 
       - name: Setup QEMU
-        uses: docker/setup-qemu-action@v1
+        uses: docker/setup-qemu-action@v2
 
       - name: Build and Push Image
         uses: docker/build-push-action@v3
