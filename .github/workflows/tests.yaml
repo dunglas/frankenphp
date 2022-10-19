@@ -27,7 +27,8 @@ jobs:
           target: builder
           tags: ${{secrets.REGISTRY_LOGIN_SERVER}}/${{ secrets.REGISTRY_USERNAME }}/frankenphp:${{ github.sha }}-builder
           builder: ${{ steps.buildx.outputs.name }}
-          cache-from: type=registry,ref=${{ secrets.REGISTRY_LOGIN_SERVER }}/${{ secrets.REGISTRY_REPO }}/frankenphp:buildcache
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
           outputs: type=docker,dest=/tmp/.builder.tar
 
       - name: Run tests
@@ -86,5 +87,5 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           builder: ${{ steps.buildx.outputs.name }}
-          cache-from: type=registry,ref=${{ secrets.REGISTRY_LOGIN_SERVER }}/${{ secrets.REGISTRY_REPO }}/frankenphp:buildcache
-          cache-to: type=registry,ref=${{ secrets.REGISTRY_LOGIN_SERVER }}/${{ secrets.REGISTRY_REPO }}/frankenphp:buildcache,mode=max
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
