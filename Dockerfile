@@ -91,7 +91,7 @@ COPY caddy/go.mod caddy/go.sum ./caddy/
 
 RUN cd caddy && go mod graph | awk '{if ($1 !~ "@") print $2}' | xargs go get
 
-COPY *.* .
+COPY *.* ./
 COPY caddy caddy
 COPY C-Thread-Pool C-Thread-Pool
 COPY internal internal
