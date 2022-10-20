@@ -74,6 +74,7 @@ func startWorkers(fileName string, nbWorkers int) error {
 
 				// TODO: make the max restart configurable
 				if _, ok := workersRequestChans.Load(absFileName); ok {
+					workersReadyWG.Add(1)
 					l.Error("unexpected termination, restarting", zap.String("worker", absFileName))
 				} else {
 					break

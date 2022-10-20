@@ -41,6 +41,14 @@ func TestWorker(t *testing.T) {
 	}, &testOptions{workerScript: "worker.php", nbWorkers: 1, nbParrallelRequests: 1})
 }
 
+func TestWorkerDie(t *testing.T) {
+	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
+		req := httptest.NewRequest("GET", "http://example.com/die.php", nil)
+		w := httptest.NewRecorder()
+		handler(w, req)
+	}, &testOptions{workerScript: "die.php", nbWorkers: 1, nbParrallelRequests: 10})
+}
+
 func ExampleServeHTTP_workers() {
 	if err := frankenphp.Init(
 		frankenphp.WithWorkers("worker1.php", 4),
