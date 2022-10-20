@@ -27,7 +27,7 @@ jobs:
           push: false
           pull: true
           target: builder
-          tags: ${{secrets.REGISTRY_LOGIN_SERVER}}/${{ secrets.REGISTRY_USERNAME }}/frankenphp:${{ github.sha }}-builder
+          tags: frankenphp:${{ github.sha }}-builder
           builder: ${{ steps.buildx.outputs.name }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -36,7 +36,7 @@ jobs:
       - name: Run tests
         run: |
           docker load -i /tmp/.builder.tar
-          docker run --rm ${{secrets.REGISTRY_LOGIN_SERVER}}/${{ secrets.REGISTRY_USERNAME }}/frankenphp:${{ github.sha }}-builder "go test"
+          docker run --rm frankenphp:${{ github.sha }}-builder "go test"
   push-image:
     runs-on: ubuntu-latest
     steps:
