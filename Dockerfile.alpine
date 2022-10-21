@@ -2,8 +2,8 @@ ARG PHP_BASE_IMAGE=php:8.2.0RC4-zts-alpine3.16
 
 FROM ${PHP_BASE_IMAGE} AS php-base
 
-ARG PHP_SRC_REPO=https://github.com/dunglas/php-src.git
-ARG PHP_SRC_BRANCH=frankenphp-8.2
+ARG PHP_SRC_REPO=https://github.com/php/php-src.git
+ARG PHP_SRC_BRANCH=PHP-8.2
 
 # Note that this image is based on the official PHP image, once 8.3 is released, this stage can likely be removed
 
