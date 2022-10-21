@@ -1,7 +1,7 @@
 <?php
 
 do {
-    $ok = frankenphp_handle_request(function () use ($i): void {
+    $ok = frankenphp_handle_request(function (): void {
         echo 'Hello, world';
     });
 
