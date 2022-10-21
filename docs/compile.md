@@ -67,7 +67,7 @@ You can now use the Go lib and compile our Caddy build:
 
 ```
 git clone git@github.com:dunglas/frankenphp.git
-cd dunglas/frankenphp
+cd frankenphp
 git submodule update --init --recursive
 cd caddy/frankenphp
 go build
