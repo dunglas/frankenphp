@@ -158,6 +158,8 @@ PHP_FUNCTION(frankenphp_handle_request) {
 
 	uintptr_t next_request = go_frankenphp_worker_handle_request_start(previous_request);
 	if (!next_request) {
+		sapi_module.log_message("Shutting down", LOG_ALERT);
+
 		/* Shutting down, re-create a dummy request to make the real php_request_shutdown() function happy */
 		frankenphp_worker_request_startup();
 		ctx->current_request = 0;
@@ -184,16 +186,9 @@ PHP_FUNCTION(frankenphp_handle_request) {
 		zval_ptr_dtor(&retval);
 	}
 
-	/* Catch all exceptions and turn them in warnings to keep the script running */
-	if (EG(exception)) {
-		char *trace;
-		spprintf(&trace, 0, "exception caught while running a worker script: %s", ZSTR_VAL(EG(exception)->ce->name));
-		sapi_module.log_message(trace, LOG_ERR);
-		efree(trace);
-
-		zend_exception_error(EG(exception), E_WARNING);
-		zend_clear_exception();
-	}
+	/* If an exception occured, print the message to the client before closing the connection */
+	if (EG(exception))
+		zend_exception_error(EG(exception), E_ERROR);
 
 	/* Call session module's rshutdown */
 	if (ctx->session_module)
@@ -541,6 +536,9 @@ int frankenphp_execute_script(const char* file_name)
 	} zend_catch {
     	/* int exit_status = EG(exit_status); */
 	} zend_end_try();
+
+	sapi_module.log_message("Execute script end", LOG_ALERT);
+
 
 	zend_destroy_file_handle(&file_handle);
 
