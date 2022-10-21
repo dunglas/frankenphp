@@ -107,7 +107,7 @@ RUN cd caddy/frankenphp && \
     cp frankenphp /usr/local/bin && \
     cp /go/src/app/caddy/frankenphp/Caddyfile /etc/Caddyfile
 
-ENTRYPOINT ["/bin/bash","-c"]
+ENTRYPOINT ["/bin/sh","-c"]
 
 FROM php:8.2.0RC4-zts-alpine3.16 AS final
 
