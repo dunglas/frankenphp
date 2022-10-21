@@ -1,4 +1,4 @@
-# Building Docker images
+# Building Docker Images
 
 Print bake plan:
 
