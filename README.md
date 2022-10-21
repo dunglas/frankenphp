@@ -35,6 +35,7 @@ Go to `https://localhost`, and enjoy!
 * [Real-time](docs/mercure.md)
 * [Configuration](docs/config.md)
 * [Demo app (Symfony) and benchmarks](https://github.com/dunglas/frankenphp-demo)
+* [Building Docker images](docs/docker.md)
 * [Compile from sources](docs/compile.md)
 * [Go library documentation](https://pkg.go.dev/github.com/dunglas/frankenphp)
 * [Contributing and debugging](CONTRIBUTING.md)

@@ -6,6 +6,9 @@ on:
 jobs:
   docker-tests:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        dockerfile: [ "Dockerfile", "Dockerfile.alpine" ]
     steps:
       - uses: actions/checkout@v3
         with:
@@ -21,7 +24,7 @@ jobs:
         uses: docker/build-push-action@v3
         with:
           context: ./
-          file: Dockerfile
+          file: ${{ matrix.dockerfile }}
           push: false
           pull: true
           target: builder
@@ -37,6 +40,9 @@ jobs:
           docker run --rm frankenphp:${{ github.sha }}-builder "go test"
   push-image:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        dockerfile: [ "Dockerfile", "Dockerfile.alpine" ]
     steps:
       - uses: actions/checkout@v3
         with:
@@ -72,7 +78,7 @@ jobs:
         uses: docker/build-push-action@v3
         with:
           context: ./
-          file: Dockerfile
+          file: ${{ matrix.dockerfile }}
           push: false
           pull: true
           target: final
