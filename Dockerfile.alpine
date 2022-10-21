@@ -1,9 +1,4 @@
-ARG PHP_BASE_IMAGE=php:8.2.0RC4-zts-alpine3.16
-
-FROM ${PHP_BASE_IMAGE} AS php-base
-
-ARG PHP_SRC_REPO=https://github.com/php/php-src.git
-ARG PHP_SRC_BRANCH=PHP-8.2
+FROM php:8.2.0RC4-zts-alpine3.16 AS php-base
 
 # Note that this image is based on the official PHP image, once 8.3 is released, this stage can likely be removed
 
@@ -36,7 +31,7 @@ RUN apk add --no-cache --virtual .build-deps \
     bison \
     git
 
-RUN git clone --depth=1 --single-branch --branch=${PHP_SRC_BRANCH} ${PHP_SRC_REPO}
+RUN git clone --depth=1 --single-branch --branch=PHP-8.2 https://github.com/php/php-src.git
 
 WORKDIR /php-src/
 
@@ -90,14 +85,18 @@ COPY --from=golang:alpine3.16 /usr/local/go /usr/local/go
 WORKDIR /go/src/app
 
 COPY go.mod go.sum ./
-RUN go get -v ./...
+RUN go mod graph | awk '{if ($1 !~ "@") print $2}' | xargs go get
 
 RUN mkdir caddy && cd caddy
-COPY go.mod go.sum ./
+COPY caddy/go.mod caddy/go.sum ./caddy/
 
-RUN go get -v ./...
+RUN cd caddy && go mod graph | awk '{if ($1 !~ "@") print $2}' | xargs go get
 
-COPY . .
+COPY *.* ./
+COPY caddy caddy
+COPY C-Thread-Pool C-Thread-Pool
+COPY internal internal
+COPY testdata testdata
 
 # todo: automate this?
 # see https://github.com/docker-library/php/blob/master/8.2-rc/bullseye/zts/Dockerfile#L57-L59 for php values
@@ -108,7 +107,9 @@ RUN cd caddy/frankenphp && \
     cp frankenphp /usr/local/bin && \
     cp /go/src/app/caddy/frankenphp/Caddyfile /etc/Caddyfile
 
-FROM ${PHP_BASE_IMAGE} AS final
+ENTRYPOINT ["/bin/bash","-c"]
+
+FROM php:8.2.0RC4-zts-alpine3.16 AS final
 
 COPY --from=mlocati/php-extension-installer /usr/bin/install-php-extensions /usr/local/bin/
 
