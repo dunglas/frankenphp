@@ -1,7 +1,7 @@
 {
 	debug
 	frankenphp {
-		worker ./index.php
+		worker ./phpinfo.php
 	}
 }
 

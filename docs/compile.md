@@ -2,16 +2,13 @@
 
 ## Install PHP
 
-To use FrankenPHP, you currently need to compile a fork of PHP.
-Patches have been contributed upstream, and some have already
-been merged. It will be possible to use the vanilla PHP interpreter starting with version 8.3.
+FrankenPHP is compatible with the PHP 8.2 and superior.
 
-First, get our PHP fork and prepare it:
+First, get the sources of PHP:
 
 ```
-git clone https://github.com/dunglas/php-src.git
-cd php-src
-git checkout frankenphp-8.2
+curl -L https://github.com/php/php-src/archive/refs/heads/PHP-8.2.tar.gz | tar xz
+cd php-src-PHP-8.2
 ./buildconf
 ```
 
@@ -66,9 +63,7 @@ make install
 You can now use the Go lib and compile our Caddy build:
 
 ```
-git clone git@github.com:dunglas/frankenphp.git
-cd frankenphp
-git submodule update --init --recursive
-cd caddy/frankenphp
+git clone --recursive git@github.com:dunglas/frankenphp.git
+cd frankenphp/caddy/frankenphp
 go build
 ```
