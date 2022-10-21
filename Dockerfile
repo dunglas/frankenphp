@@ -32,7 +32,7 @@ RUN apt-get update && \
     && \
     apt-get clean
 
-RUN git clone --depth=1 --single-branch --branch=frankenphp-8.2 https://github.com/dunglas/php-src.git && \
+RUN git clone --depth=1 --single-branch --branch=PHP-8.2 https://github.com/php/php-src.git && \
     cd php-src && \
     # --enable-embed is only necessary to generate libphp.so, we don't use this SAPI directly
     ./buildconf && \
