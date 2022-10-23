@@ -77,7 +77,6 @@ static void frankenphp_worker_request_shutdown(uintptr_t current_request) {
 
 	if (current_request != 0) go_frankenphp_worker_handle_request_end(current_request);
 
-
 	/* Destroy super-globals */
 	zend_try {
 		int i;

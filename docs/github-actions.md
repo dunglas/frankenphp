@@ -9,8 +9,8 @@ In the repository settings, under secrets, add the following secrets:
 
 - `REGISTRY_LOGIN_SERVER`: The docker registry to use (e.g. `docker.io`).
 - `REGISTRY_USERNAME`: The username to use to login to the registry (e.g. `dunglas`).
-- `REGISTRY_REPO`: The repository to use (e.g. `dunglas`).
 - `REGISTRY_PASSWORD`: The password to use to login to the registry (e.g. an access key).
+- `IMAGE_NAME`: The name of the image (e.g. `dunglas/frankenphp`).
 
 ## Building and pushing the image
 
