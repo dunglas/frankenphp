@@ -45,6 +45,7 @@ int frankenphp_check_version() {
 }
 
 typedef struct frankenphp_server_context {
+	bool worker;
 	uintptr_t current_request;
 	uintptr_t main_request;				/* Only available during worker initialization */
 	char *cookie_data;
@@ -75,6 +76,16 @@ static void frankenphp_worker_request_shutdown(uintptr_t current_request) {
 	} zend_end_try();
 
 	if (current_request != 0) go_frankenphp_worker_handle_request_end(current_request);
+
+
+	/* Destroy super-globals */
+	zend_try {
+		int i;
+
+		for (i=0; i<NUM_TRACK_VARS; i++) {
+			zval_ptr_dtor(&PG(http_globals)[i]);
+		}
+	} zend_end_try();
 
 	zend_set_memory_limit(PG(memory_limit));
 }
@@ -263,9 +274,14 @@ uintptr_t frankenphp_clean_server_context() {
 
 uintptr_t frankenphp_request_shutdown()
 {
-	php_request_shutdown((void *) 0);
-
 	frankenphp_server_context *ctx = SG(server_context);
+
+	if (ctx->worker && ctx->current_request) {
+		// Unclean worker shutdown, re-create the superglobals to prevent a segfault
+		php_hash_environment();
+	}
+
+	php_request_shutdown((void *) 0);
 
 	free(ctx->cookie_data);
 	((frankenphp_server_context*) SG(server_context))->cookie_data = NULL;
@@ -295,6 +311,7 @@ int frankenphp_create_server_context()
 	frankenphp_server_context *ctx = calloc(1, sizeof(frankenphp_server_context));
 	if (ctx == NULL) return FAILURE;
 
+	ctx->worker = false;
 	ctx->current_request = 0;
 	ctx->main_request = 0;
 	ctx->cookie_data = NULL;
@@ -322,6 +339,8 @@ void frankenphp_update_server_context(
 
 	ctx->main_request = main_request;
 	ctx->current_request = current_request;
+
+	if (ctx->main_request) ctx->worker = true;
 
 	SG(request_info).auth_password = auth_password;
 	SG(request_info).auth_user = auth_user;
