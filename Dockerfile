@@ -32,9 +32,19 @@ FROM php as builder
 COPY --from=golang /usr/local/go/bin/go /usr/local/bin/go
 COPY --from=golang /usr/local/go /usr/local/go
 
-### DEBUG STARTS ###
-WORKDIR /test_copying
+WORKDIR /go/src/app
+
+COPY go.mod go.sum ./
+RUN go mod graph | awk '{if ($1 !~ "@") print $2}' | xargs go get
+
+RUN mkdir caddy && cd caddy
+COPY caddy/go.mod caddy/go.sum ./caddy/
+
+RUN cd caddy && go mod graph | awk '{if ($1 !~ "@") print $2}' | xargs go get
+
 COPY . .
+
+### DEBUG STARTS ###
 RUN ls -lah
 ### DEBUG ENDS   ###
 
@@ -43,6 +53,8 @@ RUN ls -lah
 #
 FROM php AS frankenphp
 
+# Add PHP extension installer
+# See https://github.com/mlocati/docker-php-extension-installer
 COPY --from=mlocati/php-extension-installer /usr/bin/install-php-extensions /usr/local/bin/
 
 COPY --from=builder /usr/local/go /usr/local/go
