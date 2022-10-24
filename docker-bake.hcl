@@ -1,4 +1,4 @@
-variable "REPO_NAME" {
+variable "IMAGE_NAME" {
     default = "dunglas/frankenphp"
 }
 
@@ -47,7 +47,7 @@ target "bullseye-php-82" {
     args = {
         DISTRO = "bullseye"
     }
-    tags = ["${REPO_NAME}:bullseye", "${REPO_NAME}:latest"]
+    tags = ["${IMAGE_NAME}:bullseye", "${IMAGE_NAME}:latest"]
 }
 
 target "buster-php-82" {
@@ -55,7 +55,7 @@ target "buster-php-82" {
     args = {
         DISTRO = "buster"
     }
-    tags = ["${REPO_NAME}:buster"]
+    tags = ["${IMAGE_NAME}:buster"]
 }
 
 target "alpine315-php-82" {
@@ -63,7 +63,7 @@ target "alpine315-php-82" {
     args = {
         DISTRO = "alpine315"
     }
-    tags = ["${REPO_NAME}:alpine3.15"]
+    tags = ["${IMAGE_NAME}:alpine3.15"]
 }
 
 target "alpine316-php-82" {
@@ -71,5 +71,5 @@ target "alpine316-php-82" {
     args = {
         DISTRO = "alpine316"
     }
-    tags = ["${REPO_NAME}:alpine3.16", "${REPO_NAME}:alpine"]
+    tags = ["${IMAGE_NAME}:alpine3.16", "${IMAGE_NAME}:alpine"]
 }
