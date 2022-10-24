@@ -24,9 +24,15 @@ ZEND_TSRMLS_CACHE_DEFINE()
 #endif
 
 /* Timeouts are currently fundamentally broken with ZTS: https://bugs.php.net/bug.php?id=79464 */
-const char HARDCODED_INI[] =
+static const char HARDCODED_INI[] =
 	"max_execution_time=0\n"
 	"max_input_time=-1\n\0";
+
+static const char *MODULES_TO_RELOAD[] = {
+	"filter",
+	"session",
+	NULL
+};
 
 int frankenphp_check_version() {
 #ifndef ZTS
@@ -49,7 +55,6 @@ typedef struct frankenphp_server_context {
 	uintptr_t current_request;
 	uintptr_t main_request;				/* Only available during worker initialization */
 	char *cookie_data;
-	zend_module_entry *session_module;
 } frankenphp_server_context;
 
 /* Adapted from php_request_shutdown */
@@ -64,18 +69,19 @@ static void frankenphp_worker_request_shutdown(uintptr_t current_request) {
 		zend_unset_timeout();
 	} zend_end_try();*/
 
+	// TODO: store the list of modules to reload in a global module variable
+	const char **module_name;
+	zend_module_entry *module;
+	for (module_name = MODULES_TO_RELOAD; *module_name; module_name++) {
+		module = zend_hash_str_find_ptr(&module_registry, *module_name, strlen(*module_name));
+		if (module)
+			module->request_shutdown_func(module->type, module->module_number);
+	}
+
 	/* Shutdown output layer (send the set HTTP headers, cleanup output handlers, etc.) */
 	zend_try {
 		php_output_deactivate();
 	} zend_end_try();
-
-	/* SAPI related shutdown (free stuff) */
-	frankenphp_clean_server_context();
-	zend_try {
-		sapi_deactivate();
-	} zend_end_try();
-
-	if (current_request != 0) go_frankenphp_worker_handle_request_end(current_request);
 
 	/* Destroy super-globals */
 	zend_try {
@@ -85,6 +91,14 @@ static void frankenphp_worker_request_shutdown(uintptr_t current_request) {
 			zval_ptr_dtor(&PG(http_globals)[i]);
 		}
 	} zend_end_try();
+
+	/* SAPI related shutdown (free stuff) */
+	frankenphp_clean_server_context();
+	zend_try {
+		sapi_deactivate();
+	} zend_end_try();
+
+	if (current_request != 0) go_frankenphp_worker_handle_request_end(current_request);
 
 	zend_set_memory_limit(PG(memory_limit));
 }
@@ -133,6 +147,15 @@ static int frankenphp_worker_request_startup() {
 
 		/* Re-populate $_SERVER */
 		zend_is_auto_global(ZSTR_KNOWN(ZEND_STR_AUTOGLOBAL_SERVER));
+
+		// TODO: store the list of modules to reload in a global module variable
+		const char **module_name;
+		zend_module_entry *module;
+		for (module_name = MODULES_TO_RELOAD; *module_name; module_name++) {
+			module = zend_hash_str_find_ptr(&module_registry, *module_name, sizeof(*module_name)-1);
+			if (module && module->request_startup_func)
+				module->request_startup_func(module->type, module->module_number);
+		}
 	} zend_catch {
 		retval = FAILURE;
 	} zend_end_try();
@@ -154,9 +177,6 @@ PHP_FUNCTION(frankenphp_handle_request) {
 
 	uintptr_t previous_request = ctx->current_request;
 	if (ctx->main_request) {
-		/* Store a pointer to the session module */
-		ctx->session_module = zend_hash_str_find_ptr(&module_registry, "session", sizeof("session") -1);
-
 		/* Clean the first dummy request created to initialize the worker */
 		frankenphp_worker_request_shutdown(0);
 
@@ -167,27 +187,12 @@ PHP_FUNCTION(frankenphp_handle_request) {
 	}
 
 	uintptr_t next_request = go_frankenphp_worker_handle_request_start(previous_request);
-	if (!next_request) {
-		sapi_module.log_message("Shutting down", LOG_ALERT);
+	if (
+		frankenphp_worker_request_startup() == FAILURE
+			/* Shutting down */
+			|| !next_request
+	) RETURN_FALSE;
 
-		/* Shutting down, re-create a dummy request to make the real php_request_shutdown() function happy */
-		frankenphp_worker_request_startup();
-		ctx->current_request = 0;
-
-		// FIXME: definitely not a good idea!
-		//PG(report_memleaks) = 0;
-
-		RETURN_FALSE;
-	}
-
-	if (frankenphp_worker_request_startup() == FAILURE) {
-		RETURN_FALSE;
-	}
-
-	/* Call session module's rinit */
-	if (ctx->session_module)
-		ctx->session_module->request_startup_func(ctx->session_module->type, ctx->session_module->module_number);
-	
 	/* Call the PHP func */
 	zval retval = {0};
 	fci.size = sizeof fci;
@@ -199,10 +204,6 @@ PHP_FUNCTION(frankenphp_handle_request) {
 	/* If an exception occured, print the message to the client before closing the connection */
 	if (EG(exception))
 		zend_exception_error(EG(exception), E_ERROR);
-
-	/* Call session module's rshutdown */
-	if (ctx->session_module)
-		ctx->session_module->request_shutdown_func(ctx->session_module->type, ctx->session_module->module_number);
 
 	frankenphp_worker_request_shutdown(next_request);
 
@@ -554,9 +555,6 @@ int frankenphp_execute_script(const char* file_name)
 	} zend_catch {
     	/* int exit_status = EG(exit_status); */
 	} zend_end_try();
-
-	sapi_module.log_message("Execute script end", LOG_ALERT);
-
 
 	zend_destroy_file_handle(&file_handle);
 
