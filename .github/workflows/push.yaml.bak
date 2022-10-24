@@ -1,10 +1,10 @@
-name: Tests
+name: Build and push Docker image (latest)
 on:
-  pull_request:
+  push:
     branches:
       - main
-      - '!back-2-95:one-dockerfile-to-rule-them-all'
-
+    tags:
+      - v*
 jobs:
   docker-tests:
     runs-on: ubuntu-latest
@@ -50,13 +50,19 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Docker Login
+        uses: docker/login-action@v2
+        with:
+          #registry: ${{secrets.REGISTRY_LOGIN_SERVER}}
+          username: ${{secrets.REGISTRY_USERNAME}}
+          password: ${{secrets.REGISTRY_PASSWORD}}
+
       - name: Docker meta
         id: meta
         uses: docker/metadata-action@v4
         with:
           # list of Docker images to use as base name for tags
-          images: |
-            frankenphp
+          images: ${secrets.IMAGE_NAME}
           # generate Docker tags based on the following events/attributes
           tags: |
             type=schedule
@@ -81,7 +87,7 @@ jobs:
         with:
           context: ./
           file: ${{ matrix.dockerfile }}
-          push: false
+          push: true
           pull: true
           target: final
           platforms: linux/amd64,linux/arm64
