@@ -69,14 +69,6 @@ static void frankenphp_worker_request_shutdown(uintptr_t current_request) {
 		php_output_deactivate();
 	} zend_end_try();
 
-	/* SAPI related shutdown (free stuff) */
-	frankenphp_clean_server_context();
-	zend_try {
-		sapi_deactivate();
-	} zend_end_try();
-
-	if (current_request != 0) go_frankenphp_worker_handle_request_end(current_request);
-
 	/* Destroy super-globals */
 	zend_try {
 		int i;
@@ -85,6 +77,14 @@ static void frankenphp_worker_request_shutdown(uintptr_t current_request) {
 			zval_ptr_dtor(&PG(http_globals)[i]);
 		}
 	} zend_end_try();
+
+	/* SAPI related shutdown (free stuff) */
+	frankenphp_clean_server_context();
+	zend_try {
+		sapi_deactivate();
+	} zend_end_try();
+
+	if (current_request != 0) go_frankenphp_worker_handle_request_end(current_request);
 
 	zend_set_memory_limit(PG(memory_limit));
 }
