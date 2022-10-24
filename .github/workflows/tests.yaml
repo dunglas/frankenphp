@@ -3,7 +3,8 @@ on:
   pull_request:
     branches:
       - main
-      - '!one-dockerfile-to-rule-them-all'
+    branches-ignore:
+      - one-dockerfile-to-rule-them-all
 
 jobs:
   docker-tests:

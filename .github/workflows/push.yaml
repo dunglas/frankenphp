@@ -3,7 +3,8 @@ on:
   push:
     branches:
       - main
-      - '!one-dockerfile-to-rule-them-all'
+    branches-ignore:
+      - one-dockerfile-to-rule-them-all
     tags:
       - v*
 jobs:
