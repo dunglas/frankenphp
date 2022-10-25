@@ -62,7 +62,7 @@ jobs:
         uses: docker/metadata-action@v4
         with:
           # list of Docker images to use as base name for tags
-          images: ${secrets.IMAGE_NAME}
+          images: ${{secrets.IMAGE_NAME}}
           # generate Docker tags based on the following events/attributes
           tags: |
             type=schedule
