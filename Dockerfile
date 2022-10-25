@@ -44,7 +44,6 @@ RUN apt-get update && \
     $PHPIZE_DEPS \
     libargon2-dev \
     libcurl4-openssl-dev \
-    libonig-dev \
     libreadline-dev \
     libsodium-dev \
     libsqlite3-dev \
@@ -83,7 +82,6 @@ RUN apk add --no-cache \
     libxml2-dev \
     gnu-libiconv-dev \
     linux-headers \
-    oniguruma-dev \
     bison \
     git
 
@@ -172,23 +170,23 @@ COPY . .
 # see https://github.com/docker-library/php/blob/master/8.2-rc/bullseye/zts/Dockerfile#L57-L59 for php values
 ENV CGO_LDFLAGS="-lssl -lcrypto -lreadline -largon2 -lcurl -lonig -lz $PHP_LDFLAGS" CGO_CFLAGS=$PHP_CFLAGS CGO_CPPFLAGS=$PHP_CPPFLAGS
 
-RUN cd caddy/frankenphp && \
-    go build && \
-    cp frankenphp /usr/local/bin && \
-    cp /go/src/app/caddy/frankenphp/Caddyfile /etc/Caddyfile
+RUN cd caddy/frankenphp && go build
 
 #
 # FrankenPHP image
 #
 FROM php AS frankenphp
 
+WORKDIR /app
+
 # Add PHP extension installer
 # See https://github.com/mlocati/docker-php-extension-installer
 COPY --from=mlocati/php-extension-installer /usr/bin/install-php-extensions /usr/local/bin/
 
-COPY --from=builder /usr/local/bin/frankenphp /usr/local/bin/frankenphp
-COPY --from=builder /etc/Caddyfile /etc/Caddyfile
+# Copy build FrankenPHP binary
+COPY --from=builder /go/src/app/caddy/frankenphp/frankenphp /usr/local/bin/frankenphp
 
+# Copy build PHP
 COPY --from=builder /usr/local/include/php/ /usr/local/include/php
 COPY --from=builder /usr/local/lib/libphp.* /usr/local/lib
 COPY --from=builder /usr/local/lib/php/ /usr/local/lib/php
@@ -196,9 +194,11 @@ COPY --from=builder /usr/local/php/ /usr/local/php
 COPY --from=builder /usr/local/bin/ /usr/local/bin
 COPY --from=builder /usr/src /usr/src
 
-RUN mkdir -p /app/public && echo '<?php phpinfo();' > /app/public/index.php
+# Copy Caddy configuration
+COPY caddy/frankenphp/Caddyfile /etc/Caddyfile
 
-WORKDIR /app
+# Create default file to serve
+RUN mkdir -p /app/public && echo '<?php phpinfo();' > /app/public/index.php
 
 # Modify docker-php-entrypoint to start frankenphp
 RUN sed -i 's/php/frankenphp run/g' /usr/local/bin/docker-php-entrypoint
