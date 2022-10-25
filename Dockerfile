@@ -24,6 +24,9 @@ FROM golang-${DISTRO} as golang
 #
 # php-src builder
 #
+# See https://github.com/docker-library/php/blob/master/Dockerfile-linux.template
+# to see how php-src is build on debian and alpine
+#
 
 # Debian based
 FROM php as php-debian
