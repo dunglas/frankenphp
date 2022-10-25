@@ -41,7 +41,7 @@ var (
 	InvalidRequestError         = errors.New("not a FrankenPHP request")
 	AlreaydStartedError         = errors.New("FrankenPHP is already started")
 	InvalidPHPVersionError      = errors.New("FrankenPHP is only compatible with PHP 8.2+")
-	ZendSignalsError            = errors.New("Zend Signals are enabled, recompible PHP with --disable-zend-signals")
+	ZendSignalsError            = errors.New("Zend Signals are enabled, recompile PHP with --disable-zend-signals")
 	MainThreadCreationError     = errors.New("error creating the main thread")
 	RequestContextCreationError = errors.New("error during request context creation")
 	RequestStartupError         = errors.New("error during PHP request startup")
@@ -426,6 +426,7 @@ func go_register_variables(rh C.uintptr_t, trackVarsArray *C.zval) {
 	// FIXME: remove this debug statement
 	env[fmt.Sprintf("REQUEST_%d", rh)] = "1"
 
+	// TODO: batch this for performance
 	for k, v := range env {
 		ck := C.CString(k)
 		cv := C.CString(v)
