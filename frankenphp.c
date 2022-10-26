@@ -170,6 +170,20 @@ PHP_FUNCTION(frankenphp_finish_request) { /* {{{ */
     		RETURN_THROWS();
     }
 
+    frankenphp_server_context *ctx = SG(server_context);
+
+    // todo: check if we have alreaady finished the request
+    if(ctx->current_request != 0) {
+    	php_output_end_all();
+    	php_header();
+    	php_output_deactivate();
+
+		go_frankenphp_worker_handle_request_end(ctx->current_request);
+		ctx->current_request = 0;
+
+    	RETURN_TRUE;
+    }
+
     RETURN_FALSE;
 
 } /* }}} */

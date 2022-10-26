@@ -121,6 +121,9 @@ type FrankenPHPContext struct {
 	populated    bool
 	authPassword string
 
+	// Whether the request is already closed
+	closed bool
+
 	responseWriter http.ResponseWriter
 	done           chan interface{}
 }
@@ -359,6 +362,13 @@ func go_fetch_request() C.uintptr_t {
 	return C.uintptr_t(cgo.NewHandle(r))
 }
 
+func maybeCloseContext(fc *FrankenPHPContext) {
+	if !fc.closed {
+		close(fc.done)
+		fc.closed = true
+	}
+}
+
 //export go_execute_script
 func go_execute_script(rh unsafe.Pointer) {
 	handle := cgo.Handle(rh)
@@ -369,7 +379,7 @@ func go_execute_script(rh unsafe.Pointer) {
 	if !ok {
 		panic(InvalidRequestError)
 	}
-	defer close(fc.done)
+	defer maybeCloseContext(fc)
 
 	if C.frankenphp_create_server_context() < 0 {
 		panic(RequestContextCreationError)
