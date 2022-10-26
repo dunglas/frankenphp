@@ -148,7 +148,7 @@ func go_frankenphp_worker_handle_request_start(rh C.uintptr_t) C.uintptr_t {
 }
 
 //export go_frankenphp_worker_handle_request_end
-func go_frankenphp_worker_handle_request_end(rh C.uintptr_t) {
+func go_frankenphp_worker_handle_request_end(rh C.uintptr_t, deleteHandle bool) {
 	if rh == 0 {
 		return
 	}
@@ -156,7 +156,9 @@ func go_frankenphp_worker_handle_request_end(rh C.uintptr_t) {
 	r := rHandle.Value().(*http.Request)
 	fc := r.Context().Value(contextKey).(*FrankenPHPContext)
 
-	cgo.Handle(rh).Delete()
+	if deleteHandle {
+		cgo.Handle(rh).Delete()
+	}
 
 	maybeCloseContext(fc)
 

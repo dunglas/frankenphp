@@ -1,11 +1,7 @@
 <?php
 
-echo "<pre>I am here\n";
+echo "This is output\n";
 
-var_dump(frankenphp_finish_request());
+frankenphp_finish_request();
 
-echo "\n";
-
-var_dump(fastcgi_finish_request());
-
-echo "\nI am here too";
+echo "This is not";
