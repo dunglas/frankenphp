@@ -181,8 +181,8 @@ PHP_FUNCTION(frankenphp_finish_request) { /* {{{ */
     	php_output_end_all();
     	php_header();
 
-		go_frankenphp_worker_handle_request_end(ctx->current_request, false);
-		ctx->finished = true;
+    	go_frankenphp_worker_handle_request_end(ctx->current_request, false);
+    	ctx->finished = true;
 
     	RETURN_TRUE;
     }
