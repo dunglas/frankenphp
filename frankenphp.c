@@ -165,6 +165,15 @@ static int frankenphp_worker_request_startup() {
 	return retval;
 }
 
+PHP_FUNCTION(frankenphp_finish_request) { /* {{{ */
+    if (zend_parse_parameters_none() == FAILURE) {
+    		RETURN_THROWS();
+    }
+
+    RETURN_FALSE;
+
+} /* }}} */
+
 PHP_FUNCTION(frankenphp_handle_request) {
 	zend_fcall_info fci;
 	zend_fcall_info_cache fcc;
