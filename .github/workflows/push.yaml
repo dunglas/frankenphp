@@ -45,6 +45,11 @@ jobs:
     strategy:
       matrix:
         dockerfile: [ "Dockerfile", "Dockerfile.alpine" ]
+        include:
+          - dockerfile: Dockerfile
+            flavor: ""
+          - dockerfile: Dockerfile.alpine
+            flavor: "-alpine"
     steps:
       - uses: actions/checkout@v3
         with:
@@ -63,6 +68,8 @@ jobs:
         with:
           # list of Docker images to use as base name for tags
           images: ${{secrets.IMAGE_NAME}}
+          flavor: |
+            suffix=${{matrix.flavor}}
           # generate Docker tags based on the following events/attributes
           tags: |
             type=schedule
