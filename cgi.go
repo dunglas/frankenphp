@@ -69,8 +69,6 @@ func populateEnv(request *http.Request) error {
 	scriptName := fpath
 
 	docURI := fpath
-
-
 	// split "actual path" from "path info" if configured
 	if splitPos := splitPos(fc, fpath); splitPos > -1 {
 		docURI = fpath[:splitPos]
@@ -88,7 +86,6 @@ func populateEnv(request *http.Request) error {
 	if scriptName != "" && !strings.HasPrefix(scriptName, "/") {
 		scriptName = "/" + scriptName
 	}
-
 	
 	if _, ok := fc.Env["PHP_SELF"]; !ok {
 		fc.Env["PHP_SELF"] = fpath
