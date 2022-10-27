@@ -49,7 +49,7 @@ jobs:
           - dockerfile: Dockerfile
             flavor: ""
           - dockerfile: Dockerfile.alpine
-            flavor: "alpine"
+            flavor: "-alpine"
     steps:
       - uses: actions/checkout@v3
         with:
@@ -69,7 +69,7 @@ jobs:
           # list of Docker images to use as base name for tags
           images: ${{secrets.IMAGE_NAME}}
           flavor: |
-            suffix: {{matrix.flavor}}
+            suffix=${{matrix.flavor}}
           # generate Docker tags based on the following events/attributes
           tags: |
             type=schedule
