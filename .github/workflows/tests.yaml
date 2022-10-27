@@ -58,8 +58,8 @@ jobs:
         uses: docker/metadata-action@v4
         with:
           flavor: |
-            suffix: ${{matrix.flavor}}
-            suffixLatest: true
+            suffix=${{matrix.flavor}}
+            suffixLatest=true
           # list of Docker images to use as base name for tags
           images: |
             frankenphp
