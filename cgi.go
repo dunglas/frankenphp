@@ -86,7 +86,10 @@ func populateEnv(request *http.Request) error {
 	if scriptName != "" && !strings.HasPrefix(scriptName, "/") {
 		scriptName = "/" + scriptName
 	}
-
+	
+	if _, ok := fc.Env["PHP_SELF"]; !ok {
+		fc.Env["PHP_SELF"] = fpath
+	}
 	if _, ok := fc.Env["DOCUMENT_URI"]; !ok {
 		fc.Env["DOCUMENT_URI"] = docURI
 	}
