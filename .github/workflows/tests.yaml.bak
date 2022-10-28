@@ -44,6 +44,11 @@ jobs:
     strategy:
       matrix:
         dockerfile: [ "Dockerfile", "Dockerfile.alpine" ]
+        include:
+          - dockerfile: Dockerfile
+            flavor: ""
+          - dockerfile: Dockerfile.alpine
+            flavor: "-alpine"
     steps:
       - uses: actions/checkout@v3
         with:
@@ -53,6 +58,8 @@ jobs:
         id: meta
         uses: docker/metadata-action@v4
         with:
+          flavor: |
+            suffix=${{matrix.flavor}}
           # list of Docker images to use as base name for tags
           images: |
             frankenphp
@@ -64,6 +71,7 @@ jobs:
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=semver,pattern={{major}}
+            type=raw,value=latest
             type=sha
 
       - name: Set up Docker Buildx
