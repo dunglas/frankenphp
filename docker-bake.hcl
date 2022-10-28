@@ -3,7 +3,7 @@ variable "IMAGE_NAME" {
 }
 
 group "default" {
-    targets = ["bullseye", "buster", "alpine315", "alpine316"]
+    targets = ["bullseye", /*"buster", "alpine315",*/ "alpine316"]
 }
 
 group "bullseye" {
@@ -34,7 +34,7 @@ target "common" {
 
 target "php-82" {
     args = {
-        PHP_VERSION = "8.2.0RC4"
+        PHP_VERSION = "8.2.0RC5"
     }
 }
 

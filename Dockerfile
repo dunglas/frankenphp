@@ -47,6 +47,7 @@ RUN apt-get update && \
     $PHPIZE_DEPS \
     libargon2-dev \
     libcurl4-openssl-dev \
+    libonig-dev \
     libreadline-dev \
     libsodium-dev \
     libsqlite3-dev \
@@ -85,6 +86,7 @@ RUN apk add --no-cache \
     libxml2-dev \
     gnu-libiconv-dev \
     linux-headers \
+    oniguruma-dev \
     bison \
     git
 
