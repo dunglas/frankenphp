@@ -120,6 +120,10 @@ RUN set -eux; \
 # smoke test
 	php --version
 
+FROM php-base AS builder
+
+COPY --from=golang:bullseye /usr/local/go/bin/go /usr/local/bin/go
+COPY --from=golang:bullseye /usr/local/go /usr/local/go
 
 # This is required to link the frankenPHP binary to the PHP binary
 RUN apt-get update && \
@@ -135,11 +139,6 @@ RUN apt-get update && \
         zlib1g-dev \
         && \
         apt-get clean
-
-FROM php-base AS builder
-
-COPY --from=golang:bullseye /usr/local/go/bin/go /usr/local/bin/go
-COPY --from=golang:bullseye /usr/local/go /usr/local/go
 
 WORKDIR /go/src/app
 
