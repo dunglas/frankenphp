@@ -3,19 +3,11 @@ variable "IMAGE_NAME" {
 }
 
 group "default" {
-    targets = ["bullseye", /*"buster", "alpine315",*/ "alpine316"]
+    targets = ["bullseye", "alpine316"]
 }
 
 group "bullseye" {
     targets = ["bullseye-php-82"]
-}
-
-group "buster" {
-    targets = ["buster-php-82"]
-}
-
-group "alpine315" {
-    targets = ["alpine315-php-82"]
 }
 
 group "alpine316" {
@@ -48,22 +40,6 @@ target "bullseye-php-82" {
         DISTRO = "bullseye"
     }
     tags = ["${IMAGE_NAME}:bullseye", "${IMAGE_NAME}:latest"]
-}
-
-target "buster-php-82" {
-    inherits = ["common", "php-82"]
-    args = {
-        DISTRO = "buster"
-    }
-    tags = ["${IMAGE_NAME}:buster"]
-}
-
-target "alpine315-php-82" {
-    inherits = ["common", "php-82"]
-    args = {
-        DISTRO = "alpine315"
-    }
-    tags = ["${IMAGE_NAME}:alpine3.15"]
 }
 
 target "alpine316-php-82" {
