@@ -47,5 +47,5 @@ target "alpine316-php-82" {
     args = {
         DISTRO = "alpine316"
     }
-    tags = ["${IMAGE_NAME}:alpine3.16", "${IMAGE_NAME}:alpine"]
+    tags = ["${IMAGE_NAME}:alpine3.16", "${IMAGE_NAME}:alpine", "${IMAGE_NAME}:latest-alpine"]
 }
