@@ -122,7 +122,7 @@ type FrankenPHPContext struct {
 	authPassword string
 
 	// Whether the request is already closed
-	closed bool
+	closed sync.Once
 
 	responseWriter http.ResponseWriter
 	done           chan interface{}
@@ -363,10 +363,9 @@ func go_fetch_request() C.uintptr_t {
 }
 
 func maybeCloseContext(fc *FrankenPHPContext) {
-	if !fc.closed {
+	fc.closed.Do(func() {
 		close(fc.done)
-		fc.closed = true
-	}
+	})
 }
 
 //export go_execute_script
