@@ -60,7 +60,7 @@ typedef struct frankenphp_server_context {
 static int frankenphp_request_globals_reset(zval *zv) {
 	int i;
 
-	if (!Z_COUNTED_P(zv)) {
+	if (!Z_OPT_REFCOUNTED_P(zv)) {
 		return ZEND_HASH_APPLY_KEEP;
 	}
 
