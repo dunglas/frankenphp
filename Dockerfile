@@ -1,23 +1,18 @@
 # syntax=docker/dockerfile:1.4
 
 ARG DISTRO
-ARG PHP_VERSION
 
 #
 # Base images
 #
-FROM php:${PHP_VERSION}-zts-bullseye as php-bullseye
-FROM php:${PHP_VERSION}-zts-buster as php-buster
-FROM php:${PHP_VERSION}-zts-alpine3.15 as php-alpine315
-FROM php:${PHP_VERSION}-zts-alpine3.16 as php-alpine316
+FROM php:8.2.0RC5-zts-bullseye as php-bullseye
+FROM php:8.2.0RC5-zts-alpine3.16 as php-alpine316
 FROM php-${DISTRO} as php
 
 #
 # Golang images
 #
 FROM golang:bullseye as golang-bullseye
-FROM golang:buster as golang-buster
-FROM golang:alpine3.15 as golang-alpine315
 FROM golang:alpine3.16 as golang-alpine316
 FROM golang-${DISTRO} as golang
 
@@ -58,7 +53,6 @@ RUN apt-get update && \
     git
 
 FROM php-debian as php-src-bullseye
-FROM php-debian as php-src-buster
 
 # Alpine based
 FROM php as php-alpine
@@ -90,7 +84,6 @@ RUN apk add --no-cache \
     bison \
     git
 
-FROM php-alpine as php-src-alpine315
 FROM php-alpine as php-src-alpine316
 
 #
