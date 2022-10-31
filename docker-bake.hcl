@@ -24,18 +24,12 @@ target "common" {
 # PHP
 #
 
-target "php-82" {
-    args = {
-        PHP_VERSION = "8.2.0RC5"
-    }
-}
-
 #
 # FrankenPHP
 #
 
 target "bullseye-php-82" {
-    inherits = ["common", "php-82"]
+    inherits = ["common"]
     args = {
         DISTRO = "bullseye"
     }
@@ -43,7 +37,7 @@ target "bullseye-php-82" {
 }
 
 target "alpine316-php-82" {
-    inherits = ["common", "php-82"]
+    inherits = ["common"]
     args = {
         DISTRO = "alpine316"
     }
