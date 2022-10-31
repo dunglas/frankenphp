@@ -279,7 +279,16 @@ uintptr_t frankenphp_request_shutdown()
 	frankenphp_server_context *ctx = SG(server_context);
 
 	if (EG(symbol_table).nNumUsed) {
-		frankenphp_worker_request_shutdown(0);
+		/* Destroy super-globals and symbol table */
+		zend_try {
+			zend_symtable_clean(&EG(symbol_table));
+
+			int i;
+
+			for (i=0; i<NUM_TRACK_VARS; i++) {
+				zval_ptr_dtor(&PG(http_globals)[i]);
+			}
+		} zend_end_try();
 	}
 
 	php_request_shutdown((void *) 0);
