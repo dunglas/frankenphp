@@ -57,6 +57,22 @@ typedef struct frankenphp_server_context {
 	char *cookie_data;
 } frankenphp_server_context;
 
+static int frankenphp_request_globals_reset(zval *zv) {
+	int i;
+
+	if (!Z_COUNTED_P(zv)) {
+		return ZEND_HASH_APPLY_KEEP;
+	}
+
+	for (i=0; i<NUM_TRACK_VARS; i++) {
+		if (Z_COUNTED(PG(http_globals[i])) == Z_COUNTED_P(zv)) {
+			return ZEND_HASH_APPLY_REMOVE;
+		}
+	}
+
+	return ZEND_HASH_APPLY_KEEP;
+}
+
 /* Adapted from php_request_shutdown */
 static void frankenphp_worker_request_shutdown(uintptr_t current_request) {
 	/* Flush all output buffers */
@@ -85,7 +101,7 @@ static void frankenphp_worker_request_shutdown(uintptr_t current_request) {
 
 	/* Destroy super-globals and symbol table */
 	zend_try {
-		zend_symtable_clean(&EG(symbol_table));
+		zend_hash_apply(&EG(symbol_table), frankenphp_request_globals_reset);
 
 		int i;
 
@@ -281,7 +297,7 @@ uintptr_t frankenphp_request_shutdown()
 	if (EG(symbol_table).nNumUsed) {
 		/* Destroy super-globals and symbol table */
 		zend_try {
-			zend_symtable_clean(&EG(symbol_table));
+			zend_hash_apply(&EG(symbol_table), frankenphp_request_globals_reset);
 
 			int i;
 
