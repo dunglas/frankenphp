@@ -83,8 +83,10 @@ static void frankenphp_worker_request_shutdown(uintptr_t current_request) {
 		php_output_deactivate();
 	} zend_end_try();
 
-	/* Destroy super-globals */
+	/* Destroy super-globals and symbol table */
 	zend_try {
+		zend_symtable_clean(&EG(symbol_table));
+
 		int i;
 
 		for (i=0; i<NUM_TRACK_VARS; i++) {
@@ -101,6 +103,7 @@ static void frankenphp_worker_request_shutdown(uintptr_t current_request) {
 	if (current_request != 0) go_frankenphp_worker_handle_request_end(current_request);
 
 	zend_set_memory_limit(PG(memory_limit));
+
 }
 
 /* Adapted from php_request_startup() */
@@ -145,7 +148,6 @@ static int frankenphp_worker_request_startup() {
 
 		php_hash_environment();
 
-		/* Re-populate $_SERVER */
 		zend_is_auto_global(ZSTR_KNOWN(ZEND_STR_AUTOGLOBAL_SERVER));
 
 		// TODO: store the list of modules to reload in a global module variable
@@ -276,9 +278,8 @@ uintptr_t frankenphp_request_shutdown()
 {
 	frankenphp_server_context *ctx = SG(server_context);
 
-	if (ctx->worker && ctx->current_request) {
-		// Unclean worker shutdown, re-create the superglobals to prevent a segfault
-		php_hash_environment();
+	if (EG(symbol_table).nNumUsed) {
+		frankenphp_worker_request_shutdown(0);
 	}
 
 	php_request_shutdown((void *) 0);
