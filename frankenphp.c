@@ -57,20 +57,16 @@ typedef struct frankenphp_server_context {
 	char *cookie_data;
 } frankenphp_server_context;
 
-static int frankenphp_request_globals_reset(zval *zv) {
-	int i;
+static void frankenphp_request_reset() {
+	zend_try {
+		int i;
 
-	if (!Z_OPT_REFCOUNTED_P(zv)) {
-		return ZEND_HASH_APPLY_KEEP;
-	}
-
-	for (i=0; i<NUM_TRACK_VARS; i++) {
-		if (Z_COUNTED(PG(http_globals[i])) == Z_COUNTED_P(zv)) {
-			return ZEND_HASH_APPLY_REMOVE;
+		for (i=0; i<NUM_TRACK_VARS; i++) {
+			zval_ptr_dtor(&PG(http_globals)[i]);
 		}
-	}
 
-	return ZEND_HASH_APPLY_KEEP;
+		memset(&PG(http_globals), 0, sizeof(zval) * NUM_TRACK_VARS);
+	} zend_end_try();
 }
 
 /* Adapted from php_request_shutdown */
@@ -99,16 +95,8 @@ static void frankenphp_worker_request_shutdown(uintptr_t current_request) {
 		php_output_deactivate();
 	} zend_end_try();
 
-	/* Destroy super-globals and symbol table */
-	zend_try {
-		zend_hash_apply(&EG(symbol_table), frankenphp_request_globals_reset);
-
-		int i;
-
-		for (i=0; i<NUM_TRACK_VARS; i++) {
-			zval_ptr_dtor(&PG(http_globals)[i]);
-		}
-	} zend_end_try();
+	/* Clean super globals */
+	frankenphp_request_reset();
 
 	/* SAPI related shutdown (free stuff) */
 	frankenphp_clean_server_context();
@@ -294,17 +282,8 @@ uintptr_t frankenphp_request_shutdown()
 {
 	frankenphp_server_context *ctx = SG(server_context);
 
-	if (EG(symbol_table).nNumUsed) {
-		/* Destroy super-globals and symbol table */
-		zend_try {
-			zend_hash_apply(&EG(symbol_table), frankenphp_request_globals_reset);
-
-			int i;
-
-			for (i=0; i<NUM_TRACK_VARS; i++) {
-				zval_ptr_dtor(&PG(http_globals)[i]);
-			}
-		} zend_end_try();
+	if (ctx->worker && ctx->current_request) {
+		frankenphp_request_reset();
 	}
 
 	php_request_shutdown((void *) 0);
