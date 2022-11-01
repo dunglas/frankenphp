@@ -106,7 +106,7 @@ static void frankenphp_worker_request_shutdown(uintptr_t current_request) {
 		int i;
 
 		for (i=0; i<NUM_TRACK_VARS; i++) {
-			zval_ptr_dtor(&PG(http_globals)[i]);
+			zval_ptr_dtor_nogc(&PG(http_globals)[i]);
 		}
 	} zend_end_try();
 
@@ -302,7 +302,7 @@ uintptr_t frankenphp_request_shutdown()
 			int i;
 
 			for (i=0; i<NUM_TRACK_VARS; i++) {
-				zval_ptr_dtor(&PG(http_globals)[i]);
+				zval_ptr_dtor_nogc(&PG(http_globals)[i]);
 			}
 		} zend_end_try();
 	}
