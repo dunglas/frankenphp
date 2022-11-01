@@ -37,7 +37,7 @@ jobs:
       - name: Run tests
         run: |
           docker load -i /tmp/.builder.tar
-          docker run --rm frankenphp:${{ github.sha }}-builder "go test"
+          docker run --rm frankenphp:${{ github.sha }}-builder "go test -a -v"
   push-image:
     runs-on: ubuntu-latest
     strategy:
