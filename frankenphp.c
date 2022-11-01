@@ -99,15 +99,17 @@ static void frankenphp_worker_request_shutdown(uintptr_t current_request) {
 		php_output_deactivate();
 	} zend_end_try();
 
-	/* Destroy super-globals and symbol table */
+	/* Clean symbols */
 	zend_try {
 		zend_hash_apply(&EG(symbol_table), frankenphp_request_globals_reset);
 
 		int i;
 
 		for (i=0; i<NUM_TRACK_VARS; i++) {
-			zval_ptr_dtor_nogc(&PG(http_globals)[i]);
+			zval_ptr_dtor(&PG(http_globals)[i]);
 		}
+
+		memset(&PG(http_globals), 0, sizeof(zval) * NUM_TRACK_VARS);
 	} zend_end_try();
 
 	/* SAPI related shutdown (free stuff) */
@@ -293,19 +295,6 @@ uintptr_t frankenphp_clean_server_context() {
 uintptr_t frankenphp_request_shutdown()
 {
 	frankenphp_server_context *ctx = SG(server_context);
-
-	if (EG(symbol_table).nNumUsed) {
-		/* Destroy super-globals and symbol table */
-		zend_try {
-			zend_hash_apply(&EG(symbol_table), frankenphp_request_globals_reset);
-
-			int i;
-
-			for (i=0; i<NUM_TRACK_VARS; i++) {
-				zval_ptr_dtor_nogc(&PG(http_globals)[i]);
-			}
-		} zend_end_try();
-	}
 
 	php_request_shutdown((void *) 0);
 
