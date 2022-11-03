@@ -100,6 +100,20 @@ func testHelloWorld(t *testing.T, opts *testOptions) {
 	}, opts)
 }
 
+func TestFinishRequest_module(t *testing.T) { testFinishRequest(t, nil) }
+func TestFinishRequest_worker(t *testing.T) { testFinishRequest(t, &testOptions{workerScript: "index.php"}) }
+func testFinishRequest(t *testing.T, opts *testOptions) {
+	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
+		req := httptest.NewRequest("GET", fmt.Sprintf("http://example.com/finish-request.php?i=%d", i), nil)
+		w := httptest.NewRecorder()
+		handler(w, req)
+
+		resp := w.Result()
+		body, _ := io.ReadAll(resp.Body)
+		assert.Equal(t, fmt.Sprintf("This is output\n"), string(body))
+	}, opts)
+}
+
 func TestServerVariable_module(t *testing.T) { testServerVariable(t, nil) }
 func TestServerVariable_worker(t *testing.T) {
 	testServerVariable(t, &testOptions{workerScript: "server-variable.php"})

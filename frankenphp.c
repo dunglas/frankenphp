@@ -55,6 +55,7 @@ typedef struct frankenphp_server_context {
 	uintptr_t current_request;
 	uintptr_t main_request;				/* Only available during worker initialization */
 	char *cookie_data;
+	bool finished;
 } frankenphp_server_context;
 
 static void frankenphp_request_reset() {
@@ -104,7 +105,7 @@ static void frankenphp_worker_request_shutdown(uintptr_t current_request) {
 		sapi_deactivate();
 	} zend_end_try();
 
-	if (current_request != 0) go_frankenphp_worker_handle_request_end(current_request);
+	if (current_request != 0) go_frankenphp_worker_handle_request_end(current_request, true);
 
 	zend_set_memory_limit(PG(memory_limit));
 
@@ -154,6 +155,10 @@ static int frankenphp_worker_request_startup() {
 
 		zend_is_auto_global(ZSTR_KNOWN(ZEND_STR_AUTOGLOBAL_SERVER));
 
+		// unfinish the request
+		frankenphp_server_context *ctx = SG(server_context);
+		ctx->finished = false;
+
 		// TODO: store the list of modules to reload in a global module variable
 		const char **module_name;
 		zend_module_entry *module;
@@ -170,6 +175,27 @@ static int frankenphp_worker_request_startup() {
 
 	return retval;
 }
+
+PHP_FUNCTION(frankenphp_finish_request) { /* {{{ */
+    if (zend_parse_parameters_none() == FAILURE) {
+    		RETURN_THROWS();
+    }
+
+    frankenphp_server_context *ctx = SG(server_context);
+
+    if(!ctx->finished) {
+    	php_output_end_all();
+    	php_header();
+
+    	go_frankenphp_worker_handle_request_end(ctx->current_request, false);
+    	ctx->finished = true;
+
+    	RETURN_TRUE;
+    }
+
+    RETURN_FALSE;
+
+} /* }}} */
 
 PHP_FUNCTION(frankenphp_handle_request) {
 	zend_fcall_info fci;
@@ -320,6 +346,7 @@ int frankenphp_create_server_context()
 	ctx->current_request = 0;
 	ctx->main_request = 0;
 	ctx->cookie_data = NULL;
+	ctx->finished = false;
 
 	SG(server_context) = ctx;
 
@@ -372,6 +399,11 @@ static int frankenphp_deactivate(void)
 static size_t frankenphp_ub_write(const char *str, size_t str_length)
 {
 	frankenphp_server_context* ctx = SG(server_context);
+
+	if(ctx->finished) {
+		// todo: maybe log a warning that we tried to write to a finished request?
+		return 0;
+	}
 
 	return go_ub_write(ctx->current_request ? ctx->current_request : ctx->main_request, (char *) str, str_length);
 }
