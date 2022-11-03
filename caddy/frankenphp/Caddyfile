@@ -1,6 +1,6 @@
 {
 	# Debug
-    {$DEBUG}
+    {$CADDY_DEBUG}
 
 	frankenphp {
 		#worker /path/to/your/worker.php

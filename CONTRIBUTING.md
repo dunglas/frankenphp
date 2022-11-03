@@ -5,8 +5,8 @@
 
 Build the dev Docker image:
 
-    docker -t frankenphp-dev -f Dockerfile.dev .
-    docker run -p 8080:8080 -p 443:443 -v $PWD:/go/src/app -it frankenphp-dev
+    docker build -t frankenphp-dev -f Dockerfile.dev .
+    docker run --cap-add=SYS_PTRACE --security-opt seccomp=unconfined -p 8080:8080 -p 443:443 -v $PWD:/go/src/app -it frankenphp-dev
 
 The image contains the usual development tools (Go, GDB, Valgrind, Neovim...).
 
@@ -52,6 +52,32 @@ The server is listening on `127.0.0.1:8080`:
 
     curl -v http://127.0.0.1:8080/phpinfo.php
 
+# Building Docker Images Locally
+
+Print bake plan:
+
+```
+docker buildx bake -f docker-bake.hcl --print
+```
+
+Build FrankenPHP images for amd64 locally:
+
+```
+docker buildx bake -f docker-bake.hcl --pull --load --set "*.platform=linux/amd64"
+```
+
+Build FrankenPHP images for arm64 locally:
+
+```
+docker buildx bake -f docker-bake.hcl --pull --load --set "*.platform=linux/arm64"
+```
+
+Build FrankenPHP images from scratch for arm64 & amd64 and push to Docker Hub:
+
+```
+docker buildx bake -f docker-bake.hcl --pull --no-cache --push
+```
+
 ## Misc Dev Resources
 
 * [PHP embedding in uWSGI](https://github.com/unbit/uwsgi/blob/master/plugins/php/php_plugin.c)
@@ -63,3 +89,8 @@ The server is listening on `127.0.0.1:8080`:
 * [What the heck is TSRMLS_CC, anyway?](http://blog.golemon.com/2006/06/what-heck-is-tsrmlscc-anyway.html)
 * [PHP embedding on Mac](https://gist.github.com/jonnywang/61427ffc0e8dde74fff40f479d147db4)
 * [SDL bindings](https://pkg.go.dev/github.com/veandco/go-sdl2@v0.4.21/sdl#Main)
+
+## Docker-Related Resources
+
+* [Bake file definition](https://docs.docker.com/build/customize/bake/file-definition/)
+* [docker buildx build](https://docs.docker.com/engine/reference/commandline/buildx_build/)

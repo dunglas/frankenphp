@@ -148,14 +148,19 @@ func go_frankenphp_worker_handle_request_start(rh C.uintptr_t) C.uintptr_t {
 }
 
 //export go_frankenphp_worker_handle_request_end
-func go_frankenphp_worker_handle_request_end(rh C.uintptr_t) {
+func go_frankenphp_worker_handle_request_end(rh C.uintptr_t, deleteHandle bool) {
+	if rh == 0 {
+		return
+	}
 	rHandle := cgo.Handle(rh)
 	r := rHandle.Value().(*http.Request)
 	fc := r.Context().Value(contextKey).(*FrankenPHPContext)
 
-	cgo.Handle(rh).Delete()
+	if deleteHandle {
+		cgo.Handle(rh).Delete()
+	}
 
-	close(fc.done)
+	maybeCloseContext(fc)
 
 	fc.Logger.Debug("request handling finished", zap.String("worker", fc.Env["SCRIPT_FILENAME"]), zap.String("url", r.RequestURI))
 }

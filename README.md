@@ -34,8 +34,13 @@ Go to `https://localhost`, and enjoy!
 * [Early Hints support (103 HTTP status code)](docs/early-hints.md)
 * [Real-time](docs/mercure.md)
 * [Configuration](docs/config.md)
-* [Demo app (Symfony) and benchmarks](https://github.com/dunglas/frankenphp-demo)
-* [Building Docker images](docs/docker.md)
+* [Docker images](docs/docker.md)
 * [Compile from sources](docs/compile.md)
+* [Demo app (Symfony) and benchmarks](https://github.com/dunglas/frankenphp-demo)
 * [Go library documentation](https://pkg.go.dev/github.com/dunglas/frankenphp)
 * [Contributing and debugging](CONTRIBUTING.md)
+
+## Examples and Skeletons
+
+* [Symfony apps](https://github.com/dunglas/frankenphp-demo)
+* [Wordpress](https://github.com/dunglas/frankenphp-wordpress)
