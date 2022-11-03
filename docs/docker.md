@@ -1,30 +1,39 @@
-# Building Docker Images
+# Building Custom Docker Image
 
-Print bake plan:
+[FrankenPHP Docker images](https://hub.docker.com/repository/docker/dunglas/frankenphp) are based on [official PHP images](https://hub.docker.com/_/php/). Alpine Linux and Debian variants are provided for popular architectures.
 
-```
-docker buildx bake -f docker-bake.hcl --print
-```
+## How to Use The Images
 
-Build FrankenPHP images for amd64 locally:
+Create a `Dockerfile` in your project:
 
-```
-docker buildx bake -f docker-bake.hcl --pull --load --set "*.platform=linux/amd64"
-```
-
-Build FrankenPHP images for arm64 locally:
-
-```
-docker buildx bake -f docker-bake.hcl --pull --load --set "*.platform=linux/arm64"
+```Dockerfile
+FROM dunglas/frankenphp
+COPY . /app/public
+CMD [ "php", "./your-script.php" ]
 ```
 
-Build FrankenPHP images from scratch for arm64 & amd64 and push to Docker Hub:
+Then, run the commands to build and run the Docker image:
 
 ```
-docker buildx bake -f docker-bake.hcl --pull --no-cache --push
+$ docker build -t my-php-app .
+$ docker run -it --rm --name my-running-app my-php-app
 ```
 
-## Resources
+## How to Install More PHP Extensions
 
-* [Bake file definition](https://docs.docker.com/build/customize/bake/file-definition/)
-* [docker buildx build](https://docs.docker.com/engine/reference/commandline/buildx_build/)
+The [`docker-php-extension-installer`](https://github.com/mlocati/docker-php-extension-installer) script is provided in the base image.
+Adding additional PHP extensions is straightforwardd:
+
+```dockerfile
+FROM dunglas/frankenphp
+
+# add additional extensions here:
+RUN install-php-extensions \
+    pdo_mysql \
+    gd \
+    intl \
+    zip \
+    opcache
+
+# ...
+```
