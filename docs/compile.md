@@ -26,10 +26,10 @@ Then, configure PHP for your platform:
 ### Mac
 
 Use the [Homebrew](https://brew.sh/) package manager to install
-`libiconv` and `bison`:
+`libiconv`, `bison` and `re2c`:
 
 ```
-brew install libiconv bison
+brew install libiconv bison re2c
 echo 'export PATH="/opt/homebrew/opt/bison/bin:$PATH"' >> ~/.zshrc
 ```
 
