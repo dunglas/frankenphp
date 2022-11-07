@@ -48,10 +48,10 @@ type FrankenPHPApp struct {
 }
 
 // CaddyModule returns the Caddy module information.
-func (a *FrankenPHPApp) CaddyModule() caddy.ModuleInfo {
+func (f *FrankenPHPApp) CaddyModule() caddy.ModuleInfo {
 	return caddy.ModuleInfo{
 		ID:  "frankenphp",
-		New: func() caddy.Module { return a },
+		New: func() caddy.Module { return f },
 	}
 }
 

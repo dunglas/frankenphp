@@ -39,7 +39,7 @@ var contextKey key
 
 var (
 	InvalidRequestError         = errors.New("not a FrankenPHP request")
-	AlreaydStartedError         = errors.New("FrankenPHP is already started")
+	AlreadyStartedError         = errors.New("FrankenPHP is already started")
 	InvalidPHPVersionError      = errors.New("FrankenPHP is only compatible with PHP 8.2+")
 	ZendSignalsError            = errors.New("Zend Signals are enabled, recompile PHP with --disable-zend-signals")
 	MainThreadCreationError     = errors.New("error creating the main thread")
@@ -153,7 +153,7 @@ func FromContext(ctx context.Context) (fctx *FrankenPHPContext, ok bool) {
 // Init starts the PHP runtime and the configured workers.
 func Init(options ...Option) error {
 	if requestChan != nil {
-		return AlreaydStartedError
+		return AlreadyStartedError
 	}
 
 	opt := &opt{}
@@ -498,6 +498,14 @@ func go_read_post(rh C.uintptr_t, cBuf *C.char, countBytes C.size_t) C.size_t {
 	}
 
 	return C.size_t(readBytes)
+}
+
+//export go_flush_response
+func go_flush_response(rh C.uintptr_t) {
+	r := cgo.Handle(rh).Value().(*http.Request)
+	fc := r.Context().Value(contextKey).(*FrankenPHPContext)
+	fc.responseWriter.(http.Flusher).Flush()
+	println("flushed")
 }
 
 //export go_read_cookies

@@ -448,6 +448,20 @@ static size_t frankenphp_read_post(char *buffer, size_t count_bytes)
 	return go_read_post(ctx->current_request, buffer, count_bytes);
 }
 
+static void frankenphp_flush(void *server_context)
+{
+	frankenphp_server_context* ctx = SG(server_context);
+
+	sapi_send_headers();
+
+	if(ctx->finished) {
+		// todo: do we have a signal from go that the connection is aborted? If so:
+		// php_handle_aborted_connection();
+	}
+
+	go_flush_response(ctx->current_request);
+}
+
 static char* frankenphp_read_cookies(void)
 {
 	frankenphp_server_context* ctx = SG(server_context);
@@ -483,7 +497,7 @@ sapi_module_struct frankenphp_sapi_module = {
 	frankenphp_deactivate,              /* deactivate */
 
 	frankenphp_ub_write,                /* unbuffered write */
-	NULL,                   			/* flush */
+	frankenphp_flush,                   /* flush */
 	NULL,                               /* get uid */
 	NULL,                               /* getenv */
 
