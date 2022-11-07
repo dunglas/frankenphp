@@ -439,6 +439,15 @@ static int frankenphp_send_headers(sapi_headers_struct *sapi_headers)
 	return SAPI_HEADER_SENT_SUCCESSFULLY;
 }
 
+static void frankenphp_sapi_flush(void *server_context)
+{
+	frankenphp_server_context *ctx = (frankenphp_server_context *) server_context;
+
+	if (!ctx || ctx->current_request == 0) return;
+
+	go_sapi_flush(ctx->current_request);
+}
+
 static size_t frankenphp_read_post(char *buffer, size_t count_bytes)
 {
 	frankenphp_server_context* ctx = SG(server_context);
@@ -483,7 +492,7 @@ sapi_module_struct frankenphp_sapi_module = {
 	frankenphp_deactivate,              /* deactivate */
 
 	frankenphp_ub_write,                /* unbuffered write */
-	NULL,                   			/* flush */
+	frankenphp_sapi_flush,              /* flush */
 	NULL,                               /* get uid */
 	NULL,                               /* getenv */
 
