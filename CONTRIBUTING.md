@@ -33,7 +33,7 @@ Run the Caddy with the FrankenPHP Caddy module:
 
 The server is listening on `127.0.0.1:8080`:
 
-    curl -vk https://localhosy/phpinfo.php
+    curl -vk https://localhost/phpinfo.php
 
 ## Minimal test server
 
