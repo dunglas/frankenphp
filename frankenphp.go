@@ -485,6 +485,23 @@ func go_write_header(rh C.uintptr_t, status C.int) {
 	}
 }
 
+//export go_sapi_flush
+func go_sapi_flush(rh C.uintptr_t) {
+	r := cgo.Handle(rh).Value().(*http.Request)
+	fc := r.Context().Value(contextKey).(*FrankenPHPContext)
+
+	if fc.responseWriter == nil {
+		return
+	}
+
+	flusher, ok := fc.responseWriter.(http.Flusher)
+	if !ok {
+		return
+	}
+
+	flusher.Flush()
+}
+
 //export go_read_post
 func go_read_post(rh C.uintptr_t, cBuf *C.char, countBytes C.size_t) C.size_t {
 	r := cgo.Handle(rh).Value().(*http.Request)
