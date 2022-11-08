@@ -23,6 +23,11 @@ http:// {
 		}
 		rewrite @indexFiles {http.matchers.file.relative}
 
+	@frankenphp path *.php {
+		root public/
+		index {path}/index.php 
+		resolve_root_symlink
+	}
 		# FrankenPHP!
 		@phpFiles path *.php
 		php @phpFiles
