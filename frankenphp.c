@@ -474,6 +474,19 @@ static char* frankenphp_read_cookies(void)
 	return ctx->cookie_data;
 }
 
+void frankenphp_register_bulk_variables(char **variables, int size, zval *track_vars_array)
+{
+	char * k;
+
+	for (int i = 0; i < size; i++)
+	{
+		if (i%2 == 0) {
+			k = variables[i];
+			continue;
+		}
+	}
+}
+
 static void frankenphp_register_variables(zval *track_vars_array)
 {
 	/* https://www.php.net/manual/en/reserved.variables.server.php */

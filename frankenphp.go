@@ -447,15 +447,17 @@ func go_register_variables(rh C.uintptr_t, trackVarsArray *C.zval) {
 	// FIXME: remove this debug statement
 	env[fmt.Sprintf("REQUEST_%d", rh)] = "1"
 
-	// TODO: batch this for performance
+	le := len(env)
+	variables := make([]*C.char, le*2)
+	variables = unsafe.Slice(&variables[0], len(variables))
+
 	for k, v := range env {
-		ck := C.CString(k)
-		cv := C.CString(v)
+		variables = append(variables, C.CString(k), C.CString(v))
+	}
 
-		C.php_register_variable(ck, cv, trackVarsArray)
-
-		C.free(unsafe.Pointer(ck))
-		C.free(unsafe.Pointer(cv))
+	C.frankenphp_register_bulk_variables(&variables[0], C.int(le), trackVarsArray)
+	for _, v := range variables {
+		C.free(unsafe.Pointer(v))
 	}
 }
 
