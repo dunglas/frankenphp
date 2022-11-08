@@ -476,14 +476,9 @@ static char* frankenphp_read_cookies(void)
 
 void frankenphp_register_bulk_variables(char **variables, int size, zval *track_vars_array)
 {
-	char * k;
-
 	for (int i = 0; i < size; i++)
 	{
-		if (i%2 == 0) {
-			k = variables[i];
-			continue;
-		}
+		if (i%2 == 1) php_register_variable(variables[i-1], variables[i], track_vars_array);
 	}
 }
 
