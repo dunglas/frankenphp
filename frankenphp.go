@@ -416,7 +416,7 @@ func go_execute_script(rh unsafe.Pointer) {
 }
 
 //export go_ub_write
-func go_ub_write(rh C.uintptr_t, cString *C.char, length C.int) C.size_t {
+func go_ub_write(rh C.uintptr_t, cString *C.char, length C.int, failed *C.bool) C.size_t {
 	r := cgo.Handle(rh).Value().(*http.Request)
 	fc, _ := FromContext(r.Context())
 
@@ -434,6 +434,8 @@ func go_ub_write(rh C.uintptr_t, cString *C.char, length C.int) C.size_t {
 	if fc.responseWriter == nil {
 		fc.Logger.Info(writer.(*bytes.Buffer).String())
 	}
+
+	*failed = C.bool(fc.finished)
 
 	return C.size_t(i)
 }
