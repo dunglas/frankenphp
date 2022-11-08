@@ -43,4 +43,5 @@ Go to `https://localhost`, and enjoy!
 ## Examples and Skeletons
 
 * [Symfony apps](https://github.com/dunglas/frankenphp-demo)
-* [Wordpress](https://github.com/dunglas/frankenphp-wordpress)
+* [WordPress](https://github.com/dunglas/frankenphp-wordpress)
+* [Drupal](https://github.com/dunglas/frankenphp-drupal)
