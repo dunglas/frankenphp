@@ -411,7 +411,7 @@ static size_t frankenphp_ub_write(const char *str, size_t str_length)
 
 	if(failed) {
 		php_handle_aborted_connection();
-		return 0;
+		return wrote;
 	}
 
 	return wrote;
