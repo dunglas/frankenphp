@@ -407,7 +407,7 @@ static size_t frankenphp_ub_write(const char *str, size_t str_length)
 
 	struct go_ub_write_return result = go_ub_write(ctx->current_request ? ctx->current_request : ctx->main_request, (char *) str, str_length);
 
-	if(result.r1) {
+	if (result.r1) {
 		php_handle_aborted_connection();
 	}
 
