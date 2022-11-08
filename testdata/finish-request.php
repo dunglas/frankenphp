@@ -1,7 +1,11 @@
 <?php
 
-echo "This is output\n";
+require_once __DIR__.'/_executor.php';
 
-frankenphp_finish_request();
+return function () {
+    echo 'This is output '.($_GET['i'] ?? '')."\n";
 
-echo "This is not";
+    frankenphp_finish_request();
+
+    echo 'This is not';
+};
