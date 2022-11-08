@@ -6,7 +6,6 @@ return function () {
     echo 'He';
 
     flush();
-    sleep(2);
 
-    echo 'llo';
+    echo 'llo '.($_GET['i'] ?? '');
 };

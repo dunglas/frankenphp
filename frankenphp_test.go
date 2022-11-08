@@ -438,6 +438,40 @@ func testEarlyHints(t *testing.T, opts *testOptions) {
 	}, opts)
 }
 
+type streamResponseRecorder struct {
+	*httptest.ResponseRecorder
+	writeCallback func(buf []byte)
+}
+
+func (srr *streamResponseRecorder) Write(buf []byte) (int, error) {
+	srr.writeCallback(buf)
+
+	return srr.ResponseRecorder.Write(buf)
+}
+
+func TestFlush_module(t *testing.T) { testFlush(t, &testOptions{}) }
+func TestFlush_worker(t *testing.T) {
+	testFlush(t, &testOptions{workerScript: "flush.php"})
+}
+func testFlush(t *testing.T, opts *testOptions) {
+	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
+		var j int
+
+		req := httptest.NewRequest("GET", fmt.Sprintf("http://example.com/flush.php?i=%d", i), nil)
+		w := &streamResponseRecorder{httptest.NewRecorder(), func(buf []byte) {
+			if j == 0 {
+				assert.Equal(t, []byte("He"), buf)
+			} else {
+				assert.Equal(t, []byte(fmt.Sprintf("llo %d", i)), buf)
+			}
+
+			j++
+		}}
+		handler(w, req)
+
+		assert.Equal(t, 2, j)
+	}, opts)
+}
 func ExampleServeHTTP() {
 	if err := frankenphp.Init(); err != nil {
 		panic(err)
