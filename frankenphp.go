@@ -124,8 +124,11 @@ type FrankenPHPContext struct {
 	populated    bool
 	authPassword string
 
-	// Whether the request is already closed
+	// Whether the request is already closed by us
 	closed sync.Once
+
+	// If true, the client has closed the connection
+	finished bool
 
 	responseWriter http.ResponseWriter
 	done           chan interface{}
@@ -348,6 +351,12 @@ func ServeHTTP(responseWriter http.ResponseWriter, request *http.Request) error 
 	}
 
 	if rc != nil {
+		go func() {
+			<-request.Context().Done()
+			if fc != nil {
+				fc.finished = true
+			}
+		}()
 		rc <- request
 		<-fc.done
 	}
@@ -486,20 +495,22 @@ func go_write_header(rh C.uintptr_t, status C.int) {
 }
 
 //export go_sapi_flush
-func go_sapi_flush(rh C.uintptr_t) {
+func go_sapi_flush(rh C.uintptr_t) bool {
 	r := cgo.Handle(rh).Value().(*http.Request)
 	fc := r.Context().Value(contextKey).(*FrankenPHPContext)
 
 	if fc.responseWriter == nil {
-		return
+		return true
 	}
 
 	flusher, ok := fc.responseWriter.(http.Flusher)
 	if !ok {
-		return
+		return true
 	}
 
 	flusher.Flush()
+
+	return fc.finished
 }
 
 //export go_read_post
