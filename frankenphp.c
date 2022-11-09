@@ -405,7 +405,13 @@ static size_t frankenphp_ub_write(const char *str, size_t str_length)
 		return 0;
 	}
 
-	return go_ub_write(ctx->current_request ? ctx->current_request : ctx->main_request, (char *) str, str_length);
+	struct go_ub_write_return result = go_ub_write(ctx->current_request ? ctx->current_request : ctx->main_request, (char *) str, str_length);
+
+	if (result.r1) {
+		php_handle_aborted_connection();
+	}
+
+	return result.r0;
 }
 
 static int frankenphp_send_headers(sapi_headers_struct *sapi_headers)
@@ -445,7 +451,7 @@ static void frankenphp_sapi_flush(void *server_context)
 
 	if (!ctx || ctx->current_request == 0) return;
 
-	go_sapi_flush(ctx->current_request);
+	if (go_sapi_flush(ctx->current_request)) php_handle_aborted_connection();
 }
 
 static size_t frankenphp_read_post(char *buffer, size_t count_bytes)

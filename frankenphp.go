@@ -124,11 +124,20 @@ type FrankenPHPContext struct {
 	populated    bool
 	authPassword string
 
-	// Whether the request is already closed
+	// Whether the request is already closed by us
 	closed sync.Once
 
 	responseWriter http.ResponseWriter
 	done           chan interface{}
+}
+
+func clientHasClosed(r *http.Request) bool {
+	select {
+	case <-r.Context().Done():
+		return true
+	default:
+		return false
+	}
 }
 
 // NewRequestWithContext creates a new FrankenPHP request context.
@@ -407,7 +416,7 @@ func go_execute_script(rh unsafe.Pointer) {
 }
 
 //export go_ub_write
-func go_ub_write(rh C.uintptr_t, cString *C.char, length C.int) C.size_t {
+func go_ub_write(rh C.uintptr_t, cString *C.char, length C.int) (C.size_t, C.bool) {
 	r := cgo.Handle(rh).Value().(*http.Request)
 	fc, _ := FromContext(r.Context())
 
@@ -426,7 +435,7 @@ func go_ub_write(rh C.uintptr_t, cString *C.char, length C.int) C.size_t {
 		fc.Logger.Info(writer.(*bytes.Buffer).String())
 	}
 
-	return C.size_t(i)
+	return C.size_t(i), C.bool(clientHasClosed(r))
 }
 
 //export go_register_variables
@@ -486,20 +495,26 @@ func go_write_header(rh C.uintptr_t, status C.int) {
 }
 
 //export go_sapi_flush
-func go_sapi_flush(rh C.uintptr_t) {
+func go_sapi_flush(rh C.uintptr_t) bool {
 	r := cgo.Handle(rh).Value().(*http.Request)
 	fc := r.Context().Value(contextKey).(*FrankenPHPContext)
 
 	if fc.responseWriter == nil {
-		return
+		return true
 	}
 
 	flusher, ok := fc.responseWriter.(http.Flusher)
 	if !ok {
-		return
+		return true
+	}
+
+	if clientHasClosed(r) {
+		return true
 	}
 
 	flusher.Flush()
+
+	return false
 }
 
 //export go_read_post
