@@ -14,7 +14,6 @@ import (
 	"github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile"
 	"github.com/caddyserver/caddy/v2/modules/caddyhttp"
 	"github.com/caddyserver/caddy/v2/modules/caddyhttp/fileserver"
-	"github.com/caddyserver/caddy/v2/modules/caddyhttp/reverseproxy"
 	"github.com/caddyserver/caddy/v2/modules/caddyhttp/rewrite"
 	"github.com/dunglas/frankenphp"
 	"go.uber.org/zap"
@@ -366,41 +365,15 @@ func parseFrankenPHP(h httpcaddyfile.Helper) ([]httpcaddyfile.ConfigValue, error
 		routes = append(routes, redirRoute, rewriteRoute)
 	}
 
-	// route to actually reverse proxy requests to PHP files;
+	// route to actually handle requests to PHP files;
 	// match only requests that are for PHP files
 	pathList := []string{}
 	for _, ext := range extensions {
 		pathList = append(pathList, "*"+ext)
 	}
-	rpMatcherSet := caddy.ModuleMap{
-		"path": h.JSON(pathList),
-	}
-
-	// create the reverse proxy handler which uses our FastCGI transport
-	rpHandler := &reverseproxy.Handler{
-		TransportRaw: caddyconfig.JSONModuleObject(frankenphpTransport, "protocol", "fastcgi", nil),
-	}
-
-	// the rest of the config is specified by the user
-	// using the reverse_proxy directive syntax
-	err = rpHandler.UnmarshalCaddyfile(dispenser)
-	if err != nil {
-		return nil, err
-	}
-	err = rpHandler.FinalizeUnmarshalCaddyfile(h)
-	if err != nil {
-		return nil, err
-	}
-
-	// create the final reverse proxy route which is
-	// conditional on matching PHP files
-	rpRoute := caddyhttp.Route{
-		MatcherSetsRaw: []caddy.ModuleMap{rpMatcherSet},
-		HandlersRaw:    []json.RawMessage{caddyconfig.JSONModuleObject(rpHandler, "handler", "reverse_proxy", nil)},
-	}
 
 	subroute := caddyhttp.Subroute{
-		Routes: append(routes, rpRoute),
+		Routes: append(routes),
 	}
 
 	// the user's matcher is a prerequisite for ours, so
@@ -416,7 +389,6 @@ func parseFrankenPHP(h httpcaddyfile.Helper) ([]httpcaddyfile.ConfigValue, error
 			},
 		}, nil
 	}
-
 	// otherwise, return the literal subroute instead of
 	// individual routes, to ensure they stay together and
 	// are treated as a single unit, without necessarily
