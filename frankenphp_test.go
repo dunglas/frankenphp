@@ -89,7 +89,9 @@ func runTest(t *testing.T, test func(func(http.ResponseWriter, *http.Request), *
 }
 
 func BenchmarkHelloWorld(b *testing.B) {
-	frankenphp.Init()
+	if err := frankenphp.Init(frankenphp.WithLogger(zap.NewNop())); err != nil {
+		panic(err)
+	}
 	defer frankenphp.Shutdown()
 	cwd, _ := os.Getwd()
 	testDataDir := cwd + "/testdata/"
