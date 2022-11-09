@@ -1,6 +1,7 @@
 package frankenphp_test
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"log"
@@ -15,6 +16,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/dunglas/frankenphp"
 	"github.com/stretchr/testify/assert"
@@ -377,6 +379,102 @@ func testLog(t *testing.T, opts *testOptions) {
 
 		var found bool
 		searched := fmt.Sprintf("request %d", i)
+		for _, entry := range logs.All() {
+			if entry.Message == searched {
+				found = true
+				break
+			}
+		}
+
+		assert.True(t, found)
+	}, opts)
+}
+
+func TestConnectionAbortNormal_module(t *testing.T) { testConnectionAbortNormal(t, &testOptions{}) }
+func TestConnectionAbortNormal_worker(t *testing.T) {
+	testConnectionAbortNormal(t, &testOptions{workerScript: "connectionStatusLog.php"})
+}
+func testConnectionAbortNormal(t *testing.T, opts *testOptions) {
+	logger, logs := observer.New(zap.InfoLevel)
+	opts.logger = zap.New(logger)
+
+	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
+		req := httptest.NewRequest("GET", fmt.Sprintf("http://example.com/connectionStatusLog.php?i=%d", i), nil)
+		w := httptest.NewRecorder()
+
+		ctx, cancel := context.WithCancel(req.Context())
+		req = req.WithContext(ctx)
+		cancel()
+		handler(w, req)
+
+		// todo: remove conditions on wall clock to avoid race conditions/flakiness
+		time.Sleep(1000 * time.Microsecond)
+		var found bool
+		searched := fmt.Sprintf("request %d: 1", i)
+		for _, entry := range logs.All() {
+			if entry.Message == searched {
+				found = true
+				break
+			}
+		}
+
+		assert.True(t, found)
+	}, opts)
+}
+
+func TestConnectionAbortFlush_module(t *testing.T) { testConnectionAbortFlush(t, &testOptions{}) }
+func TestConnectionAbortFlush_worker(t *testing.T) {
+	testConnectionAbortFlush(t, &testOptions{workerScript: "connectionStatusLog.php"})
+}
+func testConnectionAbortFlush(t *testing.T, opts *testOptions) {
+	logger, logs := observer.New(zap.InfoLevel)
+	opts.logger = zap.New(logger)
+
+	runTest(t, func(handler func(w http.ResponseWriter, response *http.Request), _ *httptest.Server, i int) {
+		req := httptest.NewRequest("GET", fmt.Sprintf("http://example.com/connectionStatusLog.php?i=%d&flush", i), nil)
+		w := httptest.NewRecorder()
+
+		ctx, cancel := context.WithCancel(req.Context())
+		req = req.WithContext(ctx)
+		cancel()
+		handler(w, req)
+
+		// todo: remove conditions on wall clock to avoid race conditions/flakiness
+		time.Sleep(1000 * time.Microsecond)
+		var found bool
+		searched := fmt.Sprintf("request %d: 1", i)
+		for _, entry := range logs.All() {
+			if entry.Message == searched {
+				found = true
+				break
+			}
+		}
+
+		assert.True(t, found)
+	}, opts)
+}
+
+func TestConnectionAbortFinish_module(t *testing.T) { testConnectionAbortFinish(t, &testOptions{}) }
+func TestConnectionAbortFinish_worker(t *testing.T) {
+	testConnectionAbortFinish(t, &testOptions{workerScript: "connectionStatusLog.php"})
+}
+func testConnectionAbortFinish(t *testing.T, opts *testOptions) {
+	logger, logs := observer.New(zap.InfoLevel)
+	opts.logger = zap.New(logger)
+
+	runTest(t, func(handler func(w http.ResponseWriter, response *http.Request), _ *httptest.Server, i int) {
+		req := httptest.NewRequest("GET", fmt.Sprintf("http://example.com/connectionStatusLog.php?i=%d&finish", i), nil)
+		w := httptest.NewRecorder()
+
+		ctx, cancel := context.WithCancel(req.Context())
+		req = req.WithContext(ctx)
+		cancel()
+		handler(w, req)
+
+		// todo: remove conditions on wall clock to avoid race conditions/flakiness
+		time.Sleep(1000 * time.Microsecond)
+		var found bool
+		searched := fmt.Sprintf("request %d: 0", i)
 		for _, entry := range logs.All() {
 			if entry.Message == searched {
 				found = true

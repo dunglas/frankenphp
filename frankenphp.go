@@ -133,8 +133,8 @@ type FrankenPHPContext struct {
 
 func clientHasClosed(r *http.Request) bool {
 	select {
-	case _, more := <-r.Context().Done():
-		return !more
+	case <-r.Context().Done():
+		return true
 	default:
 		return false
 	}
