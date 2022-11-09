@@ -444,11 +444,7 @@ func go_register_variables(rh C.uintptr_t, trackVarsArray *C.zval) {
 	r := cgo.Handle(rh).Value().(*http.Request)
 	env = r.Context().Value(contextKey).(*FrankenPHPContext).Env
 
-	// FIXME: remove this debug statement
-	env[fmt.Sprintf("REQUEST_%d", rh)] = "1"
-
 	le := len(env) * 2
-
 	cArr := (**C.char)(C.malloc(C.size_t(le) * C.size_t(unsafe.Sizeof((*C.char)(nil)))))
 	variables := unsafe.Slice(cArr, le)
 
