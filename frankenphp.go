@@ -447,20 +447,23 @@ func go_register_variables(rh C.uintptr_t, trackVarsArray *C.zval) {
 	le := len(env) * 2
 	cArr := (**C.char)(C.malloc(C.size_t(le) * C.size_t(unsafe.Sizeof((*C.char)(nil)))))
 	defer C.free(unsafe.Pointer(cArr))
+
 	variables := unsafe.Slice(cArr, le)
 
 	var i int
 	for k, v := range env {
 		variables[i] = C.CString(k)
-		defer C.free(unsafe.Pointer(variables[i]))
 		i++
 
 		variables[i] = C.CString(v)
-		defer C.free(unsafe.Pointer(variables[i]))
 		i++
 	}
 
 	C.frankenphp_register_bulk_variables(cArr, C.size_t(le), trackVarsArray)
+
+	for _, v := range variables {
+		C.free(unsafe.Pointer(v))
+	}
 }
 
 //export go_add_header
