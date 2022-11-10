@@ -278,7 +278,7 @@ func parseFrankenPHP(h httpcaddyfile.Helper) ([]httpcaddyfile.ConfigValue, error
 				if !dispenser.NextArg() {
 					return nil, dispenser.ArgErr()
 				}
-				frankenphpTransport.Root = dispenser.Val()
+				frankenphp.Root = dispenser.Val()
 				dispenser.Delete()
 				dispenser.Delete()
 
@@ -291,10 +291,10 @@ func parseFrankenPHP(h httpcaddyfile.Helper) ([]httpcaddyfile.ConfigValue, error
 				if len(args) != 2 {
 					return nil, dispenser.ArgErr()
 				}
-				if frankenphpTransport.Env == nil {
-					frankenphpTransport.Env = make(map[string]string)
+				if frankenphp.Env == nil {
+					frankenphp.Env = make(map[string]string)
 				}
-				frankenphpTransport.Env[args[0]] = args[1]
+				frankenphp.Env[args[0]] = args[1]
 			case "index":
 				args := dispenser.RemainingArgs()
 				dispenser.Delete()
@@ -311,14 +311,14 @@ func parseFrankenPHP(h httpcaddyfile.Helper) ([]httpcaddyfile.ConfigValue, error
 				for range args {
 					dispenser.Delete()
 				}
-				frankenphpTransport.ResolveRootSymlink = true
+				frankenphp.ResolveRootSymlink = true
 			}
 		}
 	}
 
 	dispenser.Reset()
 	routes := caddyhttp.RouteList{}
-	frankenphpTransport.SplitPath = extensions
+	frankenphp.SplitPath = extensions
 	if indexFile != "off" {
 		// route to redirect to canonical path if index PHP file
 		redirMatcherSet := caddy.ModuleMap{
