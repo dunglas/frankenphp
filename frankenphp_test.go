@@ -88,6 +88,29 @@ func runTest(t *testing.T, test func(func(http.ResponseWriter, *http.Request), *
 	wg.Wait()
 }
 
+func BenchmarkHelloWorld(b *testing.B) {
+	if err := frankenphp.Init(frankenphp.WithLogger(zap.NewNop())); err != nil {
+		panic(err)
+	}
+	defer frankenphp.Shutdown()
+	cwd, _ := os.Getwd()
+	testDataDir := cwd + "/testdata/"
+
+	handler := func(w http.ResponseWriter, r *http.Request) {
+		req := frankenphp.NewRequestWithContext(r, testDataDir, nil)
+		if err := frankenphp.ServeHTTP(w, req); err != nil {
+			panic(err)
+		}
+	}
+
+	req := httptest.NewRequest("GET", "http://example.com/index.php", nil)
+	w := httptest.NewRecorder()
+
+	for i := 0; i < b.N; i++ {
+		handler(w, req)
+	}
+}
+
 func TestHelloWorld_module(t *testing.T) { testHelloWorld(t, nil) }
 func TestHelloWorld_worker(t *testing.T) { testHelloWorld(t, &testOptions{workerScript: "index.php"}) }
 func testHelloWorld(t *testing.T, opts *testOptions) {

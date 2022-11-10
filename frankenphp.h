@@ -2,6 +2,7 @@
 #define _FRANKENPPHP_H
 
 #include <stdint.h>
+#include <Zend/zend_types.h>
 
 int frankenphp_check_version();
 int frankenphp_init(int num_threads);
@@ -26,5 +27,6 @@ uintptr_t frankenphp_clean_server_context();
 int frankenphp_request_startup();
 int frankenphp_execute_script(const char *file_name);
 uintptr_t frankenphp_request_shutdown();
+void frankenphp_register_bulk_variables(char **variables, size_t size, zval *track_vars_array);
 
 #endif

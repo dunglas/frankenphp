@@ -444,18 +444,25 @@ func go_register_variables(rh C.uintptr_t, trackVarsArray *C.zval) {
 	r := cgo.Handle(rh).Value().(*http.Request)
 	env = r.Context().Value(contextKey).(*FrankenPHPContext).Env
 
-	// FIXME: remove this debug statement
-	env[fmt.Sprintf("REQUEST_%d", rh)] = "1"
+	le := len(env) * 2
+	cArr := (**C.char)(C.malloc(C.size_t(le) * C.size_t(unsafe.Sizeof((*C.char)(nil)))))
+	defer C.free(unsafe.Pointer(cArr))
 
-	// TODO: batch this for performance
+	variables := unsafe.Slice(cArr, le)
+
+	var i int
 	for k, v := range env {
-		ck := C.CString(k)
-		cv := C.CString(v)
+		variables[i] = C.CString(k)
+		i++
 
-		C.php_register_variable(ck, cv, trackVarsArray)
+		variables[i] = C.CString(v)
+		i++
+	}
 
-		C.free(unsafe.Pointer(ck))
-		C.free(unsafe.Pointer(cv))
+	C.frankenphp_register_bulk_variables(cArr, C.size_t(le), trackVarsArray)
+
+	for _, v := range variables {
+		C.free(unsafe.Pointer(v))
 	}
 }
 
