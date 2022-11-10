@@ -373,7 +373,7 @@ func parseFrankenPHP(h httpcaddyfile.Helper) ([]httpcaddyfile.ConfigValue, error
 	}
 
 	subroute := caddyhttp.Subroute{
-		Routes: append(routes),
+		Routes: routes,
 	}
 
 	// the user's matcher is a prerequisite for ours, so
