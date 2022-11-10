@@ -254,7 +254,7 @@ func parseFrankenPHP(h httpcaddyfile.Helper) ([]httpcaddyfile.ConfigValue, error
 		return nil, h.ArgErr()
 	}
 
-	frankenphpTransport := FrankenPHPModule{}
+	frankenphp := FrankenPHPModule{}
 	extensions := []string{".php"}
 	indexFile := "index.php"
 	tryFiles := []string{}
