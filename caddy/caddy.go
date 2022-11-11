@@ -82,7 +82,7 @@ func (f *FrankenPHPApp) Start() error {
 		}
 	}
 
-	logger.Info("FrankenPHP started 🐘")
+	logger.Info("FrankenPHP started 🐘", zap.String("php_version", frankenphp.Version().Version))
 
 	return nil
 }

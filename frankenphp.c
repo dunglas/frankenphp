@@ -34,6 +34,17 @@ static const char *MODULES_TO_RELOAD[] = {
 	NULL
 };
 
+frankenphp_php_version frankenphp_version() {
+	return (frankenphp_php_version){
+		PHP_MAJOR_VERSION,
+		PHP_MINOR_VERSION,
+		PHP_RELEASE_VERSION,
+		PHP_EXTRA_VERSION,
+		PHP_VERSION,
+		PHP_VERSION_ID,
+	};
+}
+
 int frankenphp_check_version() {
 #ifndef ZTS
     return -1;

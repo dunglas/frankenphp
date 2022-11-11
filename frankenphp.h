@@ -4,6 +4,16 @@
 #include <stdint.h>
 #include <Zend/zend_types.h>
 
+typedef struct frankenphp_php_version {
+	int major_version;
+	int minor_version;
+	int release_version;
+	const char *extra_version;
+	const char *version;
+	int version_id;
+} frankenphp_php_version;
+
+frankenphp_php_version frankenphp_version();
 int frankenphp_check_version();
 int frankenphp_init(int num_threads);
 
