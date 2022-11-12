@@ -593,6 +593,17 @@ func testFlush(t *testing.T, opts *testOptions) {
 		assert.Equal(t, 2, j)
 	}, opts)
 }
+
+func TestVersion(t *testing.T) {
+	v := frankenphp.Version()
+
+	assert.GreaterOrEqual(t, v.MajorVersion, 8)
+	assert.GreaterOrEqual(t, v.MinorVersion, 0)
+	assert.GreaterOrEqual(t, v.ReleaseVersion, 0)
+	assert.GreaterOrEqual(t, v.VersionID, 0)
+	assert.NotEmpty(t, v.Version, 0)
+}
+
 func ExampleServeHTTP() {
 	if err := frankenphp.Init(); err != nil {
 		panic(err)

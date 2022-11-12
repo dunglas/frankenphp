@@ -162,6 +162,29 @@ func FromContext(ctx context.Context) (fctx *FrankenPHPContext, ok bool) {
 	return
 }
 
+type PHPVersion struct {
+	MajorVersion   int
+	MinorVersion   int
+	ReleaseVersion int
+	ExtraVersion   string
+	Version        string
+	VersionID      int
+}
+
+// Version returns infos about the PHP version.
+func Version() PHPVersion {
+	cVersion := C.frankenphp_version()
+
+	return PHPVersion{
+		int(cVersion.major_version),
+		int(cVersion.minor_version),
+		int(cVersion.release_version),
+		C.GoString(cVersion.extra_version),
+		C.GoString(cVersion.version),
+		int(cVersion.version_id),
+	}
+}
+
 // Init starts the PHP runtime and the configured workers.
 func Init(options ...Option) error {
 	if requestChan != nil {
