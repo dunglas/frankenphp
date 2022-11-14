@@ -558,9 +558,8 @@ static void *manager_thread(void *arg) {
 	free(arg);
 
 	uintptr_t rh;
-	while ((rh = go_fetch_request())) {
+	while ((rh = go_fetch_request()))
 		thpool_add_work(thpool, go_execute_script, (void *) rh);
-	}
 
 	/* channel closed, shutdown gracefully */
 	thpool_wait(thpool);

@@ -49,6 +49,19 @@ func TestWorkerDie(t *testing.T) {
 	}, &testOptions{workerScript: "die.php", nbWorkers: 1, nbParrallelRequests: 10})
 }
 
+func TestNonWorkerModeAlwaysWorks(t *testing.T) {
+	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
+		req := httptest.NewRequest("GET", "http://example.com/index.php", nil)
+		w := httptest.NewRecorder()
+		handler(w, req)
+
+		resp := w.Result()
+		body, _ := io.ReadAll(resp.Body)
+
+		assert.Contains(t, string(body), "I am by birth a Genevese")
+	}, &testOptions{workerScript: "phpinfo.php"})
+}
+
 func ExampleServeHTTP_workers() {
 	if err := frankenphp.Init(
 		frankenphp.WithWorkers("worker1.php", 4),

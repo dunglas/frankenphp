@@ -39,9 +39,6 @@ func runTest(t *testing.T, test func(func(http.ResponseWriter, *http.Request), *
 	if opts == nil {
 		opts = &testOptions{}
 	}
-	if opts.nbWorkers == 0 {
-		opts.nbWorkers = 2
-	}
 	if opts.nbParrallelRequests == 0 {
 		opts.nbParrallelRequests = 100
 	}
