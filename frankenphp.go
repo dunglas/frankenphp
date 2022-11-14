@@ -5,8 +5,9 @@
 // [FrankenPHP app server]: https://frankenphp.dev
 package frankenphp
 
+//go:generate rm -Rf C-Thread-Pool/
 //go:generate git clone --branch=feat/mac-os-compat --depth=1 git@github.com:dunglas/C-Thread-Pool.git
-//go:generate rm -rf C-Thread-Pool/.git C-Thread-Pool/.circleci C-Thread-Pool/docs C-Thread-Pool/tests
+//go:generate rm -Rf C-Thread-Pool/.git C-Thread-Pool/.circleci C-Thread-Pool/docs C-Thread-Pool/tests
 
 // #cgo CFLAGS: -Wall
 // #cgo CFLAGS: -I/usr/local/include/php -I/usr/local/include/php/Zend -I/usr/local/include/php/TSRM -I/usr/local/include/php/main
@@ -45,6 +46,7 @@ var (
 	AlreaydStartedError         = errors.New("FrankenPHP is already started")
 	InvalidPHPVersionError      = errors.New("FrankenPHP is only compatible with PHP 8.2+")
 	ZendSignalsError            = errors.New("Zend Signals are enabled, recompile PHP with --disable-zend-signals")
+	NotEnoughThreads            = errors.New("the number of threads must be superior to the number of workers")
 	MainThreadCreationError     = errors.New("error creating the main thread")
 	RequestContextCreationError = errors.New("error during request context creation")
 	RequestStartupError         = errors.New("error during PHP request startup")
@@ -221,16 +223,18 @@ func Init(options ...Option) error {
 			opt.workers[i].num = numCPU
 		}
 
-		numWorkers += w.num
+		numWorkers += opt.workers[i].num
 	}
 
 	if opt.numThreads <= 0 {
 		if numWorkers >= numCPU {
-			// Keep a free thread to handle requests not handled by a worker
-			opt.numThreads = numCPU + 1
+			// Start at least as many threads as workers, and keep a free thread to handle requests in non-worker mode
+			opt.numThreads = numWorkers + 1
 		} else {
 			opt.numThreads = numCPU
 		}
+	} else if opt.numThreads <= numWorkers {
+		return NotEnoughThreads
 	}
 
 	switch C.frankenphp_check_version() {
