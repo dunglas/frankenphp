@@ -1,0 +1,20 @@
+before:
+  hooks:
+    - go mod download
+env:
+  - CGO_ENABLED=1
+  - CGO_LDFLAGS=-lreadline -largon2 -lcurl -lonig -lz -Wl -pie
+  - CGO_CFLAGS=-fstack-protector-strong -fpic -fpie -O2 -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64
+  - CGO_CPPFLAGS=-fstack-protector-strong -fpic -fpie -O2 -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64
+builds:
+  - id: frankenphp
+    dir: caddy/frankenphp
+    binary: frankenphp
+    goos:
+      - darwin
+    goarch:
+      - amd64
+archives:
+  - id: frankenphp
+    replacements:
+      darwin: Darwin

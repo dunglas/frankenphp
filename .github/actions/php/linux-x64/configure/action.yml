@@ -1,0 +1,25 @@
+name: ./configure
+description: Run ./configure for Linux x64
+inputs:
+  configurationParameters:
+    default: ''
+    description: Additional flags for ./configure
+    required: false
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      working-directory: php-src
+      run: |
+        set -x
+
+        ./buildconf --force
+        ./configure \
+          --prefix=/usr \
+          --with-config-file-path=/etc \
+          --with-config-file-scan-dir=/etc/php.d \
+          --enable-embed \
+          --enable-zts \
+          --disable-zend-signals \
+          --enable-debug \
+          ${{ inputs.configurationParameters }}

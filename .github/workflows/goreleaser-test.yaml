@@ -1,0 +1,108 @@
+name: GoReleaser
+on:
+  push:
+    branches:
+      - feat/goreleaser
+jobs:
+  linux-x64:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
+      - name: Setup PHP
+        uses: ./.github/actions/php/linux-x64
+        with:
+          version: '8.2'
+
+      - uses: actions/setup-go@v3
+        with:
+          go-version: 1.19
+          cache: true
+
+      - name: Build
+        uses: goreleaser/goreleaser-action@v3
+        with:
+          args: release --skip-publish --config .goreleaser/linux-x64.yaml
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: frankenphp-linux-x64
+          path: dist/frankenphp*
+
+      - name: Setup tmate session
+        if: failure()
+        uses: mxschmitt/action-tmate@v3
+
+  linux-x32:
+    runs-on: ubuntu-latest
+    container:
+      image: ubuntu:20.04
+    steps:
+      - run: |
+          apt update -y
+          apt install git -y
+          git config --global --add safe.directory ${GITHUB_WORKSPACE}
+
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
+      - name: Setup PHP
+        uses: ./.github/actions/php/linux-x32
+        with:
+          version: '8.2'
+
+      - uses: actions/setup-go@v3
+        with:
+          go-version: 1.19
+          cache: true
+
+      - name: Build
+        uses: goreleaser/goreleaser-action@v3
+        with:
+          args: release --skip-publish --config .goreleaser/linux-x32.yaml
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: frankenphp-linux-x32
+          path: dist/frankenphp*
+
+      - name: Setup tmate session
+        if: failure()
+        uses: mxschmitt/action-tmate@v3
+
+  darwin:
+    runs-on: macos-12
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
+      - name: Setup PHP
+        uses: ./.github/actions/php/darwin
+        with:
+          version: '8.2'
+
+      - uses: actions/setup-go@v3
+        with:
+          go-version: 1.19
+          cache: true
+
+      - name: Build
+        uses: goreleaser/goreleaser-action@v3
+        with:
+          args: release --skip-publish --config .goreleaser/darwin.yaml
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: frankenphp-darwin
+          path: dist/frankenphp*
+
+      - name: Setup tmate session
+        if: failure()
+        uses: mxschmitt/action-tmate@v3

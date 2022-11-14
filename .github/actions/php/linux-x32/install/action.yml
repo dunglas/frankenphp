@@ -1,0 +1,14 @@
+name: Install
+description: Install PHP on Linux x32
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      working-directory: php-src
+      run: |
+        set -x
+
+        make -j$(nproc)
+        make install
+
+        ldconfig

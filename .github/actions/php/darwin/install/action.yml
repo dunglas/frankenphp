@@ -1,0 +1,14 @@
+name: Install
+description: Install PHP on Darwin
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      working-directory: php-src
+      run: |
+        set -x
+
+        export PATH="/usr/local/opt/bison/bin:$PATH"
+
+        make -j$(sysctl -n hw.logicalcpu)
+        sudo make install

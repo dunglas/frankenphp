@@ -1,0 +1,28 @@
+name: Setup PHP
+description: Setup PHP for Linux x64
+inputs:
+  version:
+    description: PHP Version
+    required: true
+  configurationParameters:
+    default: ''
+    description: Additional flags for ./configure
+    required: false
+runs:
+  using: composite
+  steps:
+    - name: Checkout PHP Source
+      uses: ./.github/actions/php/checkout
+      with:
+        version: ${{ inputs.version }}
+
+    - name: Install Packages
+      uses: ./.github/actions/php/linux-x64/apt
+
+    - name: Configure PHP
+      uses: ./.github/actions/php/linux-x64/configure
+      with:
+        configurationParameters: ${{ inputs.configurationParameters }}
+
+    - name: Install PHP
+      uses: ./.github/actions/php/linux-x64/install

@@ -1,0 +1,23 @@
+name: apt
+description: Install APT Packages for Linux x64
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      run: |
+        set -x
+
+        sudo apt-get update
+        sudo apt-get install \
+          re2c \
+          bison
+        sudo apt-get install \
+          libargon2-dev \
+          libcurl4-openssl-dev \
+          libonig-dev \
+          libreadline-dev \
+          libsodium-dev \
+          libsqlite3-dev \
+          libssl-dev \
+          libxml2-dev \
+          zlib1g-dev

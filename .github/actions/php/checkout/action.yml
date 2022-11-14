@@ -1,0 +1,14 @@
+name: Checkout
+description: Checkout PHP Source
+inputs:
+  version:
+    description: PHP Version
+    required: true
+runs:
+  using: composite
+  steps:
+    - uses: actions/checkout@v3
+      with:
+        repository: php/php-src
+        ref: PHP-${{ inputs.version }}
+        path: php-src

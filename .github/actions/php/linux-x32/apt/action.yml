@@ -1,0 +1,32 @@
+name: apt
+description: Install APT Packages for Linux x32
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      run: |
+        set -x
+
+        export DEBIAN_FRONTEND=noninteractive
+
+        dpkg --add-architecture i386
+        apt-get update -y
+        apt-get install -y \
+          build-essential \
+          autoconf \
+          make \
+          re2c \
+          bison \
+          g++-multilib \
+          gcc-multilib \
+          pkg-config:i386
+        apt-get install -y \
+          libargon2-dev:i386 \
+          libcurl4-openssl-dev:i386 \
+          libonig-dev:i386 \
+          libreadline-dev:i386 \
+          libsodium-dev:i386 \
+          libsqlite3-dev:i386 \
+          libssl-dev:i386 \
+          libxml2-dev:i386 \
+          zlib1g-dev:i386

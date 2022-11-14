@@ -1,0 +1,36 @@
+name: brew
+description: Install Brew Packages
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      run: |
+        set -x
+
+        brew install \
+          pkg-config \
+          autoconf \
+          bison \
+          re2c
+        brew install \
+          openssl@1.1 \
+          krb5 \
+          bzip2 \
+          enchant \
+          libffi \
+          libpng \
+          webp \
+          freetype \
+          intltool \
+          icu4c \
+          libiconv \
+          zlib \
+          t1lib \
+          gd \
+          libzip \
+          gmp \
+          tidy-html5 \
+          libxml2 \
+          libjpeg \
+          libxslt
+        brew link icu4c gettext --force

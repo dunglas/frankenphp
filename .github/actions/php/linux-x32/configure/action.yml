@@ -1,0 +1,32 @@
+name: ./configure
+description: Run ./configure for Linux x32
+inputs:
+  configurationParameters:
+    default: ''
+    description: Additional flags for ./configure
+    required: false
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      working-directory: php-src
+      run: |
+        set -x
+
+        ./buildconf --force
+
+        export CFLAGS="-m32 -msse2"
+        export CXXFLAGS="-m32 -msse2"
+        export LDFLAGS=-L/usr/lib/i386-linux-gnu
+
+        ./configure \
+            --enable-option-checking=fatal \
+            --build=i686-pc-linux-gnu \
+            --prefix=/usr \
+            --with-config-file-path=/etc \
+            --with-config-file-scan-dir=/etc/php.d \
+            --enable-embed \
+            --enable-zts \
+            --disable-zend-signals \
+            --enable-debug \
+            ${{ inputs.configurationParameters }}

@@ -1,0 +1,14 @@
+name: Install
+description: Install PHP on Linux x64
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      working-directory: php-src
+      run: |
+        set -x
+
+        sudo make -j$(nproc)
+        sudo make install
+
+        sudo ldconfig

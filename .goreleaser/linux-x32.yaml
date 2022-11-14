@@ -1,0 +1,21 @@
+before:
+  hooks:
+    - go mod download
+env:
+  - CGO_ENABLED=1
+  - CGO_LDFLAGS=-lssl -lcrypto -lreadline -largon2 -lcurl -lonig -lz -Wl,-O1 -pie
+  - CGO_CFLAGS=-fstack-protector-strong -fpic -fpie -O2 -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -I/usr/include/php -I/usr/include/php/TSRM -I/usr/include/php/Zend -I/usr/include/php/main
+  - CGO_CPPFLAGS=-fstack-protector-strong -fpic -fpie -O2 -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -I/usr/include/php -I/usr/include/php/TSRM -I/usr/include/php/Zend -I/usr/include/php/main
+builds:
+  - id: frankenphp
+    dir: caddy/frankenphp
+    binary: frankenphp
+    goos:
+      - linux
+    goarch:
+      - 386
+archives:
+  - id: frankenphp
+    replacements:
+      linux: Linux
+      386: i386
