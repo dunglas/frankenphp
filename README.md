@@ -45,3 +45,4 @@ Go to `https://localhost`, and enjoy!
 * [Symfony apps](https://github.com/dunglas/frankenphp-demo)
 * [WordPress](https://github.com/dunglas/frankenphp-wordpress)
 * [Drupal](https://github.com/dunglas/frankenphp-drupal)
+* [Sulu](https://sulu.io/blog/running-sulu-with-frankenphp)
