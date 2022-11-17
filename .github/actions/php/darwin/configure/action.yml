@@ -29,6 +29,8 @@ runs:
           --with-config-file-scan-dir=/etc/php.d \
           --with-iconv=/usr/local/opt/libiconv \
           --enable-embed \
+          --enable-static \
+          --enable-shared=no \
           --enable-zts \
           --disable-zend-signals \
           --enable-debug \
