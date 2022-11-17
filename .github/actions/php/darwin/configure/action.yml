@@ -24,6 +24,7 @@ runs:
 
         ./buildconf --force
         ./configure \
+          --enable-option-checking=fatal \
           --prefix=/usr/local \
           --with-config-file-path=/etc \
           --with-config-file-scan-dir=/etc/php.d \

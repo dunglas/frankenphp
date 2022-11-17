@@ -3,9 +3,8 @@ before:
     - go mod download
 env:
   - CGO_ENABLED=1
-  - CGO_LDFLAGS=-lreadline -largon2 -lcurl -lonig -lz -Wl -pie
-  - CGO_CFLAGS=-fstack-protector-strong -fpic -fpie -O2 -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64
-  - CGO_CPPFLAGS=-fstack-protector-strong -fpic -fpie -O2 -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64
+  - CGO_LDFLAGS=-L/usr/local/lib -L/usr/local/opt/libiconv/lib -L/usr/lib -lphp -lxml2 -lresolv -lsqlite3 -ldl -lm -lutil -liconv
+  - CGO_CFLAGS=-Wall -I/usr/local/include/php -I/usr/local/include/php/Zend -I/usr/local/include/php/TSRM -I/usr/local/include/php/main
 builds:
   - id: frankenphp
     dir: caddy/frankenphp

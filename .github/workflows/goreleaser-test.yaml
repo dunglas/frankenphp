@@ -32,10 +32,6 @@ jobs:
           name: frankenphp-linux-x64
           path: dist/frankenphp*
 
-      - name: Setup tmate session
-        if: failure()
-        uses: mxschmitt/action-tmate@v3
-
   linux-x32:
     runs-on: ubuntu-latest
     container:
@@ -71,10 +67,6 @@ jobs:
           name: frankenphp-linux-x32
           path: dist/frankenphp*
 
-      - name: Setup tmate session
-        if: failure()
-        uses: mxschmitt/action-tmate@v3
-
   darwin:
     runs-on: macos-12
     steps:
@@ -102,7 +94,3 @@ jobs:
         with:
           name: frankenphp-darwin
           path: dist/frankenphp*
-
-      - name: Setup tmate session
-        if: failure()
-        uses: mxschmitt/action-tmate@v3
