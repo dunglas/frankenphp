@@ -45,11 +45,15 @@ jobs:
     strategy:
       matrix:
         dockerfile: [ "Dockerfile", "Dockerfile.alpine" ]
+        php-version:
+          - 8.2
         include:
           - dockerfile: Dockerfile
             flavor: ""
           - dockerfile: Dockerfile.alpine
             flavor: "-alpine"
+          - php-version: 8.2
+            base-image-tag: 8.2.0RC6-zts
     steps:
       - uses: actions/checkout@v3
         with:
@@ -69,7 +73,7 @@ jobs:
           # list of Docker images to use as base name for tags
           images: ${{secrets.IMAGE_NAME}}
           flavor: |
-            suffix=${{matrix.flavor}}
+            suffix=${{matrix.php-version}}-${{matrix.flavor}}
           # generate Docker tags based on the following events/attributes
           tags: |
             type=schedule
@@ -104,3 +108,4 @@ jobs:
           builder: ${{ steps.buildx.outputs.name }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          build-args: 'php_base_tag=${{ matrix.base-image-tag }}'
