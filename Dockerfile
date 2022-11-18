@@ -1,4 +1,6 @@
-FROM php:8.2.0RC6-zts-bullseye AS builder
+ARG php_base_tag=8.2.0RC6-zts
+
+FROM php:${php_base_tag}-bullseye AS builder
 
 COPY --from=golang:bullseye /usr/local/go/bin/go /usr/local/bin/go
 COPY --from=golang:bullseye /usr/local/go /usr/local/go
@@ -45,7 +47,7 @@ RUN cd caddy/frankenphp && \
 
 ENTRYPOINT ["/bin/bash","-c"]
 
-FROM php:8.2.0RC6-zts-bullseye AS final
+FROM php:${php_base_tag}-bullseye AS final
 
 COPY --from=mlocati/php-extension-installer /usr/bin/install-php-extensions /usr/local/bin/
 
