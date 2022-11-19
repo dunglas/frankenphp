@@ -1,10 +1,5 @@
 name: ./configure
 description: Run ./configure for Linux x32
-inputs:
-  configurationParameters:
-    default: ''
-    description: Additional flags for ./configure
-    required: false
 runs:
   using: composite
   steps:
@@ -28,5 +23,4 @@ runs:
             --enable-embed \
             --enable-zts \
             --disable-zend-signals \
-            --enable-debug \
-            ${{ inputs.configurationParameters }}
+            --enable-debug
