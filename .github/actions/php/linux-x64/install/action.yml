@@ -12,3 +12,7 @@ runs:
         sudo make install
 
         sudo ldconfig
+
+    # Fixes: https://github.com/actions/cache/issues/324
+    - shell: bash
+      run: sudo chown $USER:$USER php-src -R

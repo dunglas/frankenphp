@@ -20,6 +20,7 @@ runs:
       id: cache
       uses: ./.github/actions/php/cache
       with:
+        os: darwin
         additionalKey: ${{ hashFiles('./.github/actions/php/darwin/configure/action.yml', './.github/actions/php/darwin/install/action.yml') }}
 
     - name: Install Packages

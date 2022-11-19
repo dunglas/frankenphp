@@ -1,6 +1,10 @@
 name: Cache
 description: Cache PHP Source
 inputs:
+  os:
+    default: ''
+    description: OS (used in cache key)
+    required: true
   additionalKey:
     default: ''
     description: Additional cache key
@@ -17,9 +21,9 @@ runs:
       id: cache-php-src
       with:
         path: ./php-src
-        key: ${{ runner.os }}-${{ runner.arch }}-php-src-${{ steps.last-commit.outputs.hash }}-${{ inputs.additionalKey }}
+        key: ${{ inputs.os }}-php-src-${{ steps.last-commit.outputs.hash }}-${{ inputs.additionalKey }}
         restore-keys: |
-          ${{ runner.os }}-${{ runner.arch }}-php-src-${{ steps.last-commit.outputs.hash }}-
+          ${{ inputs.os }}-php-src-${{ steps.last-commit.outputs.hash }}-
 outputs:
   cache-hit:
     description: "A boolean value to indicate an exact match was found for the primary key"

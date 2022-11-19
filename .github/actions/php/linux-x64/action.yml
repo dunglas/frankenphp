@@ -20,6 +20,7 @@ runs:
       id: cache
       uses: ./.github/actions/php/cache
       with:
+        os: linux-x64
         additionalKey: ${{ hashFiles('./.github/actions/php/linux-x64/configure/action.yml', './.github/actions/php/linux-x64/install/action.yml') }}
 
     - name: Install Packages
