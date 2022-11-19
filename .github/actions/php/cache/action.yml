@@ -1,0 +1,26 @@
+name: Cache
+description: Cache PHP Source
+inputs:
+  additionalKey:
+    default: ''
+    description: Additional cache key
+    required: false
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      working-directory: php-src
+      id: last-commit
+      run: echo "hash=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
+
+    - uses: actions/cache@v3
+      id: cache-php-src
+      with:
+        path: ./php-src
+        key: ${{ runner.os }}-${{ runner.arch }}-php-src-${{ steps.last-commit.outputs.hash }}-${{ inputs.additionalKey }}
+        restore-keys: |
+          ${{ runner.os }}-${{ runner.arch }}-php-src-${{ steps.last-commit.outputs.hash }}-
+outputs:
+  cache-hit:
+    description: "A boolean value to indicate an exact match was found for the primary key"
+    value:  ${{ steps.cache-php-src.outputs.cache-hit }}

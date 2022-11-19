@@ -16,10 +16,17 @@ runs:
       with:
         version: ${{ inputs.version }}
 
+    - name: Setup Cache
+      id: cache
+      uses: ./.github/actions/php/cache
+      with:
+        additionalKey: ${{ hashFiles('./.github/actions/php/linux-x32/configure/action.yml', './.github/actions/php/linux-x32/install/action.yml') }}
+
     - name: Install Packages
       uses: ./.github/actions/php/linux-x32/apt
 
     - name: Configure PHP
+      if: steps.cache.outputs.cache-hit != 'true'
       uses: ./.github/actions/php/linux-x32/configure
       with:
         configurationParameters: ${{ inputs.configurationParameters }}
