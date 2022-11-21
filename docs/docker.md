@@ -71,7 +71,8 @@ services:
     image: dunglas/frankenphp
     # uncomment the following line if you want to use a custom Dockerfile
     #build: .
-    restart: always
+    # uncomment the following line if you want to run this in a production environment
+    # restart: always
     ports:
       - 80:80
       - 443:443
