@@ -137,7 +137,7 @@ func go_frankenphp_worker_handle_request_start(rh C.uintptr_t) C.uintptr_t {
 	}
 
 	l.Debug("request handling started", zap.String("worker", previousFc.Env["SCRIPT_FILENAME"]), zap.String("url", r.RequestURI))
-	if err := updateServerContext(r); err != nil {
+	if err := updateServerContext(r, false); err != nil {
 		// Unexpected error
 		l.Debug("unexpected error", zap.String("worker", previousFc.Env["SCRIPT_FILENAME"]), zap.String("url", r.RequestURI), zap.Error(err))
 

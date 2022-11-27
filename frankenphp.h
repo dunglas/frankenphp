@@ -17,8 +17,8 @@ frankenphp_php_version frankenphp_version();
 int frankenphp_check_version();
 int frankenphp_init(int num_threads);
 
-int frankenphp_create_server_context();
-void frankenphp_update_server_context(
+int frankenphp_update_server_context(
+	bool create,
 	uintptr_t current_request,
 	uintptr_t main_request,
 

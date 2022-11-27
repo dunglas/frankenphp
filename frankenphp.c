@@ -339,32 +339,8 @@ uintptr_t frankenphp_request_shutdown()
 	return rh;
 }
 
-int frankenphp_create_server_context()
-{
-#ifdef ZTS
-	/* initial resource fetch */
-	(void)ts_resource(0);
-# ifdef PHP_WIN32
-	ZEND_TSRMLS_CACHE_UPDATE();
-# endif
-#endif
-
-	/* todo: use a pool */
-	frankenphp_server_context *ctx = calloc(1, sizeof(frankenphp_server_context));
-	if (ctx == NULL) return FAILURE;
-
-	ctx->worker = false;
-	ctx->current_request = 0;
-	ctx->main_request = 0;
-	ctx->cookie_data = NULL;
-	ctx->finished = false;
-
-	SG(server_context) = ctx;
-
-	return SUCCESS;
-}
-
-void frankenphp_update_server_context(
+int frankenphp_update_server_context(
+	bool create,
 	uintptr_t current_request,
 	uintptr_t main_request,
 
@@ -378,7 +354,30 @@ void frankenphp_update_server_context(
 	char *auth_password,
 	int proto_num
 ) {
-	frankenphp_server_context *ctx = SG(server_context);
+	frankenphp_server_context *ctx;
+
+	if (create) {
+#ifdef ZTS
+	/* initial resource fetch */
+	(void)ts_resource(0);
+# ifdef PHP_WIN32
+	ZEND_TSRMLS_CACHE_UPDATE();
+# endif
+#endif
+
+	/* todo: use a pool */
+	ctx = (frankenphp_server_context *) calloc(1, sizeof(frankenphp_server_context));
+	if (ctx == NULL) return FAILURE;
+
+	ctx->worker = false;
+	ctx->current_request = 0;
+	ctx->main_request = 0;
+	ctx->cookie_data = NULL;
+	ctx->finished = false;
+
+	SG(server_context) = ctx;
+	} else
+		ctx = (frankenphp_server_context *) SG(server_context);
 
 	ctx->main_request = main_request;
 	ctx->current_request = current_request;
@@ -394,6 +393,8 @@ void frankenphp_update_server_context(
 	SG(request_info).path_translated = path_translated;
 	SG(request_info).request_uri = request_uri;
 	SG(request_info).proto_num = proto_num;
+
+	return SUCCESS;
 }
 
 static int frankenphp_startup(sapi_module_struct *sapi_module)
