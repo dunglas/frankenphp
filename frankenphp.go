@@ -292,7 +292,7 @@ func getLogger() *zap.Logger {
 	return logger
 }
 
-func updateServerContext(request *http.Request) error {
+func updateServerContext(request *http.Request, create bool) error {
 	fc, ok := FromContext(request.Context())
 	if !ok {
 		return InvalidRequestError
@@ -339,7 +339,8 @@ func updateServerContext(request *http.Request) error {
 		rh = cgo.NewHandle(request)
 	}
 
-	C.frankenphp_update_server_context(
+	ret := C.frankenphp_update_server_context(
+		C.bool(create),
 		C.uintptr_t(rh),
 		C.uintptr_t(mwrh),
 
@@ -353,6 +354,10 @@ func updateServerContext(request *http.Request) error {
 		cAuthPassword,
 		C.int(request.ProtoMajor*1000+request.ProtoMinor),
 	)
+
+	if ret > 0 {
+		return RequestContextCreationError
+	}
 
 	return nil
 }
@@ -419,11 +424,7 @@ func go_execute_script(rh unsafe.Pointer) {
 	}
 	defer maybeCloseContext(fc)
 
-	if C.frankenphp_create_server_context() < 0 {
-		panic(RequestContextCreationError)
-	}
-
-	if err := updateServerContext(request); err != nil {
+	if err := updateServerContext(request, true); err != nil {
 		panic(err)
 	}
 
