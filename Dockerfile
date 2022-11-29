@@ -45,7 +45,7 @@ RUN cd caddy/frankenphp && \
 
 ENTRYPOINT ["/bin/bash","-c"]
 
-FROM php:8.2.0RC6-zts-bullseye AS final
+FROM php:8.2.0RC7-zts-bullseye AS final
 
 COPY --from=mlocati/php-extension-installer /usr/bin/install-php-extensions /usr/local/bin/
 
