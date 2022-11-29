@@ -1,4 +1,4 @@
-FROM php:8.2.0RC6-zts-alpine3.16 AS builder
+FROM php:8.2.0RC7-zts-alpine3.16 AS builder
 
 COPY --from=golang:alpine3.16 /usr/local/go/bin/go /usr/local/bin/go
 COPY --from=golang:alpine3.16 /usr/local/go /usr/local/go
@@ -44,7 +44,7 @@ RUN cd caddy/frankenphp && \
 
 ENTRYPOINT ["/bin/sh","-c"]
 
-FROM php:8.2.0RC6-zts-alpine3.16 AS final
+FROM php:8.2.0RC7-zts-alpine3.16 AS final
 
 COPY --from=mlocati/php-extension-installer /usr/bin/install-php-extensions /usr/local/bin/
 
