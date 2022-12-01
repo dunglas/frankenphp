@@ -1,0 +1,10 @@
+builds:
+  - skip: true
+dockers:
+  - id: mailtm
+    goos: linux
+    goarch: amd64
+    image_templates:
+      - "abgeo/{{.ProjectName}}:{{ .Tag }}"
+      - "abgeo/{{.ProjectName}}:v{{ .Major }}.{{ .Minor }}"
+      - "abgeo/{{.ProjectName}}:latest"

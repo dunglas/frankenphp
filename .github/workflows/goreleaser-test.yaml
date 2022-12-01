@@ -66,31 +66,61 @@ jobs:
         with:
           name: frankenphp-linux-x32
           path: dist/frankenphp*
+#
+#  darwin:
+#    runs-on: macos-12
+#    steps:
+#      - uses: actions/checkout@v3
+#        with:
+#          submodules: recursive
+#
+#      - name: Setup PHP
+#        uses: ./.github/actions/php/darwin
+#        with:
+#          version: '8.2'
+#
+#      - uses: actions/setup-go@v3
+#        with:
+#          go-version: 1.19
+#          cache: true
+#
+#      - name: Build
+#        uses: goreleaser/goreleaser-action@v3
+#        with:
+#          args: release --skip-publish --config .goreleaser/darwin.yaml
+#
+#      - name: Upload Artifacts
+#        uses: actions/upload-artifact@v3
+#        with:
+#          name: frankenphp-darwin
+#          path: dist/frankenphp*
 
-  darwin:
-    runs-on: macos-12
+  release:
+    runs-on: ubuntu-latest
+    needs:
+      - linux-x64
+      - linux-x32
     steps:
       - uses: actions/checkout@v3
-        with:
-          submodules: recursive
-
-      - name: Setup PHP
-        uses: ./.github/actions/php/darwin
-        with:
-          version: '8.2'
 
       - uses: actions/setup-go@v3
         with:
           go-version: 1.19
           cache: true
 
-      - name: Build
+      - name: Download linux-x64 Artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: frankenphp-linux-x64
+          path: dist
+
+      - name: Download linux-x32 Artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: frankenphp-linux-x32
+          path: dist
+
+      - name: Release
         uses: goreleaser/goreleaser-action@v3
         with:
-          args: release --skip-publish --config .goreleaser/darwin.yaml
-
-      - name: Upload Artifacts
-        uses: actions/upload-artifact@v3
-        with:
-          name: frankenphp-darwin
-          path: dist/frankenphp*
+          args: release --skip-publish --config .goreleaser/main.yaml
