@@ -323,8 +323,8 @@ static void thread_hold(int sig_id) {
 static void* thread_do(struct thread* thread_p){
 
 	/* Set thread name for profiling and debuging */
-	char thread_name[32] = {0};
-	snprintf(thread_name, 32, "thread-pool-%d", thread_p->id);
+	char thread_name[16] = {0};
+	snprintf(thread_name, 16, "thpool-%d", thread_p->id);
 
 #if defined(__linux__)
 	/* Use prctl instead to prevent using _GNU_SOURCE flag and implicit declaration */
