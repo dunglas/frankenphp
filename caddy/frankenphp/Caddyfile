@@ -1,27 +1,18 @@
 {
 	# Debug
-    {$CADDY_DEBUG}
-
-	frankenphp {
-		#worker /path/to/your/worker.php
+	{$CADDY_DEBUG}
+    frankenphp index {
+        root /path/to/root
+        split_path /index.php
+        resolve_root_symlink true
 		{$FRANKENPHP_CONFIG}
-	}
+        
+    }
 }
+
+
 
 {$SERVER_NAME:localhost}
 
 log
-route {
-	 
-	@frankenphp path *.php {
-		root public/
-		index {path}/index.php 
-		resolve_root_symlink
-	}
-	
-	php @phpFiles
-	encode zstd gzip
-	file_server
-
-	respond 404
-}
+ 

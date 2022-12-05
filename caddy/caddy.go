@@ -4,7 +4,6 @@
 package caddy
 
 import (
-	"encoding/json"
 	"net/http"
 	"strconv"
 
@@ -13,15 +12,13 @@ import (
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile"
 	"github.com/caddyserver/caddy/v2/modules/caddyhttp"
-	"github.com/caddyserver/caddy/v2/modules/caddyhttp/fileserver"
-	"github.com/caddyserver/caddy/v2/modules/caddyhttp/rewrite"
 	"github.com/dunglas/frankenphp"
 	"go.uber.org/zap"
 )
 
 func init() {
 	caddy.RegisterModule(&FrankenPHPApp{})
-	caddy.RegisterModule(FrankenPHPModule{})
+	caddy.RegisterModule(&FrankenPHPModule{})
 	httpcaddyfile.RegisterGlobalOption("frankenphp", parseGlobalOption)
 	httpcaddyfile.RegisterHandlerDirective("php", parseCaddyfile)
 	httpcaddyfile.RegisterDirective("frankenphp", parseFrankenPHP)
@@ -157,6 +154,8 @@ type FrankenPHPModule struct {
 	Env                map[string]string `json:"env,omitempty"`
 	Index              string            `json:"index,omitempty"`
 	logger             *zap.Logger
+	upstreams    []caddyhttp.Upstream
+	WorkerConfig 	   workerConfig
 }
 
 // CaddyModule returns the Caddy module information.
@@ -248,23 +247,13 @@ func parseCaddyfile(h httpcaddyfile.Helper) (caddyhttp.MiddlewareHandler, error)
 	return m, err
 }
 
-func parseFrankenPHP(h httpcaddyfile.Helper) ([]httpcaddyfile.ConfigValue, error) {
-
-	if !h.Next() {
-		return nil, h.ArgErr()
-	}
-
+func parseFrankenPHP(h httpcaddyfile.Helper) (caddyhttp.MiddlewareHandler, error) {
+	var err error
+	var index, root string
+	var resolveRootSymlink bool
+	splitPath :=[]string{".php"}
+	var env map[string]string
 	frankenphp := FrankenPHPModule{}
-	extensions := []string{".php"}
-	indexFile := "index.php"
-	tryFiles := []string{}
-
-	userMatcherSet, err := h.ExtractMatcherSet()
-
-	if err != nil {
-		return nil, err
-	}
-
 	dispenser := h.NewFromNextSegment()
 
 	for dispenser.Next() {
@@ -314,91 +303,15 @@ func parseFrankenPHP(h httpcaddyfile.Helper) ([]httpcaddyfile.ConfigValue, error
 				frankenphp.ResolveRootSymlink = true
 			}
 		}
-	}
-
-	dispenser.Reset()
-	routes := caddyhttp.RouteList{}
-	frankenphp.SplitPath = extensions
-	if indexFile != "off" {
-		// route to redirect to canonical path if index PHP file
-		redirMatcherSet := caddy.ModuleMap{
-			"file": h.JSON(fileserver.MatchFile{
-				TryFiles: []string{"{http.request.uri.path}/" + indexFile},
-			}),
-			"not": h.JSON(caddyhttp.MatchNot{
-				MatcherSetsRaw: []caddy.ModuleMap{
-					{
-						"path": h.JSON(caddyhttp.MatchPath{"*/"}),
-					},
-				},
-			}),
+		frankenphp.SplitPath = splitPath
+		dispenser.Reset()
+		err = frankenphp.UnmarshalCaddyfile(dispenser) 
+		if err != nil {
+			return nil, err
 		}
-		redirHandler := caddyhttp.StaticResponse{
-			StatusCode: caddyhttp.WeakString(strconv.Itoa(http.StatusPermanentRedirect)),
-			Headers:    http.Header{"Location": []string{"{http.request.orig_uri.path}/"}},
-		}
-		redirRoute := caddyhttp.Route{
-			MatcherSetsRaw: []caddy.ModuleMap{redirMatcherSet},
-			HandlersRaw:    []json.RawMessage{caddyconfig.JSONModuleObject(redirHandler, "handler", "static_response", nil)},
-		}
-
-		// if tryFiles wasn't overridden, use a reasonable default
-		if len(tryFiles) == 0 {
-			tryFiles = []string{"{http.request.uri.path}", "{http.request.uri.path}/" + indexFile, indexFile}
-		}
-
-		// route to rewrite to PHP index file
-		rewriteMatcherSet := caddy.ModuleMap{
-			"file": h.JSON(fileserver.MatchFile{
-				TryFiles:  tryFiles,
-				SplitPath: extensions,
-			}),
-		}
-		rewriteHandler := rewrite.Rewrite{
-			URI: "{http.matchers.file.relative}",
-		}
-		rewriteRoute := caddyhttp.Route{
-			MatcherSetsRaw: []caddy.ModuleMap{rewriteMatcherSet},
-			HandlersRaw:    []json.RawMessage{caddyconfig.JSONModuleObject(rewriteHandler, "handler", "rewrite", nil)},
-		}
-
-		routes = append(routes, redirRoute, rewriteRoute)
-	}
-
-	// route to actually handle requests to PHP files;
-	// match only requests that are for PHP files
-	pathList := []string{}
-	for _, ext := range extensions {
-		pathList = append(pathList, "*"+ext)
-	}
-
-	subroute := caddyhttp.Subroute{
-		Routes: routes,
-	}
-
-	// the user's matcher is a prerequisite for ours, so
-	// wrap ours in a subroute and return that
-	if userMatcherSet != nil {
-		return []httpcaddyfile.ConfigValue{
-			{
-				Class: "route",
-				Value: caddyhttp.Route{
-					MatcherSetsRaw: []caddy.ModuleMap{userMatcherSet},
-					HandlersRaw:    []json.RawMessage{caddyconfig.JSONModuleObject(subroute, "handler", "subroute", nil)},
-				},
-			},
-		}, nil
-	}
-	// otherwise, return the literal subroute instead of
-	// individual routes, to ensure they stay together and
-	// are treated as a single unit, without necessarily
-	// creating an actual subroute in the output
-	return []httpcaddyfile.ConfigValue{
-		{
-			Class: "route",
-			Value: subroute,
-		},
-	}, nil
+	return func(next caddyhttp.Handler) caddyhttp.Handler {
+		return frankenphp
+	}, err
 }
 
 // Interface guards

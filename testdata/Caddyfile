@@ -1,39 +1,10 @@
 {
-	debug
-	frankenphp {
-		worker ./phpinfo.php
-	}
+    debug
+    frankenphp index {
+        root /path/to/root
+        split_path /index.php
+        resolve_root_symlink true
+        
+    }
 }
-
-http:// {
-	log
-	route {
-		root * . 
-		# Add trailing slash for directory requests
-		@canonicalPath {
-			file {path}/index.php
-			not path */
-		}
-		redir @canonicalPath {path}/ 308
-
-		# If the requested file does not exist, try index files
-		@indexFiles file {
-			try_files {path} {path}/index.php index.php
-			split_path .php
-		}
-		rewrite @indexFiles {http.matchers.file.relative}
-
-	@frankenphp path *.php {
-		root public/
-		index {path}/index.php 
-		resolve_root_symlink
-	}
-		# FrankenPHP!
-		@phpFiles path *.php
-		php @phpFiles
-		encode zstd gzip
-		file_server
-
-		respond 404
-	}
-}
+ 
