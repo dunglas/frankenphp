@@ -559,11 +559,12 @@ func go_read_post(rh C.uintptr_t, cBuf *C.char, countBytes C.size_t) C.size_t {
 	p := make([]byte, int(countBytes))
 	readBytes, err := r.Body.Read(p)
 	if err != nil && err != io.EOF {
-		panic(err)
+		// invalid Read on closed Body may happen because of https://github.com/golang/go/issues/15527
+		fc, _ := FromContext(r.Context())
+		fc.Logger.Error("error while reading the request body", zap.Error(err))
 	}
 
 	if readBytes != 0 {
-		// todo: memory leak?
 		C.memcpy(unsafe.Pointer(cBuf), unsafe.Pointer(&p[0]), C.size_t(readBytes))
 	}
 
