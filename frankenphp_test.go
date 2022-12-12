@@ -12,6 +12,7 @@ import (
 	"net/textproto"
 	"net/url"
 	"os"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -588,6 +589,28 @@ func testFlush(t *testing.T, opts *testOptions) {
 		handler(w, req)
 
 		assert.Equal(t, 2, j)
+	}, opts)
+}
+
+func TestTimeout_module(t *testing.T) { testTimeout(t, &testOptions{}) }
+func TestTimeout_worker(t *testing.T) {
+	t.Skip("TODO")
+	testTimeout(t, &testOptions{workerScript: "timeout.php"})
+}
+func testTimeout(t *testing.T, opts *testOptions) {
+	if runtime.GOOS != "linux" {
+		t.Skip("timeouts are currently supported only on Linux")
+	}
+
+	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
+		req := httptest.NewRequest("GET", fmt.Sprintf("http://example.com/timeout.php?i=%d", i), nil)
+		w := httptest.NewRecorder()
+		handler(w, req)
+
+		resp := w.Result()
+		body, _ := io.ReadAll(resp.Body)
+
+		assert.Contains(t, string(body), fmt.Sprintf("request: %d\n<br />\n<b>Fatal error</b>:  Maximum execution time of 1 second exceeded in", i))
 	}, opts)
 }
 

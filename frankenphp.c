@@ -2,16 +2,17 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <php_config.h>
 #include <php.h>
-#include <SAPI.h>
-#include <ext/standard/head.h>
 #include <php_main.h>
 #include <php_variables.h>
 #include <php_output.h>
+#include <SAPI.h>
 #include <Zend/zend_alloc.h>
 #include <Zend/zend_types.h>
 #include <Zend/zend_exceptions.h>
 #include <Zend/zend_interfaces.h>
+#include <ext/standard/head.h>
 
 #include "C-Thread-Pool/thpool.h"
 #include "C-Thread-Pool/thpool.c"
@@ -23,10 +24,12 @@
 ZEND_TSRMLS_CACHE_DEFINE()
 #endif
 
-/* Timeouts are currently fundamentally broken with ZTS: https://bugs.php.net/bug.php?id=79464 */
+/* Timeouts are currently fundamentally broken with ZTS except on Linux: https://bugs.php.net/bug.php?id=79464 */
+#if defined(ZTS) && !defined(HAVE_TIMER_CREATE)
 static const char HARDCODED_INI[] =
 	"max_execution_time=0\n"
 	"max_input_time=-1\n\0";
+#endif
 
 static const char *MODULES_TO_RELOAD[] = {
 	"filter",
@@ -541,6 +544,7 @@ sapi_module_struct frankenphp_sapi_module = {
 
 static void *manager_thread(void *arg) {
 #ifdef ZTS
+	// TODO: use tsrm_startup() directly as we now the number of expected threads
 	php_tsrm_startup();
 	/*tsrm_error_set(TSRM_ERROR_LEVEL_INFO, NULL);*/
 # ifdef PHP_WIN32
@@ -550,8 +554,10 @@ static void *manager_thread(void *arg) {
 
     sapi_startup(&frankenphp_sapi_module);
 
+#if defined(ZTS) && !defined(HAVE_TIMER_CREATE)
 	frankenphp_sapi_module.ini_entries = malloc(sizeof(HARDCODED_INI));
 	memcpy(frankenphp_sapi_module.ini_entries, HARDCODED_INI, sizeof(HARDCODED_INI));
+#endif
 
 	frankenphp_sapi_module.startup(&frankenphp_sapi_module);
 
