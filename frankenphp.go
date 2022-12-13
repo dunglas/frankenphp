@@ -548,6 +548,13 @@ func go_sapi_flush(rh C.uintptr_t) bool {
 		return true
 	}
 
+	if r.ProtoMajor == 1 {
+		if _, err := r.Body.Read(nil); err != nil {
+			// Don't flush until the whole body has been read to prevent https://github.com/golang/go/issues/15527
+			return false
+		}
+	}
+
 	flusher.Flush()
 
 	return false
