@@ -11,8 +11,6 @@ jobs:
         dockerfile: [ "Dockerfile", "Dockerfile.alpine" ]
     steps:
       - uses: actions/checkout@v3
-        with:
-          submodules: recursive
 
       - name: Set up Docker Buildx
         id: buildx
@@ -50,8 +48,6 @@ jobs:
             flavor: "-alpine"
     steps:
       - uses: actions/checkout@v3
-        with:
-          submodules: recursive
 
       - name: Docker meta
         id: meta
