@@ -24,6 +24,9 @@ do {
 
     // Do something after sending the HTTP response
     $myApp->terminate();
+
+    // Call the garbage collector to reduce the chances of it being triggered in the middle of a page generation
+    gc_collect_cycles();
 } while ($running);
 
 // Cleanup
