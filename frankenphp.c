@@ -244,7 +244,7 @@ PHP_FUNCTION(frankenphp_handle_request) {
 		zval_ptr_dtor(&retval);
 	}
 
-	/* If an exception occured, print the message to the client before closing the connection */
+	/* If an exception occurred, print the message to the client before closing the connection */
 	if (EG(exception))
 		zend_exception_error(EG(exception), E_ERROR);
 

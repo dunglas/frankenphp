@@ -118,7 +118,7 @@ type FrankenPHPContext struct {
 	ResolveRootSymlink bool
 
 	// CGI-like environment variables that will be available in $_SERVER.
-	// This map is populated automatically, exisiting key are never replaced.
+	// This map is populated automatically, existing key are never replaced.
 	Env map[string]string
 
 	// The logger associated with the current request
@@ -260,7 +260,7 @@ func Init(options ...Option) error {
 	}
 
 	for _, w := range opt.workers {
-		// TODO: start all the worker in parallell to reduce the boot time
+		// TODO: start all the worker in parallel to reduce the boot time
 		if err := startWorkers(w.fileName, w.num); err != nil {
 			return err
 		}
