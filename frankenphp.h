@@ -2,19 +2,27 @@
 #define _FRANKENPPHP_H
 
 #include <stdint.h>
+#include <stdbool.h>
 #include <Zend/zend_types.h>
 
-typedef struct frankenphp_php_version {
-	int major_version;
-	int minor_version;
-	int release_version;
+typedef struct frankenphp_version {
+	unsigned char major_version;
+	unsigned char minor_version;
+	unsigned char release_version;
 	const char *extra_version;
 	const char *version;
-	int version_id;
-} frankenphp_php_version;
+	unsigned long version_id;
+} frankenphp_version;
+frankenphp_version frankenphp_get_version();
 
-frankenphp_php_version frankenphp_version();
-int frankenphp_check_version();
+typedef struct frankenphp_config {
+	frankenphp_version version;	
+	bool zts;
+	bool zend_signals;
+	bool zend_timer;
+} frankenphp_config;
+frankenphp_config frankenphp_get_config();
+
 int frankenphp_init(int num_threads);
 
 int frankenphp_update_server_context(

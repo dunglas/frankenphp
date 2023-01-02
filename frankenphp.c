@@ -25,7 +25,7 @@ ZEND_TSRMLS_CACHE_DEFINE()
 #endif
 
 /* Timeouts are currently fundamentally broken with ZTS except on Linux: https://bugs.php.net/bug.php?id=79464 */
-#if defined(ZTS) && !defined(HAVE_TIMER_CREATE)
+#ifndef ZEND_TIMER
 static const char HARDCODED_INI[] =
 	"max_execution_time=0\n"
 	"max_input_time=-1\n\0";
@@ -37,8 +37,8 @@ static const char *MODULES_TO_RELOAD[] = {
 	NULL
 };
 
-frankenphp_php_version frankenphp_version() {
-	return (frankenphp_php_version){
+frankenphp_version frankenphp_get_version() {
+	return (frankenphp_version){
 		PHP_MAJOR_VERSION,
 		PHP_MINOR_VERSION,
 		PHP_RELEASE_VERSION,
@@ -48,20 +48,25 @@ frankenphp_php_version frankenphp_version() {
 	};
 }
 
-int frankenphp_check_version() {
-#ifndef ZTS
-    return -1;
+frankenphp_config frankenphp_get_config() {
+	return (frankenphp_config){
+		frankenphp_get_version(),
+#ifdef ZTS
+		true,
+#else
+		false,
 #endif
-
-	if (PHP_VERSION_ID < 80200) {
-		return -2;
-	}
-
 #ifdef ZEND_SIGNALS
-	return -3;
+		true,
+#else
+		false,
 #endif
-
-	return SUCCESS;
+#ifdef ZEND_TIMER
+		true,
+#else
+		false,
+#endif
+	};
 }
 
 typedef struct frankenphp_server_context {
@@ -554,7 +559,7 @@ static void *manager_thread(void *arg) {
 
     sapi_startup(&frankenphp_sapi_module);
 
-#if defined(ZTS) && !defined(HAVE_TIMER_CREATE)
+#ifndef ZEND_TIMER
 	frankenphp_sapi_module.ini_entries = malloc(sizeof(HARDCODED_INI));
 	memcpy(frankenphp_sapi_module.ini_entries, HARDCODED_INI, sizeof(HARDCODED_INI));
 #endif

@@ -174,9 +174,16 @@ type PHPVersion struct {
 	VersionID      int
 }
 
+type PHPConfig struct {
+	Version     PHPVersion
+	ZTS         bool
+	ZendSignals bool
+	ZendTimer   bool
+}
+
 // Version returns infos about the PHP version.
 func Version() PHPVersion {
-	cVersion := C.frankenphp_version()
+	cVersion := C.frankenphp_get_version()
 
 	return PHPVersion{
 		int(cVersion.major_version),
@@ -185,6 +192,17 @@ func Version() PHPVersion {
 		C.GoString(cVersion.extra_version),
 		C.GoString(cVersion.version),
 		int(cVersion.version_id),
+	}
+}
+
+func Config() PHPConfig {
+	cConfig := C.frankenphp_get_config()
+
+	return PHPConfig{
+		Version:     Version(),
+		ZTS:         bool(cConfig.zts),
+		ZendSignals: bool(cConfig.zend_signals),
+		ZendTimer:   bool(cConfig.zend_timer),
 	}
 }
 
@@ -238,18 +256,19 @@ func Init(options ...Option) error {
 		return NotEnoughThreads
 	}
 
-	switch C.frankenphp_check_version() {
-	case -1:
-		if opt.numThreads != 1 {
-			opt.numThreads = 1
-			logger.Warn(`ZTS is not enabled, only 1 thread will be available, recompile PHP using the "--enable-zts" configuration option or performance will be degraded`)
-		}
+	config := Config()
 
-	case -2:
+	if config.Version.MajorVersion < 8 || config.Version.MinorVersion < 2 {
 		return InvalidPHPVersionError
+	}
 
-	case -3:
-		return ZendSignalsError
+	if config.ZTS {
+		if !config.ZendTimer && runtime.GOOS == "linux" {
+			logger.Warn(`Zend Timer is not enabled, "--enable-zend-timer" configuration option or timeouts (e.g. "max_execution_time") will not work as expected`)
+		}
+	} else {
+		opt.numThreads = 1
+		logger.Warn(`ZTS is not enabled, only 1 thread will be available, recompile PHP using the "--enable-zts" configuration option or performance will be degraded`)
 	}
 
 	shutdownWG.Add(1)

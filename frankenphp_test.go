@@ -12,7 +12,6 @@ import (
 	"net/textproto"
 	"net/url"
 	"os"
-	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -598,8 +597,9 @@ func TestTimeout_worker(t *testing.T) {
 	testTimeout(t, &testOptions{workerScript: "timeout.php"})
 }
 func testTimeout(t *testing.T, opts *testOptions) {
-	if runtime.GOOS != "linux" {
-		t.Skip("timeouts are currently supported only on Linux")
+	config := frankenphp.Config()
+	if !config.ZendTimer {
+		t.Skip("Zend Timer is not enabled")
 	}
 
 	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
