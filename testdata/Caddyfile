@@ -1,10 +1,8 @@
 {
-    debug
-    frankenphp index {
-        root /path/to/root
-        split_path /index.php
-        resolve_root_symlink true
-        
-    }
+	debug
+	frankenphp {
+		root /path/to/root
+		split_path /index.php
+		resolve_root_symlink true
+	}
 }
- 

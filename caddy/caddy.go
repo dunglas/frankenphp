@@ -18,7 +18,7 @@ import (
 
 func init() {
 	caddy.RegisterModule(&FrankenPHPApp{})
-	caddy.RegisterModule(&FrankenPHPModule{})
+	caddy.RegisterModule(FrankenPHPModule{})
 	httpcaddyfile.RegisterGlobalOption("frankenphp", parseGlobalOption)
 	httpcaddyfile.RegisterHandlerDirective("php", parseCaddyfile)
 	httpcaddyfile.RegisterDirective("frankenphp", parseFrankenPHP)
@@ -154,8 +154,6 @@ type FrankenPHPModule struct {
 	Env                map[string]string `json:"env,omitempty"`
 	Index              string            `json:"index,omitempty"`
 	logger             *zap.Logger
-	upstreams    []caddyhttp.Upstream
-	WorkerConfig 	   workerConfig
 }
 
 // CaddyModule returns the Caddy module information.

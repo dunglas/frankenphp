@@ -1,18 +1,14 @@
 {
 	# Debug
 	{$CADDY_DEBUG}
-    frankenphp index {
-        root /path/to/root
-        split_path /index.php
-        resolve_root_symlink true
+	frankenphp {
+		root /path/to/root
+		split_path /index.php
+		resolve_root_symlink true 
 		{$FRANKENPHP_CONFIG}
-        
-    }
+	}
 }
-
-
 
 {$SERVER_NAME:localhost}
 
 log
- 
