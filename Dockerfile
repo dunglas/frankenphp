@@ -1,7 +1,7 @@
-FROM php:8.2-zts-bullseye AS builder
+FROM php-base AS builder
 
-COPY --from=golang:1.19-bullseye /usr/local/go/bin/go /usr/local/bin/go
-COPY --from=golang:1.19-bullseye /usr/local/go /usr/local/go
+COPY --from=golang-base /usr/local/go/bin/go /usr/local/bin/go
+COPY --from=golang-base /usr/local/go /usr/local/go
 
 # This is required to link the frankenPHP binary to the PHP binary
 RUN apt-get update && \
@@ -45,7 +45,7 @@ RUN cd caddy/frankenphp && \
 
 ENTRYPOINT ["/bin/bash","-c"]
 
-FROM php:8.2-zts-bullseye AS final
+FROM php-base AS final
 
 COPY --from=mlocati/php-extension-installer /usr/bin/install-php-extensions /usr/local/bin/
 
