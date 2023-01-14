@@ -1,2 +1,10 @@
-Dockerfile
-Dockerfile.dev
+/.git/
+/.github/
+/.gitmodules/
+/.idea/
+/.vscode/
+/docs/
+/*Dockerfile*
+/.*ignore
+/*.hcl
+/*.md
