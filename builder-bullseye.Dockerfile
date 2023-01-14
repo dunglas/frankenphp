@@ -1,21 +1,22 @@
-FROM php-base AS builder
+FROM php-base
 
 COPY --from=golang-base /usr/local/go/bin/go /usr/local/bin/go
 COPY --from=golang-base /usr/local/go /usr/local/go
 
-RUN apk add --no-cache --virtual .build-deps \
-		$PHPIZE_DEPS \
-		argon2-dev \
-		coreutils \
-		curl-dev \
-		gnu-libiconv-dev \
-		libsodium-dev \
-		libxml2-dev \
-		linux-headers \
-		oniguruma-dev \
-		openssl-dev \
-		readline-dev \
-		sqlite-dev
+# This is required to link the frankenPHP binary to the PHP binary
+RUN apt-get update && \
+    apt-get -y --no-install-recommends install \
+        libargon2-dev \
+        libcurl4-openssl-dev \
+        libonig-dev \
+        libreadline-dev \
+        libsodium-dev \
+        libsqlite3-dev \
+        libssl-dev \
+        libxml2-dev \
+        zlib1g-dev \
+        && \
+        apt-get clean
 
 WORKDIR /go/src/app
 
@@ -42,20 +43,4 @@ RUN cd caddy/frankenphp && \
     cp frankenphp /usr/local/bin && \
     cp /go/src/app/caddy/frankenphp/Caddyfile /etc/Caddyfile
 
-ENTRYPOINT ["/bin/sh","-c"]
-
-FROM php-base AS final
-
-COPY --from=mlocati/php-extension-installer /usr/bin/install-php-extensions /usr/local/bin/
-
-WORKDIR /app
-
-RUN mkdir -p /app/public
-RUN echo '<?php phpinfo();' > /app/public/index.php
-
-COPY --from=builder /usr/local/bin/frankenphp /usr/local/bin/frankenphp
-COPY --from=builder /etc/Caddyfile /etc/Caddyfile
-
-RUN sed -i 's/php/frankenphp run/g' /usr/local/bin/docker-php-entrypoint
-
-CMD [ "--config", "/etc/Caddyfile" ]
+ENTRYPOINT ["/bin/bash","-c"]
