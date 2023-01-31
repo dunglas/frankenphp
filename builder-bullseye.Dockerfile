@@ -3,7 +3,7 @@ FROM php-base
 COPY --from=golang-base /usr/local/go/bin/go /usr/local/bin/go
 COPY --from=golang-base /usr/local/go /usr/local/go
 
-# This is required to link the frankenPHP binary to the PHP binary
+# This is required to link the FrankenPHP binary to the PHP binary
 RUN apt-get update && \
     apt-get -y --no-install-recommends install \
         libargon2-dev \
