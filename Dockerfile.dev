@@ -30,7 +30,8 @@ RUN apt-get update && \
     gdb \
     valgrind \
     neovim \
-    zsh && \
+    zsh \
+    libtool-bin && \
     echo 'set auto-load safe-path /' > /root/.gdbinit && \
     echo '* soft core unlimited' >> /etc/security/limits.conf \
     && \
