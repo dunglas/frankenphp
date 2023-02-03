@@ -8,7 +8,7 @@ require (
 	github.com/caddyserver/caddy/v2 v2.6.2
 	github.com/dunglas/frankenphp v0.0.0-20221103080429-3641552483ba
 	github.com/dunglas/mercure/caddy v0.14.4
-	github.com/dunglas/vulcain/caddy v0.4.2
+	github.com/dunglas/vulcain/caddy v0.4.3
 	go.uber.org/zap v1.24.0
 )
 
@@ -39,11 +39,11 @@ require (
 	github.com/dlclark/regexp2 v1.7.0 // indirect
 	github.com/dunglas/httpsfv v1.0.1 // indirect
 	github.com/dunglas/mercure v0.14.4 // indirect
-	github.com/dunglas/vulcain v0.4.2 // indirect
+	github.com/dunglas/vulcain v0.4.3 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/felixge/httpsnoop v1.0.3 // indirect
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
-	github.com/getkin/kin-openapi v0.112.0 // indirect
+	github.com/getkin/kin-openapi v0.114.0 // indirect
 	github.com/go-chi/chi v4.1.2+incompatible // indirect
 	github.com/go-kit/kit v0.12.0 // indirect
 	github.com/go-kit/log v0.2.1 // indirect
@@ -54,7 +54,7 @@ require (
 	github.com/go-openapi/swag v0.22.3 // indirect
 	github.com/go-sql-driver/mysql v1.6.0 // indirect
 	github.com/go-task/slim-sprig v0.0.0-20210107165309-348f09dbbbc0 // indirect
-	github.com/gofrs/uuid v4.3.1+incompatible // indirect
+	github.com/gofrs/uuid v4.4.0+incompatible // indirect
 	github.com/golang-jwt/jwt/v4 v4.4.3 // indirect
 	github.com/golang/glog v1.0.0 // indirect
 	github.com/golang/mock v1.6.0 // indirect
@@ -108,6 +108,7 @@ require (
 	github.com/onsi/ginkgo/v2 v2.7.0 // indirect
 	github.com/pelletier/go-toml v1.9.5 // indirect
 	github.com/pelletier/go-toml/v2 v2.0.6 // indirect
+	github.com/perimeterx/marshmallow v1.1.4 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/prometheus/client_golang v1.14.0 // indirect
 	github.com/prometheus/client_model v0.3.0 // indirect
@@ -135,7 +136,7 @@ require (
 	github.com/tidwall/gjson v1.14.4 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect
-	github.com/tidwall/sjson v1.1.7 // indirect
+	github.com/tidwall/sjson v1.2.5 // indirect
 	github.com/unrolled/secure v1.13.0 // indirect
 	github.com/urfave/cli v1.22.10 // indirect
 	github.com/yosida95/uritemplate/v3 v3.0.2 // indirect
