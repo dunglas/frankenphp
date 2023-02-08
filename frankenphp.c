@@ -25,7 +25,7 @@ ZEND_TSRMLS_CACHE_DEFINE()
 #endif
 
 /* Timeouts are currently fundamentally broken with ZTS except on Linux: https://bugs.php.net/bug.php?id=79464 */
-#ifndef ZEND_TIMER
+#ifndef ZEND_TIMERS
 static const char HARDCODED_INI[] =
 	"max_execution_time=0\n"
 	"max_input_time=-1\n\0";
@@ -61,7 +61,7 @@ frankenphp_config frankenphp_get_config() {
 #else
 		false,
 #endif
-#ifdef ZEND_TIMER
+#ifdef ZEND_TIMERS
 		true,
 #else
 		false,
@@ -559,7 +559,7 @@ static void *manager_thread(void *arg) {
 
     sapi_startup(&frankenphp_sapi_module);
 
-#ifndef ZEND_TIMER
+#ifndef ZEND_TIMERS
 	frankenphp_sapi_module.ini_entries = malloc(sizeof(HARDCODED_INI));
 	memcpy(frankenphp_sapi_module.ini_entries, HARDCODED_INI, sizeof(HARDCODED_INI));
 #endif
