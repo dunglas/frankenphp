@@ -130,8 +130,9 @@ type FrankenPHPContext struct {
 	// Whether the request is already closed by us
 	closed sync.Once
 
-	responseWriter http.ResponseWriter
-	done           chan interface{}
+	responseWriter       http.ResponseWriter
+	done                 chan interface{}
+	currentWorkerRequest cgo.Handle
 }
 
 func clientHasClosed(r *http.Request) bool {
@@ -312,7 +313,7 @@ func getLogger() *zap.Logger {
 	return logger
 }
 
-func updateServerContext(request *http.Request, create bool) error {
+func updateServerContext(request *http.Request, create bool, mrh C.uintptr_t) error {
 	fc, ok := FromContext(request.Context())
 	if !ok {
 		return InvalidRequestError
@@ -352,9 +353,9 @@ func updateServerContext(request *http.Request, create bool) error {
 
 	cRequestUri := C.CString(request.URL.RequestURI())
 
-	var rh, mwrh cgo.Handle
+	var rh cgo.Handle
 	if fc.responseWriter == nil {
-		mwrh = cgo.NewHandle(request)
+		mrh = C.uintptr_t(cgo.NewHandle(request))
 	} else {
 		rh = cgo.NewHandle(request)
 	}
@@ -362,7 +363,7 @@ func updateServerContext(request *http.Request, create bool) error {
 	ret := C.frankenphp_update_server_context(
 		C.bool(create),
 		C.uintptr_t(rh),
-		C.uintptr_t(mwrh),
+		mrh,
 
 		cMethod,
 		cQueryString,
@@ -444,7 +445,7 @@ func go_execute_script(rh unsafe.Pointer) {
 	}
 	defer maybeCloseContext(fc)
 
-	if err := updateServerContext(request, true); err != nil {
+	if err := updateServerContext(request, true, 0); err != nil {
 		panic(err)
 	}
 
@@ -538,6 +539,7 @@ func go_write_header(rh C.uintptr_t, status C.int) {
 		return
 	}
 
+	// FIXME: http: superfluous response.WriteHeader call from github.com/dunglas/frankenphp.go_write_header
 	fc.responseWriter.WriteHeader(int(status))
 
 	if status >= 100 && status < 200 {

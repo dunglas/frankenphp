@@ -62,6 +62,19 @@ func TestNonWorkerModeAlwaysWorks(t *testing.T) {
 	}, &testOptions{workerScript: "phpinfo.php"})
 }
 
+func TestCannotCallHandleRequestInNonWorkerMode(t *testing.T) {
+	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
+		req := httptest.NewRequest("GET", "http://example.com/non-worker.php", nil)
+		w := httptest.NewRecorder()
+		handler(w, req)
+
+		resp := w.Result()
+		body, _ := io.ReadAll(resp.Body)
+
+		assert.Contains(t, string(body), "<b>Fatal error</b>:  Uncaught RuntimeException: frankenphp_handle_request() called while not in worker mode")
+	}, nil)
+}
+
 func ExampleServeHTTP_workers() {
 	if err := frankenphp.Init(
 		frankenphp.WithWorkers("worker1.php", 4),

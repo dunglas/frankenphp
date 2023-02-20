@@ -109,7 +109,9 @@ func BenchmarkHelloWorld(b *testing.B) {
 }
 
 func TestHelloWorld_module(t *testing.T) { testHelloWorld(t, nil) }
-func TestHelloWorld_worker(t *testing.T) { testHelloWorld(t, &testOptions{workerScript: "index.php"}) }
+func TestHelloWorld_worker(t *testing.T) {
+	testHelloWorld(t, &testOptions{workerScript: "index.php"})
+}
 func testHelloWorld(t *testing.T, opts *testOptions) {
 	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
 		req := httptest.NewRequest("GET", fmt.Sprintf("http://example.com/index.php?i=%d", i), nil)
@@ -593,7 +595,6 @@ func testFlush(t *testing.T, opts *testOptions) {
 
 func TestTimeout_module(t *testing.T) { testTimeout(t, &testOptions{}) }
 func TestTimeout_worker(t *testing.T) {
-	t.Skip("TODO")
 	testTimeout(t, &testOptions{workerScript: "timeout.php"})
 }
 func testTimeout(t *testing.T, opts *testOptions) {
