@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1
 FROM php-base
 
 COPY --from=mlocati/php-extension-installer /usr/bin/install-php-extensions /usr/local/bin/

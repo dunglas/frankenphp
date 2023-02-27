@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1
 FROM php-base
 
 COPY --from=golang-base /usr/local/go/bin/go /usr/local/bin/go

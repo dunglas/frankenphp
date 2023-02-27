@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1
 FROM golang:1.19
 
 ARG LIBICONV_VERSION=1.17
