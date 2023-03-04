@@ -176,10 +176,10 @@ type PHPVersion struct {
 }
 
 type PHPConfig struct {
-	Version     PHPVersion
-	ZTS         bool
-	ZendSignals bool
-	ZendTimer   bool
+	Version                PHPVersion
+	ZTS                    bool
+	ZendSignals            bool
+	ZendMaxExecutionTimers bool
 }
 
 // Version returns infos about the PHP version.
@@ -200,10 +200,10 @@ func Config() PHPConfig {
 	cConfig := C.frankenphp_get_config()
 
 	return PHPConfig{
-		Version:     Version(),
-		ZTS:         bool(cConfig.zts),
-		ZendSignals: bool(cConfig.zend_signals),
-		ZendTimer:   bool(cConfig.zend_timer),
+		Version:                Version(),
+		ZTS:                    bool(cConfig.zts),
+		ZendSignals:            bool(cConfig.zend_signals),
+		ZendMaxExecutionTimers: bool(cConfig.zend_max_execution_timers),
 	}
 }
 
@@ -264,7 +264,7 @@ func Init(options ...Option) error {
 	}
 
 	if config.ZTS {
-		if !config.ZendTimer && runtime.GOOS == "linux" {
+		if !config.ZendMaxExecutionTimers && runtime.GOOS == "linux" {
 			logger.Warn(`Zend Timer is not enabled, "--enable-zend-timer" configuration option or timeouts (e.g. "max_execution_time") will not work as expected`)
 		}
 	} else {

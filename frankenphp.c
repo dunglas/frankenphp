@@ -26,7 +26,7 @@ ZEND_TSRMLS_CACHE_DEFINE()
 #endif
 
 /* Timeouts are currently fundamentally broken with ZTS except on Linux: https://bugs.php.net/bug.php?id=79464 */
-#ifndef ZEND_TIMERS
+#ifndef ZEND_MAX_EXECUTION_TIMERS
 static const char HARDCODED_INI[] =
 	"max_execution_time=0\n"
 	"max_input_time=-1\n\0";
@@ -62,7 +62,7 @@ frankenphp_config frankenphp_get_config() {
 #else
 		false,
 #endif
-#ifdef ZEND_TIMERS
+#ifdef ZEND_MAX_EXECUTION_TIMERS
 		true,
 #else
 		false,
@@ -237,7 +237,7 @@ PHP_FUNCTION(frankenphp_handle_request) {
 		go_frankenphp_worker_ready();
 	}
 
-#ifdef ZEND_TIMERS
+#ifdef ZEND_MAX_EXECUTION_TIMERS
 	// Disable timeouts while waiting for a request to handle
 	zend_unset_timeout();
 #endif
@@ -249,7 +249,7 @@ PHP_FUNCTION(frankenphp_handle_request) {
 			|| !request
 	) RETURN_FALSE;
 
-#ifdef ZEND_TIMERS
+#ifdef ZEND_MAX_EXECUTION_TIMERS
 	// Reset default timeout
 	// TODO: add support for max_input_time
 	zend_set_timeout(INI_INT("max_execution_time"), 0);
@@ -568,7 +568,7 @@ static void *manager_thread(void *arg) {
 
     sapi_startup(&frankenphp_sapi_module);
 
-#ifndef ZEND_TIMERS
+#ifndef ZEND_MAX_EXECUTION_TIMERS
 	frankenphp_sapi_module.ini_entries = malloc(sizeof(HARDCODED_INI));
 	memcpy(frankenphp_sapi_module.ini_entries, HARDCODED_INI, sizeof(HARDCODED_INI));
 #endif

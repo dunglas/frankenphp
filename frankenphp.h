@@ -19,7 +19,7 @@ typedef struct frankenphp_config {
 	frankenphp_version version;	
 	bool zts;
 	bool zend_signals;
-	bool zend_timer;
+	bool zend_max_execution_timers;
 } frankenphp_config;
 frankenphp_config frankenphp_get_config();
 

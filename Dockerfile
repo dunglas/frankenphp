@@ -32,7 +32,7 @@ RUN apt-get update && \
     && \
     apt-get clean
 
-RUN git clone --depth=1 --single-branch --branch=frankenphp https://github.com/dunglas/php-src.git && \
+RUN git clone --depth=1 --single-branch --branch=PHP-8.2 https://github.com/php/php-src.git && \
     cd php-src && \
     # --enable-embed is only necessary to generate libphp.so, we don't use this SAPI directly
     ./buildconf && \
@@ -40,6 +40,7 @@ RUN git clone --depth=1 --single-branch --branch=frankenphp https://github.com/d
         --enable-embed \
         --enable-zts \
         --disable-zend-signals \
+        --enable-zend-max-execution-timers \
     	# --enable-mysqlnd is included here because it's harder to compile after the fact than extensions are (since it's a plugin for several extensions, not an extension in itself)
     	--enable-mysqlnd \
      	# make sure invalid --configure-flags are fatal errors instead of just warnings

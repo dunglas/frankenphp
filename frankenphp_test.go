@@ -599,7 +599,7 @@ func TestTimeout_worker(t *testing.T) {
 }
 func testTimeout(t *testing.T, opts *testOptions) {
 	config := frankenphp.Config()
-	if !config.ZendTimer {
+	if !config.ZendMaxExecutionTimers {
 		t.Skip("Zend Timer is not enabled")
 	}
 
