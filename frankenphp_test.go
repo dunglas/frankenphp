@@ -109,7 +109,9 @@ func BenchmarkHelloWorld(b *testing.B) {
 }
 
 func TestHelloWorld_module(t *testing.T) { testHelloWorld(t, nil) }
-func TestHelloWorld_worker(t *testing.T) { testHelloWorld(t, &testOptions{workerScript: "index.php"}) }
+func TestHelloWorld_worker(t *testing.T) {
+	testHelloWorld(t, &testOptions{workerScript: "index.php"})
+}
 func testHelloWorld(t *testing.T, opts *testOptions) {
 	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
 		req := httptest.NewRequest("GET", fmt.Sprintf("http://example.com/index.php?i=%d", i), nil)
@@ -588,6 +590,28 @@ func testFlush(t *testing.T, opts *testOptions) {
 		handler(w, req)
 
 		assert.Equal(t, 2, j)
+	}, opts)
+}
+
+func TestTimeout_module(t *testing.T) { testTimeout(t, &testOptions{}) }
+func TestTimeout_worker(t *testing.T) {
+	testTimeout(t, &testOptions{workerScript: "timeout.php"})
+}
+func testTimeout(t *testing.T, opts *testOptions) {
+	config := frankenphp.Config()
+	if !config.ZendMaxExecutionTimers {
+		t.Skip("Zend Timer is not enabled")
+	}
+
+	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
+		req := httptest.NewRequest("GET", fmt.Sprintf("http://example.com/timeout.php?i=%d", i), nil)
+		w := httptest.NewRecorder()
+		handler(w, req)
+
+		resp := w.Result()
+		body, _ := io.ReadAll(resp.Body)
+
+		assert.Contains(t, string(body), fmt.Sprintf("request: %d\n<br />\n<b>Fatal error</b>:  Maximum execution time of 1 second exceeded in", i))
 	}, opts)
 }
 

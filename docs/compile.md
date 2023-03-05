@@ -20,7 +20,8 @@ Then, configure PHP for your platform:
 ./configure \
     --enable-embed \
     --enable-zts \
-    --disable-zend-signals
+    --disable-zend-signals \
+    --enable-zend-max-execution-timers
 ```
 
 ### Mac

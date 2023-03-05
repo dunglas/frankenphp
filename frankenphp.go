@@ -130,8 +130,9 @@ type FrankenPHPContext struct {
 	// Whether the request is already closed by us
 	closed sync.Once
 
-	responseWriter http.ResponseWriter
-	done           chan interface{}
+	responseWriter       http.ResponseWriter
+	done                 chan interface{}
+	currentWorkerRequest cgo.Handle
 }
 
 func clientHasClosed(r *http.Request) bool {
@@ -174,9 +175,16 @@ type PHPVersion struct {
 	VersionID      int
 }
 
+type PHPConfig struct {
+	Version                PHPVersion
+	ZTS                    bool
+	ZendSignals            bool
+	ZendMaxExecutionTimers bool
+}
+
 // Version returns infos about the PHP version.
 func Version() PHPVersion {
-	cVersion := C.frankenphp_version()
+	cVersion := C.frankenphp_get_version()
 
 	return PHPVersion{
 		int(cVersion.major_version),
@@ -185,6 +193,17 @@ func Version() PHPVersion {
 		C.GoString(cVersion.extra_version),
 		C.GoString(cVersion.version),
 		int(cVersion.version_id),
+	}
+}
+
+func Config() PHPConfig {
+	cConfig := C.frankenphp_get_config()
+
+	return PHPConfig{
+		Version:                Version(),
+		ZTS:                    bool(cConfig.zts),
+		ZendSignals:            bool(cConfig.zend_signals),
+		ZendMaxExecutionTimers: bool(cConfig.zend_max_execution_timers),
 	}
 }
 
@@ -238,18 +257,19 @@ func Init(options ...Option) error {
 		return NotEnoughThreads
 	}
 
-	switch C.frankenphp_check_version() {
-	case -1:
-		if opt.numThreads != 1 {
-			opt.numThreads = 1
-			logger.Warn(`ZTS is not enabled, only 1 thread will be available, recompile PHP using the "--enable-zts" configuration option or performance will be degraded`)
-		}
+	config := Config()
 
-	case -2:
+	if config.Version.MajorVersion < 8 || config.Version.MinorVersion < 2 {
 		return InvalidPHPVersionError
+	}
 
-	case -3:
-		return ZendSignalsError
+	if config.ZTS {
+		if !config.ZendMaxExecutionTimers && runtime.GOOS == "linux" {
+			logger.Warn(`Zend Timer is not enabled, "--enable-zend-timer" configuration option or timeouts (e.g. "max_execution_time") will not work as expected`)
+		}
+	} else {
+		opt.numThreads = 1
+		logger.Warn(`ZTS is not enabled, only 1 thread will be available, recompile PHP using the "--enable-zts" configuration option or performance will be degraded`)
 	}
 
 	shutdownWG.Add(1)
@@ -293,7 +313,7 @@ func getLogger() *zap.Logger {
 	return logger
 }
 
-func updateServerContext(request *http.Request, create bool) error {
+func updateServerContext(request *http.Request, create bool, mrh C.uintptr_t) error {
 	fc, ok := FromContext(request.Context())
 	if !ok {
 		return InvalidRequestError
@@ -333,9 +353,9 @@ func updateServerContext(request *http.Request, create bool) error {
 
 	cRequestUri := C.CString(request.URL.RequestURI())
 
-	var rh, mwrh cgo.Handle
+	var rh cgo.Handle
 	if fc.responseWriter == nil {
-		mwrh = cgo.NewHandle(request)
+		mrh = C.uintptr_t(cgo.NewHandle(request))
 	} else {
 		rh = cgo.NewHandle(request)
 	}
@@ -343,7 +363,7 @@ func updateServerContext(request *http.Request, create bool) error {
 	ret := C.frankenphp_update_server_context(
 		C.bool(create),
 		C.uintptr_t(rh),
-		C.uintptr_t(mwrh),
+		mrh,
 
 		cMethod,
 		cQueryString,
@@ -425,7 +445,7 @@ func go_execute_script(rh unsafe.Pointer) {
 	}
 	defer maybeCloseContext(fc)
 
-	if err := updateServerContext(request, true); err != nil {
+	if err := updateServerContext(request, true, 0); err != nil {
 		panic(err)
 	}
 
@@ -519,6 +539,7 @@ func go_write_header(rh C.uintptr_t, status C.int) {
 		return
 	}
 
+	// FIXME: http: superfluous response.WriteHeader call from github.com/dunglas/frankenphp.go_write_header
 	fc.responseWriter.WriteHeader(int(status))
 
 	if status >= 100 && status < 200 {

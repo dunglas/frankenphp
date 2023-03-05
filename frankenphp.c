@@ -2,16 +2,18 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <php_config.h>
 #include <php.h>
-#include <SAPI.h>
-#include <ext/standard/head.h>
 #include <php_main.h>
 #include <php_variables.h>
 #include <php_output.h>
+#include <SAPI.h>
 #include <Zend/zend_alloc.h>
 #include <Zend/zend_types.h>
 #include <Zend/zend_exceptions.h>
 #include <Zend/zend_interfaces.h>
+#include <ext/standard/head.h>
+#include <ext/spl/spl_exceptions.h>
 
 #include "C-Thread-Pool/thpool.h"
 #include "C-Thread-Pool/thpool.c"
@@ -23,10 +25,12 @@
 ZEND_TSRMLS_CACHE_DEFINE()
 #endif
 
-/* Timeouts are currently fundamentally broken with ZTS: https://bugs.php.net/bug.php?id=79464 */
+/* Timeouts are currently fundamentally broken with ZTS except on Linux: https://bugs.php.net/bug.php?id=79464 */
+#ifndef ZEND_MAX_EXECUTION_TIMERS
 static const char HARDCODED_INI[] =
 	"max_execution_time=0\n"
 	"max_input_time=-1\n\0";
+#endif
 
 static const char *MODULES_TO_RELOAD[] = {
 	"filter",
@@ -34,8 +38,8 @@ static const char *MODULES_TO_RELOAD[] = {
 	NULL
 };
 
-frankenphp_php_version frankenphp_version() {
-	return (frankenphp_php_version){
+frankenphp_version frankenphp_get_version() {
+	return (frankenphp_version){
 		PHP_MAJOR_VERSION,
 		PHP_MINOR_VERSION,
 		PHP_RELEASE_VERSION,
@@ -45,26 +49,31 @@ frankenphp_php_version frankenphp_version() {
 	};
 }
 
-int frankenphp_check_version() {
-#ifndef ZTS
-    return -1;
+frankenphp_config frankenphp_get_config() {
+	return (frankenphp_config){
+		frankenphp_get_version(),
+#ifdef ZTS
+		true,
+#else
+		false,
 #endif
-
-	if (PHP_VERSION_ID < 80200) {
-		return -2;
-	}
-
 #ifdef ZEND_SIGNALS
-	return -3;
+		true,
+#else
+		false,
 #endif
-
-	return SUCCESS;
+#ifdef ZEND_MAX_EXECUTION_TIMERS
+		true,
+#else
+		false,
+#endif
+	};
 }
 
 typedef struct frankenphp_server_context {
-	bool worker;
 	uintptr_t current_request;
-	uintptr_t main_request;				/* Only available during worker initialization */
+	uintptr_t main_request;
+	bool worker_ready;
 	char *cookie_data;
 	bool finished;
 } frankenphp_server_context;
@@ -82,16 +91,11 @@ static void frankenphp_request_reset() {
 }
 
 /* Adapted from php_request_shutdown */
-static void frankenphp_worker_request_shutdown(uintptr_t current_request) {
+static void frankenphp_worker_request_shutdown() {
 	/* Flush all output buffers */
 	zend_try {
 		php_output_end_all();
 	} zend_end_try();
-
-	/* Reset max_execution_time (no longer executing php code after response sent) */
-	/*zend_try {
-		zend_unset_timeout();
-	} zend_end_try();*/
 
 	// TODO: store the list of modules to reload in a global module variable
 	const char **module_name;
@@ -116,10 +120,7 @@ static void frankenphp_worker_request_shutdown(uintptr_t current_request) {
 		sapi_deactivate();
 	} zend_end_try();
 
-	if (current_request != 0) go_frankenphp_worker_handle_request_end(current_request, true);
-
 	zend_set_memory_limit(PG(memory_limit));
-
 }
 
 /* Adapted from php_request_startup() */
@@ -189,23 +190,25 @@ static int frankenphp_worker_request_startup() {
 
 PHP_FUNCTION(frankenphp_finish_request) { /* {{{ */
     if (zend_parse_parameters_none() == FAILURE) {
-    		RETURN_THROWS();
+		RETURN_THROWS();
     }
 
     frankenphp_server_context *ctx = SG(server_context);
 
-    if(!ctx->finished) {
-    	php_output_end_all();
-    	php_header();
+    if (ctx->finished) {
+		RETURN_FALSE;
+	}
 
-    	go_frankenphp_worker_handle_request_end(ctx->current_request, false);
-    	ctx->finished = true;
+	php_output_end_all();
+	php_header();
 
-    	RETURN_TRUE;
-    }
+	if (ctx->current_request != 0) {
+		go_frankenphp_finish_request(ctx->main_request, ctx->current_request, false);
+	}
 
-    RETURN_FALSE;
+	ctx->finished = true;
 
+	RETURN_TRUE;
 } /* }}} */
 
 PHP_FUNCTION(frankenphp_handle_request) {
@@ -218,23 +221,39 @@ PHP_FUNCTION(frankenphp_handle_request) {
 
 	frankenphp_server_context *ctx = SG(server_context);
 
-	uintptr_t previous_request = ctx->current_request;
-	if (ctx->main_request) {
-		/* Clean the first dummy request created to initialize the worker */
-		frankenphp_worker_request_shutdown(0);
+	if (ctx->main_request == 0) {
+		// not a worker, throw an error
+		zend_throw_exception(spl_ce_RuntimeException, "frankenphp_handle_request() called while not in worker mode", 0);
+		RETURN_THROWS();
+	}
 
-		previous_request = ctx->main_request;
+	if (!ctx->worker_ready) {
+		/* Clean the first dummy request created to initialize the worker */
+		frankenphp_worker_request_shutdown();
+
+		ctx->worker_ready = true;
 
 		/* Mark the worker as ready to handle requests */
 		go_frankenphp_worker_ready();
 	}
 
-	uintptr_t next_request = go_frankenphp_worker_handle_request_start(previous_request);
+#ifdef ZEND_MAX_EXECUTION_TIMERS
+	// Disable timeouts while waiting for a request to handle
+	zend_unset_timeout();
+#endif
+
+	uintptr_t request = go_frankenphp_worker_handle_request_start(ctx->main_request);
 	if (
 		frankenphp_worker_request_startup() == FAILURE
 			/* Shutting down */
-			|| !next_request
+			|| !request
 	) RETURN_FALSE;
+
+#ifdef ZEND_MAX_EXECUTION_TIMERS
+	// Reset default timeout
+	// TODO: add support for max_input_time
+	zend_set_timeout(INI_INT("max_execution_time"), 0);
+#endif
 
 	/* Call the PHP func */
 	zval retval = {0};
@@ -245,10 +264,12 @@ PHP_FUNCTION(frankenphp_handle_request) {
 	}
 
 	/* If an exception occured, print the message to the client before closing the connection */
-	if (EG(exception))
+	if (EG(exception)) {
 		zend_exception_error(EG(exception), E_ERROR);
+	}
 
-	frankenphp_worker_request_shutdown(next_request);
+	frankenphp_worker_request_shutdown();
+	go_frankenphp_finish_request(ctx->main_request, request, true);
 
 	RETURN_TRUE;
 }
@@ -319,7 +340,7 @@ uintptr_t frankenphp_request_shutdown()
 {
 	frankenphp_server_context *ctx = SG(server_context);
 
-	if (ctx->worker && ctx->current_request) {
+	if (ctx->main_request && ctx->current_request) {
 		frankenphp_request_reset();
 	}
 
@@ -358,31 +379,27 @@ int frankenphp_update_server_context(
 
 	if (create) {
 #ifdef ZTS
-	/* initial resource fetch */
-	(void)ts_resource(0);
+		/* initial resource fetch */
+		(void)ts_resource(0);
 # ifdef PHP_WIN32
-	ZEND_TSRMLS_CACHE_UPDATE();
+		ZEND_TSRMLS_CACHE_UPDATE();
 # endif
 #endif
 
-	/* todo: use a pool */
-	ctx = (frankenphp_server_context *) calloc(1, sizeof(frankenphp_server_context));
-	if (ctx == NULL) return FAILURE;
+		/* todo: use a pool */
+		ctx = (frankenphp_server_context *) calloc(1, sizeof(frankenphp_server_context));
+		if (ctx == NULL) return FAILURE;
 
-	ctx->worker = false;
-	ctx->current_request = 0;
-	ctx->main_request = 0;
-	ctx->cookie_data = NULL;
-	ctx->finished = false;
+		ctx->cookie_data = NULL;
+		ctx->finished = false;
 
-	SG(server_context) = ctx;
-	} else
+		SG(server_context) = ctx;
+	} else {
 		ctx = (frankenphp_server_context *) SG(server_context);
+	}
 
 	ctx->main_request = main_request;
 	ctx->current_request = current_request;
-
-	if (ctx->main_request) ctx->worker = true;
 
 	SG(request_info).auth_password = auth_password;
 	SG(request_info).auth_user = auth_user;
@@ -541,6 +558,7 @@ sapi_module_struct frankenphp_sapi_module = {
 
 static void *manager_thread(void *arg) {
 #ifdef ZTS
+	// TODO: use tsrm_startup() directly as we now the number of expected threads
 	php_tsrm_startup();
 	/*tsrm_error_set(TSRM_ERROR_LEVEL_INFO, NULL);*/
 # ifdef PHP_WIN32
@@ -550,8 +568,10 @@ static void *manager_thread(void *arg) {
 
     sapi_startup(&frankenphp_sapi_module);
 
+#ifndef ZEND_MAX_EXECUTION_TIMERS
 	frankenphp_sapi_module.ini_entries = malloc(sizeof(HARDCODED_INI));
 	memcpy(frankenphp_sapi_module.ini_entries, HARDCODED_INI, sizeof(HARDCODED_INI));
+#endif
 
 	frankenphp_sapi_module.startup(&frankenphp_sapi_module);
 

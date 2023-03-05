@@ -30,7 +30,8 @@ RUN apt-get update && \
     gdb \
     valgrind \
     neovim \
-    zsh && \
+    zsh \
+    libtool-bin && \
     echo 'set auto-load safe-path /' > /root/.gdbinit && \
     echo '* soft core unlimited' >> /etc/security/limits.conf \
     && \
@@ -44,6 +45,7 @@ RUN git clone --branch=PHP-8.2 https://github.com/php/php-src.git && \
         --enable-embed \
         --enable-zts \
         --disable-zend-signals \
+        --enable-zend-max-execution-timers \
         --enable-debug && \
     make -j$(nproc) && \
     make install && \
