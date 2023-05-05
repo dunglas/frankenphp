@@ -1,6 +1,6 @@
 # Building Custom Docker Image
 
-[FrankenPHP Docker images](https://hub.docker.com/repository/docker/dunglas/frankenphp) are based on [official PHP images](https://hub.docker.com/_/php/). Alpine Linux and Debian variants are provided for popular architectures.
+[FrankenPHP Docker images](https://hub.docker.com/r/dunglas/frankenphp) are based on [official PHP images](https://hub.docker.com/_/php/). Alpine Linux and Debian variants are provided for popular architectures.
 
 ## How to Use The Images
 
