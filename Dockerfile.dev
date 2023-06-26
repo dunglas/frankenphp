@@ -27,6 +27,8 @@ RUN apt-get update && \
     bison \
     # Dev tools \
     git \
+    clang \
+    llvm \
     gdb \
     valgrind \
     neovim \
