@@ -2,8 +2,8 @@ FROM php:8.2-zts-bullseye AS php-base
 
 FROM php-base AS builder
 
-COPY --from=golang:1.19-bullseye /usr/local/go/bin/go /usr/local/bin/go
-COPY --from=golang:1.19-bullseye /usr/local/go /usr/local/go
+COPY --from=golang:1.20-bullseye /usr/local/go/bin/go /usr/local/bin/go
+COPY --from=golang:1.20-bullseye /usr/local/go /usr/local/go
 
 # This is required to link the FrankenPHP binary to the PHP binary
 RUN apt-get update && \
