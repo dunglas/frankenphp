@@ -2,8 +2,8 @@ FROM php:8.2-zts-alpine3.18 AS php-base
 
 FROM php-base AS builder
 
-COPY --from=golang:1.19-alpine3.18 /usr/local/go/bin/go /usr/local/bin/go
-COPY --from=golang:1.19-alpine3.18 /usr/local/go /usr/local/go
+COPY --from=golang:1.20-alpine3.18 /usr/local/go/bin/go /usr/local/bin/go
+COPY --from=golang:1.20-alpine3.18 /usr/local/go /usr/local/go
 
 RUN apk add --no-cache --virtual .build-deps \
 		$PHPIZE_DEPS \
