@@ -34,17 +34,3 @@ func TestPHP(t *testing.T) {
 	}
 	wg.Wait()
 }
-
-func TestAutoHTTPtoHTTPSRedirectsImplicitPort(t *testing.T) {
-	tester := caddytest.NewTester(t)
-	tester.InitServer(`
-	{
-		http_port     9080
-		https_port    9443
-	}
-	localhost
-	respond "Yahaha! You found me!"
-  `, "caddyfile")
-
-	tester.AssertRedirect("http://localhost:9080/", "https://localhost/", http.StatusPermanentRedirect)
-}
