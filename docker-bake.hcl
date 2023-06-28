@@ -3,7 +3,7 @@ variable "REPO_NAME" {
 }
 
 group "default" {
-    targets = ["bullseye", "alpine"]
+    targets = ["bookworm", "alpine"]
 }
 
 target "common" {
@@ -14,11 +14,11 @@ target "common" {
 # FrankenPHP
 #
 
-target "bullseye" {
+target "bookworm" {
     inherits = ["common"]
     context = "."
     dockerfile = "Dockerfile"
-    tags = ["${REPO_NAME}:bullseye", "${REPO_NAME}:latest"]
+    tags = ["${REPO_NAME}:bookworm", "${REPO_NAME}:latest"]
 }
 
 target "alpine" {
