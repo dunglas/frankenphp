@@ -17,6 +17,7 @@ jobs:
         with:
           php-version: ${{ matrix.php-versions }}
           ini-file: development
+          coverage: none
         env:
           phpts: ts
       - name: config
