@@ -8,8 +8,6 @@ jobs:
     strategy:
       matrix:
         php-versions: ['8.2']
-    env:
-      CGO_CFLAGS: -I/usr/include/php -I/usr/include/php/Zend -I/usr/include/php/TSRM -I/usr/include/php/main
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
@@ -20,9 +18,15 @@ jobs:
           php-version: ${{ matrix.php-versions }}
         env:
           phpts: ts
-      - run: ls /usr/include/php
+      - name: Set include flags
+        run: echo "php-includes=$(php-config --includes)" >> "$GITHUB_ENV"
+      - run: env
       - name: Run library tests
         run: go test -race -v ./...
+        env:
+          CGO_CFLAGS: "${{ env.php-includes }}"
       - name: Run Caddy module tests
         working-directory: caddy/
         run: go test -race -v ./...
+        env:
+          CGO_CFLAGS: "${{ env.php-includes }}"
