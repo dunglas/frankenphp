@@ -19,14 +19,10 @@ jobs:
         env:
           phpts: ts
       - name: Set include flags
-        run: echo "php-includes=$(php-config --includes)" >> "$GITHUB_ENV"
+        run: echo "CGO_CFLAGS=$(php-config --includes)" >> "$GITHUB_ENV"
       - run: env
       - name: Run library tests
         run: go test -race -v ./...
-        env:
-          CGO_CFLAGS: "${{ env.php-includes }}"
       - name: Run Caddy module tests
         working-directory: caddy/
         run: go test -race -v ./...
-        env:
-          CGO_CFLAGS: "${{ env.php-includes }}"
