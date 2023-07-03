@@ -7,13 +7,15 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        php-versions: ['8.2', '8.3']
+        php-versions: ['8.2']
+    env:
+      CGO_CFLAGS: -I/usr/include/php -I/usr/include/php/Zend -I/usr/include/php/TSRM -I/usr/include/php/main
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
         with:
           go-version: '1.20'
-      - uses: dunglas/setup-php@feat/embed 
+      - uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php-versions }}
         env:
