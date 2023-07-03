@@ -16,8 +16,13 @@ jobs:
       - uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php-versions }}
+          ini-file: development
         env:
           phpts: ts
+      - name: config
+        run: |
+          php -m
+          php -i
       - name: Set include flags
         run: echo "CGO_CFLAGS=$(php-config --includes)" >> "$GITHUB_ENV"
       - run: env
