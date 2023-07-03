@@ -17,6 +17,7 @@ jobs:
         with:
           php-version: ${{ matrix.php-versions }}
           ini-file: development
+          ini-values: display_errors=On,
           coverage: none
         env:
           phpts: ts
@@ -26,7 +27,6 @@ jobs:
           php -i
       - name: Set include flags
         run: echo "CGO_CFLAGS=$(php-config --includes)" >> "$GITHUB_ENV"
-      - run: env
       - name: Run library tests
         run: go test -race -v ./...
       - name: Run Caddy module tests
