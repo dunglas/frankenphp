@@ -20,6 +20,7 @@ jobs:
           php-version: ${{ matrix.php-versions }}
         env:
           phpts: ts
+      - run: ls /usr/include/php
       - name: Run library tests
         run: go test -race -v ./...
       - name: Run Caddy module tests
