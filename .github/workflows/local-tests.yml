@@ -17,7 +17,7 @@ jobs:
         with:
           php-version: ${{ matrix.php-versions }}
           ini-file: development
-          ini-values: display_errors=On
+          ini-values: output_buffering=Off
           coverage: none
         env:
           phpts: ts
