@@ -569,8 +569,12 @@ static void *manager_thread(void *arg) {
     sapi_startup(&frankenphp_sapi_module);
 
 #ifndef ZEND_MAX_EXECUTION_TIMERS
+# if (PHP_VERSION_ID >= 80300)
+	frankenphp_sapi_module.ini_entries = HARDCODED_INI;
+# else
 	frankenphp_sapi_module.ini_entries = malloc(sizeof(HARDCODED_INI));
 	memcpy(frankenphp_sapi_module.ini_entries, HARDCODED_INI, sizeof(HARDCODED_INI));
+# endif
 #endif
 
 	frankenphp_sapi_module.startup(&frankenphp_sapi_module);
@@ -593,10 +597,12 @@ static void *manager_thread(void *arg) {
 	tsrm_shutdown();
 #endif
 
+#if (PHP_VERSION_ID < 80300)
 	if (frankenphp_sapi_module.ini_entries) {
 		free(frankenphp_sapi_module.ini_entries);
 		frankenphp_sapi_module.ini_entries = NULL;
 	}
+#endif
 
 	go_shutdown();
 
