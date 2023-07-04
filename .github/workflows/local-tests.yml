@@ -24,8 +24,8 @@ jobs:
           debug: true
       - name: Update php.ini
         run: |
-          rm -Rf /etc/php/${{ matrix.php-versions }}/embed/conf.d/*
-          echo 'output_buffering=Off' > /etc/php/${{ matrix.php-versions }}/embed/php.ini
+          sudo rm -Rf /etc/php/8.2/embed/conf.d/*
+          sudo echo 'output_buffering=Off' > /etc/php/8.2/embed/php.ini
       - name: Set include flags
         run: echo "CGO_CFLAGS=$(php-config --includes)" >> "$GITHUB_ENV"
       #- name: Setup tmate session
