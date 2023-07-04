@@ -19,7 +19,7 @@ jobs:
           ini-file: development
           ini-values: output_buffering=Off
           extensions: none
-          coverage: none
+          coverage: none opcache
         env:
           phpts: ts
           debug: true
