@@ -1,94 +1,31 @@
-name: Tests
-on:
-  pull_request:
-    branches:
-      - main
+name: Run tests locally
+
+on: [push, pull_request]
+
 jobs:
-  docker-tests:
+  tests:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        dockerfile: [ "Dockerfile", "Dockerfile.alpine" ]
+        php-versions: ['8.2']
     steps:
       - uses: actions/checkout@v3
-
-      - name: Set up Docker Buildx
-        id: buildx
-        uses: docker/setup-buildx-action@v2
+      - uses: actions/setup-go@v4
         with:
-          install: true
-
-      - name: Build test image
-        uses: docker/build-push-action@v4
+          go-version: '1.20'
+      - uses: shivammathur/setup-php@v2
         with:
-          context: ./
-          file: ${{ matrix.dockerfile }}
-          push: false
-          pull: true
-          target: builder
-          tags: frankenphp:${{ github.sha }}-builder
-          builder: ${{ steps.buildx.outputs.name }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          outputs: type=docker,dest=/tmp/.builder.tar
-
-      - name: Run tests
-        run: |
-          docker load -i /tmp/.builder.tar
-          docker run --rm frankenphp:${{ github.sha }}-builder "sh -c 'go test -race -v ./... && cd caddy && go test -race -v ./...'"
-  push-image:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        dockerfile: [ "Dockerfile", "Dockerfile.alpine" ]
-        include:
-          - dockerfile: Dockerfile
-            flavor: ""
-          - dockerfile: Dockerfile.alpine
-            flavor: "-alpine"
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Docker meta
-        id: meta
-        uses: docker/metadata-action@v4
-        with:
-          flavor: |
-            suffix=${{matrix.flavor}}
-          # list of Docker images to use as base name for tags
-          images: |
-            frankenphp
-          # generate Docker tags based on the following events/attributes
-          tags: |
-            type=schedule
-            type=ref,event=branch
-            type=ref,event=pr
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=semver,pattern={{major}}
-            type=raw,value=latest
-            type=sha
-
-      - name: Set up Docker Buildx
-        id: buildx
-        uses: docker/setup-buildx-action@v2
-        with:
-          install: true
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v2
-
-      - name: Build Image
-        uses: docker/build-push-action@v4
-        with:
-          context: ./
-          file: ${{ matrix.dockerfile }}
-          push: false
-          pull: true
-          target: final
-          platforms: linux/amd64,linux/arm64
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          builder: ${{ steps.buildx.outputs.name }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          php-version: ${{ matrix.php-versions }}
+          ini-file: development
+          ini-values: output_buffering=Off
+          extensions: none
+          coverage: none opcache
+        env:
+          phpts: ts
+      - name: Set include flags
+        run: echo "CGO_CFLAGS=$(php-config --includes)" >> "$GITHUB_ENV"
+      - name: Run library tests
+        run: go test -race -v ./...
+      - name: Run Caddy module tests
+        working-directory: caddy/
+        run: go test -race -v ./...
