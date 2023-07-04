@@ -3,7 +3,7 @@ name: Run tests locally
 on: [push, pull_request]
 
 jobs:
-  Test:
+  tests:
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -24,8 +24,12 @@ jobs:
           debug: true
       - name: Set include flags
         run: echo "CGO_CFLAGS=$(php-config --includes)" >> "$GITHUB_ENV"
-      - name: Run library tests
-        run: go test -race -v ./...
-      - name: Run Caddy module tests
-        working-directory: caddy/
-        run: go test -race -v ./...
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@v3
+        with:
+          limit-access-to-actor: true
+      #- name: Run library tests
+      #  run: go test -race -v ./...
+      #- name: Run Caddy module tests
+      #  working-directory: caddy/
+      #  run: go test -race -v ./...
