@@ -16,8 +16,8 @@ jobs:
           php-version: ${{ matrix.php-versions }}
           ini-file: development
           ini-values: output_buffering=Off
-          extensions: none
-          coverage: none opcache
+          extensions: none opcache
+          coverage: none
         env:
           phpts: ts
       - name: Set include flags
