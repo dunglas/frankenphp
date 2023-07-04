@@ -25,6 +25,7 @@ RUN apt-get update && \
     libxml2-dev \
     zlib1g-dev \
     bison \
+    libnss3-tools \
     # Dev tools \
     git \
     clang \
@@ -42,7 +43,7 @@ RUN apt-get update && \
 RUN git clone --branch=PHP-8.2 https://github.com/php/php-src.git && \
     cd php-src && \
     # --enable-embed is only necessary to generate libphp.so, we don't use this SAPI directly
-    ./buildconf && \
+    ./buildconf --force && \
     ./configure \
         --enable-embed \
         --enable-zts \

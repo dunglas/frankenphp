@@ -335,6 +335,7 @@ func testSession(t *testing.T, opts *testOptions) {
 func TestPhpInfo_module(t *testing.T) { testPhpInfo(t, nil) }
 func TestPhpInfo_worker(t *testing.T) { testPhpInfo(t, &testOptions{workerScript: "phpinfo.php"}) }
 func testPhpInfo(t *testing.T, opts *testOptions) {
+	var logOnce sync.Once
 	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
 		req := httptest.NewRequest("GET", fmt.Sprintf("http://example.com/phpinfo.php?i=%d", i), nil)
 		w := httptest.NewRecorder()
@@ -342,6 +343,10 @@ func testPhpInfo(t *testing.T, opts *testOptions) {
 
 		resp := w.Result()
 		body, _ := io.ReadAll(resp.Body)
+
+		logOnce.Do(func() {
+			t.Log(string(body))
+		})
 
 		assert.Contains(t, string(body), "frankenphp")
 		assert.Contains(t, string(body), fmt.Sprintf("i=%d", i))
@@ -595,7 +600,10 @@ func testFlush(t *testing.T, opts *testOptions) {
 	}, opts)
 }
 
-func TestTimeout_module(t *testing.T) { testTimeout(t, &testOptions{}) }
+func TestTimeout_module(t *testing.T) {
+	testTimeout(t, &testOptions{})
+}
+
 func TestTimeout_worker(t *testing.T) {
 	t.Skip("Race condition")
 

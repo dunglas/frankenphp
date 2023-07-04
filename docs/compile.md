@@ -9,7 +9,7 @@ First, get the sources of PHP:
 ```
 curl -L https://github.com/php/php-src/archive/refs/heads/PHP-8.2.tar.gz | tar xz
 cd php-src-PHP-8.2
-./buildconf
+./buildconf -f
 ```
 
 Then, configure PHP for your platform:
@@ -56,7 +56,7 @@ Finally, compile PHP:
 
 ```
 make -j$(nproc)
-make install
+sudo make install
 ```
 
 #### Compile the Go App
@@ -64,7 +64,7 @@ make install
 You can now use the Go lib and compile our Caddy build:
 
 ```
-git clone --recursive git@github.com:dunglas/frankenphp.git
+git clone git@github.com:dunglas/frankenphp.git
 cd frankenphp/caddy/frankenphp
 go build
 ```
