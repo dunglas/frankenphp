@@ -601,8 +601,6 @@ func testFlush(t *testing.T, opts *testOptions) {
 }
 
 func TestTimeout_module(t *testing.T) {
-	//t.Skip("segfault with setup-php")
-
 	testTimeout(t, &testOptions{})
 }
 

@@ -35,7 +35,7 @@ import (
 
 	"go.uber.org/zap"
 	// debug on Linux
-	_ "github.com/ianlancetaylor/cgosymbolizer"
+	//_ "github.com/ianlancetaylor/cgosymbolizer"
 )
 
 type key int

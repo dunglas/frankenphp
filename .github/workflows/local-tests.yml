@@ -17,19 +17,23 @@ jobs:
         with:
           php-version: ${{ matrix.php-versions }}
           ini-file: development
-          ini-values: output_buffering=Off
+          #ini-values: output_buffering=Off
           coverage: none
         env:
           phpts: ts
           debug: true
+      - name: Update php.ini
+        run: |
+          rm -Rf /etc/php/${{ matrix.php-versions }}/embed/conf.d/*
+          echo 'output_buffering=Off' > /etc/php/${{ matrix.php-versions }}/embed/php.ini
       - name: Set include flags
         run: echo "CGO_CFLAGS=$(php-config --includes)" >> "$GITHUB_ENV"
-      - name: Setup tmate session
-        uses: mxschmitt/action-tmate@v3
-        with:
-          limit-access-to-actor: true
-      #- name: Run library tests
-      #  run: go test -race -v ./...
-      #- name: Run Caddy module tests
-      #  working-directory: caddy/
-      #  run: go test -race -v ./...
+      #- name: Setup tmate session
+      #  uses: mxschmitt/action-tmate@v3
+      #  with:
+      #    limit-access-to-actor: true
+      - name: Run library tests
+        run: go test -race -v ./...
+      - name: Run Caddy module tests
+        working-directory: caddy/
+        run: go test -race -v ./...
