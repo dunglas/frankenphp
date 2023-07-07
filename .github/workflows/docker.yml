@@ -11,35 +11,179 @@ on:
   workflow_dispatch:
     inputs: {}
 jobs:
-  build:
+  prepare:
     runs-on: ubuntu-latest
+    outputs:
+      # Push only if we're committing in the main branch
+      push: ${{toJson(github.ref == 'refs/heads/main' && github.event_name != 'pull_request')}}
+      variants: ${{ steps.matrix.outputs.variants }}
+      platforms: ${{ steps.matrix.outputs.platforms }}
+      metadata: ${{ steps.matrix.outputs.metadata }}
     steps:
       - uses: actions/checkout@v3
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
+        with:
+          version: latest
+
+      - name: Create variants matrix
+        id: matrix 
+        run: |
+          METADATA=$(docker buildx bake --print)
+          echo "variants=$(jq -c '.group.default.targets|map(sub("runner-|builder-"; ""))|unique' <<< $METADATA)" >> "$GITHUB_OUTPUT"
+          echo "platforms=$(jq -c 'first(.target[]) | .platforms' <<< $METADATA)" >> "$GITHUB_OUTPUT"
+          echo "metadata=$(jq -c <<< $METADATA)" >> "$GITHUB_OUTPUT"
+        env:
+          LATEST: '1' # TODO: unset this variable when releasing the first tagged version
+          SHA: ${{github.sha}}
+          VERSION: ${{github.ref_name}}
+
+  build:
+    runs-on: ubuntu-latest
+    needs:
+      - prepare
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: ${{ fromJson(needs.prepare.outputs.variants) }}
+        platform: ${{ fromJson(needs.prepare.outputs.platforms) }}
+        include:
+          - race: ""
+            qemu: true
+          - platform: linux/amd64
+            qemu: false
+            race: "-race" # The Go race detector is only supported on amd64
+          - platform: linux/386
+            qemu: false
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up QEMU
+        if: matrix.qemu
+        uses: docker/setup-qemu-action@v2
+        with:
+          platforms: ${{matrix.platform}}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+        with:
+          platforms: ${{matrix.platform}}
+          version: latest
+
       - name: Login to DockerHub
-        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        if: fromJson(needs.prepare.outputs.push)
         uses: docker/login-action@v2
         with:
-          #registry: ${{secrets.REGISTRY_LOGIN_SERVER}}
           username: ${{secrets.REGISTRY_USERNAME}}
           password: ${{secrets.REGISTRY_PASSWORD}}
-      - name: Build for amd64
+
+      - name: Build
+        id: build
         uses: docker/bake-action@v3
         with:
           pull: true
-          load: true
-          set: "*.platform=linux/amd64"
-      - name: Build for all platforms
-        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
-        uses: docker/bake-action@v3
+          targets: |
+            builder-${{matrix.variant}}
+            runner-${{matrix.variant}}
+          # Remove tags to prevent "can't push tagged ref [...] by digest" error
+          set: |
+            *.tags=
+            *.platform=${{matrix.platform}}
+            *.cache-from=type=gha,scope=${{github.ref}}-${{matrix.platform}}
+            *.cache-from=type=gha,scope=refs/heads/main-${{matrix.platform}}
+            *.cache-to=type=gha,scope=${{github.ref}}-${{matrix.platform}}
+            *.output=type=image,name=dunglas/frankenphp,push-by-digest=true,name-canonical=true,push=${{ needs.prepare.outputs.push }}
+        env:
+          LATEST: '1' # TODO: unset this variable when releasing the first tagged version
+          SHA: ${{github.sha}}
+          VERSION: ${{github.ref_name}}
+
+      # Workaround for https://github.com/actions/runner/pull/2477#issuecomment-1501003600
+      - name: Export metadata
+        if: fromJson(needs.prepare.outputs.push)
+        run: |
+          mkdir -p /tmp/metadata/builder /tmp/metadata/runner
+
+          builderDigest=$(jq -r '."builder-${{matrix.variant}}"."containerimage.digest"' <<< $METADATA)
+          touch "/tmp/metadata/builder/${builderDigest#sha256:}"
+  
+          runnerDigest=$(jq -r '."runner-${{matrix.variant}}"."containerimage.digest"' <<< $METADATA)
+          touch "/tmp/metadata/runner/${runnerDigest#sha256:}"
+        env:
+          METADATA: ${{steps.build.outputs.metadata}}
+
+      - name: Upload runner metadata
+        if: fromJson(needs.prepare.outputs.push)
+        uses: actions/upload-artifact@v3
         with:
-          pull: true
-          push: true
-      - run: docker image ls
-      - name: Run tests on Debian Bookworm
+          name: metadata-builder-${{matrix.variant}}
+          path: /tmp/metadata/builder/*
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: Upload runner metadata
+        if: fromJson(needs.prepare.outputs.push)
+        uses: actions/upload-artifact@v3
+        with:
+          name: metadata-runner-${{matrix.variant}}
+          path: /tmp/metadata/runner/*
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: Run tests
+        if: '!matrix.qemu'
+        continue-on-error: true
         run: |
-          docker run --rm dunglas/frankenphp:builder-bookworm "sh -c 'go test -race -v ./... && cd caddy && go test -race -v ./...'"
-      - name: Run tests on Alpine
+          docker run --platform=${{matrix.platform}} --rm \
+            dunglas/frankenphp@$(jq -r '."builder-${{matrix.variant}}"."containerimage.digest"' <<< $METADATA) \
+            "sh -c 'go test ${{matrix.race}} -v ./... && cd caddy && go test ${{matrix.race}} -v ./...'"
+        env:
+          METADATA: ${{steps.build.outputs.metadata}}
+
+  # Adapted from https://docs.docker.com/build/ci/github-actions/multi-platform/
+  push:
+    runs-on: ubuntu-latest    
+    needs:
+      - prepare
+      - build
+    if: fromJson(needs.prepare.outputs.push)
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: ${{ fromJson(needs.prepare.outputs.variants) }}
+        target: ['builder', 'runner']
+    steps:
+      - name: Download metadata
+        uses: actions/download-artifact@v3
+        with:
+          name: metadata-${{matrix.target}}-${{matrix.variant}}
+          path: /tmp/metadata
+
+      - run: ls -R /tmp/metadata
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+        with:
+          version: latest
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v2
+        with:
+          username: ${{secrets.REGISTRY_USERNAME}}
+          password: ${{secrets.REGISTRY_PASSWORD}}
+
+      - name: Create manifest list and push
+        working-directory: /tmp/metadata
         run: |
-          docker run --rm dunglas/frankenphp:builder-alpine "sh -c 'go test -race -v ./... && cd caddy && go test -race -v ./...'"
+          docker buildx imagetools create $(jq -cr '.target."${{matrix.target}}-${{matrix.variant}}".tags | map("-t " + .) | join(" ")' <<< $METADATA) \
+            $(printf 'dunglas/frankenphp@sha256:%s ' *)
+        env:
+          METADATA: ${{needs.prepare.outputs.metadata}}
+
+      - name: Inspect image
+        run: |
+          docker buildx imagetools inspect $(jq -cr '.target."${{matrix.target}}-${{matrix.variant}}".tags | first' <<< $METADATA) 
+        env:
+          METADATA: ${{needs.prepare.outputs.metadata}}
+  
