@@ -1,10 +1,10 @@
-/.git/
-/.github/
-/.gitmodules/
-/.idea/
-/.vscode/
-/docs/
-/*Dockerfile*
-/.*ignore
-/*.hcl
-/*.md
+# ignored
+**/*
+
+# authorized
+!**/Caddyfile
+!**/*.go
+!**/go.*
+!**/*.c
+!**/*.h
+!testdata/*.php

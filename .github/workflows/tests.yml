@@ -8,9 +8,11 @@ jobs:
         php-versions: ['8.2', '8.3']
     steps:
       - uses: actions/checkout@v3
+
       - uses: actions/setup-go@v4
         with:
           go-version: '1.20'
+
       - uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php-versions }}
@@ -19,10 +21,13 @@ jobs:
           coverage: none
         env:
           phpts: ts
+
       - name: Set include flags
         run: echo "CGO_CFLAGS=$(php-config --includes)" >> "$GITHUB_ENV"
+
       - name: Run library tests
         run: go test -race -v ./...
+
       - name: Run Caddy module tests
         working-directory: caddy/
         run: go test -race -v ./...
