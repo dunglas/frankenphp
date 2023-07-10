@@ -3,7 +3,6 @@ module github.com/dunglas/frankenphp
 go 1.20
 
 require (
-	github.com/ianlancetaylor/cgosymbolizer v0.0.0-20230328201059-365e72989107
 	github.com/stretchr/testify v1.8.0
 	go.uber.org/zap v1.24.0
 	golang.org/x/net v0.0.0-20221004154528-8021a29435af
