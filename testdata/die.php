@@ -5,5 +5,5 @@ do {
         echo 'Hello, world';
     });
 
-    die('Hello');
+    die();
 } while ($ok);
