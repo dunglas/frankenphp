@@ -53,9 +53,9 @@ RUN git clone --branch=PHP-8.2 https://github.com/php/php-src.git && \
     make -j$(nproc) && \
     make install && \
     ldconfig && \
+    cp php.ini-development /usr/local/lib/php.ini && \
+    echo "zend_extension=opcache.so\nopcache.enable=1" >> /usr/local/lib/php.ini &&\
     php --version
-
-RUN echo "zend_extension=opcache.so\nopcache.enable=1" > /usr/local/lib/php.ini
 
 WORKDIR /go/src/app
 
