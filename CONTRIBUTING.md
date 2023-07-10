@@ -78,6 +78,45 @@ Build FrankenPHP images from scratch for arm64 & amd64 and push to Docker Hub:
 docker buildx bake -f docker-bake.hcl --pull --no-cache --push
 ```
 
+## Debugging Segmentation Faults in GitHub Actions
+
+1. Open `.github/workflows/tests.yml`
+2. Enable PHP debug symbols
+    ```patch
+        - uses: shivammathur/setup-php@v2
+          # ...
+          env:
+            phpts: ts
+    +       debug: true
+    ```
+3. Enable `tmate` to connect to the container
+    ```patch
+        - name: Set include flags
+          run: echo "CGO_CFLAGS=$(php-config --includes)" >> "$GITHUB_ENV"
+    +   - run: |
+            sudo apt install gdb
+    +       mkdir -p /home/runner/.config/gdb/
+    +       printf "set auto-load safe-path /\nhandle SIG34 nostop noprint pass" > /home/runner/.config/gdb/gdbinit
+    +   - uses: mxschmitt/action-tmate@v3
+    +     env:
+    +       GOFLAGS: "-w -gcflags=all=-N -gcflags=all=-l"
+    ```
+4. Open `frankenphp.go`
+5. Enable `cgosymbolizer`
+    ```patch
+    -	//_ "github.com/ianlancetaylor/cgosymbolizer"
+    +	_ "github.com/ianlancetaylor/cgosymbolizer"
+    ```
+6. Download the module: `go get`
+7. In the container, you can use GDB and the like:
+    ```sh
+    sudo apt install gdb
+    mkdir -p /home/runner/.config/gdb/
+    go test -c -ldflags=-w
+    gdb --args ./frankenphp.test -test.run ^MyTest$
+    ```
+8. When the bug is fixed, revert all these changes
+
 ## Misc Dev Resources
 
 * [PHP embedding in uWSGI](https://github.com/unbit/uwsgi/blob/master/plugins/php/php_plugin.c)
