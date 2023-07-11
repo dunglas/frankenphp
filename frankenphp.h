@@ -32,7 +32,7 @@ int frankenphp_update_server_context(
 
 	const char *request_method,
 	char *query_string,
-	int64_t content_length,
+	zend_long content_length,
 	char *path_translated,
 	char *request_uri,
 	const char *content_type,
