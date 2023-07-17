@@ -240,7 +240,8 @@ func Init(options ...Option) error {
 	var numWorkers int
 	for i, w := range opt.workers {
 		if w.num <= 0 {
-			opt.workers[i].num = numCPU
+			// https://github.com/dunglas/frankenphp/issues/126
+			opt.workers[i].num = numCPU * 2
 		}
 
 		numWorkers += opt.workers[i].num
