@@ -87,4 +87,7 @@ target "default" {
         "org.opencontainers.image.version" = VERSION
         "org.opencontainers.image.revision" = SHA
     }
+    args = {
+        FRANKENPHP_VERSION = VERSION
+    }
 }

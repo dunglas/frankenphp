@@ -28,12 +28,12 @@ jobs:
           version: latest
 
       - name: Create variants matrix
-        id: matrix 
+        id: matrix
         run: |
-          METADATA=$(docker buildx bake --print)
+          METADATA=$(docker buildx bake --print | jq -c)
+          echo "metadata=$METADATA" >> "$GITHUB_OUTPUT"
           echo "variants=$(jq -c '.group.default.targets|map(sub("runner-|builder-"; ""))|unique' <<< $METADATA)" >> "$GITHUB_OUTPUT"
           echo "platforms=$(jq -c 'first(.target[]) | .platforms' <<< $METADATA)" >> "$GITHUB_OUTPUT"
-          echo "metadata=$(jq -c <<< $METADATA)" >> "$GITHUB_OUTPUT"
         env:
           LATEST: '1' # TODO: unset this variable when releasing the first tagged version
           SHA: ${{github.sha}}
@@ -83,6 +83,7 @@ jobs:
         uses: docker/bake-action@v3
         with:
           pull: true
+          load: ${{!fromJson(needs.prepare.outputs.push)}}
           targets: |
             builder-${{matrix.variant}}
             runner-${{matrix.variant}}
@@ -93,7 +94,7 @@ jobs:
             *.cache-from=type=gha,scope=${{github.ref}}-${{matrix.platform}}
             *.cache-from=type=gha,scope=refs/heads/main-${{matrix.platform}}
             *.cache-to=type=gha,scope=${{github.ref}}-${{matrix.platform}}
-            *.output=type=image,name=dunglas/frankenphp,push-by-digest=true,name-canonical=true,push=${{ needs.prepare.outputs.push }}
+            ${{fromJson(needs.prepare.outputs.push) && '*.output=type=image,name=dunglas/frankenphp,push-by-digest=true,name-canonical=true,push=true' || ''}}
         env:
           LATEST: '1' # TODO: unset this variable when releasing the first tagged version
           SHA: ${{github.sha}}
@@ -133,11 +134,11 @@ jobs:
 
       - name: Run tests
         if: '!matrix.qemu'
-        continue-on-error: true
+        continue-on-error: ${{fromJson(needs.prepare.outputs.push)}}
         run: |
           docker run --platform=${{matrix.platform}} --rm \
-            dunglas/frankenphp@$(jq -r '."builder-${{matrix.variant}}"."containerimage.digest"' <<< $METADATA) \
-            "sh -c 'go test ${{matrix.race}} -v ./... && cd caddy && go test ${{matrix.race}} -v ./...'"
+            $(jq -r '."builder-${{matrix.variant}}"."containerimage.config.digest"' <<< $METADATA) \
+            "sh -c 'frankenphp version && go test ${{matrix.race}} -v ./... && cd caddy && go test ${{matrix.race}} -v ./...'"
         env:
           METADATA: ${{steps.build.outputs.metadata}}
 
@@ -159,8 +160,6 @@ jobs:
         with:
           name: metadata-${{matrix.target}}-${{matrix.variant}}
           path: /tmp/metadata
-
-      - run: ls -R /tmp/metadata
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2

@@ -1,6 +1,8 @@
 # syntax=docker/dockerfile:1
 FROM php-base AS builder
 
+ARG FRANKENPHP_VERSION='dev'
+
 COPY --from=golang-base /usr/local/go/bin/go /usr/local/bin/go
 COPY --from=golang-base /usr/local/go /usr/local/go
 
@@ -40,7 +42,7 @@ COPY testdata testdata
 ENV CGO_LDFLAGS="-lssl -lcrypto -lreadline -largon2 -lcurl -lonig -lz $PHP_LDFLAGS" CGO_CFLAGS=$PHP_CFLAGS CGO_CPPFLAGS=$PHP_CPPFLAGS
 
 RUN cd caddy/frankenphp && \
-    go build && \
+    go build -ldflags "-X 'github.com/caddyserver/caddy/v2.CustomVersion=FrankenPHP $FRANKENPHP_VERSION Caddy'" && \
     cp frankenphp /usr/local/bin && \
     cp /go/src/app/caddy/frankenphp/Caddyfile /etc/Caddyfile
 
