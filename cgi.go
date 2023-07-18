@@ -86,7 +86,7 @@ func populateEnv(request *http.Request) error {
 	if scriptName != "" && !strings.HasPrefix(scriptName, "/") {
 		scriptName = "/" + scriptName
 	}
-	
+
 	if _, ok := fc.Env["PHP_SELF"]; !ok {
 		fc.Env["PHP_SELF"] = fpath
 	}
@@ -134,8 +134,18 @@ func populateEnv(request *http.Request) error {
 			// compliance with the CGI specification requires that
 			// SERVER_PORT should only exist if it's a valid numeric value.
 			// Info: https://www.ietf.org/rfc/rfc3875 Page 18
-			if !serverPortOk && reqPort != "" {
-				fc.Env["SERVER_PORT"] = reqPort
+			if !serverPortOk {
+				// compliance with the CGI specification requires that
+				// the SERVER_PORT variable MUST be set to the TCP/IP port number on which this request is received from the client
+				// even if the port is the default port for the scheme and could otherwise be omitted from a URI.
+				// https://tools.ietf.org/html/rfc3875#section-4.1.15
+				if reqPort != "" {
+					fc.Env["SERVER_PORT"] = reqPort
+				} else if fc.Env["REQUEST_SCHEME"] == "http" {
+					fc.Env["SERVER_PORT"] = "80"
+				} else if fc.Env["REQUEST_SCHEME"] == "https" {
+					fc.Env["SERVER_PORT"] = "443"
+				}
 			}
 		} else if !serverNameOk {
 			// whatever, just assume there was no port
