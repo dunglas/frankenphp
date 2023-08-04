@@ -11,24 +11,31 @@ import (
 
 func TestPHP(t *testing.T) {
 	var wg sync.WaitGroup
-	caddytest.Default.AdminPort = 2019
 	tester := caddytest.NewTester(t)
 	tester.InitServer(`
 		{
+			skip_install_trust
 			admin localhost:2999
 			http_port 9080
 			https_port 9443
+
+			frankenphp
 		}
 
 		localhost:9080 {
-			respond "Hello"
+			route {
+				php {
+					root ../testdata
+				}
+			}
 		}
 		`, "caddyfile")
 
-	wg.Add(100)
 	for i := 0; i < 100; i++ {
+		wg.Add(1)
+
 		go func(i int) {
-			tester.AssertGetResponse(fmt.Sprintf("http://localhost:9080?i=%d", i), http.StatusOK, fmt.Sprintf("I am by birth a Genevese (%d)", i))
+			tester.AssertGetResponse(fmt.Sprintf("http://localhost:9080/index.php?i=%d", i), http.StatusOK, fmt.Sprintf("I am by birth a Genevese (%d)", i))
 			wg.Done()
 		}(i)
 	}
