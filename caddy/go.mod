@@ -18,6 +18,7 @@ require (
 	github.com/dunglas/frankenphp v0.0.0-20230718125822-91f66201513a
 	github.com/dunglas/mercure/caddy v0.14.10
 	github.com/dunglas/vulcain/caddy v0.4.3
+	go.uber.org/automaxprocs v1.5.3
 	go.uber.org/zap v1.25.0
 )
 
