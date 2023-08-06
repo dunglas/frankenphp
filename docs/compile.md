@@ -4,12 +4,11 @@
 
 FrankenPHP is compatible with the PHP 8.2 and superior.
 
-First, get the sources of PHP:
+First, [get the sources of PHP](https://www.php.net/downloads.php) and extract them:
 
 ```
-curl -L https://github.com/php/php-src/archive/refs/heads/PHP-8.2.tar.gz | tar xz
-cd php-src-PHP-8.2
-./buildconf -f
+tar xf php-*
+cd php-*/
 ```
 
 Then, configure PHP for your platform:
@@ -64,7 +63,7 @@ sudo make install
 You can now use the Go lib and compile our Caddy build:
 
 ```
-git clone git@github.com:dunglas/frankenphp.git
-cd frankenphp/caddy/frankenphp
-go build
+curl -L https://github.com/dunglas/frankenphp/archive/refs/heads/main.tar.gz | tar x
+cd frankenphp-main/caddy/frankenphp
+CGO_CFLAGS=$(php-config --includes) go build
 ```
