@@ -108,7 +108,6 @@ func startWorkers(fileName string, nbWorkers int) error {
 func stopWorkers() {
 	workersRequestChans.Range(func(k, v any) bool {
 		workersRequestChans.Delete(k)
-		close(v.(chan *http.Request))
 
 		return true
 	})
@@ -135,12 +134,14 @@ func go_frankenphp_worker_handle_request_start(mrh C.uintptr_t) C.uintptr_t {
 	l := getLogger()
 
 	l.Debug("waiting for request", zap.String("worker", fc.Env["SCRIPT_FILENAME"]))
-	r, ok := <-rc
-	if !ok {
-		// channel closed, server is shutting down
+
+	var r *http.Request
+	select {
+	case <-done:
 		l.Debug("shutting down", zap.String("worker", fc.Env["SCRIPT_FILENAME"]))
 
 		return 0
+	case r = <-rc:
 	}
 
 	fc.currentWorkerRequest = cgo.NewHandle(r)

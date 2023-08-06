@@ -525,13 +525,10 @@ func testFlush(t *testing.T, opts *testOptions) {
 func TestTimeout_module(t *testing.T) {
 	testTimeout(t, &testOptions{})
 }
-
 func TestTimeout_worker(t *testing.T) {
 	testTimeout(t, &testOptions{workerScript: "timeout.php"})
 }
 func testTimeout(t *testing.T, opts *testOptions) {
-	t.Skip("config-dependant")
-
 	config := frankenphp.Config()
 	if !config.ZendMaxExecutionTimers {
 		t.Skip("Zend Timer is not enabled")
