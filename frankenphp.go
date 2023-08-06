@@ -54,6 +54,7 @@ var (
 	ScriptExecutionError        = errors.New("error during PHP script execution")
 
 	requestChan chan *http.Request
+	done        chan struct{}
 	shutdownWG  sync.WaitGroup
 
 	loggerMu sync.RWMutex
@@ -274,6 +275,7 @@ func Init(options ...Option) error {
 	}
 
 	shutdownWG.Add(1)
+	done = make(chan struct{})
 	requestChan = make(chan *http.Request)
 
 	if C.frankenphp_init(C.int(opt.numThreads)) != 0 {
@@ -295,7 +297,7 @@ func Init(options ...Option) error {
 // Shutdown stops the workers and the PHP runtime.
 func Shutdown() {
 	stopWorkers()
-	close(requestChan)
+	close(done)
 	shutdownWG.Wait()
 	requestChan = nil
 
@@ -410,8 +412,9 @@ func ServeHTTP(responseWriter http.ResponseWriter, request *http.Request) error 
 		rc = v.(chan *http.Request)
 	}
 
-	if rc != nil {
-		rc <- request
+	select {
+	case <-done:
+	case rc <- request:
 		<-fc.done
 	}
 
@@ -420,12 +423,13 @@ func ServeHTTP(responseWriter http.ResponseWriter, request *http.Request) error 
 
 //export go_fetch_request
 func go_fetch_request() C.uintptr_t {
-	r, ok := <-requestChan
-	if !ok {
+	select {
+	case <-done:
 		return 0
-	}
 
-	return C.uintptr_t(cgo.NewHandle(r))
+	case r := <-requestChan:
+		return C.uintptr_t(cgo.NewHandle(r))
+	}
 }
 
 func maybeCloseContext(fc *FrankenPHPContext) {
