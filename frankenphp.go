@@ -235,24 +235,24 @@ func Init(options ...Option) error {
 		loggerMu.Unlock()
 	}
 
-	numCPU := runtime.NumCPU()
+	maxProcs := runtime.GOMAXPROCS(0)
 
 	var numWorkers int
 	for i, w := range opt.workers {
 		if w.num <= 0 {
 			// https://github.com/dunglas/frankenphp/issues/126
-			opt.workers[i].num = numCPU * 2
+			opt.workers[i].num = maxProcs * 2
 		}
 
 		numWorkers += opt.workers[i].num
 	}
 
 	if opt.numThreads <= 0 {
-		if numWorkers >= numCPU {
+		if numWorkers >= maxProcs {
 			// Start at least as many threads as workers, and keep a free thread to handle requests in non-worker mode
 			opt.numThreads = numWorkers + 1
 		} else {
-			opt.numThreads = numCPU
+			opt.numThreads = maxProcs
 		}
 	} else if opt.numThreads <= numWorkers {
 		return NotEnoughThreads
