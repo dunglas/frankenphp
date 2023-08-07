@@ -561,17 +561,15 @@ func go_sapi_flush(rh C.uintptr_t) bool {
 	r := cgo.Handle(rh).Value().(*http.Request)
 	fc := r.Context().Value(contextKey).(*FrankenPHPContext)
 
-	if fc.responseWriter == nil {
+	if fc.responseWriter == nil || clientHasClosed(r) {
 		return true
 	}
 
 	flusher, ok := fc.responseWriter.(http.Flusher)
 	if !ok {
-		return true
-	}
+		fc.Logger.Error("the current responseWriter does not implement the http.Flusher interface")
 
-	if clientHasClosed(r) {
-		return true
+		return false
 	}
 
 	if r.ProtoMajor == 1 {
