@@ -7,15 +7,13 @@ replace github.com/dunglas/frankenphp => ../
 replace (
 	// some packages must match versions defined in go.mod of caddyserver/caddy/v2
 	github.com/caddyserver/certmagic => github.com/caddyserver/certmagic v0.19.1
-	github.com/quic-go/qtls-go1-20 => github.com/quic-go/qtls-go1-20 v0.3.0
-	github.com/quic-go/quic-go => github.com/quic-go/quic-go v0.37.1
-	// Fix a weird bug
-	golang.org/x/text => golang.org/x/text v0.11.0
+	github.com/quic-go/qtls-go1-20 => github.com/quic-go/qtls-go1-20 v0.3.1
+	github.com/quic-go/quic-go => github.com/quic-go/quic-go v0.37.3
 )
 
 require (
-	github.com/caddyserver/caddy/v2 v2.7.2
-	github.com/dunglas/frankenphp v0.0.0-20230718125822-91f66201513a
+	github.com/caddyserver/caddy/v2 v2.7.3
+	github.com/dunglas/frankenphp v0.0.0-20230806153752-df976c17088b
 	github.com/dunglas/mercure/caddy v0.14.10
 	github.com/dunglas/vulcain/caddy v0.4.3
 	go.uber.org/automaxprocs v1.5.3
@@ -127,7 +125,7 @@ require (
 	github.com/prometheus/procfs v0.11.1 // indirect
 	github.com/quic-go/qpack v0.4.0 // indirect
 	github.com/quic-go/qtls-go1-20 v0.3.2 // indirect
-	github.com/quic-go/quic-go v0.37.2 // indirect
+	github.com/quic-go/quic-go v0.37.3 // indirect
 	github.com/rs/xid v1.5.0 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/shopspring/decimal v1.3.1 // indirect
@@ -146,7 +144,7 @@ require (
 	github.com/spf13/viper v1.15.0 // indirect
 	github.com/stoewer/go-strcase v1.3.0 // indirect
 	github.com/subosito/gotenv v1.4.2 // indirect
-	github.com/tailscale/tscert v0.0.0-20230509043813-4e9cb4f2b4ad // indirect
+	github.com/tailscale/tscert v0.0.0-20230806124524-28a91b69a046 // indirect
 	github.com/tidwall/gjson v1.14.4 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect
@@ -178,18 +176,18 @@ require (
 	go.step.sm/crypto v0.34.0 // indirect
 	go.step.sm/linkedca v0.20.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
-	golang.org/x/crypto v0.11.0 // indirect
-	golang.org/x/exp v0.0.0-20230801115018-d63ba01acd4b // indirect
+	golang.org/x/crypto v0.12.0 // indirect
+	golang.org/x/exp v0.0.0-20230807203716-38c65ebc0710 // indirect
 	golang.org/x/mod v0.12.0 // indirect
-	golang.org/x/net v0.13.0 // indirect
+	golang.org/x/net v0.14.0 // indirect
 	golang.org/x/sync v0.3.0 // indirect
 	golang.org/x/sys v0.11.0 // indirect
-	golang.org/x/term v0.10.0 // indirect
+	golang.org/x/term v0.11.0 // indirect
 	golang.org/x/text v0.12.0 // indirect
-	golang.org/x/tools v0.11.1 // indirect
-	google.golang.org/genproto v0.0.0-20230726155614-23370e0ffb3e // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20230803162519-f966b187b2e5 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20230803162519-f966b187b2e5 // indirect
+	golang.org/x/tools v0.12.0 // indirect
+	google.golang.org/genproto v0.0.0-20230803162519-f966b187b2e5 // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20230807174057-1744710a1577 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20230807174057-1744710a1577 // indirect
 	google.golang.org/grpc v1.57.0 // indirect
 	google.golang.org/protobuf v1.31.0 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect

@@ -1,14 +1,14 @@
 {
 	debug
 	frankenphp {
-		worker ./timeout.php
+		#worker ./index.php
 	}
 }
 
 http:// {
 	log
 	route {
-		root * . 
+		root * .
 		# Add trailing slash for directory requests
 		@canonicalPath {
 			file {path}/index.php
