@@ -5,6 +5,7 @@ package frankenphp
 import "C"
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"path/filepath"
@@ -45,8 +46,8 @@ func startWorkers(fileName string, nbWorkers int) error {
 	workersReadyWG.Add(nbWorkers)
 
 	var (
-		m      sync.RWMutex
-		errors []error
+		m    sync.RWMutex
+		errs []error
 	)
 
 	l := getLogger()
@@ -68,7 +69,7 @@ func startWorkers(fileName string, nbWorkers int) error {
 					// TODO: this should never happen, maybe can we remove this block?
 					m.Lock()
 					defer m.Unlock()
-					errors = append(errors, fmt.Errorf("workers %q: unable to create main worker request: %w", absFileName, err))
+					errs = append(errs, fmt.Errorf("workers %q: unable to create main worker request: %w", absFileName, err))
 
 					return
 				}
@@ -77,7 +78,7 @@ func startWorkers(fileName string, nbWorkers int) error {
 				if err := ServeHTTP(nil, r); err != nil {
 					m.Lock()
 					defer m.Unlock()
-					errors = append(errors, fmt.Errorf("workers %q: unable to start: %w", absFileName, err))
+					errs = append(errs, fmt.Errorf("workers %q: unable to start: %w", absFileName, err))
 
 					return
 				}
@@ -107,12 +108,12 @@ func startWorkers(fileName string, nbWorkers int) error {
 	m.Lock()
 	defer m.Unlock()
 
-	if len(errors) == 0 {
+	if len(errs) == 0 {
 		return nil
 	}
 
 	// Wrapping multiple errors will be available in Go 1.20: https://github.com/golang/go/issues/53435
-	return fmt.Errorf("workers %q: error while starting: #%v", fileName, errors)
+	return fmt.Errorf("workers %q: error while starting: %w", fileName, errors.Join(errs...))
 }
 
 func stopWorkers() {
