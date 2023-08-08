@@ -565,13 +565,6 @@ func go_sapi_flush(rh C.uintptr_t) bool {
 		return true
 	}
 
-	flusher, ok := fc.responseWriter.(http.Flusher)
-	if !ok {
-		fc.Logger.Error("the current responseWriter does not implement the http.Flusher interface")
-
-		return false
-	}
-
 	if r.ProtoMajor == 1 {
 		if _, err := r.Body.Read(nil); err != nil {
 			// Don't flush until the whole body has been read to prevent https://github.com/golang/go/issues/15527
@@ -579,7 +572,9 @@ func go_sapi_flush(rh C.uintptr_t) bool {
 		}
 	}
 
-	flusher.Flush()
+	if err := http.NewResponseController(fc.responseWriter).Flush(); err != nil {
+		fc.Logger.Error("the current responseWriter is not a flusher", zap.Error(err))
+	}
 
 	return false
 }
