@@ -35,7 +35,7 @@ func startWorkers(fileName string, nbWorkers int) error {
 	workersReadyWG.Add(nbWorkers)
 
 	var (
-		m      sync.Mutex
+		m      sync.RWMutex
 		errors []error
 	)
 

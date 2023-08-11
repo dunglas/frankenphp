@@ -300,6 +300,7 @@ func Shutdown() {
 	close(done)
 	shutdownWG.Wait()
 	requestChan = nil
+	workersReadyWG = sync.WaitGroup{}
 
 	logger.Debug("FrankenPHP shut down")
 }
