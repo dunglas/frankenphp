@@ -267,7 +267,7 @@ func Init(options ...Option) error {
 
 	if config.ZTS {
 		if !config.ZendMaxExecutionTimers && runtime.GOOS == "linux" {
-			logger.Warn(`Zend Timer is not enabled, "--enable-zend-max-execution-timers" configuration option or timeouts (e.g. "max_execution_time") will not work as expected`)
+			logger.Warn(`Zend Max Execution Timers are not enabled, timeouts (e.g. "max_execution_time") are disabled, recompile PHP with the "--enable-zend-max-execution-timers" configuration option to fix this issue`)
 		}
 	} else {
 		opt.numThreads = 1
