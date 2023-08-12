@@ -17,8 +17,18 @@ import (
 var (
 	workersRequestChans sync.Map // map[fileName]chan *http.Request
 	workersReadyWG      sync.WaitGroup
-	workersWG           sync.WaitGroup
 )
+
+// TODO: start all the worker in parallell to reduce the boot time
+func initWorkers(opt []workerOpt) error {
+	for _, w := range opt {
+		if err := startWorkers(w.fileName, w.num); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
 
 func startWorkers(fileName string, nbWorkers int) error {
 	absFileName, err := filepath.Abs(fileName)
@@ -35,7 +45,7 @@ func startWorkers(fileName string, nbWorkers int) error {
 	workersReadyWG.Add(nbWorkers)
 
 	var (
-		m      sync.Mutex
+		m      sync.RWMutex
 		errors []error
 	)
 

@@ -282,11 +282,8 @@ func Init(options ...Option) error {
 		return MainThreadCreationError
 	}
 
-	for _, w := range opt.workers {
-		// TODO: start all the worker in parallell to reduce the boot time
-		if err := startWorkers(w.fileName, w.num); err != nil {
-			return err
-		}
+	if err := initWorkers(opt.workers); err != nil {
+		return err
 	}
 
 	logger.Debug("FrankenPHP started")
@@ -300,6 +297,9 @@ func Shutdown() {
 	close(done)
 	shutdownWG.Wait()
 	requestChan = nil
+
+	// Always reset the WaitGroup to ensure we're in a clean state
+	workersReadyWG = sync.WaitGroup{}
 
 	logger.Debug("FrankenPHP shut down")
 }
