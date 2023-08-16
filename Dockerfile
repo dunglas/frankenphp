@@ -50,6 +50,8 @@ ENTRYPOINT ["/bin/bash","-c"]
 
 FROM php-base AS runner
 
+ENV GODEBUG=cgocheck=0
+
 COPY --from=mlocati/php-extension-installer /usr/bin/install-php-extensions /usr/local/bin/
 
 WORKDIR /app
