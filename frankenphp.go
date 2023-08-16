@@ -580,11 +580,17 @@ func go_sapi_flush(rh C.uintptr_t) bool {
 }
 
 //export go_read_post
-func go_read_post(rh C.uintptr_t, cBuf *C.char, countBytes C.size_t) C.size_t {
+func go_read_post(rh C.uintptr_t, cBuf *C.char, countBytes C.size_t) (readBytes C.size_t) {
 	r := cgo.Handle(rh).Value().(*http.Request)
 
-	p := make([]byte, int(countBytes))
-	readBytes, err := r.Body.Read(p)
+	p := make([]byte, countBytes)
+	var err error
+	for readBytes < countBytes && err == nil {
+		var n int
+		n, err = r.Body.Read(p[readBytes:])
+		readBytes += C.size_t(n)
+	}
+
 	if err != nil && err != io.EOF {
 		// invalid Read on closed Body may happen because of https://github.com/golang/go/issues/15527
 		fc, _ := FromContext(r.Context())
@@ -595,7 +601,7 @@ func go_read_post(rh C.uintptr_t, cBuf *C.char, countBytes C.size_t) C.size_t {
 		C.memcpy(unsafe.Pointer(cBuf), unsafe.Pointer(&p[0]), C.size_t(readBytes))
 	}
 
-	return C.size_t(readBytes)
+	return
 }
 
 //export go_read_cookies
