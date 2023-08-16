@@ -70,6 +70,6 @@ func TestLargeRequest(t *testing.T) {
 		[]string{},
 		bytes.NewBufferString(strings.Repeat("f", 1_048_576)),
 		http.StatusOK,
-		"Request body size: 1048576 (undefined)",
+		"Request body size: 1048576 (unknown)",
 	)
 }
