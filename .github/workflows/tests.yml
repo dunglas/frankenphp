@@ -3,6 +3,8 @@ on: [push, pull_request]
 jobs:
   tests:
     runs-on: ubuntu-latest
+    env:
+      GODEBUG: cgocheck=2
     strategy:
       matrix:
         php-versions: ['8.2', '8.3']
