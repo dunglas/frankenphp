@@ -522,27 +522,26 @@ func testFlush(t *testing.T, opts *testOptions) {
 	}, opts)
 }
 
-func TestTimeout_module(t *testing.T) {
-	testTimeout(t, &testOptions{})
+func TestLargeRequest_module(t *testing.T) {
+	testLargeRequest(t, &testOptions{})
 }
-func TestTimeout_worker(t *testing.T) {
-	testTimeout(t, &testOptions{workerScript: "timeout.php"})
+func TestLargeRequest_worker(t *testing.T) {
+	testLargeRequest(t, &testOptions{workerScript: "large-request.php"})
 }
-func testTimeout(t *testing.T, opts *testOptions) {
-	config := frankenphp.Config()
-	if !config.ZendMaxExecutionTimers {
-		t.Skip("Zend Timer is not enabled")
-	}
-
+func testLargeRequest(t *testing.T, opts *testOptions) {
 	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
-		req := httptest.NewRequest("GET", fmt.Sprintf("http://example.com/timeout.php?i=%d", i), nil)
+		req := httptest.NewRequest(
+			"POST",
+			fmt.Sprintf("http://example.com/large-request.php?i=%d", i),
+			strings.NewReader(strings.Repeat("f", 1_048_576)),
+		)
 		w := httptest.NewRecorder()
 		handler(w, req)
 
 		resp := w.Result()
 		body, _ := io.ReadAll(resp.Body)
 
-		assert.Contains(t, string(body), fmt.Sprintf("request: %d\n<br />\n<b>Fatal error</b>:  Maximum execution time of 1 second exceeded in", i))
+		assert.Contains(t, string(body), fmt.Sprintf("Request body size: 1048576 (%d)", i))
 	}, opts)
 }
 
