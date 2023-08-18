@@ -101,9 +101,9 @@ static void frankenphp_worker_request_shutdown() {
 	const char **module_name;
 	zend_module_entry *module;
 	for (module_name = MODULES_TO_RELOAD; *module_name; module_name++) {
-		module = zend_hash_str_find_ptr(&module_registry, *module_name, strlen(*module_name));
-		if (module)
+		if ((module = zend_hash_str_find_ptr(&module_registry, *module_name, strlen(*module_name)))) {
 			module->request_shutdown_func(module->type, module->module_number);
+		}
 	}
 
 	/* Shutdown output layer (send the set HTTP headers, cleanup output handlers, etc.) */
@@ -175,9 +175,12 @@ static int frankenphp_worker_request_startup() {
 		const char **module_name;
 		zend_module_entry *module;
 		for (module_name = MODULES_TO_RELOAD; *module_name; module_name++) {
-			module = zend_hash_str_find_ptr(&module_registry, *module_name, sizeof(*module_name)-1);
-			if (module && module->request_startup_func)
+			if (
+				(module = zend_hash_str_find_ptr(&module_registry, *module_name, sizeof(*module_name)-1))
+				&& module->request_startup_func
+			) {
 				module->request_startup_func(module->type, module->module_number);
+			}
 		}
 	} zend_catch {
 		retval = FAILURE;
@@ -247,7 +250,9 @@ PHP_FUNCTION(frankenphp_handle_request) {
 		frankenphp_worker_request_startup() == FAILURE
 			/* Shutting down */
 			|| !request
-	) RETURN_FALSE;
+	) {
+		RETURN_FALSE;
+	}
 
 #ifdef ZEND_MAX_EXECUTION_TIMERS
 	// Reset default timeout
@@ -388,7 +393,9 @@ int frankenphp_update_server_context(
 
 		/* todo: use a pool */
 		ctx = (frankenphp_server_context *) calloc(1, sizeof(frankenphp_server_context));
-		if (ctx == NULL) return FAILURE;
+		if (ctx == NULL) {
+			return FAILURE;
+		}
 
 		ctx->cookie_data = NULL;
 		ctx->finished = false;
@@ -430,7 +437,7 @@ static size_t frankenphp_ub_write(const char *str, size_t str_length)
 	frankenphp_server_context* ctx = SG(server_context);
 
 	if(ctx->finished) {
-		// todo: maybe log a warning that we tried to write to a finished request?
+		// TODO: maybe log a warning that we tried to write to a finished request?
 		return 0;
 	}
 
@@ -475,25 +482,25 @@ static void frankenphp_sapi_flush(void *server_context)
 {
 	frankenphp_server_context *ctx = (frankenphp_server_context *) server_context;
 
-	if (!ctx || ctx->current_request == 0) return;
-
-	if (go_sapi_flush(ctx->current_request)) php_handle_aborted_connection();
+	if (ctx && ctx->current_request != 0 && go_sapi_flush(ctx->current_request)) {
+		php_handle_aborted_connection();
+	}
 }
 
 static size_t frankenphp_read_post(char *buffer, size_t count_bytes)
 {
 	frankenphp_server_context* ctx = SG(server_context);
 
-	if (ctx->current_request == 0) return 0;
-
-	return go_read_post(ctx->current_request, buffer, count_bytes);
+	return ctx->current_request ? go_read_post(ctx->current_request, buffer, count_bytes) : 0;
 }
 
 static char* frankenphp_read_cookies(void)
 {
 	frankenphp_server_context* ctx = SG(server_context);
 
-	if (ctx->current_request == 0) return "";
+	if (ctx->current_request == 0) {
+		return "";
+	}
 
 	ctx->cookie_data = go_read_cookies(ctx->current_request);
 
@@ -502,9 +509,9 @@ static char* frankenphp_read_cookies(void)
 
 void frankenphp_register_bulk_variables(char **variables, size_t size, zval *track_vars_array)
 {
-	for (size_t i = 0; i < size; i++)
+	for (size_t i = 1; i < size; i = i+2)
 	{
-		if (i%2 == 1) php_register_variable(variables[i-1], variables[i], track_vars_array);
+		php_register_variable(variables[i-1], variables[i], track_vars_array);
 	}
 }
 
