@@ -17,6 +17,8 @@ package frankenphp
 // #include <stdlib.h>
 // #include <stdint.h>
 // #include <php_variables.h>
+// #include <zend_llist.h>
+// #include <SAPI.h>
 // #include "frankenphp.h"
 import "C"
 import (
@@ -520,11 +522,7 @@ func go_register_variables(rh C.uintptr_t, trackVarsArray *C.zval) {
 	}
 }
 
-//export go_add_header
-func go_add_header(rh C.uintptr_t, cString *C.char, length C.int) {
-	r := cgo.Handle(rh).Value().(*http.Request)
-	fc := r.Context().Value(contextKey).(*FrankenPHPContext)
-
+func addHeader(fc *FrankenPHPContext, cString *C.char, length C.int) {
 	parts := strings.SplitN(C.GoStringN(cString, length), ": ", 2)
 	if len(parts) != 2 {
 		fc.Logger.Debug("invalid header", zap.String("header", parts[0]))
@@ -535,8 +533,8 @@ func go_add_header(rh C.uintptr_t, cString *C.char, length C.int) {
 	fc.responseWriter.Header().Add(parts[0], parts[1])
 }
 
-//export go_write_header
-func go_write_header(rh C.uintptr_t, status C.int) {
+//export go_write_headers
+func go_write_headers(rh C.uintptr_t, status C.int, headers *C.zend_llist) {
 	r := cgo.Handle(rh).Value().(*http.Request)
 	fc := r.Context().Value(contextKey).(*FrankenPHPContext)
 
@@ -544,7 +542,15 @@ func go_write_header(rh C.uintptr_t, status C.int) {
 		return
 	}
 
-	// FIXME: http: superfluous response.WriteHeader call from github.com/dunglas/frankenphp.go_write_header
+	current := headers.head
+	for current != nil {
+		h := (*C.sapi_header_struct)(unsafe.Pointer(&(current.data)))
+
+		addHeader(fc, h.header, C.int(h.header_len))
+		current = current.next
+	}
+
+	// FIXME: http: superfluous response.WriteHeader call from github.com/dunglas/frankenphp.go_write_headers
 	fc.responseWriter.WriteHeader(int(status))
 
 	if status >= 100 && status < 200 {

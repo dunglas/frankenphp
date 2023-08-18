@@ -449,27 +449,24 @@ static int frankenphp_send_headers(sapi_headers_struct *sapi_headers)
 		return SAPI_HEADER_SENT_SUCCESSFULLY;
 	}
 
-	sapi_header_struct *h;
-	zend_llist_position pos;
 	int status;
 	frankenphp_server_context* ctx = SG(server_context);
 
-	if (ctx->current_request == 0) return SAPI_HEADER_SEND_FAILED;
-
-	h = zend_llist_get_first_ex(&sapi_headers->headers, &pos);
-	while (h) {
-		go_add_header(ctx->current_request, h->header, h->header_len);
-		h = zend_llist_get_next_ex(&sapi_headers->headers, &pos);
+	if (ctx->current_request == 0) {
+		return SAPI_HEADER_SEND_FAILED;
 	}
 
-	if (!SG(sapi_headers).http_status_line) {
-		status = SG(sapi_headers).http_response_code;
-		if (!status) status = 200;
-	} else {
+	if (SG(sapi_headers).http_status_line) {
 		status = atoi((SG(sapi_headers).http_status_line) + 9);
+	} else {
+		status = SG(sapi_headers).http_response_code;
+
+		if (!status) {
+			status = 200;
+		}
 	}
 
-	go_write_header(ctx->current_request, status);
+	go_write_headers(ctx->current_request, status, &sapi_headers->headers);
 
 	return SAPI_HEADER_SENT_SUCCESSFULLY;
 }
