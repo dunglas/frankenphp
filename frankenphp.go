@@ -9,11 +9,16 @@ package frankenphp
 //go:generate git clone --branch=fix/SA_ONSTACK --depth=1 git@github.com:dunglas/C-Thread-Pool.git
 //go:generate rm -Rf C-Thread-Pool/.git C-Thread-Pool/.circleci C-Thread-Pool/docs C-Thread-Pool/tests
 
+// Use PHP includes corresponding to your PHP installation by running:
+//
+//   export CGO_CFLAGS=$(php-config --includes)
+
+// #cgo pkg-config: libxml-2.0 sqlite3
 // #cgo CFLAGS: -Wall -Werror
-// #cgo CFLAGS: -I/usr/local/include/php -I/usr/local/include/php/Zend -I/usr/local/include/php/TSRM -I/usr/local/include/php/main
+// #cgo CFLAGS: -I/usr/local/include/php -I/usr/local/include/php/main -I/usr/local/include/php/TSRM -I/usr/local/include/php/Zend -I/usr/local/include/php/ext -I/usr/local/include/php/ext/date/lib
 // #cgo linux CFLAGS: -D_GNU_SOURCE
-// #cgo LDFLAGS: -L/usr/local/lib -L/opt/homebrew/opt/libiconv/lib -L/usr/lib -lphp -lxml2 -lresolv -lsqlite3 -ldl -lm -lutil
-// #cgo darwin LDFLAGS: -liconv
+// #cgo darwin LDFLAGS: -L/opt/homebrew/opt/libiconv/lib -liconv
+// #cgo LDFLAGS: -L/usr/local/lib -L/usr/lib -lphp -lresolv -ldl -lm -lutil
 // #include <stdlib.h>
 // #include <stdint.h>
 // #include <php_variables.h>
