@@ -3,8 +3,6 @@ on: [push, pull_request]
 jobs:
   tests:
     runs-on: ubuntu-latest
-    env:
-      GODEBUG: cgocheck=2
     strategy:
       matrix:
         php-versions: ['8.2', '8.3']
@@ -26,6 +24,11 @@ jobs:
 
       - name: Set include flags
         run: echo "CGO_CFLAGS=$(php-config --includes)" >> "$GITHUB_ENV"
+
+      - name: Build
+        run: go build
+        env:
+          GOEXPERIMENT: cgocheck2
 
       - name: Run library tests
         run: go test -race -v ./...
