@@ -24,7 +24,7 @@ RUN apt-get update && \
 WORKDIR /go/src/app
 
 COPY go.mod go.sum ./
-RUN go mod graph | awk '{if ($1 !~ "@") print $2}' | xargs go get
+RUN go get
 
 RUN mkdir caddy && cd caddy
 COPY caddy/go.mod caddy/go.sum ./caddy/
