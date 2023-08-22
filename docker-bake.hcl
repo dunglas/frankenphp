@@ -59,7 +59,7 @@ target "default" {
     }
     contexts = {
         php-base = "docker-image://php:${php-version}-zts-${os}"
-        golang-base = "docker-image://golang:1.20-${os}"
+        golang-base = "docker-image://golang:1.21-${os}"
     }
     dockerfile = os == "alpine" ? "alpine.Dockerfile" : "Dockerfile"
     context = "./"
