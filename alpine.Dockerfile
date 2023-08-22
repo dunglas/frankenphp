@@ -25,7 +25,7 @@ RUN apk add --no-cache --virtual .build-deps \
 WORKDIR /go/src/app
 
 COPY go.mod go.sum ./
-RUN go get
+RUN go mod graph | awk '{if ($1 !~ "@") print $2}' | xargs go get
 
 RUN mkdir caddy && cd caddy
 COPY caddy/go.mod caddy/go.sum ./caddy/
