@@ -3,8 +3,10 @@ FROM php-base AS builder
 
 ARG FRANKENPHP_VERSION='dev'
 
-COPY --from=golang-base /usr/local/go/bin/go /usr/local/bin/go
+COPY --from=golang-base /usr/local/go/bin/go /usr/local/go/bin/go
 COPY --from=golang-base /usr/local/go /usr/local/go
+
+ENV PATH /usr/local/go/bin:$PATH
 
 # This is required to link the FrankenPHP binary to the PHP binary
 RUN apt-get update && \
@@ -24,7 +26,7 @@ RUN apt-get update && \
 WORKDIR /go/src/app
 
 COPY go.mod go.sum ./
-RUN go get
+RUN go mod graph | awk '{if ($1 !~ "@") print $2}' | xargs go get
 
 RUN mkdir caddy && cd caddy
 COPY caddy/go.mod caddy/go.sum ./caddy/
