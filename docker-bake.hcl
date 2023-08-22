@@ -54,7 +54,7 @@ target "default" {
     name = "${tgt}-php-${replace(php-version, ".", "-")}-${os}"
     matrix = {
         os = ["bookworm", "alpine"]
-        php-version = ["8.2", "8.3.0beta2"]
+        php-version = ["8.2", "8.3.0beta3"]
         tgt = ["builder", "runner"]
     }
     contexts = {
