@@ -3,8 +3,10 @@ FROM php-base AS builder
 
 ARG FRANKENPHP_VERSION='dev'
 
-COPY --from=golang-base /usr/local/go/bin/go /usr/local/bin/go
+COPY --from=golang-base /usr/local/go/bin/go /usr/local/go/bin/go
 COPY --from=golang-base /usr/local/go /usr/local/go
+
+ENV PATH /usr/local/go/bin:$PATH
 
 # This is required to link the FrankenPHP binary to the PHP binary
 RUN apt-get update && \
