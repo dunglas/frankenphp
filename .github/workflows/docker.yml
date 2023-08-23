@@ -136,7 +136,7 @@ jobs:
         if: '!matrix.qemu'
         continue-on-error: ${{fromJson(needs.prepare.outputs.push)}}
         run: |
-          docker run --platform=${{matrix.platform}} --env GODEBUG=cgocheck=2 --rm \
+          docker run --platform=${{matrix.platform}} --rm \
             $(jq -r '."builder-${{matrix.variant}}"."containerimage.config.digest"' <<< $METADATA) \
             "sh -c 'frankenphp version && go test ${{matrix.race}} -v ./... && cd caddy && go test ${{matrix.race}} -v ./...'"
         env:
