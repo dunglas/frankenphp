@@ -274,6 +274,7 @@ PHP_FUNCTION(frankenphp_handle_request) {
 	}
 
 	frankenphp_worker_request_shutdown();
+	ctx->current_request = 0;
 	go_frankenphp_finish_request(ctx->main_request, request, true);
 
 	RETURN_TRUE;
