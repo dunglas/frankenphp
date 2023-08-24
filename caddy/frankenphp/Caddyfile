@@ -1,6 +1,5 @@
 {
-	# Debug
-	{$CADDY_DEBUG}
+	{$CADDY_GLOBAL_OPTIONS}
 
 	frankenphp {
 		#worker /path/to/your/worker.php
@@ -13,6 +12,22 @@
 log
 route {
 	root * public/ 
+	mercure {
+        # Transport to use (default to Bolt)
+        transport_url {$MERCURE_TRANSPORT_URL:bolt:///data/mercure.db}
+        # Publisher JWT key
+        publisher_jwt {env.MERCURE_PUBLISHER_JWT_KEY} {env.MERCURE_PUBLISHER_JWT_ALG}
+        # Subscriber JWT key
+        subscriber_jwt {env.MERCURE_SUBSCRIBER_JWT_KEY} {env.MERCURE_SUBSCRIBER_JWT_ALG}
+        # Allow anonymous subscribers (double-check that it's what you want)
+        anonymous
+        # Enable the subscription API (double-check that it's what you want)
+        subscriptions
+        # Extra directives
+        {$MERCURE_EXTRA_DIRECTIVES}
+    }
+    vulcain
+
 	# Add trailing slash for directory requests
 	@canonicalPath {
 		file {path}/index.php
