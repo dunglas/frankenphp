@@ -555,7 +555,6 @@ func go_write_headers(rh C.uintptr_t, status C.int, headers *C.zend_llist) {
 		current = current.next
 	}
 
-	// FIXME: http: superfluous response.WriteHeader call from github.com/dunglas/frankenphp.go_write_headers
 	fc.responseWriter.WriteHeader(int(status))
 
 	if status >= 100 && status < 200 {
