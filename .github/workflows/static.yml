@@ -13,22 +13,22 @@ jobs:
         with:
           go-version: '1.21'
 
-      - name: Clone static-php-cli
+      - name: Clone static-php-cli/
         run: git clone https://github.com/dunglas/static-php-cli.git --branch=feat/embed
 
       - name: Download libraries sources
-        working-directory: static-php-cli
+        working-directory: static-php-cli/
         run: bin/spc-alpine-docker fetch --with-php=${{ matrix.php-versions }} -A 
 
       - name: Build static libraries
-        working-directory: static-php-cli
+        working-directory: static-php-cli/
         run: bin/spc-alpine-docker build --build-embed --enable-zts --debug "bcmath,calendar,ctype,curl,dba,dom,exif,filter,fileinfo,gd,iconv,mbstring,mbregex,mysqli,mysqlnd,openssl,pcntl,pdo,pdo_mysql,pdo_sqlite,phar,posix,readline,redis,session,simplexml,sockets,sqlite3,tokenizer,xml,xmlreader,xmlwriter,zip,zlib,apcu"
 
       - name: Set CGO flags
-        working-directory: static-php-cli
+        working-directory: static-php-cli/
         run: |
-          echo "CGO_CFLAGS=-I$PWD/source/php-src -I$PWD/source/php-src/main -I$PWD/source/php-src/TSRM -I$PWD/source/php-src/Zend -I$PWD/source/php-src/ext -I$PWD/source/php-src/ext/date/lib" >> "$GITHUB_ENV"
-          echo "CGO_LDFLAGS=-L$PWD/source/php-src/libs $(sh $PWD/source/php-src/scripts/php-config --ldflags) $(sh $PWD/source/php-src/scripts/php-config --libs | sed 's/-lgcc_s//g' | tr ' ' '\n' | sort -u | xargs)" >> "$GITHUB_ENV"
+          echo "CGO_CFLAGS=$(sh $PWD/source/php-src/scripts/php-config --includes | sed s#/app#$PWD#g)" >> "$GITHUB_ENV"
+          echo "CGO_LDFLAGS=-L$PWD/source/php-src/libs $(sh $PWD/source/php-src/scripts/php-config --ldflags | sed s#/app#$PWD#g) $(sh $PWD/source/php-src/scripts/php-config --libs | sed -e 's/-lxml2//g' -e s#/app#$PWD#g)" >> "$GITHUB_ENV"
 
       - name: Build
         working-directory: caddy/frankenphp/
