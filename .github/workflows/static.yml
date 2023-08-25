@@ -16,17 +16,17 @@ jobs:
       - name: Clone static-php-cli/
         run: git clone --depth=1 https://github.com/dunglas/static-php-cli.git --branch=feat/embed
 
-      - id: cache-composer-deps
-        name: Download cached Composer
-        uses: actions/cache@v3
-        with:
-          path: static-php-cli/vendor
-          key: composer-dependencies
-
-      - if: steps.cache-composer-deps.outputs.cache-hit != 'true'
-        name: Install Composer dependencies
-        working-directory: static-php-cli/
-        run: composer install --no-dev -a
+      #- id: cache-composer-deps
+      #  name: Download cached Composer
+      #  uses: actions/cache@v3
+      #  with:
+      #    path: static-php-cli/vendor
+      #    key: composer-dependencies
+#
+      #- if: steps.cache-composer-deps.outputs.cache-hit != 'true'
+      #  name: Install Composer dependencies
+      #  working-directory: static-php-cli/
+      #  run: composer install --no-dev -a
 
       - id: cache-download
         name: Download cached sources
@@ -37,6 +37,7 @@ jobs:
 
       - if: steps.cache-download.outputs.cache-hit != 'true'
         name: Download sources
+        working-directory: static-php-cli/
         run: ./bin/spc-alpine-docker download --with-php=${{ matrix.php-versions }} --all
 
       - name: Build static libraries
