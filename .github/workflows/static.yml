@@ -48,7 +48,7 @@ jobs:
         working-directory: static-php-cli/
         run: |
           echo "CGO_CFLAGS=$(sh $PWD/source/php-src/scripts/php-config --includes | sed s#-I/include/php#-I$PWD/source/php-src#g)" >> "$GITHUB_ENV"
-          echo "CGO_LDFLAGS=-L$PWD/source/php-src/libs $(sh $PWD/source/php-src/scripts/php-config --ldflags | sed s#/app#$PWD#g) $(sh $PWD/source/php-src/scripts/php-config --libs | sed -e 's/-lxml2//g' -e s#/app#$PWD#g)" >> "$GITHUB_ENV"
+          echo "CGO_LDFLAGS=-L$PWD/source/php-src/libs $(sh $PWD/source/php-src/scripts/php-config --ldflags | sed s#/app#$PWD#g) $(sh $PWD/source/php-src/scripts/php-config --libs | sed -e 's/-lgcc_s//g' -e s#/app#$PWD#g)" >> "$GITHUB_ENV"
 
       - name: Build
         working-directory: caddy/frankenphp/
