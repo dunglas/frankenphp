@@ -1,67 +1,45 @@
 name: Build binary releases
-on: [push, pull_request]
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+    tags:
+      - v*
+  workflow_dispatch:
+    inputs: {}
 jobs:
   build:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        php-versions: ['8.2']
     steps:
       - uses: actions/checkout@v3
 
-      - uses: actions/setup-go@v4
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
         with:
-          go-version: '1.21'
-
-      - name: Clone static-php-cli/
-        run: git clone --depth=1 https://github.com/dunglas/static-php-cli.git --branch=feat/embed
-
-      - id: cache-composer-deps
-        name: Download cached Composer
-        uses: actions/cache@v3
-        with:
-          path: static-php-cli/vendor
-          key: composer-dependencies
-
-      - if: steps.cache-composer-deps.outputs.cache-hit != 'true'
-        name: Install Composer dependencies
-        working-directory: static-php-cli/
-        run: composer install --no-dev -a
-
-      - id: cache-download
-        name: Download cached sources
-        uses: actions/cache@v3
-        with:
-          path: static-php-cli/downloads
-          key: php-${{ matrix.php-versions }}-dependencies
-
-      - if: steps.cache-download.outputs.cache-hit != 'true'
-        name: Download sources
-        working-directory: static-php-cli/
-        run: ./bin/spc-alpine-docker download --with-php=${{ matrix.php-versions }} --all
-
-      - name: Build static libraries
-        working-directory: static-php-cli/
-        run: bin/spc-alpine-docker build --build-embed --enable-zts --debug "bcmath,calendar,ctype,curl,dba,dom,exif,filter,fileinfo,gd,iconv,mbstring,mbregex,mysqli,mysqlnd,openssl,pcntl,pdo,pdo_mysql,pdo_sqlite,phar,posix,readline,redis,session,simplexml,sockets,sqlite3,tokenizer,xml,xmlreader,xmlwriter,zip,zlib,apcu"
-
-      - name: Set CGO flags
-        working-directory: static-php-cli/
-        run: |
-          echo "CGO_CFLAGS=$(sh $PWD/source/php-src/scripts/php-config --includes | sed s#-I/include/php#-I$PWD/source/php-src#g)" >> "$GITHUB_ENV"
-          echo "CGO_LDFLAGS=-L$PWD/source/php-src/libs $(sh $PWD/source/php-src/scripts/php-config --ldflags | sed s#/app#$PWD#g) $(sh $PWD/source/php-src/scripts/php-config --libs | sed -e 's/-lgcc_s//g' -e s#/app#$PWD#g)" >> "$GITHUB_ENV"
+          version: latest
 
       - name: Build
-        working-directory: caddy/frankenphp/
-        run: go build -buildmode=pie -tags "cgo netgo osusergo static_build" -ldflags "-linkmode=external -extldflags -static-pie"
-
-      - uses: actions/upload-artifact@v3
+        id: build
+        uses: docker/bake-action@v3
         with:
-          name: frankenphp-linux-php-${{ matrix.php-versions }}-dev
-          path: caddy/frankenphp/frankenphp
+          pull: true
+          load: true
+          targets: static-builder
+          set: |
+            *.cache-from=type=gha,scope=${{github.ref}}-static-builder
+            *.cache-from=type=gha,scope=refs/heads/main-static-builder
+            *.cache-to=type=gha,scope=${{github.ref}}-static-builder
+        env:
+          VERSION: ${{github.ref_name}}
 
-      - name: Run library tests
-        run: go test -race -v ./...
+      - name: Copy binary
+        run: docker cp $(docker create --name static-builder dunglas/frankenphp:static-builder):/go/src/app/caddy/frankenphp/frankenphp frankenphp ; docker rm static-builder
 
-      - name: Run Caddy module tests
-        working-directory: caddy/
-        run: go test -race -v ./...
+      - name: Upload binary
+        uses: actions/upload-artifact@v3
+        with:
+          name: frankenphp-dev
+          path: frankenphp

@@ -6,6 +6,10 @@ variable "VERSION" {
     default = "dev"
 }
 
+variable "GO_VERSION" {
+    default = "1.21"
+}
+
 variable "SHA" {}
 
 variable "LATEST" {
@@ -50,6 +54,7 @@ function "__semver" {
     result = v == {} ? [clean_tag(VERSION)] : v.prerelease == null ? ["latest", v.major, "${v.major}.${v.minor}", "${v.major}.${v.minor}.${v.patch}"] : ["${v.major}.${v.minor}.${v.patch}-${v.prerelease}"]
 }
 
+
 target "default" {
     name = "${tgt}-php-${replace(php-version, ".", "-")}-${os}"
     matrix = {
@@ -59,7 +64,7 @@ target "default" {
     }
     contexts = {
         php-base = "docker-image://php:${php-version}-zts-${os}"
-        golang-base = "docker-image://golang:1.21-${os}"
+        golang-base = "docker-image://golang:${GO_VERSION}-${os}"
     }
     dockerfile = os == "alpine" ? "alpine.Dockerfile" : "Dockerfile"
     context = "./"
@@ -90,4 +95,17 @@ target "default" {
     args = {
         FRANKENPHP_VERSION = VERSION
     }
+}
+
+target "static-builder" {
+    contexts = {
+        golang-base = "docker-image://golang:${GO_VERSION}-alpine"
+    }
+    dockerfile = "static-builder.Dockerfile"
+    context = "./"
+    tags = ["${IMAGE_NAME}:static-builder"]
+    args = {
+        FRANKENPHP_VERSION = VERSION
+    }
+    secret = ["type=env,id=GITHUB_TOKEN"]
 }
