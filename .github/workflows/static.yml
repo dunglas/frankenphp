@@ -34,6 +34,7 @@ jobs:
             *.cache-to=type=gha,scope=${{github.ref}}-static-builder
         env:
           VERSION: ${{github.ref_name}}
+          ENV: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Copy binary
         run: docker cp $(docker create --name static-builder dunglas/frankenphp:static-builder):/go/src/app/caddy/frankenphp/frankenphp frankenphp ; docker rm static-builder

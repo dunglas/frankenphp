@@ -107,5 +107,5 @@ target "static-builder" {
     args = {
         FRANKENPHP_VERSION = VERSION
     }
-    secret = ["type=env,id=GITHUB_TOKEN"]
+    secret = ["id=github-token,env=GITHUB_TOKEN"]
 }
