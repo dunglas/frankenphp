@@ -335,7 +335,6 @@ func testSession(t *testing.T, opts *testOptions) {
 func TestPhpInfo_module(t *testing.T) { testPhpInfo(t, nil) }
 func TestPhpInfo_worker(t *testing.T) { testPhpInfo(t, &testOptions{workerScript: "phpinfo.php"}) }
 func testPhpInfo(t *testing.T, opts *testOptions) {
-	t.Skip()
 	var logOnce sync.Once
 	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
 		req := httptest.NewRequest("GET", fmt.Sprintf("http://example.com/phpinfo.php?i=%d", i), nil)

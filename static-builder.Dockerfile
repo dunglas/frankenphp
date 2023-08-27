@@ -3,6 +3,7 @@ FROM golang-base
 
 ARG FRANKENPHP_VERSION='dev'
 ARG PHP_VERSION='8.2'
+ARG PHP_EXTENSIONS='bcmath,calendar,ctype,curl,dba,dom,exif,filter,fileinfo,gd,iconv,mbstring,mbregex,mysqli,mysqlnd,openssl,pcntl,pdo,pdo_mysql,pdo_pgsql,pdo_sqlite,pgsql,phar,posix,readline,redis,session,simplexml,sockets,sqlite3,tokenizer,xml,xmlreader,xmlwriter,zip,zlib,apcu'
 
 RUN apk update; \
     apk add --no-cache \
@@ -44,9 +45,7 @@ RUN git clone --depth=1 https://github.com/dunglas/static-php-cli.git --branch=f
 
 RUN --mount=type=secret,id=github-token GITHUB_TOKEN=$(cat /run/secrets/github-token) ./bin/spc download --with-php=$PHP_VERSION --all
 
-RUN ./bin/spc build --build-embed --enable-zts --debug "bcmath,calendar,ctype,curl,dba,dom,exif,filter,fileinfo,gd,iconv,mbstring,mbregex,mysqli,mysqlnd,openssl,pcntl,pdo,pdo_mysql,pdo_sqlite,phar,posix,readline,redis,session,simplexml,sockets,sqlite3,tokenizer,xml,xmlreader,xmlwriter,zip,zlib,apcu"
-
-RUN echo "CGO_CFLAGS=$CGO_CFLAGS"
+RUN ./bin/spc build --build-embed --enable-zts --debug "$PHP_EXTENSIONS"
 
 WORKDIR /go/src/app
 
