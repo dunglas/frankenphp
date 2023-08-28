@@ -47,6 +47,8 @@ RUN --mount=type=secret,id=github-token GITHUB_TOKEN=$(cat /run/secrets/github-t
 
 RUN ./bin/spc build --build-embed --enable-zts --debug "$PHP_EXTENSIONS"
 
+ENV PATH="/static-php-cli/buildroot/bin:/static-php-cli/buildroot/usr/bin:$PATH"
+
 WORKDIR /go/src/app
 
 COPY go.mod go.sum ./
@@ -62,6 +64,6 @@ COPY caddy caddy
 COPY C-Thread-Pool C-Thread-Pool
 
 RUN cd caddy/frankenphp && \
-    CGO_CFLAGS="$(sh /static-php-cli/source/php-src/scripts/php-config --includes | sed s#-I/include/php#-I/static-php-cli/source/php-src#g)" \
-    CGO_LDFLAGS="-L/static-php-cli/source/php-src/libs $(sh /static-php-cli/source/php-src/scripts/php-config --ldflags) $(sh /static-php-cli/source/php-src/scripts/php-config --libs | sed -e 's/-lgcc_s//g')" \
+    CGO_CFLAGS="$(php-config --includes | sed s#-I/#-I/static-php-cli/buildroot/#g)" \
+    CGO_LDFLAGS="-L/static-php-cli/buildroot/lib $(php-config --ldflags) $(php-config --libs | sed -e 's/-lgcc_s//g')" \
     go build -buildmode=pie -tags "cgo netgo osusergo static_build" -ldflags "-linkmode=external -extldflags -static-pie -s -w -X 'github.com/caddyserver/caddy/v2.CustomVersion=FrankenPHP $FRANKENPHP_VERSION Caddy'"

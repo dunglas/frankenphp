@@ -54,7 +54,6 @@ function "__semver" {
     result = v == {} ? [clean_tag(VERSION)] : v.prerelease == null ? ["latest", v.major, "${v.major}.${v.minor}", "${v.major}.${v.minor}.${v.patch}"] : ["${v.major}.${v.minor}.${v.patch}-${v.prerelease}"]
 }
 
-
 target "default" {
     name = "${tgt}-php-${replace(php-version, ".", "-")}-${os}"
     matrix = {
