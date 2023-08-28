@@ -39,3 +39,22 @@ If you hit the GitHub API rate limit, set a GitHub Personal Access Token in an e
 GITHUB_TOKEN="xxx" docker --load buildx bake static-builder
 # ...
 ```
+
+## macOS
+
+Run the following command to create a static binary for macOS:
+
+```console
+git clone --depth=1 https://github.com/dunglas/static-php-cli.git --branch=feat/embed 
+cd static-php-cli
+composer install --no-dev -a
+./bin/spc doctor
+./bin/spc fetch --with-php=8.2 -A
+./bin/spc build --enable-zts --build-embed --debug "opcache"
+export CGO_CFLAGS="$(./buildroot/bin/php-config --includes | sed s#-I/#-I$PWD/buildroot/#g)"
+export CGO_LDFLAGS="-L$PWD/buildroot/lib $(./buildroot/bin/php-config --ldflags) $(./buildroot/bin/php-config --libs)"
+
+git clone --depth=1 https://github.com/dunglas/frankenphp.git
+cd frankenphp/caddy/frankenphp
+go build -buildmode=pie -tags "cgo netgo osusergo static_build" -ldflags "-linkmode=external -extldflags -static-pie"
+```

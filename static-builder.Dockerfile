@@ -64,6 +64,7 @@ COPY caddy caddy
 COPY C-Thread-Pool C-Thread-Pool
 
 RUN cd caddy/frankenphp && \
+    PATH="/static-php-cli/buildroot/bin:$PATH" \
     CGO_CFLAGS="$(php-config --includes | sed s#-I/#-I/static-php-cli/buildroot/#g)" \
     CGO_LDFLAGS="-L/static-php-cli/buildroot/lib $(php-config --ldflags) $(php-config --libs | sed -e 's/-lgcc_s//g')" \
     go build -buildmode=pie -tags "cgo netgo osusergo static_build" -ldflags "-linkmode=external -extldflags -static-pie -s -w -X 'github.com/caddyserver/caddy/v2.CustomVersion=FrankenPHP $FRANKENPHP_VERSION Caddy'"
