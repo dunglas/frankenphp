@@ -42,6 +42,9 @@ GITHUB_TOKEN="xxx" docker --load buildx bake static-builder
 
 ## macOS
 
+Note: only a very limited subset of extensions are currently available for static builds on macOS
+because of a weird linking issue.
+
 Run the following command to create a static binary for macOS:
 
 ```console
