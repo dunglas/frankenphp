@@ -27,9 +27,11 @@ To reduce the size of the binary and to reduce the attack surface, you can choos
 For instance, run the following command to only build the `opcache` extension:
 
 ```console
-docker buildx bake --load --set static-builder.args.PHP_EXTENSIONS=opcache static-builder
+docker buildx bake --load --set static-builder.args.PHP_EXTENSIONS=opcache,pdo_sqlite static-builder
 # ...
 ```
+
+See [the list of supported extensions](https://static-php-cli.zhamao.me/en/guide/extensions.html).
 
 ### GitHub Token
 
