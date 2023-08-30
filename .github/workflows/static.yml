@@ -70,16 +70,15 @@ jobs:
       - name: Fetch libraries sources
         working-directory: static-php-cli/
         run: ./bin/spc fetch --with-php=8.2 -A
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build static libphp
         working-directory: static-php-cli/
         run: ./bin/spc build --enable-zts --build-embed --debug "bcmath,calendar,ctype,curl,dba,dom,exif,filter,fileinfo,gd,iconv,mbstring,mbregex,mysqli,mysqlnd,openssl,pcntl,pdo,pdo_mysql,pdo_pgsql,pdo_sqlite,pgsql,phar,posix,readline,redis,session,simplexml,sockets,sqlite3,tokenizer,xml,xmlreader,xmlwriter,zip,zlib,apcu"
 
-      - name: Set include flags
-        working-directory: static-php-cli/
-        run: echo "CGO_CFLAGS=$(php-config --includes)" >> "$GITHUB_ENV"
-
       - name: Set CGO flags
+        working-directory: static-php-cli/
         run: |
            echo "CGO_CFLAGS=$(./buildroot/bin/php-config --includes | sed s#-I/#-I$PWD/buildroot/#g)" >> "$GITHUB_ENV"
            echo "CGO_LDFLAGS=-framework CoreFoundation -framework SystemConfiguration $(./buildroot/bin/php-config --ldflags) $(./buildroot/bin/php-config --libs)" >> "$GITHUB_ENV"
