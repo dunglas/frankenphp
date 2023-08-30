@@ -11,7 +11,8 @@ on:
   workflow_dispatch:
     inputs: {}
 jobs:
-  build:
+  build-linux:
+    name: Build Linux x86_64 binary
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -42,5 +43,53 @@ jobs:
       - name: Upload binary
         uses: actions/upload-artifact@v3
         with:
-          name: frankenphp-dev
+          name: frankenphp-linux-x86_64-dev
+          path: frankenphp
+
+  build-mac:
+    name: Build macOS binaries
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+
+      - run: git clone --depth=1 https://github.com/dunglas/static-php-cli.git --branch=feat/embed 
+
+      - name: Install static-php-cli dependencies
+        working-directory: static-php-cli/
+        run: composer install --no-dev -a
+
+      - name: Install missing system dependencies
+        run: ./bin/spc doctor --auto-fix
+        working-directory: static-php-cli/
+
+      - name: Fetch libraries sources
+        working-directory: static-php-cli/
+        run: ./bin/spc fetch --with-php=8.2 -A
+
+      - name: Build static libphp
+        working-directory: static-php-cli/
+        run: ./bin/spc build --enable-zts --build-embed --debug "bcmath,calendar,ctype,curl,dba,dom,exif,filter,fileinfo,gd,iconv,mbstring,mbregex,mysqli,mysqlnd,openssl,pcntl,pdo,pdo_mysql,pdo_pgsql,pdo_sqlite,pgsql,phar,posix,readline,redis,session,simplexml,sockets,sqlite3,tokenizer,xml,xmlreader,xmlwriter,zip,zlib,apcu"
+
+      - name: Set include flags
+        working-directory: static-php-cli/
+        run: echo "CGO_CFLAGS=$(php-config --includes)" >> "$GITHUB_ENV"
+
+      - name: Set CGO flags
+        run: |
+           echo "CGO_CFLAGS=$(./buildroot/bin/php-config --includes | sed s#-I/#-I$PWD/buildroot/#g)" >> "$GITHUB_ENV"
+           echo "CGO_LDFLAGS=-framework CoreFoundation -framework SystemConfiguration $(./buildroot/bin/php-config --ldflags) $(./buildroot/bin/php-config --libs)" >> "$GITHUB_ENV"
+
+      - name: Build FrankenPHP
+        working-directory: caddy/frankenphp/
+        run: go build -buildmode=pie -tags "cgo netgo osusergo static_build" -ldflags "-linkmode=external -extldflags -static-pie"
+
+      - name: Upload binary
+        uses: actions/upload-artifact@v3
+        with:
+          name: frankenphp-mac-x86_64-dev
           path: frankenphp

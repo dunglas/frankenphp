@@ -44,22 +44,22 @@ GITHUB_TOKEN="xxx" docker --load buildx bake static-builder
 
 ## macOS
 
-Note: only a very limited subset of extensions are currently available for static builds on macOS
-because of a weird linking issue.
-
 Run the following command to create a static binary for macOS:
 
 ```console
 git clone --depth=1 https://github.com/dunglas/static-php-cli.git --branch=feat/embed 
 cd static-php-cli
 composer install --no-dev -a
-./bin/spc doctor
+./bin/spc doctor --auto-fix
 ./bin/spc fetch --with-php=8.2 -A
-./bin/spc build --enable-zts --build-embed --debug "opcache"
+./bin/spc build --enable-zts --build-embed --debug "bcmath,calendar,ctype,curl,dba,dom,exif,filter,fileinfo,gd,iconv,mbstring,mbregex,mysqli,mysqlnd,openssl,pcntl,pdo,pdo_mysql,pdo_pgsql,pdo_sqlite,pgsql,phar,posix,readline,redis,session,simplexml,sockets,sqlite3,tokenizer,xml,xmlreader,xmlwri
+ter,zip,zlib,apcu"
 export CGO_CFLAGS="$(./buildroot/bin/php-config --includes | sed s#-I/#-I$PWD/buildroot/#g)"
-export CGO_LDFLAGS="-L$PWD/buildroot/lib $(./buildroot/bin/php-config --ldflags) $(./buildroot/bin/php-config --libs)"
+export CGO_LDFLAGS="-framework CoreFoundation -framework SystemConfiguration $(./buildroot/bin/php-config --ldflags) $(./buildroot/bin/php-config --libs)"
 
 git clone --depth=1 https://github.com/dunglas/frankenphp.git
 cd frankenphp/caddy/frankenphp
 go build -buildmode=pie -tags "cgo netgo osusergo static_build" -ldflags "-linkmode=external -extldflags -static-pie"
 ```
+
+See [the list of supported extensions](https://static-php-cli.zhamao.me/en/guide/extensions.html).
