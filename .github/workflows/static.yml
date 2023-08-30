@@ -86,10 +86,10 @@ jobs:
 
       - name: Build FrankenPHP
         working-directory: caddy/frankenphp/
-        run: go build -buildmode=pie -tags "cgo netgo osusergo static_build" -ldflags "-linkmode=external -extldflags -static-pie"
+        run: go build -buildmode=pie -tags "cgo netgo osusergo static_build" -ldflags "-linkmode=external -extldflags -static-pie -w -s"
 
       - name: Upload binary
         uses: actions/upload-artifact@v3
         with:
           name: frankenphp-mac-x86_64-dev
-          path: frankenphp
+          path: caddy/frankenphp/frankenphp
