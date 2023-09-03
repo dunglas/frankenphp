@@ -3,10 +3,12 @@ FROM php-base AS builder
 
 ARG FRANKENPHP_VERSION='dev'
 
-COPY --from=golang-base /usr/local/go/bin/go /usr/local/go/bin/go
-COPY --from=golang-base /usr/local/go /usr/local/go
-
 ENV PATH /usr/local/go/bin:$PATH
+# todo: automate this?
+# see https://github.com/docker-library/php/blob/master/8.2/bookworm/zts/Dockerfile#L57-L59 for PHP values
+ENV CGO_LDFLAGS="-lssl -lcrypto -lreadline -largon2 -lcurl -lonig -lz $PHP_LDFLAGS" CGO_CFLAGS=$PHP_CFLAGS CGO_CPPFLAGS=$PHP_CPPFLAGS
+
+ENTRYPOINT ["/bin/bash","-c"]
 
 # This is required to link the FrankenPHP binary to the PHP binary
 RUN apt-get update && \
@@ -25,30 +27,26 @@ RUN apt-get update && \
 
 WORKDIR /go/src/app
 
-COPY go.mod go.sum ./
-RUN go mod graph | awk '{if ($1 !~ "@") print $2}' | xargs go get
+COPY --from=golang-base /usr/local/go/bin/go /usr/local/go/bin/go
+COPY --from=golang-base /usr/local/go /usr/local/go
 
-RUN mkdir caddy && cd caddy
-COPY caddy/go.mod caddy/go.sum ./caddy/
+RUN --mount=type=cache,target=/go/pkg/mod/ \
+	--mount=type=bind,source=go.sum,target=go.sum \
+	--mount=type=bind,source=go.mod,target=go.mod \
+    go mod graph | awk '{if ($1 !~ "@") print $2}' | xargs go get
 
-RUN cd caddy && go mod graph | awk '{if ($1 !~ "@") print $2}' | xargs go get
+RUN mkdir caddy
+RUN --mount=type=cache,target=/go/pkg/mod/ \
+	--mount=type=bind,source=caddy/go.sum,target=caddy/go.sum \
+	--mount=type=bind,source=caddy/go.mod,target=caddy/go.mod \
+    cd caddy && go mod graph | awk '{if ($1 !~ "@") print $2}' | xargs go get
 
-COPY *.* ./
-COPY caddy caddy
-COPY C-Thread-Pool C-Thread-Pool
-COPY internal internal
-COPY testdata testdata
-
-# todo: automate this?
-# see https://github.com/docker-library/php/blob/master/8.2/bookworm/zts/Dockerfile#L57-L59 for PHP values
-ENV CGO_LDFLAGS="-lssl -lcrypto -lreadline -largon2 -lcurl -lonig -lz $PHP_LDFLAGS" CGO_CFLAGS=$PHP_CFLAGS CGO_CPPFLAGS=$PHP_CPPFLAGS
-
-RUN cd caddy/frankenphp && \
+RUN --mount=type=bind,target=. \
+    cd caddy/frankenphp && \
     go build -ldflags "-X 'github.com/caddyserver/caddy/v2.CustomVersion=FrankenPHP $FRANKENPHP_VERSION Caddy'" && \
     cp frankenphp /usr/local/bin && \
     cp /go/src/app/caddy/frankenphp/Caddyfile /etc/Caddyfile
 
-ENTRYPOINT ["/bin/bash","-c"]
 
 FROM php-base AS runner
 
