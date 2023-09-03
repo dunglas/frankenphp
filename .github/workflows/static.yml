@@ -50,11 +50,6 @@ jobs:
     name: Build macOS binaries
     runs-on: macos-latest
 
-    strategy:
-      fail-fast: false
-      matrix:
-        arch: ['arm64', 'x86_64']
-
     steps:
       - uses: actions/checkout@v3
 
@@ -62,7 +57,7 @@ jobs:
         with:
           go-version: '1.21'
 
-      - run: git clone --depth=1 https://github.com/dunglas/static-php-cli.git --branch=feat/cross-compile-apple
+      - run: git clone --depth=1 https://github.com/dunglas/static-php-cli.git --branch=feat/embed 
 
       - name: Install static-php-cli dependencies
         working-directory: static-php-cli/
@@ -80,9 +75,7 @@ jobs:
 
       - name: Build static libphp
         working-directory: static-php-cli/
-        run: |
-          clang --print-targets
-          ./bin/spc build --arch ${{ matrix.arch }} --enable-zts --build-embed --debug "bcmath,calendar,ctype,curl,dba,dom,exif,filter,fileinfo,gd,iconv,mbstring,mbregex,mysqli,mysqlnd,openssl,pcntl,pdo,pdo_mysql,pdo_pgsql,pdo_sqlite,pgsql,phar,posix,readline,redis,session,simplexml,sockets,sqlite3,tokenizer,xml,xmlreader,xmlwriter,zip,zlib,apcu" || cat source/pkg-config/config.log
+        run: ./bin/spc build --enable-zts --build-embed --debug "bcmath,calendar,ctype,curl,dba,dom,exif,filter,fileinfo,gd,iconv,mbstring,mbregex,mysqli,mysqlnd,openssl,pcntl,pdo,pdo_mysql,pdo_pgsql,pdo_sqlite,pgsql,phar,posix,readline,redis,session,simplexml,sockets,sqlite3,tokenizer,xml,xmlreader,xmlwriter,zip,zlib,apcu"
 
       - name: Set CGO flags
         working-directory: static-php-cli/
@@ -93,11 +86,9 @@ jobs:
       - name: Build FrankenPHP
         working-directory: caddy/frankenphp/
         run: go build -buildmode=pie -tags "cgo netgo osusergo static_build" -ldflags "-linkmode=external -extldflags -static-pie -w -s"
-        env:
-          GOARCH: ${{ matrix.arch == 'arm64' && 'arm64' || 'amd64' }}
 
       - name: Upload binary
         uses: actions/upload-artifact@v3
         with:
-          name: frankenphp-mac-${{ matrix.arch }}-dev
+          name: frankenphp-mac-x86_64-dev
           path: caddy/frankenphp/frankenphp
