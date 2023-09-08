@@ -67,33 +67,20 @@ RUN apk add --no-cache --virtual .build-deps \
 	readline-dev \
 	sqlite-dev \
 	upx \
-	# Needed for the custom Go build
+	# Needed by gotip
 	git \
 	bash
-
-# FIXME: temporary workaround for https://github.com/golang/go/issues/68285
-WORKDIR /
-RUN git clone https://go.googlesource.com/go goroot
-WORKDIR /goroot
-# Revert https://github.com/golang/go/commit/3560cf0afb3c29300a6c88ccd98256949ca7a6f6 to prevent the crash with musl
-RUN git config --global user.email "build@example.com" && \
-	git config --global user.name "Build" && \
-	git checkout "$(go env GOVERSION)" && \
-	git revert 3560cf0afb3c29300a6c88ccd98256949ca7a6f6
-WORKDIR /goroot/src
-ENV GOHOSTARCH="$TARGETARCH"
-RUN ./make.bash
-ENV PATH="/goroot/bin:$PATH"
-RUN go version
-
+	
+RUN GOBIN=/usr/local/go/bin go install golang.org/dl/gotip@latest && gotip download
+	
 WORKDIR /go/src/app
 
 COPY --link go.mod go.sum ./
-RUN go mod graph | awk '{if ($1 !~ "@") print $2}' | xargs go get
+RUN gotip mod graph | awk '{if ($1 !~ "@") print $2}' | xargs gotip get
 
 WORKDIR /go/src/app/caddy
 COPY caddy/go.mod caddy/go.sum ./
-RUN go mod graph | awk '{if ($1 !~ "@") print $2}' | xargs go get
+RUN gotip mod graph | awk '{if ($1 !~ "@") print $2}' | xargs gotip get
 
 WORKDIR /go/src/app
 COPY --link *.* ./
