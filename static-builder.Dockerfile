@@ -29,11 +29,13 @@ RUN apk update; \
         make \
         php81 \
         php81-common \
+        php81-dom \
         php81-pcntl \
         php81-phar \
         php81-posix \
         php81-tokenizer \
         php81-xml \
+        php81-xmlwriter \
         pkgconfig \
         wget \
         xz
@@ -41,7 +43,7 @@ RUN apk update; \
 WORKDIR /static-php-cli
 
 RUN git clone --depth=1 https://github.com/dunglas/static-php-cli.git --branch=feat/embed . && \
-    composer install --no-cache --no-dev --classmap-authoritative
+    COMPOSER_ALLOW_SUPERUSER=1 composer install --no-dev --classmap-authoritative --no-cache
 
 RUN --mount=type=secret,id=github-token GITHUB_TOKEN=$(cat /run/secrets/github-token) ./bin/spc download --with-php=$PHP_VERSION --all
 
