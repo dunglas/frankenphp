@@ -12,13 +12,18 @@ package frankenphp
 // Use PHP includes corresponding to your PHP installation by running:
 //
 //   export CGO_CFLAGS=$(php-config --includes)
+//   export CGO_LDFLAGS=$(php-config --ldflags --libs)
+//
+// We also set these flags for hardening: https://github.com/docker-library/php/blob/master/8.2/bookworm/zts/Dockerfile#L57-L59
 
-// #cgo pkg-config: libxml-2.0 sqlite3
-// #cgo CFLAGS: -Wall -Werror
+// #cgo darwin pkg-config: libxml-2.0 sqlite3
+// #cgo CFLAGS: -Wall -Werror -fstack-protector-strong -fpic -fpie -O2 -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64
 // #cgo CFLAGS: -I/usr/local/include/php -I/usr/local/include/php/main -I/usr/local/include/php/TSRM -I/usr/local/include/php/Zend -I/usr/local/include/php/ext -I/usr/local/include/php/ext/date/lib
 // #cgo linux CFLAGS: -D_GNU_SOURCE
+// #cgo CPPFLAGS: -fstack-protector-strong -fpic -fpie -O2 -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64
 // #cgo darwin LDFLAGS: -L/opt/homebrew/opt/libiconv/lib -liconv
-// #cgo LDFLAGS: -L/usr/local/lib -L/usr/lib -lphp -lresolv -ldl -lm -lutil
+// #cgo linux LDFLAGS: -Wl,-O1
+// #cgo LDFLAGS: -pie -L/usr/local/lib -L/usr/lib -lphp -lresolv -ldl -lm -lutil
 // #include <stdlib.h>
 // #include <stdint.h>
 // #include <php_variables.h>

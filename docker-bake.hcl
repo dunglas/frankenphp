@@ -6,6 +6,10 @@ variable "VERSION" {
     default = "dev"
 }
 
+variable "GO_VERSION" {
+    default = "1.21"
+}
+
 variable "SHA" {}
 
 variable "LATEST" {
@@ -59,7 +63,7 @@ target "default" {
     }
     contexts = {
         php-base = "docker-image://php:${php-version}-zts-${os}"
-        golang-base = "docker-image://golang:1.21-${os}"
+        golang-base = "docker-image://golang:${GO_VERSION}-${os}"
     }
     dockerfile = os == "alpine" ? "alpine.Dockerfile" : "Dockerfile"
     context = "./"
@@ -90,4 +94,17 @@ target "default" {
     args = {
         FRANKENPHP_VERSION = VERSION
     }
+}
+
+target "static-builder" {
+    contexts = {
+        golang-base = "docker-image://golang:${GO_VERSION}-alpine"
+    }
+    dockerfile = "static-builder.Dockerfile"
+    context = "./"
+    tags = ["${IMAGE_NAME}:static-builder"]
+    args = {
+        FRANKENPHP_VERSION = VERSION
+    }
+    secret = ["id=github-token,env=GITHUB_TOKEN"]
 }

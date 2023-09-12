@@ -1,5 +1,10 @@
 # Compile From Sources
 
+This document explain how to create a FrankenPHP build that will load PHP as a dymanic library.
+This is the recommended method.
+
+Alternatively, [creating static builds](static.md) is also possible.
+
 ## Install PHP
 
 FrankenPHP is compatible with the PHP 8.2 and superior.
