@@ -14,7 +14,6 @@ RUN apk update; \
         bison \
         build-base \
         cmake \
-        composer \
         curl \
         file \
         flex \
@@ -27,23 +26,32 @@ RUN apk update; \
         linux-headers \
         m4 \
         make \
-        php81 \
-        php81-common \
-        php81-dom \
-        php81-pcntl \
-        php81-phar \
-        php81-posix \
-        php81-tokenizer \
-        php81-xml \
-        php81-xmlwriter \
+        php82 \
+        php82-common \
+        php82-dom \
+        php82-mbstring \
+        php82-openssl \
+        php82-pcntl \
+        php82-phar \
+        php82-posix \
+        php82-tokenizer \
+        php82-xml \
+        php82-xmlwriter \
         pkgconfig \
         wget \
-        xz
+        xz ; \
+    ln -sf /usr/bin/php82 /usr/bin/php
+
+# https://getcomposer.org/doc/03-cli.md#composer-allow-superuser
+ENV COMPOSER_ALLOW_SUPERUSER=1
+ENV PATH="${PATH}:/root/.composer/vendor/bin"
+
+COPY --from=composer/composer:2-bin --link /composer /usr/bin/composer
 
 WORKDIR /static-php-cli
 
 RUN git clone --depth=1 https://github.com/dunglas/static-php-cli.git --branch=feat/embed . && \
-    COMPOSER_ALLOW_SUPERUSER=1 composer install --no-dev --classmap-authoritative --no-cache
+    composer install --no-cache --no-dev --classmap-authoritative
 
 RUN --mount=type=secret,id=github-token GITHUB_TOKEN=$(cat /run/secrets/github-token) ./bin/spc download --with-php=$PHP_VERSION --all
 
