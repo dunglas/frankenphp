@@ -15,7 +15,7 @@ jobs:
     name: Build Linux x86_64 binary
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
@@ -51,13 +51,16 @@ jobs:
     runs-on: macos-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
+
+      - uses: actions/checkout@v4
+        with:
+          repository: crazywhalecc/static-php-cli
+          path: static-php-cli
 
       - uses: actions/setup-go@v4
         with:
           go-version: '1.21'
-
-      - run: git clone --depth=1 https://github.com/dunglas/static-php-cli.git --branch=feat/embed 
 
       - name: Install static-php-cli dependencies
         working-directory: static-php-cli/
@@ -75,7 +78,7 @@ jobs:
 
       - name: Build static libphp
         working-directory: static-php-cli/
-        run: ./bin/spc build --enable-zts --build-embed --debug "bcmath,calendar,ctype,curl,dba,dom,exif,filter,fileinfo,gd,iconv,mbstring,mbregex,mysqli,mysqlnd,opcache,openssl,pcntl,pdo,pdo_mysql,pdo_pgsql,pdo_sqlite,pgsql,phar,posix,readline,redis,session,simplexml,sockets,sqlite3,tokenizer,xml,xmlreader,xmlwriter,zip,zlib,apcu"
+        run: ./bin/spc build --enable-zts --build-embed --debug "bcmath,calendar,ctype,curl,dba,dom,exif,filter,fileinfo,gd,iconv,intl,mbstring,mbregex,mysqli,mysqlnd,opcache,openssl,pcntl,pdo,pdo_mysql,pdo_pgsql,pdo_sqlite,pgsql,phar,posix,readline,redis,session,simplexml,sockets,sqlite3,tokenizer,xml,xmlreader,xmlwriter,zip,zlib,apcu"
 
       - name: Set CGO flags
         working-directory: static-php-cli/

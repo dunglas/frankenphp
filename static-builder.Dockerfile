@@ -3,7 +3,7 @@ FROM golang-base
 
 ARG FRANKENPHP_VERSION='dev'
 ARG PHP_VERSION='8.2'
-ARG PHP_EXTENSIONS='bcmath,calendar,ctype,curl,dba,dom,exif,filter,fileinfo,gd,iconv,mbstring,mbregex,mysqli,mysqlnd,opcache,openssl,pcntl,pdo,pdo_mysql,pdo_pgsql,pdo_sqlite,pgsql,phar,posix,readline,redis,session,simplexml,sockets,sqlite3,tokenizer,xml,xmlreader,xmlwriter,zip,zlib,apcu'
+ARG PHP_EXTENSIONS='bcmath,calendar,ctype,curl,dba,dom,exif,filter,fileinfo,gd,iconv,intl,mbstring,mbregex,mysqli,mysqlnd,opcache,openssl,pcntl,pdo,pdo_mysql,pdo_pgsql,pdo_sqlite,pgsql,phar,posix,readline,redis,session,simplexml,sockets,sqlite3,tokenizer,xml,xmlreader,xmlwriter,zip,zlib,apcu'
 
 RUN apk update; \
     apk add --no-cache \
@@ -50,7 +50,7 @@ COPY --from=composer/composer:2-bin --link /composer /usr/bin/composer
 
 WORKDIR /static-php-cli
 
-RUN git clone --depth=1 https://github.com/dunglas/static-php-cli.git --branch=feat/embed . && \
+RUN git clone --depth=1 https://github.com/crazywhalecc/static-php-cli . && \
     composer install --no-cache --no-dev --classmap-authoritative
 
 RUN --mount=type=secret,id=github-token GITHUB_TOKEN=$(cat /run/secrets/github-token) ./bin/spc download --with-php=$PHP_VERSION --all

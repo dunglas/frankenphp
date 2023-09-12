@@ -47,13 +47,12 @@ GITHUB_TOKEN="xxx" docker --load buildx bake static-builder
 Run the following command to create a static binary for macOS:
 
 ```console
-git clone --depth=1 https://github.com/dunglas/static-php-cli.git --branch=feat/embed 
+git clone --depth=1 https://github.com/crazywhalecc/static-php-cli.git
 cd static-php-cli
 composer install --no-dev -a
 ./bin/spc doctor --auto-fix
 ./bin/spc fetch --with-php=8.2 -A
-./bin/spc build --enable-zts --build-embed --debug "bcmath,calendar,ctype,curl,dba,dom,exif,filter,fileinfo,gd,iconv,mbstring,mbregex,mysqli,mysqlnd,openssl,pcntl,pdo,pdo_mysql,pdo_pgsql,pdo_sqlite,pgsql,phar,posix,readline,redis,session,simplexml,sockets,sqlite3,tokenizer,xml,xmlreader,xmlwri
-ter,zip,zlib,apcu"
+./bin/spc build --enable-zts --build-embed --debug "bcmath,calendar,ctype,curl,dba,dom,exif,filter,fileinfo,gd,iconv,intl,mbstring,mbregex,mysqli,mysqlnd,opcache,openssl,pcntl,pdo,pdo_mysql,pdo_pgsql,pdo_sqlite,pgsql,phar,posix,readline,redis,session,simplexml,sockets,sqlite3,tokenizer,xml,xmlreader,xmlwriter,zip,zlib,apcu"
 export CGO_CFLAGS="$(./buildroot/bin/php-config --includes | sed s#-I/#-I$PWD/buildroot/#g)"
 export CGO_LDFLAGS="-framework CoreFoundation -framework SystemConfiguration $(./buildroot/bin/php-config --ldflags) $(./buildroot/bin/php-config --libs)"
 
