@@ -47,7 +47,7 @@ jobs:
           path: frankenphp
 
   build-mac:
-    name: Build macOS binaries
+    name: Build macOS x86_64 binaries
     runs-on: macos-latest
     env:
       HOMEBREW_NO_AUTO_UPDATE: 1
@@ -60,6 +60,10 @@ jobs:
           repository: crazywhalecc/static-php-cli
           path: static-php-cli
 
+      - name: Install missing system dependencies
+        run: brew install automake
+        working-directory: static-php-cli/
+
       - uses: actions/setup-go@v4
         with:
           go-version: '1.21'
@@ -67,10 +71,6 @@ jobs:
       - name: Install static-php-cli dependencies
         working-directory: static-php-cli/
         run: composer install --no-dev -a
-
-      - name: Install missing system dependencies
-        run: ./bin/spc doctor --auto-fix
-        working-directory: static-php-cli/
 
       - name: Fetch libraries sources
         working-directory: static-php-cli/

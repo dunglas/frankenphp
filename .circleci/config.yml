@@ -9,8 +9,7 @@ jobs:
 
     steps:
       - checkout
-      - run: brew install go composer
-
+      - run: brew install --formula go automake cmake composer
       - run:
           name: Clone static-php-cli
           command: git clone --depth 1 https://github.com/crazywhalecc/static-php-cli
@@ -22,7 +21,6 @@ jobs:
           working_directory: static-php-cli/
           command: |
             composer install --no-dev -a
-            ./bin/spc doctor --auto-fix
             ./bin/spc fetch --with-php=8.2 -A
       - save_cache:
           key: spc-{{ checksum "static-php-cli/composer.json" }}
@@ -37,11 +35,9 @@ jobs:
           working_directory: static-php-cli/
           name: Set CGO flags
           command: |
-            ./buildroot/bin/php-config
-            echo "export CGO_CFLAGS=$(./buildroot/bin/php-config --includes | sed s#-I/#-I$PWD/buildroot/#g)" >> "$BASH_ENV"
-            echo "export CGO_LDFLAGS=-framework CoreFoundation -framework SystemConfiguration $(./buildroot/bin/php-config --ldflags) $(./buildroot/bin/php-config --libs)" >> "$BASH_ENV"
-            echo "export PHP_VERSION=$(./buildroot/bin/php-config --version)" >> "$BASH_ENV"
-            cat $BASH_ENV
+            echo "export CGO_CFLAGS='$(./buildroot/bin/php-config --includes | sed s#-I/#-I$PWD/buildroot/#g)'" >> "$BASH_ENV"
+            echo "export CGO_LDFLAGS='-framework CoreFoundation -framework SystemConfiguration $(./buildroot/bin/php-config --ldflags) $(./buildroot/bin/php-config --libs)'" >> "$BASH_ENV"
+            echo "export PHP_VERSION='$(./buildroot/bin/php-config --version)'" >> "$BASH_ENV"
       - restore_cache:
           keys:
             - go-mod-v4-{{ checksum "caddy/go.sum" }}
