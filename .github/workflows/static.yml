@@ -34,7 +34,7 @@ jobs:
             *.cache-from=type=gha,scope=refs/heads/main-static-builder
             *.cache-to=type=gha,scope=${{github.ref}}-static-builder
         env:
-          VERSION: ${{github.ref_name}}
+          VERSION: ${{ github.sha }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Copy binary
@@ -43,12 +43,14 @@ jobs:
       - name: Upload binary
         uses: actions/upload-artifact@v3
         with:
-          name: frankenphp-linux-x86_64-dev
+          name: frankenphp-linux-x86_64-${{ github.sha }}
           path: frankenphp
 
   build-mac:
-    name: Build macOS binaries
+    name: Build macOS x86_64 binaries
     runs-on: macos-latest
+    env:
+      HOMEBREW_NO_AUTO_UPDATE: 1
 
     steps:
       - uses: actions/checkout@v4
@@ -58,6 +60,10 @@ jobs:
           repository: crazywhalecc/static-php-cli
           path: static-php-cli
 
+      - name: Install missing system dependencies
+        run: brew install automake
+        working-directory: static-php-cli/
+
       - uses: actions/setup-go@v4
         with:
           go-version: '1.21'
@@ -66,17 +72,13 @@ jobs:
         working-directory: static-php-cli/
         run: composer install --no-dev -a
 
-      - name: Install missing system dependencies
-        run: ./bin/spc doctor --auto-fix
-        working-directory: static-php-cli/
-
       - name: Fetch libraries sources
         working-directory: static-php-cli/
         run: ./bin/spc fetch --with-php=8.2 -A
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build static libphp
+      - name: Build libphp.a
         working-directory: static-php-cli/
         run: ./bin/spc build --enable-zts --build-embed --debug "bcmath,calendar,ctype,curl,dba,dom,exif,filter,fileinfo,gd,iconv,intl,mbstring,mbregex,mysqli,mysqlnd,opcache,openssl,pcntl,pdo,pdo_mysql,pdo_pgsql,pdo_sqlite,pgsql,phar,posix,readline,redis,session,simplexml,sockets,sqlite3,tokenizer,xml,xmlreader,xmlwriter,zip,zlib,apcu"
 
@@ -85,13 +87,16 @@ jobs:
         run: |
            echo "CGO_CFLAGS=$(./buildroot/bin/php-config --includes | sed s#-I/#-I$PWD/buildroot/#g)" >> "$GITHUB_ENV"
            echo "CGO_LDFLAGS=-framework CoreFoundation -framework SystemConfiguration $(./buildroot/bin/php-config --ldflags) $(./buildroot/bin/php-config --libs)" >> "$GITHUB_ENV"
+           echo "PHP_VERSION=$(./buildroot/bin/php-config --version)" >> "$GITHUB_ENV"
 
       - name: Build FrankenPHP
         working-directory: caddy/frankenphp/
-        run: go build -buildmode=pie -tags "cgo netgo osusergo static_build" -ldflags "-linkmode=external -extldflags -static-pie -w -s"
+        run: |
+          go build -buildmode=pie -tags "cgo netgo osusergo static_build" -ldflags "-linkmode=external -extldflags -static-pie -w -s -X 'github.com/caddyserver/caddy/v2.CustomVersion=FrankenPHP ${{ github.sha }} PHP $PHP_VERSION Caddy'"
+          ./frankenphp version
 
       - name: Upload binary
         uses: actions/upload-artifact@v3
         with:
-          name: frankenphp-mac-x86_64-dev
+          name: frankenphp-mac-x86_64-${{ github.sha }}
           path: caddy/frankenphp/frankenphp
