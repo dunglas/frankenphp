@@ -37,9 +37,11 @@ jobs:
           working_directory: static-php-cli/
           name: Set CGO flags
           command: |
-            echo "CGO_CFLAGS=$(./buildroot/bin/php-config --includes | sed s#-I/#-I$PWD/buildroot/#g)" >> "$BASH_ENV"
-            echo "CGO_LDFLAGS=-framework CoreFoundation -framework SystemConfiguration $(./buildroot/bin/php-config --ldflags) $(./buildroot/bin/php-config --libs)" >> "$BASH_ENV"
-            echo "PHP_VERSION=$(./buildroot/bin/php-config --version)" >> "$BASH_ENV"
+            ./buildroot/bin/php-config
+            echo "export CGO_CFLAGS=$(./buildroot/bin/php-config --includes | sed s#-I/#-I$PWD/buildroot/#g)" >> "$BASH_ENV"
+            echo "export CGO_LDFLAGS=-framework CoreFoundation -framework SystemConfiguration $(./buildroot/bin/php-config --ldflags) $(./buildroot/bin/php-config --libs)" >> "$BASH_ENV"
+            echo "export PHP_VERSION=$(./buildroot/bin/php-config --version)" >> "$BASH_ENV"
+            cat $BASH_ENV
       - restore_cache:
           keys:
             - go-mod-v4-{{ checksum "caddy/go.sum" }}

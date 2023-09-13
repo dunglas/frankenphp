@@ -76,6 +76,7 @@ COPY caddy caddy
 COPY C-Thread-Pool C-Thread-Pool
 
 RUN cd caddy/frankenphp && \
+    /static-php-cli/buildroot/bin/php-config && \
     CGO_CFLAGS="$(/static-php-cli/buildroot/bin/php-config --includes | sed s#-I/#-I/static-php-cli/buildroot/#g)" \
     CGO_LDFLAGS="$(/static-php-cli/buildroot/bin/php-config --ldflags) $(/static-php-cli/buildroot/bin/php-config --libs | sed -e 's/-lgcc_s//g')" \
     PHP_VERSION="$(/static-php-cli/buildroot/bin/php-config --version)" \
