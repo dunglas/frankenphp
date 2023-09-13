@@ -16,7 +16,7 @@ jobs:
           command: git clone --depth 1 https://github.com/crazywhalecc/static-php-cli
       - restore_cache:
           keys:
-            - spc-{{ checksum "static-php-cli/composer.lock" }}
+            - spc-{{ checksum "static-php-cli/composer.json" }}
       - run:
           name: Install static-php-cli and fetch libraries sources
           working_directory: static-php-cli/
@@ -25,7 +25,7 @@ jobs:
             ./bin/spc doctor --auto-fix
             ./bin/spc fetch --with-php=8.2 -A
       - save_cache:
-          key: spc-{{ checksum "static-php-cli/composer.lock" }}
+          key: spc-{{ checksum "static-php-cli/composer.json" }}
           paths:
             - save_cache:tatic-php-cli/downloads/
             - static-php-cli/vendor/
