@@ -11,17 +11,17 @@ ENV PATH /usr/local/go/bin:$PATH
 # This is required to link the FrankenPHP binary to the PHP binary
 RUN apt-get update && \
     apt-get -y --no-install-recommends install \
-        libargon2-dev \
-        libcurl4-openssl-dev \
-        libonig-dev \
-        libreadline-dev \
-        libsodium-dev \
-        libsqlite3-dev \
-        libssl-dev \
-        libxml2-dev \
-        zlib1g-dev \
-        && \
-        apt-get clean
+    libargon2-dev \
+    libcurl4-openssl-dev \
+    libonig-dev \
+    libreadline-dev \
+    libsodium-dev \
+    libsqlite3-dev \
+    libssl-dev \
+    libxml2-dev \
+    zlib1g-dev \
+    && \
+    apt-get clean
 
 WORKDIR /go/src/app
 
@@ -44,9 +44,10 @@ COPY testdata testdata
 ENV CGO_LDFLAGS="-lssl -lcrypto -lreadline -largon2 -lcurl -lonig -lz $PHP_LDFLAGS" CGO_CFLAGS=$PHP_CFLAGS CGO_CPPFLAGS=$PHP_CPPFLAGS
 
 RUN cd caddy/frankenphp && \
-    go build -ldflags "-X 'github.com/caddyserver/caddy/v2.CustomVersion=FrankenPHP $FRANKENPHP_VERSION Caddy'" && \
+    go build -ldflags "-X 'github.com/caddyserver/caddy/v2.CustomVersion=FrankenPHP $FRANKENPHP_VERSION PHP $PHP_VERSION Caddy'" && \
     cp frankenphp /usr/local/bin && \
-    cp /go/src/app/caddy/frankenphp/Caddyfile /etc/Caddyfile
+    cp Caddyfile /etc/Caddyfile && \
+    frankenphp version
 
 ENTRYPOINT ["/bin/bash","-c"]
 

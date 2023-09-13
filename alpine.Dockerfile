@@ -9,18 +9,18 @@ COPY --from=golang-base /usr/local/go /usr/local/go
 ENV PATH /usr/local/go/bin:$PATH
 
 RUN apk add --no-cache --virtual .build-deps \
-		$PHPIZE_DEPS \
-		argon2-dev \
-		coreutils \
-		curl-dev \
-		gnu-libiconv-dev \
-		libsodium-dev \
-		libxml2-dev \
-		linux-headers \
-		oniguruma-dev \
-		openssl-dev \
-		readline-dev \
-		sqlite-dev
+	$PHPIZE_DEPS \
+	argon2-dev \
+	coreutils \
+	curl-dev \
+	gnu-libiconv-dev \
+	libsodium-dev \
+	libxml2-dev \
+	linux-headers \
+	oniguruma-dev \
+	openssl-dev \
+	readline-dev \
+	sqlite-dev
 
 WORKDIR /go/src/app
 
@@ -43,9 +43,10 @@ COPY testdata testdata
 ENV CGO_LDFLAGS="-lssl -lcrypto -lreadline -largon2 -lcurl -lonig -lz $PHP_LDFLAGS" CGO_CFLAGS=$PHP_CFLAGS CGO_CPPFLAGS=$PHP_CPPFLAGS
 
 RUN cd caddy/frankenphp && \
-    go build -ldflags "-X 'github.com/caddyserver/caddy/v2.CustomVersion=FrankenPHP $FRANKENPHP_VERSION Caddy'" && \
-    cp frankenphp /usr/local/bin && \
-    cp /go/src/app/caddy/frankenphp/Caddyfile /etc/Caddyfile
+	go build -ldflags "-X 'github.com/caddyserver/caddy/v2.CustomVersion=FrankenPHP $FRANKENPHP_VERSION PHP $PHP_VERSION Caddy'" && \
+	cp frankenphp /usr/local/bin && \
+	cp Caddyfile /etc/Caddyfile && \
+	frankenphp version
 
 ENTRYPOINT ["/bin/sh","-c"]
 
