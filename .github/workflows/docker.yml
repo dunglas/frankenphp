@@ -37,7 +37,7 @@ jobs:
         env:
           LATEST: '1' # TODO: unset this variable when releasing the first tagged version
           SHA: ${{github.sha}}
-          VERSION: ${{github.ref_name}}
+          VERSION: ${{github.ref_type == 'tag' && github.ref_name || github.sha}}
 
   build:
     runs-on: ubuntu-latest
@@ -98,7 +98,7 @@ jobs:
         env:
           LATEST: '1' # TODO: unset this variable when releasing the first tagged version
           SHA: ${{github.sha}}
-          VERSION: ${{github.ref_name}}
+          VERSION: ${{github.ref_type == 'tag' && github.ref_name || github.sha}}
 
       # Workaround for https://github.com/actions/runner/pull/2477#issuecomment-1501003600
       - name: Export metadata
@@ -138,7 +138,7 @@ jobs:
         run: |
           docker run --platform=${{matrix.platform}} --rm \
             $(jq -r '."builder-${{matrix.variant}}"."containerimage.config.digest"' <<< $METADATA) \
-            "sh -c 'frankenphp version && go test ${{matrix.race}} -v ./... && cd caddy && go test ${{matrix.race}} -v ./...'"
+            sh -c 'go test ${{matrix.race}} -v ./... && cd caddy && go test ${{matrix.race}} -v ./...'
         env:
           METADATA: ${{steps.build.outputs.metadata}}
 
