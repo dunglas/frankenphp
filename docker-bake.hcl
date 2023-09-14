@@ -81,12 +81,6 @@ target "default" {
         [for v in semver(VERSION) : tag(v, os, php-version, tgt)]
     ]))
     labels = {
-        "org.opencontainers.image.title" = "FrankenPHP"
-        "org.opencontainers.image.description" = "The modern PHP app server"
-        "org.opencontainers.image.url" = "https://frankenphp.dev"
-        "org.opencontainers.image.source" = "https://github.com/dunglas/frankenphp"
-        "org.opencontainers.image.licenses" = "MIT"
-        "org.opencontainers.image.vendor" = "Kévin Dunglas"
         "org.opencontainers.image.created" = "${timestamp()}"
         "org.opencontainers.image.version" = VERSION
         "org.opencontainers.image.revision" = SHA
