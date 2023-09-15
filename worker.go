@@ -23,7 +23,7 @@ var (
 // TODO: start all the worker in parallell to reduce the boot time
 func initWorkers(opt []workerOpt) error {
 	for _, w := range opt {
-		if err := startWorkers(w.fileName, w.num); err != nil {
+		if err := startWorkers(w.fileName, w.num, w.env); err != nil {
 			return err
 		}
 	}
@@ -31,7 +31,7 @@ func initWorkers(opt []workerOpt) error {
 	return nil
 }
 
-func startWorkers(fileName string, nbWorkers int) error {
+func startWorkers(fileName string, nbWorkers int, env map[string]string) error {
 	absFileName, err := filepath.Abs(fileName)
 	if err != nil {
 		return fmt.Errorf("workers %q: %w", fileName, err)
@@ -57,8 +57,13 @@ func startWorkers(fileName string, nbWorkers int) error {
 			for {
 				// Create main dummy request
 				fc := &FrankenPHPContext{
-					Env: map[string]string{"SCRIPT_FILENAME": absFileName},
+					Env: make(map[string]string, len(env)+1),
 				}
+				fc.Env["SCRIPT_FILENAME"] = absFileName
+				for k, v := range env {
+					fc.Env[k] = v
+				}
+
 				r, err := http.NewRequestWithContext(context.WithValue(
 					context.Background(),
 					contextKey,
@@ -112,7 +117,6 @@ func startWorkers(fileName string, nbWorkers int) error {
 		return nil
 	}
 
-	// Wrapping multiple errors will be available in Go 1.20: https://github.com/golang/go/issues/53435
 	return fmt.Errorf("workers %q: error while starting: %w", fileName, errors.Join(errs...))
 }
 
