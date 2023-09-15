@@ -4,6 +4,7 @@
 package caddy
 
 import (
+	"errors"
 	"net/http"
 	"strconv"
 
@@ -38,13 +39,19 @@ func (phpInterpreterDestructor) Destruct() error {
 }
 
 type workerConfig struct {
+	// FileName sets the path to the worker script.
 	FileName string `json:"file_name,omitempty"`
-	Num      int    `json:"num,omitempty"`
+	// Num sets the number of workers to start.
+	Num int `json:"num,omitempty"`
+	// Env sets an extra environment variable to the given value. Can be specified more than once for multiple environment variables.
+	Env map[string]string `json:"env,omitempty"`
 }
 
 type FrankenPHPApp struct {
-	NumThreads int            `json:"num_threads,omitempty"`
-	Workers    []workerConfig `json:"workers,omitempty"`
+	// NumThreads sets the number of PHP threads to start. Default: 2x the number of available CPUs.
+	NumThreads int `json:"num_threads,omitempty"`
+	// Workers configures the worker scripts to start.
+	Workers []workerConfig `json:"workers,omitempty"`
 }
 
 // CaddyModule returns the Caddy module information.
@@ -61,7 +68,7 @@ func (f *FrankenPHPApp) Start() error {
 
 	opts := []frankenphp.Option{frankenphp.WithNumThreads(f.NumThreads), frankenphp.WithLogger(logger)}
 	for _, w := range f.Workers {
-		opts = append(opts, frankenphp.WithWorkers(repl.ReplaceKnown(w.FileName, ""), w.Num))
+		opts = append(opts, frankenphp.WithWorkers(repl.ReplaceKnown(w.FileName, ""), w.Num, w.Env))
 	}
 
 	_, loaded, err := phpInterpreter.LoadOrNew(mainPHPInterpreterKey, func() (caddy.Destructor, error) {
@@ -111,11 +118,11 @@ func (f *FrankenPHPApp) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 				f.NumThreads = v
 
 			case "worker":
-				if !d.NextArg() {
-					return d.ArgErr()
+				wc := workerConfig{}
+				if d.NextArg() {
+					wc.FileName = d.Val()
 				}
 
-				wc := workerConfig{FileName: d.Val()}
 				if d.NextArg() {
 					v, err := strconv.Atoi(d.Val())
 					if err != nil {
@@ -123,6 +130,41 @@ func (f *FrankenPHPApp) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 					}
 
 					wc.Num = v
+				}
+
+				for d.NextBlock(1) {
+					v := d.Val()
+					switch v {
+					case "file":
+						if !d.NextArg() {
+							return d.ArgErr()
+						}
+						wc.FileName = d.Val()
+					case "num":
+						if !d.NextArg() {
+							return d.ArgErr()
+						}
+
+						v, err := strconv.Atoi(d.Val())
+						if err != nil {
+							return err
+						}
+
+						wc.Num = v
+					case "env":
+						args := d.RemainingArgs()
+						if len(args) != 2 {
+							return d.ArgErr()
+						}
+						if wc.Env == nil {
+							wc.Env = make(map[string]string)
+						}
+						wc.Env[args[0]] = args[1]
+					}
+
+					if wc.FileName == "" {
+						return errors.New(`The "file" argument must be specified`)
+					}
 				}
 
 				f.Workers = append(f.Workers, wc)
@@ -147,11 +189,15 @@ func parseGlobalOption(d *caddyfile.Dispenser, _ interface{}) (interface{}, erro
 }
 
 type FrankenPHPModule struct {
-	Root               string            `json:"root,omitempty"`
-	SplitPath          []string          `json:"split_path,omitempty"`
-	ResolveRootSymlink bool              `json:"resolve_root_symlink,omitempty"`
-	Env                map[string]string `json:"env,omitempty"`
-	logger             *zap.Logger
+	// Root sets the root folder to the site. Default: `root` directive.
+	Root string `json:"root,omitempty"`
+	// SplitPath sets the substrings for splitting the URI into two parts. The first matching substring will be used to split the "path info" from the path. The first piece is suffixed with the matching substring and will be assumed as the actual resource (CGI script) name. The second piece will be set to PATH_INFO for the CGI script to use. Default: `.php`.
+	SplitPath []string `json:"split_path,omitempty"`
+	// ResolveRootSymlink enables resolving the `root` directory to its actual value by evaluating a symbolic link, if one exists.
+	ResolveRootSymlink bool `json:"resolve_root_symlink,omitempty"`
+	// Env sets an extra environment variable to the given value. Can be specified more than once for multiple environment variables.
+	Env    map[string]string `json:"env,omitempty"`
+	logger *zap.Logger
 }
 
 // CaddyModule returns the Caddy module information.

@@ -563,7 +563,7 @@ sapi_module_struct frankenphp_sapi_module = {
 
 static void *manager_thread(void *arg) {
 #ifdef ZTS
-	// TODO: use tsrm_startup() directly as we now the number of expected threads
+	// TODO: use tsrm_startup() directly as we know the number of expected threads
 	php_tsrm_startup();
 	/*tsrm_error_set(TSRM_ERROR_LEVEL_INFO, NULL);*/
 # ifdef PHP_WIN32

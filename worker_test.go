@@ -75,10 +75,23 @@ func TestCannotCallHandleRequestInNonWorkerMode(t *testing.T) {
 	}, nil)
 }
 
+func TestWorkerEnv(t *testing.T) {
+	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
+		req := httptest.NewRequest("GET", fmt.Sprintf("http://example.com/env.php?i=%d", i), nil)
+		w := httptest.NewRecorder()
+		handler(w, req)
+
+		resp := w.Result()
+		body, _ := io.ReadAll(resp.Body)
+
+		assert.Equal(t, fmt.Sprintf("bar%d", i), string(body))
+	}, &testOptions{workerScript: "env.php", nbWorkers: 1, env: map[string]string{"FOO": "bar"}, nbParrallelRequests: 10})
+}
+
 func ExampleServeHTTP_workers() {
 	if err := frankenphp.Init(
-		frankenphp.WithWorkers("worker1.php", 4),
-		frankenphp.WithWorkers("worker2.php", 2),
+		frankenphp.WithWorkers("worker1.php", 4, map[string]string{"ENV1": "foo"}),
+		frankenphp.WithWorkers("worker2.php", 2, map[string]string{"ENV2": "bar"}),
 	); err != nil {
 		panic(err)
 	}
