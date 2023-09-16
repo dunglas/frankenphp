@@ -5,6 +5,12 @@
 #include <stdbool.h>
 #include <Zend/zend_types.h>
 
+#ifndef FRANKENPHP_VERSION
+#define FRANKENPHP_VERSION dev
+#endif
+#define STRINGIFY(x) #x
+#define TOSTRING(x) STRINGIFY(x)
+
 typedef struct frankenphp_version {
 	unsigned char major_version;
 	unsigned char minor_version;

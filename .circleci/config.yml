@@ -35,7 +35,7 @@ jobs:
           working_directory: static-php-cli/
           name: Set CGO flags
           command: |
-            echo "export CGO_CFLAGS='$(./buildroot/bin/php-config --includes | sed s#-I/#-I$PWD/buildroot/#g)'" >> "$BASH_ENV"
+            echo "export CGO_CFLAGS='-DFRANKENPHP_VERSION=$CIRCLE_SHA1 $(./buildroot/bin/php-config --includes | sed s#-I/#-I$PWD/buildroot/#g)'" >> "$BASH_ENV"
             echo "export CGO_LDFLAGS='-framework CoreFoundation -framework SystemConfiguration $(./buildroot/bin/php-config --ldflags) $(./buildroot/bin/php-config --libs)'" >> "$BASH_ENV"
             echo "export PHP_VERSION='$(./buildroot/bin/php-config --version)'" >> "$BASH_ENV"
       - restore_cache:
