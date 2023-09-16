@@ -69,6 +69,10 @@ The following environment variables can be used to inject Caddy directives in th
 * `CADDY_GLOBAL_OPTIONS`: inject [global options](https://caddyserver.com/docs/caddyfile/options)
 * `FRANKENPHP_CONFIG`: inject config under the `frankenphp` directive
 
+Unlike with FPM and CLI SAPIs, environment variables are **not** exposed by default in superglobals `$_SERVER` and `$_ENV`.
+
+To propagate environment variables to `$_SERVER` and `$_ENV`, set the `php.ini` `variables_order` directive to `EGPS`.
+
 ## Enable the Debug Mode
 
 When using the Docker image, set the `CADDY_DEBUG` environment variable to `debug` to enable the debug mode:
