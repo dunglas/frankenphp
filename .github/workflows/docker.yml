@@ -7,15 +7,15 @@ on:
     branches:
       - main
     tags:
-      - v*
+      - v*.*.*
   workflow_dispatch:
     inputs: {}
 jobs:
   prepare:
     runs-on: ubuntu-latest
     outputs:
-      # Push only if we're committing in the main branch
-      push: ${{toJson(github.ref == 'refs/heads/main' && github.event_name != 'pull_request')}}
+      # Push only if it's a tag or if we're committing in the main branch
+      push: ${{toJson(startsWith(github.ref, 'refs/tags/') || (github.ref == 'refs/heads/main' && github.event_name != 'pull_request'))}}
       variants: ${{ steps.matrix.outputs.variants }}
       platforms: ${{ steps.matrix.outputs.platforms }}
       metadata: ${{ steps.matrix.outputs.metadata }}
@@ -96,7 +96,6 @@ jobs:
             *.cache-to=type=gha,scope=${{github.ref}}-${{matrix.platform}}
             ${{fromJson(needs.prepare.outputs.push) && '*.output=type=image,name=dunglas/frankenphp,push-by-digest=true,name-canonical=true,push=true' || ''}}
         env:
-          LATEST: '1' # TODO: unset this variable when releasing the first tagged version
           SHA: ${{github.sha}}
           VERSION: ${{github.ref_type == 'tag' && github.ref_name || github.sha}}
 

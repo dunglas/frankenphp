@@ -1,5 +1,8 @@
 version: 2.1
 
+orbs:
+  gh: circleci/github-cli@2.2
+
 jobs:
   build:
     macos:
@@ -25,19 +28,21 @@ jobs:
       - save_cache:
           key: spc-{{ checksum "static-php-cli/composer.json" }}
           paths:
-            - save_cache:tatic-php-cli/downloads/
+            - static-php-cli/downloads/
             - static-php-cli/vendor/
       - run:
           working_directory: static-php-cli/
           name: Build libphp.a
-          command: ./bin/spc build --enable-zts --build-embed --debug "bcmath,calendar,ctype,curl,dba,dom,exif,filter,fileinfo,gd,iconv,intl,mbstring,mbregex,mysqli,mysqlnd,opcache,openssl,pcntl,pdo,pdo_mysql,pdo_pgsql,pdo_sqlite,pgsql,phar,posix,readline,redis,session,simplexml,sockets,sqlite3,tokenizer,xml,xmlreader,xmlwriter,zip,zlib,apcu"
+          command: ./bin/spc build --enable-zts --build-embed "bcmath,calendar,ctype,curl,dba,dom,exif,filter,fileinfo,gd,iconv,intl,mbstring,mbregex,mysqli,mysqlnd,opcache,openssl,pcntl,pdo,pdo_mysql,pdo_pgsql,pdo_sqlite,pgsql,phar,posix,readline,redis,session,simplexml,sockets,sqlite3,tokenizer,xml,xmlreader,xmlwriter,zip,zlib,apcu"
       - run:
           working_directory: static-php-cli/
           name: Set CGO flags
           command: |
-            echo "export CGO_CFLAGS='-DFRANKENPHP_VERSION=$CIRCLE_SHA1 $(./buildroot/bin/php-config --includes | sed s#-I/#-I$PWD/buildroot/#g)'" >> "$BASH_ENV"
+            if [ -z "$CIRCLE_TAG" ]; then export FRANKENPHP_VERSION=$CIRCLE_SHA1; else export FRANKENPHP_VERSION=${CIRCLE_TAG:1}; fi
+            echo "export CGO_CFLAGS='-DFRANKENPHP_VERSION=$FRANKENPHP_VERSION $(./buildroot/bin/php-config --includes | sed s#-I/#-I$PWD/buildroot/#g)'" >> "$BASH_ENV"
             echo "export CGO_LDFLAGS='-framework CoreFoundation -framework SystemConfiguration $(./buildroot/bin/php-config --ldflags) $(./buildroot/bin/php-config --libs)'" >> "$BASH_ENV"
             echo "export PHP_VERSION='$(./buildroot/bin/php-config --version)'" >> "$BASH_ENV"
+            echo "export FRANKENPHP_VERSION='$FRANKENPHP_VERSION'" >> "$BASH_ENV"
       - restore_cache:
           keys:
             - go-mod-v4-{{ checksum "caddy/go.sum" }}
@@ -46,11 +51,11 @@ jobs:
           working_directory: caddy/frankenphp/
           command: |
             go env
-            go build -buildmode=pie -tags "cgo netgo osusergo static_build" -ldflags "-linkmode=external -extldflags -static-pie -w -s -X 'github.com/caddyserver/caddy/v2.CustomVersion=FrankenPHP $CIRCLE_SHA1 PHP $PHP_VERSION Caddy'"
-            ./frankenphp version
+            go build -buildmode=pie -tags "cgo netgo osusergo static_build" -ldflags "-linkmode=external -extldflags -static-pie -w -s -X 'github.com/caddyserver/caddy/v2.CustomVersion=FrankenPHP $FRANKENPHP_VERSION PHP $PHP_VERSION Caddy'" -o frankenphp-mac-arm64
+            ./frankenphp-mac-arm64 version
       - store_artifacts:
-          path: caddy/frankenphp/frankenphp
-          destination: frankenphp-arm64-<<pipeline.git.revision>>
+          path: caddy/frankenphp/frankenphp-mac-arm64
+          destination: frankenphp-mac-arm64
       - save_cache:
           key: go-mod-v4-{{ checksum "caddy/go.sum" }}
           paths:
