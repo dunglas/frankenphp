@@ -310,7 +310,7 @@ static zend_module_entry frankenphp_module = {
     NULL,			/* request initialization */
     NULL,			/* request shutdown */
     NULL,			/* information */
-    "dev",
+    TOSTRING(FRANKENPHP_VERSION),
     STANDARD_MODULE_PROPERTIES
 };
 
