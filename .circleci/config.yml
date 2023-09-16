@@ -53,6 +53,12 @@ jobs:
             go env
             go build -buildmode=pie -tags "cgo netgo osusergo static_build" -ldflags "-linkmode=external -extldflags -static-pie -w -s -X 'github.com/caddyserver/caddy/v2.CustomVersion=FrankenPHP $FRANKENPHP_VERSION PHP $PHP_VERSION Caddy'" -o frankenphp-mac-arm64
             ./frankenphp-mac-arm64 version
+      - gh/upload:
+          filters:
+            tags:
+              only: /^v.*/
+          files:
+            - frankenphp-mac-arm64
       - store_artifacts:
           path: caddy/frankenphp/frankenphp-mac-arm64
           destination: frankenphp-mac-arm64
