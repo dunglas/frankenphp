@@ -58,7 +58,7 @@ jobs:
           name: Release
           working_directory: caddy/frankenphp/
           command: |
-            if [ -z "$CIRCLE_TAG" ]; then
+            if [ -n "$CIRCLE_TAG" ]; then
               gh release upload $CIRCLE_TAG --repo dunglas/frankenphp
             fi
       - store_artifacts:
