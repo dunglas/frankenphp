@@ -133,3 +133,11 @@ docker buildx bake -f docker-bake.hcl --pull --no-cache --push
 
 * [Bake file definition](https://docs.docker.com/build/customize/bake/file-definition/)
 * [docker buildx build](https://docs.docker.com/engine/reference/commandline/buildx_build/)
+
+
+## Useful Command
+
+```
+apk add strace util-linux gdb
+strace -e 'trace=!futex,epoll_ctl,epoll_pwait,tgkill,rt_sigreturn' -p 1
+```
