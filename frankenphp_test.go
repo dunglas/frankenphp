@@ -180,7 +180,7 @@ func testServerVariable(t *testing.T, opts *testOptions) {
 		assert.Contains(t, strBody, "[SERVER_SOFTWARE] => FrankenPHP")
 		assert.Contains(t, strBody, "[REQUEST_TIME_FLOAT]")
 		assert.Contains(t, strBody, "[REQUEST_TIME]")
-		assert.Contains(t, strBody, "[REQUEST_TIME]")
+		assert.Contains(t, strBody, "[SERVER_PORT] => 80")
 	}, opts)
 }
 

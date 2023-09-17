@@ -122,34 +122,30 @@ func populateEnv(request *http.Request) error {
 		}
 	}
 
-	_, serverNameOk := fc.Env["SERVER_NAME"]
-	_, serverPortOk := fc.Env["SERVER_PORT"]
-	if !serverNameOk || !serverPortOk {
-		reqHost, reqPort, err := net.SplitHostPort(request.Host)
-		if err == nil {
-			if !serverNameOk {
-				fc.Env["SERVER_NAME"] = reqHost
-			}
+	if fc.Env["SERVER_NAME"] == "" || fc.Env["SERVER_PORT"] == "" {
+		reqHost, reqPort, _ := net.SplitHostPort(request.Host)
+		if fc.Env["SERVER_NAME"] == "" {
+			fc.Env["SERVER_NAME"] = reqHost
+		}
+		if fc.Env["SERVER_PORT"] == "" {
+			fc.Env["SERVER_PORT"] = reqPort
+		}
 
-			// compliance with the CGI specification requires that
-			// SERVER_PORT should only exist if it's a valid numeric value.
-			// Info: https://www.ietf.org/rfc/rfc3875 Page 18
-			if !serverPortOk {
-				// compliance with the CGI specification requires that
-				// the SERVER_PORT variable MUST be set to the TCP/IP port number on which this request is received from the client
-				// even if the port is the default port for the scheme and could otherwise be omitted from a URI.
-				// https://tools.ietf.org/html/rfc3875#section-4.1.15
-				if reqPort != "" {
-					fc.Env["SERVER_PORT"] = reqPort
-				} else if fc.Env["REQUEST_SCHEME"] == "http" {
-					fc.Env["SERVER_PORT"] = "80"
-				} else if fc.Env["REQUEST_SCHEME"] == "https" {
-					fc.Env["SERVER_PORT"] = "443"
-				}
-			}
-		} else if !serverNameOk {
+		if fc.Env["SERVER_NAME"] == "" {
 			// whatever, just assume there was no port
 			fc.Env["SERVER_NAME"] = request.Host
+		}
+
+		// compliance with the CGI specification requires that
+		// the SERVER_PORT variable MUST be set to the TCP/IP port number on which this request is received from the client
+		// even if the port is the default port for the scheme and could otherwise be omitted from a URI.
+		// https://tools.ietf.org/html/rfc3875#section-4.1.15
+		if fc.Env["SERVER_PORT"] == "" {
+			if fc.Env["REQUEST_SCHEME"] == "https" {
+				fc.Env["SERVER_PORT"] = "443"
+			} else {
+				fc.Env["SERVER_PORT"] = "80"
+			}
 		}
 	}
 
