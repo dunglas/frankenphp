@@ -62,6 +62,7 @@ WORKDIR /go/src/app
 
 COPY . .
 
-RUN go get -d -v ./...
+RUN cd caddy/frankenphp && \
+    go build
 
 CMD [ "zsh" ]
