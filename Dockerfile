@@ -8,7 +8,8 @@ RUN apt-get update && \
         mailcap \
         libcap2-bin \
     && \
-    apt-get clean
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
 RUN set -eux; \
 	mkdir -p \
@@ -73,7 +74,8 @@ RUN go mod graph | awk '{if ($1 !~ "@") print $2}' | xargs go get
 RUN mkdir caddy && cd caddy
 COPY --link caddy/go.mod caddy/go.sum ./caddy/
 
-RUN cd caddy && go mod graph | awk '{if ($1 !~ "@") print $2}' | xargs go get
+RUN cd caddy && \
+    go mod graph | awk '{if ($1 !~ "@") print $2}' | xargs go get
 
 COPY --link *.* ./
 COPY --link caddy caddy
