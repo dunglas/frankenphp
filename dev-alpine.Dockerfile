@@ -13,8 +13,7 @@ ENV PHPIZE_DEPS \
     pkgconfig \
     re2c
 
-RUN apk update && \
-    apk add --no-cache \
+RUN apk add --no-cache \
     $PHPIZE_DEPS \
     argon2-dev \
     curl-dev \
@@ -36,8 +35,7 @@ RUN apk update && \
     neovim \
     zsh \
     libtool && \
-    echo 'set auto-load safe-path /' > /root/.gdbinit && \
-    rm -rf /var/cache/apk/*
+    echo 'set auto-load safe-path /' > /root/.gdbinit
 
 RUN git clone --branch=PHP-8.2 https://github.com/php/php-src.git && \
     cd php-src && \
