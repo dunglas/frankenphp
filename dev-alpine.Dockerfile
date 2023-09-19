@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-FROM golang:1.21
+FROM golang:1.21-alpine
 
 ENV CFLAGS="-ggdb3"
 ENV PHPIZE_DEPS \
@@ -10,23 +10,22 @@ ENV PHPIZE_DEPS \
     gcc \
     libc-dev \
     make \
-    pkg-config \
+    pkgconfig \
     re2c
 
-RUN apt-get update && \
-    apt-get -y --no-install-recommends install \
+RUN apk add --no-cache \
     $PHPIZE_DEPS \
-    libargon2-dev \
-    libcurl4-openssl-dev \
-    libonig-dev \
-    libreadline-dev \
+    argon2-dev \
+    curl-dev \
+    oniguruma-dev \
+    readline-dev \
     libsodium-dev \
-    libsqlite3-dev \
-    libssl-dev \
+    sqlite-dev \
+    openssl-dev \
     libxml2-dev \
-    zlib1g-dev \
+    zlib-dev \
     bison \
-    libnss3-tools \
+    nss-tools \
     # Dev tools \
     git \
     clang \
@@ -35,11 +34,8 @@ RUN apt-get update && \
     valgrind \
     neovim \
     zsh \
-    libtool-bin && \
-    echo 'set auto-load safe-path /' > /root/.gdbinit && \
-    echo '* soft core unlimited' >> /etc/security/limits.conf \
-    && \
-    apt-get clean 
+    libtool && \
+    echo 'set auto-load safe-path /' > /root/.gdbinit
 
 RUN git clone --branch=PHP-8.2 https://github.com/php/php-src.git && \
     cd php-src && \
@@ -53,9 +49,9 @@ RUN git clone --branch=PHP-8.2 https://github.com/php/php-src.git && \
         --enable-debug && \
     make -j$(nproc) && \
     make install && \
-    ldconfig && \
+    ldconfig /etc/ld.so.conf.d && \
     cp php.ini-development /usr/local/lib/php.ini && \
-    echo "zend_extension=opcache.so\nopcache.enable=1" >> /usr/local/lib/php.ini &&\
+    echo -e "zend_extension=opcache.so\nopcache.enable=1" >> /usr/local/lib/php.ini &&\
     php --version
 
 WORKDIR /go/src/app
