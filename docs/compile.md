@@ -11,7 +11,7 @@ FrankenPHP is compatible with the PHP 8.2 and superior.
 
 First, [get the sources of PHP](https://www.php.net/downloads.php) and extract them:
 
-```
+```console
 tar xf php-*
 cd php-*/
 ```
@@ -20,7 +20,7 @@ Then, configure PHP for your platform:
 
 ### Linux
 
-```
+```console
 ./configure \
     --enable-embed \
     --enable-zts \
@@ -28,19 +28,26 @@ Then, configure PHP for your platform:
     --enable-zend-max-execution-timers
 ```
 
+Finally, compile and install PHP:
+
+```console
+make -j$(nproc)
+sudo make install
+```
+
 ### Mac
 
 Use the [Homebrew](https://brew.sh/) package manager to install
 `libiconv`, `bison`, `re2c` and `pkg-config`:
 
-```
+```console
 brew install libiconv bison re2c pkg-config
 echo 'export PATH="/opt/homebrew/opt/bison/bin:$PATH"' >> ~/.zshrc
 ```
 
 Then run the configure script:
 
-```
+```console
 ./configure \
     --enable-embed=static \
     --enable-zts \
@@ -54,18 +61,16 @@ Then run the configure script:
 These flags are required, but you can add other flags (e.g. extra extensions)
 if needed.
 
-## Compile PHP
+Finally, compile and install PHP:
 
-Finally, compile PHP:
-
-```
-make -j$(nproc)
+```console
+make -j$(sysctl -n hw.logicalcpu)
 sudo make install
 ```
 
 #### Compile the Go App
 
-You can now use the Go lib and compile our Caddy build:
+You can now use the Go library and compile our Caddy build:
 
 ```
 curl -L https://github.com/dunglas/frankenphp/archive/refs/heads/main.tar.gz | tar x

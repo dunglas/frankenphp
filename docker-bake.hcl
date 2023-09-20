@@ -24,9 +24,10 @@ function "tag" {
     params = [version, os, php-version, tgt]
     result = [
         version != "" ? format("%s:%s%s-php%s-%s", IMAGE_NAME, version, tgt == "builder" ? "-builder" : "", php-version, os) : "",
-        os == "bookworm" && php-version == "8.2" && version != "" ? format("%s:%s%s", IMAGE_NAME, version, tgt == "builder" ? "-builder" : "") : "",
+        php-version == "8.2" && os == "bookworm"  && version != "" ? format("%s:%s%s", IMAGE_NAME, version, tgt == "builder" ? "-builder" : "") : "",
         php-version == "8.2" && version != "" ? format("%s:%s%s-%s", IMAGE_NAME, version, tgt == "builder" ? "-builder" : "", os) : "",
-        os == "bookworm" && version != "" ? format("%s:%s%s-php%s", IMAGE_NAME, version, tgt == "builder" ? "-builder" : "", php-version) : ""
+        php-version == "8.2" && version == "latest" ? format("%s:%s%s", IMAGE_NAME, os, tgt == "builder" ? "-builder" : "") : "",
+        os == "bookworm" && version != "" ? format("%s:%s%s-php%s", IMAGE_NAME, version, tgt == "builder" ? "-builder" : "", php-version) : "",
     ]
 }
 

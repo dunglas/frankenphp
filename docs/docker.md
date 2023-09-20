@@ -1,12 +1,12 @@
 # Building Custom Docker Image
 
-[FrankenPHP Docker images](https://hub.docker.com/r/dunglas/frankenphp) are based on [official PHP images](https://hub.docker.com/_/php/). Alpine Linux and Debian variants are provided for popular architectures.
+[FrankenPHP Docker images](https://hub.docker.com/r/dunglas/frankenphp) are based on [official PHP images](https://hub.docker.com/_/php/). Alpine Linux and Debian variants are provided for popular architectures. Variants for PHP 8.2 and PHP 8.3 are provided. [Browse tags](https://hub.docker.com/repository/docker/dunglas/frankenphp).
 
 ## How to Use The Images
 
 Create a `Dockerfile` in your project:
 
-```Dockerfile
+```dockerfile
 FROM dunglas/frankenphp
 
 COPY . /app/public
@@ -14,7 +14,7 @@ COPY . /app/public
 
 Then, run the commands to build and run the Docker image:
 
-```
+```console
 $ docker build -t my-php-app .
 $ docker run -it --rm --name my-running-app my-php-app
 ```
@@ -42,7 +42,7 @@ RUN install-php-extensions \
 
 Set the `FRANKENPHP_CONFIG` environment variable to start FrankenPHP with a worker script:
 
-```Dockerfile
+```dockerfile
 FROM dunglas/frankenphp
 
 # ...
@@ -54,19 +54,18 @@ ENV FRANKENPHP_CONFIG="worker ./public/index.php"
 
 To develop easily with FrankenPHP, mount the directory from your host containing the source code of the app as a volume in the Docker container:
 
-```
+```console
 docker run -v $PWD:/app/public -p 80:80 -p 443:443 my-php-app
 ```
 
 With Docker Compose:
 
 ```yaml
-# docker-compose.yml
+# compose.yml
 
 version: '3.1'
 
 services:
-
   php:
     image: dunglas/frankenphp
     # uncomment the following line if you want to use a custom Dockerfile

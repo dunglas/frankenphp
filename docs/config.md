@@ -77,7 +77,7 @@ To propagate environment variables to `$_SERVER` and `$_ENV`, set the `php.ini` 
 
 When using the Docker image, set the `CADDY_DEBUG` environment variable to `debug` to enable the debug mode:
 
-```
+```console
 docker run -v $PWD:/app/public \
     -e CADDY_GLOBAL_OPTIONS=debug \
     -p 80:80 -p 443:443 \
