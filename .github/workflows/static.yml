@@ -11,6 +11,18 @@ on:
   workflow_dispatch:
     inputs: {}
 jobs:
+  release:
+    name: Build Linux x86_64 binary
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create release
+        if: github.ref_type == 'tag'
+        uses: ncipollo/release-action@v1
+        with:
+          generateReleaseNotes: true
+          allowUpdates: true
+          omitBodyDuringUpdate: true
+          omitNameDuringUpdate: true
   build-linux:
     name: Build Linux x86_64 binary
     runs-on: ubuntu-latest
@@ -41,7 +53,7 @@ jobs:
       - name: Copy binary
         run: docker cp $(docker create --name static-builder dunglas/frankenphp:static-builder):/go/src/app/caddy/frankenphp/frankenphp frankenphp-linux-x86_64 ; docker rm static-builder
 
-      - name: Release
+      - name: Upload asset
         if: github.ref_type == 'tag'
         uses: ncipollo/release-action@v1
         with:
@@ -109,7 +121,7 @@ jobs:
           go build -buildmode=pie -tags "cgo netgo osusergo static_build" -ldflags "-linkmode=external -extldflags -static-pie -w -s -X 'github.com/caddyserver/caddy/v2.CustomVersion=FrankenPHP $FRANKENPHP_VERSION PHP $PHP_VERSION Caddy'" -o frankenphp-mac-x86_64
           ./frankenphp-mac-x86_64 version
 
-      - name: Release
+      - name: Upload asset
         if: github.ref_type == 'tag'
         uses: ncipollo/release-action@v1
         with:

@@ -54,11 +54,11 @@ jobs:
             ./frankenphp-mac-arm64 version
       - gh/setup
       - run:
-          name: Release
+          name: Upload asset
           working_directory: caddy/frankenphp/
           command: |
             if [ -n "$CIRCLE_TAG" ]; then
-              gh release upload $CIRCLE_TAG --repo dunglas/frankenphp
+              gh release upload $CIRCLE_TAG frankenphp-mac-arm64 --repo dunglas/frankenphp --clobber
             fi
       - store_artifacts:
           path: caddy/frankenphp/frankenphp-mac-arm64
