@@ -32,7 +32,7 @@ cd caddy/
 go get "github.com/dunglas/frankenphp@v$1"
 cd -
 
-git commit -S -a -m "chore: prepare release $1"
+git commit -S -a -m "chore: prepare release $1" || echo "skip"
 
 git tag -s -m "Version $1" "v$1"
 git tag -s -m "Version $1" "caddy/v$1"
