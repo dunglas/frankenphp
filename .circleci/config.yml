@@ -9,7 +9,11 @@ jobs:
       xcode: 14.3.1
     environment:
       HOMEBREW_NO_AUTO_UPDATE: 1
-
+    filters:
+      branches:
+        ignore: /.*/
+      tags:
+        only: /^v.*/
     steps:
       - checkout
       - run: brew install --formula go automake cmake composer

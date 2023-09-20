@@ -117,9 +117,9 @@ jobs:
           allowUpdates: true
           omitBodyDuringUpdate: true
           omitNameDuringUpdate: true
-          artifacts: frankenphp-mac-x86_64
+          artifacts: caddy/frankenphp/frankenphp-mac-x86_64
   
       - name: Upload binary
         uses: actions/upload-artifact@v3
         with:
-          path: frankenphp-mac-x86_64
+          path: caddy/frankenphp/frankenphp-mac-x86_64
