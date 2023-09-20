@@ -13,7 +13,7 @@ replace (
 
 require (
 	github.com/caddyserver/caddy/v2 v2.7.4
-	github.com/dunglas/frankenphp v0.0.0-20230912200819-1f3007337d84
+	github.com/dunglas/frankenphp v1.0.0-rc.1
 	github.com/dunglas/mercure/caddy v0.15.2
 	github.com/dunglas/vulcain/caddy v0.5.0
 	go.uber.org/automaxprocs v1.5.3
