@@ -4,16 +4,11 @@ orbs:
   gh: circleci/github-cli@2.2.0
 
 jobs:
-  build:
+  release_mac_arm:
     macos:
       xcode: 14.3.1
     environment:
       HOMEBREW_NO_AUTO_UPDATE: 1
-    filters:
-      branches:
-        ignore: /.*/
-      tags:
-        only: /^v.*/
     steps:
       - checkout
       - run: brew install --formula go automake cmake composer
@@ -72,3 +67,13 @@ jobs:
           key: go-mod-v4-{{ checksum "caddy/go.sum" }}
           paths:
             - "~/go/pkg/mod"
+
+workflows:
+  release:
+    jobs:
+      - release_mac_arm:
+          filters:
+            branches:
+              ignore: /.*/
+            tags:
+              only: /^v.*/
