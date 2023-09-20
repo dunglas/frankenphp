@@ -17,7 +17,7 @@ require (
 	github.com/dunglas/mercure/caddy v0.15.2
 	github.com/dunglas/vulcain/caddy v0.5.0
 	go.uber.org/automaxprocs v1.5.3
-	go.uber.org/zap v1.25.0
+	go.uber.org/zap v1.26.0
 )
 
 require (

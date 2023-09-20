@@ -18,7 +18,7 @@ import (
 )
 
 func init() {
-	caddy.RegisterModule(&FrankenPHPApp{})
+	caddy.RegisterModule(FrankenPHPApp{})
 	caddy.RegisterModule(FrankenPHPModule{})
 	httpcaddyfile.RegisterGlobalOption("frankenphp", parseGlobalOption)
 	httpcaddyfile.RegisterHandlerDirective("php", parseCaddyfile)
@@ -55,7 +55,7 @@ type FrankenPHPApp struct {
 }
 
 // CaddyModule returns the Caddy module information.
-func (a *FrankenPHPApp) CaddyModule() caddy.ModuleInfo {
+func (a FrankenPHPApp) CaddyModule() caddy.ModuleInfo {
 	return caddy.ModuleInfo{
 		ID:  "frankenphp",
 		New: func() caddy.Module { return a },
