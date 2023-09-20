@@ -14,7 +14,7 @@ jobs:
   build-linux:
     name: Build Linux x86_64 binary
     runs-on: ubuntu-latest
-   steps:
+    steps:
       - uses: actions/checkout@v4
 
       - name: Set up Docker Buildx
@@ -34,6 +34,7 @@ jobs:
             *.cache-from=type=gha,scope=refs/heads/main-static-builder
             *.cache-to=type=gha,scope=${{github.ref}}-static-builder
         env:
+          VERSION: ${{github.ref_type == 'tag' && github.ref_name || github.sha}}
           SHA: ${{github.sha}}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

@@ -24,7 +24,7 @@ docker run -v $PWD:/app/public \
 
 Go to `https://localhost`, and enjoy!
 
-If you prefer not using Docker, we provide standalone FrankenPHP binaries for Linux and macOS
+If you prefer not to use Docker, we provide standalone FrankenPHP binaries for Linux and macOS
 containing [PHP 8.2](https://www.php.net/releases/8.2/en.php) and most popular PHP extensions: [Download FrankenPHP](https://github.com/dunglas/frankenphp/releases)
 
 > Note: do not attempt to use `https://127.0.0.1`. Use `localhost` and accept the self-signed certificate. Caddy has an automatic TLS handling that auto-trusts some local-based hostnames like `localhost`, but it does not apply to IP addresses. More details [on Caddy's "automatic https" docs](https://caddyserver.com/docs/automatic-https#hostname-requirements).
@@ -37,7 +37,7 @@ containing [PHP 8.2](https://www.php.net/releases/8.2/en.php) and most popular P
 * [Configuration](docs/config.md)
 * [Docker images](docs/docker.md)
 * [Compile from sources](docs/compile.md)
-* [Creat static binaries](docs/static.md)
+* [Create static binaries](docs/static.md)
 * [Demo app (Symfony) and benchmarks](https://github.com/dunglas/frankenphp-demo)
 * [Go library documentation](https://pkg.go.dev/github.com/dunglas/frankenphp)
 * [Contributing and debugging](CONTRIBUTING.md)
