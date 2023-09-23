@@ -32,7 +32,7 @@ localhost {
 }
 ```
 
-Optionnaly, the number of threads to create and [worker scripts](worker.md) to start with the server can be specified under the global directive.
+Optionally, the number of threads to create and [worker scripts](worker.md) to start with the server can be specified under the global directive.
 
 ```caddyfile
 {
