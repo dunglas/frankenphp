@@ -12,11 +12,11 @@ on:
     inputs: {}
 jobs:
   release:
-    name: Build Linux x86_64 binary
+    if: github.ref_type == 'tag'
+    name: Create GitHub Release
     runs-on: ubuntu-latest
     steps:
       - name: Create release
-        if: github.ref_type == 'tag'
         uses: ncipollo/release-action@v1
         with:
           generateReleaseNotes: true
