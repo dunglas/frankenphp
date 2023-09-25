@@ -2,11 +2,20 @@
 
 FrankenPHP, Caddy as well the Mercure and Vulcain modules can be configured using [the formats supported by Caddy](https://caddyserver.com/docs/getting-started#your-first-config).
 
-In the Docker image, the `Caddyfile` is located at `/etc/Caddyfile`.
+In the Docker image, the `Caddyfile` is located at `/etc/caddy/Caddyfile`.
 
 You can also configure PHP using `php.ini` as usual.
 
-In the Docker image, the `php.ini` file is located at `/usr/local/lib/php.ini`.
+In the Docker image, the `php.ini` file is not present, you can create it or `COPY` manually.
+
+If you copy `php.ini` from `$PHP_INI_DIR/php.ini-production` or `$PHP_INI_DIR/php.ini-development` you also must set variable `variables_order = "EGPCS"`, because default value for `variables_order` is `"EGPCS"` but in `php.ini-production` and `php.ini-development` we have `"GPCS"`. And in this case `worker` not work propertly.
+
+```dockerfile
+FROM dunglas/frankenphp
+
+RUN cp $PHP_INI_DIR/php.ini-production $PHP_INI_DIR/php.ini; \
+    sed -i 's/variables_order = "GPCS"/variables_order = "EGPCS"/' $PHP_INI_DIR/php.ini;
+```
 
 ## Caddy Directives
 
