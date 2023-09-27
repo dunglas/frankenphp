@@ -58,7 +58,7 @@ type FrankenPHPApp struct {
 func (a FrankenPHPApp) CaddyModule() caddy.ModuleInfo {
 	return caddy.ModuleInfo{
 		ID:  "frankenphp",
-		New: func() caddy.Module { return a },
+		New: func() caddy.Module { return &a },
 	}
 }
 
