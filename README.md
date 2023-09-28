@@ -47,6 +47,7 @@ containing [PHP 8.2](https://www.php.net/releases/8.2/en.php) and most popular P
 
 * [Symfony](https://github.com/dunglas/symfony-docker)
 * [API Platform](https://api-platform.com/docs/distribution/)
+* [Laravel](docs/laravel.md)
 * [Sulu](https://sulu.io/blog/running-sulu-with-frankenphp)
 * [WordPress](https://github.com/dunglas/frankenphp-wordpress)
 * [Drupal](https://github.com/dunglas/frankenphp-drupal)
