@@ -38,6 +38,7 @@ containing [PHP 8.2](https://www.php.net/releases/8.2/en.php) and most popular P
 * [Docker images](docs/docker.md)
 * [Compile from sources](docs/compile.md)
 * [Create static binaries](docs/static.md)
+* [Known issues](docs/known-issues.md)
 * [Demo app (Symfony) and benchmarks](https://github.com/dunglas/frankenphp-demo)
 * [Go library documentation](https://pkg.go.dev/github.com/dunglas/frankenphp)
 * [Contributing and debugging](CONTRIBUTING.md)
