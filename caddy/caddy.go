@@ -454,7 +454,7 @@ func parsePhpServer(h httpcaddyfile.Helper) ([]httpcaddyfile.ConfigValue, error)
 	for _, ext := range extensions {
 		pathList = append(pathList, "*"+ext)
 	}
-	phpPatcherSet := caddy.ModuleMap{
+	phpMatcherSet := caddy.ModuleMap{
 		"path": h.JSON(pathList),
 	}
 
