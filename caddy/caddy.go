@@ -469,7 +469,7 @@ func parsePhpServer(h httpcaddyfile.Helper) ([]httpcaddyfile.ConfigValue, error)
 	// create the final PHP route which is
 	// conditional on matching PHP files
 	phpRoute := caddyhttp.Route{
-		MatcherSetsRaw: []caddy.ModuleMap{phpPatcherSet},
+		MatcherSetsRaw: []caddy.ModuleMap{phpMatcherSet},
 		HandlersRaw:    []json.RawMessage{caddyconfig.JSONModuleObject(phpServer, "handler", "php", nil)},
 	}
 
