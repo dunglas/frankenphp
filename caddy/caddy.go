@@ -4,6 +4,7 @@
 package caddy
 
 import (
+	"encoding/json"
 	"errors"
 	"net/http"
 	"strconv"
@@ -13,6 +14,8 @@ import (
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile"
 	"github.com/caddyserver/caddy/v2/modules/caddyhttp"
+	"github.com/caddyserver/caddy/v2/modules/caddyhttp/fileserver"
+	"github.com/caddyserver/caddy/v2/modules/caddyhttp/rewrite"
 	"github.com/dunglas/frankenphp"
 	"go.uber.org/zap"
 )
@@ -22,6 +25,7 @@ func init() {
 	caddy.RegisterModule(FrankenPHPModule{})
 	httpcaddyfile.RegisterGlobalOption("frankenphp", parseGlobalOption)
 	httpcaddyfile.RegisterHandlerDirective("php", parseCaddyfile)
+	httpcaddyfile.RegisterDirective("php_server", parsePhpServer)
 }
 
 type mainPHPinterpreterKeyType int
@@ -224,6 +228,7 @@ func (f *FrankenPHPModule) Provision(ctx caddy.Context) error {
 
 // ServeHTTP implements caddyhttp.MiddlewareHandler.
 // TODO: Expose TLS versions as env vars, as Apache's mod_ssl: https://github.com/caddyserver/caddy/blob/master/modules/caddyhttp/reverseproxy/fastcgi/fastcgi.go#L298
+// TODO: Expose TLS versions as env vars, as Apache's mod_ssl: https://github.com/caddyserver/caddy/blob/master/modules/caddyhttp/reverseproxy/fastcgi/fastcgi.go#L298
 func (f FrankenPHPModule) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhttp.Handler) error {
 	origReq := r.Context().Value(caddyhttp.OriginalRequestCtxKey).(http.Request)
 	repl := r.Context().Value(caddy.ReplacerCtxKey).(*caddy.Replacer)
@@ -283,10 +288,219 @@ func (f *FrankenPHPModule) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 
 // parseCaddyfile unmarshals tokens from h into a new Middleware.
 func parseCaddyfile(h httpcaddyfile.Helper) (caddyhttp.MiddlewareHandler, error) {
-	var m FrankenPHPModule
+	m := FrankenPHPModule{}
 	err := m.UnmarshalCaddyfile(h.Dispenser)
 
 	return m, err
+}
+
+// parsePhpServer parses the php_server directive, which has a similar syntax
+// to the php_fastcgi directive. A line such as this:
+//
+//	php_server
+//
+// is equivalent to a route consisting of:
+//
+//		# Add trailing slash for directory requests
+//		@canonicalPath {
+//		    file {path}/index.php
+//		    not path */
+//		}
+//		redir @canonicalPath {path}/ 308
+//
+//		# If the requested file does not exist, try index files
+//		@indexFiles file {
+//		    try_files {path} {path}/index.php index.php
+//		    split_path .php
+//		}
+//		rewrite @indexFiles {http.matchers.file.relative}
+//
+//		# FrankenPHP!
+//		@phpFiles path *.php
+//	 	php @phpFiles
+func parsePhpServer(h httpcaddyfile.Helper) ([]httpcaddyfile.ConfigValue, error) {
+	if !h.Next() {
+		return nil, h.ArgErr()
+	}
+
+	// set up FrankenPHP
+	phpServer := FrankenPHPModule{}
+
+	// set up the set of file extensions allowed to execute PHP code
+	extensions := []string{".php"}
+
+	// set the default index file for the try_files rewrites
+	indexFile := "index.php"
+
+	// set up for explicitly overriding try_files
+	tryFiles := []string{}
+
+	// if the user specified a matcher token, use that
+	// matcher in a route that wraps both of our routes;
+	// either way, strip the matcher token and pass
+	// the remaining tokens to the unmarshaler so that
+	// we can gain the rest of the directive syntax
+	userMatcherSet, err := h.ExtractMatcherSet()
+	if err != nil {
+		return nil, err
+	}
+
+	// make a new dispenser from the remaining tokens so that we
+	// can reset the dispenser back to this point for the
+	// php unmarshaler to read from it as well
+	dispenser := h.NewFromNextSegment()
+
+	// read the subdirectives that we allow as overrides to
+	// the php_server shortcut
+	// NOTE: we delete the tokens as we go so that the php
+	// unmarshal doesn't see these subdirectives which it cannot handle
+	for dispenser.Next() {
+		for dispenser.NextBlock(0) {
+			// ignore any sub-subdirectives that might
+			// have the same name somewhere within
+			// the php passthrough tokens
+			if dispenser.Nesting() != 1 {
+				continue
+			}
+
+			// parse the php_server subdirectives
+			switch dispenser.Val() {
+			case "split":
+				extensions = dispenser.RemainingArgs()
+				dispenser.DeleteN(len(extensions) + 1)
+				if len(extensions) == 0 {
+					return nil, dispenser.ArgErr()
+				}
+
+			case "index":
+				args := dispenser.RemainingArgs()
+				dispenser.DeleteN(len(args) + 1)
+				if len(args) != 1 {
+					return nil, dispenser.ArgErr()
+				}
+				indexFile = args[0]
+
+			case "try_files":
+				args := dispenser.RemainingArgs()
+				dispenser.DeleteN(len(args) + 1)
+				if len(args) < 1 {
+					return nil, dispenser.ArgErr()
+				}
+				tryFiles = args
+			}
+		}
+	}
+
+	// reset the dispenser after we're done so that the frankenphp
+	// unmarshaler can read it from the start
+	dispenser.Reset()
+
+	// set up a route list that we'll append to
+	routes := caddyhttp.RouteList{}
+
+	// set the list of allowed path segments on which to split
+	phpServer.SplitPath = extensions
+
+	// if the index is turned off, we skip the redirect and try_files
+	if indexFile != "off" {
+		// route to redirect to canonical path if index PHP file
+		redirMatcherSet := caddy.ModuleMap{
+			"file": h.JSON(fileserver.MatchFile{
+				TryFiles: []string{"{http.request.uri.path}/" + indexFile},
+			}),
+			"not": h.JSON(caddyhttp.MatchNot{
+				MatcherSetsRaw: []caddy.ModuleMap{
+					{
+						"path": h.JSON(caddyhttp.MatchPath{"*/"}),
+					},
+				},
+			}),
+		}
+		redirHandler := caddyhttp.StaticResponse{
+			StatusCode: caddyhttp.WeakString(strconv.Itoa(http.StatusPermanentRedirect)),
+			Headers:    http.Header{"Location": []string{"{http.request.orig_uri.path}/"}},
+		}
+		redirRoute := caddyhttp.Route{
+			MatcherSetsRaw: []caddy.ModuleMap{redirMatcherSet},
+			HandlersRaw:    []json.RawMessage{caddyconfig.JSONModuleObject(redirHandler, "handler", "static_response", nil)},
+		}
+
+		// if tryFiles wasn't overridden, use a reasonable default
+		if len(tryFiles) == 0 {
+			tryFiles = []string{"{http.request.uri.path}", "{http.request.uri.path}/" + indexFile, indexFile}
+		}
+
+		// route to rewrite to PHP index file
+		rewriteMatcherSet := caddy.ModuleMap{
+			"file": h.JSON(fileserver.MatchFile{
+				TryFiles:  tryFiles,
+				SplitPath: extensions,
+			}),
+		}
+		rewriteHandler := rewrite.Rewrite{
+			URI: "{http.matchers.file.relative}",
+		}
+		rewriteRoute := caddyhttp.Route{
+			MatcherSetsRaw: []caddy.ModuleMap{rewriteMatcherSet},
+			HandlersRaw:    []json.RawMessage{caddyconfig.JSONModuleObject(rewriteHandler, "handler", "rewrite", nil)},
+		}
+
+		routes = append(routes, redirRoute, rewriteRoute)
+	}
+
+	// route to actually reverse proxy requests to PHP files;
+	// match only requests that are for PHP files
+	pathList := []string{}
+	for _, ext := range extensions {
+		pathList = append(pathList, "*"+ext)
+	}
+	phpPatcherSet := caddy.ModuleMap{
+		"path": h.JSON(pathList),
+	}
+
+	// the rest of the config is specified by the user
+	// using the php directive syntax
+	dispenser.Next() // consume the directive name
+	err = phpServer.UnmarshalCaddyfile(dispenser)
+	if err != nil {
+		return nil, err
+	}
+
+	// create the final PHP route which is
+	// conditional on matching PHP files
+	phpRoute := caddyhttp.Route{
+		MatcherSetsRaw: []caddy.ModuleMap{phpPatcherSet},
+		HandlersRaw:    []json.RawMessage{caddyconfig.JSONModuleObject(phpServer, "handler", "php", nil)},
+	}
+
+	subroute := caddyhttp.Subroute{
+		Routes: append(routes, phpRoute),
+	}
+
+	// the user's matcher is a prerequisite for ours, so
+	// wrap ours in a subroute and return that
+	if userMatcherSet != nil {
+		return []httpcaddyfile.ConfigValue{
+			{
+				Class: "route",
+				Value: caddyhttp.Route{
+					MatcherSetsRaw: []caddy.ModuleMap{userMatcherSet},
+					HandlersRaw:    []json.RawMessage{caddyconfig.JSONModuleObject(subroute, "handler", "subroute", nil)},
+				},
+			},
+		}, nil
+	}
+
+	// otherwise, return the literal subroute instead of
+	// individual routes, to ensure they stay together and
+	// are treated as a single unit, without necessarily
+	// creating an actual subroute in the output
+	return []httpcaddyfile.ConfigValue{
+		{
+			Class: "route",
+			Value: subroute,
+		},
+	}, nil
 }
 
 // Interface guards
