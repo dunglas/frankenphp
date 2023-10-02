@@ -34,10 +34,8 @@ Minimal example:
 localhost {
     # Enable compression (optional)
     encode zstd gzip
-    # Executes PHP files in the current directory
+    # Execute PHP files in the current directory and serve assets
     php_server
-    # Serves assets (optional but usually needed)
-    file_server
 }
 ```
 
@@ -91,6 +89,7 @@ rewrite @indexFiles {http.matchers.file.relative}
 # FrankenPHP!
 @phpFiles path *.php
 php @phpFiles
+file_server
 ```
 
 The `php_server` and the `php` directives have the following options:

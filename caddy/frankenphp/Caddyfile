@@ -43,5 +43,4 @@
 
 	encode zstd gzip
 	php_server
-	file_server
 }

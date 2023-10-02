@@ -317,13 +317,17 @@ func parseCaddyfile(h httpcaddyfile.Helper) (caddyhttp.MiddlewareHandler, error)
 //		# FrankenPHP!
 //		@phpFiles path *.php
 //	 	php @phpFiles
+//		file_server
 func parsePhpServer(h httpcaddyfile.Helper) ([]httpcaddyfile.ConfigValue, error) {
 	if !h.Next() {
 		return nil, h.ArgErr()
 	}
 
 	// set up FrankenPHP
-	phpServer := FrankenPHPModule{}
+	phpsrv := FrankenPHPModule{}
+
+	// set up file server
+	fsrv := fileserver.FileServer{}
 
 	// set up the set of file extensions allowed to execute PHP code
 	extensions := []string{".php"}
@@ -364,6 +368,14 @@ func parsePhpServer(h httpcaddyfile.Helper) ([]httpcaddyfile.ConfigValue, error)
 
 			// parse the php_server subdirectives
 			switch dispenser.Val() {
+			case "root":
+				if !dispenser.NextArg() {
+					return nil, dispenser.ArgErr()
+				}
+				phpsrv.Root = dispenser.Val()
+				fsrv.Root = phpsrv.Root
+				dispenser.DeleteN(2)
+
 			case "split":
 				extensions = dispenser.RemainingArgs()
 				dispenser.DeleteN(len(extensions) + 1)
@@ -398,7 +410,7 @@ func parsePhpServer(h httpcaddyfile.Helper) ([]httpcaddyfile.ConfigValue, error)
 	routes := caddyhttp.RouteList{}
 
 	// set the list of allowed path segments on which to split
-	phpServer.SplitPath = extensions
+	phpsrv.SplitPath = extensions
 
 	// if the index is turned off, we skip the redirect and try_files
 	if indexFile != "off" {
@@ -447,7 +459,7 @@ func parsePhpServer(h httpcaddyfile.Helper) ([]httpcaddyfile.ConfigValue, error)
 		routes = append(routes, redirRoute, rewriteRoute)
 	}
 
-	// route to actually reverse proxy requests to PHP files;
+	// route to actually pass requests to PHP files;
 	// match only requests that are for PHP files
 	pathList := []string{}
 	for _, ext := range extensions {
@@ -460,20 +472,26 @@ func parsePhpServer(h httpcaddyfile.Helper) ([]httpcaddyfile.ConfigValue, error)
 	// the rest of the config is specified by the user
 	// using the php directive syntax
 	dispenser.Next() // consume the directive name
-	err = phpServer.UnmarshalCaddyfile(dispenser)
+	err = phpsrv.UnmarshalCaddyfile(dispenser)
 	if err != nil {
 		return nil, err
 	}
 
-	// create the final PHP route which is
+	// create the PHP route which is
 	// conditional on matching PHP files
 	phpRoute := caddyhttp.Route{
 		MatcherSetsRaw: []caddy.ModuleMap{phpMatcherSet},
-		HandlersRaw:    []json.RawMessage{caddyconfig.JSONModuleObject(phpServer, "handler", "php", nil)},
+		HandlersRaw:    []json.RawMessage{caddyconfig.JSONModuleObject(phpsrv, "handler", "php", nil)},
+	}
+
+	// create the file server route
+	fileRoute := caddyhttp.Route{
+		MatcherSetsRaw: []caddy.ModuleMap{},
+		HandlersRaw:    []json.RawMessage{caddyconfig.JSONModuleObject(fsrv, "handler", "file_server", nil)},
 	}
 
 	subroute := caddyhttp.Subroute{
-		Routes: append(routes, phpRoute),
+		Routes: append(routes, phpRoute, fileRoute),
 	}
 
 	// the user's matcher is a prerequisite for ours, so

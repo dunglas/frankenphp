@@ -160,4 +160,5 @@ func TestPHPServerDirective(t *testing.T) {
 		`, "caddyfile")
 
 	tester.AssertGetResponse("http://localhost:9080", http.StatusOK, "I am by birth a Genevese (i not set)")
+	tester.AssertGetResponse("http://localhost:9080/hello.txt", http.StatusOK, "Hello")
 }
