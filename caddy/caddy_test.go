@@ -161,6 +161,7 @@ func TestPHPServerDirective(t *testing.T) {
 
 	tester.AssertGetResponse("http://localhost:9080", http.StatusOK, "I am by birth a Genevese (i not set)")
 	tester.AssertGetResponse("http://localhost:9080/hello.txt", http.StatusOK, "Hello")
+	tester.AssertGetResponse("http://localhost:9080/not-found.txt", http.StatusOK, "I am by birth a Genevese (i not set)")
 }
 
 func TestPHPServerDirectiveDisableFileServer(t *testing.T) {
@@ -173,7 +174,7 @@ func TestPHPServerDirectiveDisableFileServer(t *testing.T) {
 			https_port 9443
 
 			frankenphp
-			order php_server before reverse_proxy
+			order php_server before respond
 		}
 
 		localhost:9080 {
@@ -181,9 +182,10 @@ func TestPHPServerDirectiveDisableFileServer(t *testing.T) {
 			php_server {
 				file_server off
 			}
+			respond "Not found" 404
 		}
 		`, "caddyfile")
 
 	tester.AssertGetResponse("http://localhost:9080", http.StatusOK, "I am by birth a Genevese (i not set)")
-	//tester.AssertGetResponse("http://localhost:9080/hello.txt", http.StatusOK, "I am by birth a Genevese (i not set)")
+	tester.AssertGetResponse("http://localhost:9080/hello.txt", http.StatusNotFound, "Not found")
 }
