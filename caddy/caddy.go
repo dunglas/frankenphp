@@ -328,6 +328,7 @@ func parsePhpServer(h httpcaddyfile.Helper) ([]httpcaddyfile.ConfigValue, error)
 
 	// set up file server
 	fsrv := fileserver.FileServer{}
+	disableFsrv := false
 
 	// set up the set of file extensions allowed to execute PHP code
 	extensions := []string{".php"}
@@ -398,6 +399,14 @@ func parsePhpServer(h httpcaddyfile.Helper) ([]httpcaddyfile.ConfigValue, error)
 					return nil, dispenser.ArgErr()
 				}
 				tryFiles = args
+
+			case "file_server":
+				args := dispenser.RemainingArgs()
+				dispenser.DeleteN(len(args) + 1)
+				if len(args) < 1 || args[0] != "off" {
+					return nil, dispenser.ArgErr()
+				}
+				disableFsrv = true
 			}
 		}
 	}
@@ -483,15 +492,19 @@ func parsePhpServer(h httpcaddyfile.Helper) ([]httpcaddyfile.ConfigValue, error)
 		MatcherSetsRaw: []caddy.ModuleMap{phpMatcherSet},
 		HandlersRaw:    []json.RawMessage{caddyconfig.JSONModuleObject(phpsrv, "handler", "php", nil)},
 	}
+	routes = append(routes, phpRoute)
 
 	// create the file server route
-	fileRoute := caddyhttp.Route{
-		MatcherSetsRaw: []caddy.ModuleMap{},
-		HandlersRaw:    []json.RawMessage{caddyconfig.JSONModuleObject(fsrv, "handler", "file_server", nil)},
+	if !disableFsrv {
+		fileRoute := caddyhttp.Route{
+			MatcherSetsRaw: []caddy.ModuleMap{},
+			HandlersRaw:    []json.RawMessage{caddyconfig.JSONModuleObject(fsrv, "handler", "file_server", nil)},
+		}
+		routes = append(routes, fileRoute)
 	}
 
 	subroute := caddyhttp.Subroute{
-		Routes: append(routes, phpRoute, fileRoute),
+		Routes: routes,
 	}
 
 	// the user's matcher is a prerequisite for ours, so
