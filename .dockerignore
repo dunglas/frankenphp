@@ -7,4 +7,5 @@
 !**/go.*
 !**/*.c
 !**/*.h
-!testdata/*.{php,txt}
+!testdata/*.php
+!testdata/*.txt

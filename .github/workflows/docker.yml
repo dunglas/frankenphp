@@ -138,7 +138,7 @@ jobs:
         run: |
           docker run --platform=${{matrix.platform}} --rm \
             $(jq -r '."builder-${{matrix.variant}}"."containerimage.config.digest"' <<< $METADATA) \
-            sh -c 'ulimit -i && go test ${{matrix.race}} -v ./... && cd caddy && go test ${{matrix.race}} -v ./...'
+            sh -c 'go test ${{matrix.race}} -v ./... && cd caddy && go test ${{matrix.race}} -v ./...'
         env:
           METADATA: ${{steps.build.outputs.metadata}}
 
