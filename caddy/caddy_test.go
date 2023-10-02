@@ -154,7 +154,7 @@ func TestPHPServerDirective(t *testing.T) {
 		}
 
 		localhost:9080 {
-			root ../testdata
+			root * ../testdata
 			php_server
 		}
 		`, "caddyfile")
@@ -178,7 +178,7 @@ func TestPHPServerDirectiveDisableFileServer(t *testing.T) {
 		}
 
 		localhost:9080 {
-			root ../testdata
+			root * ../testdata
 			php_server {
 				file_server off
 			}
