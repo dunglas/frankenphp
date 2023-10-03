@@ -21,35 +21,15 @@ Alternatively, you can run your Laravel projects with FrankenPHP from your local
 ```Caddyfile
 {
 	frankenphp
+	order php_server before file_server
 }
 
 # The domain name of your server
-localhost
-
-route {
-	root * public/
-
-	# Add trailing slash for directory requests
-	@canonicalPath {
-		file {path}/index.php
-		not path */
-	}
-	redir @canonicalPath {path}/ 308
-
-	# If the requested file does not exist, try index files
-	@indexFiles file {
-		try_files {path} {path}/index.php index.php
-		split_path .php
-	}
-	rewrite @indexFiles {http.matchers.file.relative}
-
-	# FrankenPHP!
-	@phpFiles path *.php
-	php @phpFiles
-	encode zstd gzip
-	file_server
-
-	respond 404
+localhost {
+    # Enable compression (optional)
+    encode zstd gzip
+    # Execute PHP files in the current directory and serve assets
+    php_server
 }
 ```
 3. Start FrankenPHP from the root directory of your Laravel project: `./frankenphp run`
