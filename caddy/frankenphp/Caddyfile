@@ -5,8 +5,10 @@
 		#worker /path/to/your/worker.php
 		{$FRANKENPHP_CONFIG}
 	}
-	order php_server before reverse_proxy
+	order php_server before file_server
 }
+
+{$CADDY_EXTRA_CONFIG}
 
 {$SERVER_NAME:localhost} {
 	log {
@@ -39,7 +41,7 @@
 	#}
 	#vulcain
 
-	{$SERVER_EXTRA_DIRECTIVES}
+	{$CADDY_SERVER_EXTRA_DIRECTIVES}
 
 	encode zstd gzip
 	php_server
