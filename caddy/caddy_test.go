@@ -139,3 +139,53 @@ func TestEnv(t *testing.T) {
 
 	tester.AssertGetResponse("http://localhost:9080/env.php", http.StatusOK, "bazbar")
 }
+
+func TestPHPServerDirective(t *testing.T) {
+	tester := caddytest.NewTester(t)
+	tester.InitServer(`
+		{
+			skip_install_trust
+			admin localhost:2999
+			http_port 9080
+			https_port 9443
+
+			frankenphp
+			order php_server before reverse_proxy
+		}
+
+		localhost:9080 {
+			root * ../testdata
+			php_server
+		}
+		`, "caddyfile")
+
+	tester.AssertGetResponse("http://localhost:9080", http.StatusOK, "I am by birth a Genevese (i not set)")
+	tester.AssertGetResponse("http://localhost:9080/hello.txt", http.StatusOK, "Hello")
+	tester.AssertGetResponse("http://localhost:9080/not-found.txt", http.StatusOK, "I am by birth a Genevese (i not set)")
+}
+
+func TestPHPServerDirectiveDisableFileServer(t *testing.T) {
+	tester := caddytest.NewTester(t)
+	tester.InitServer(`
+		{
+			skip_install_trust
+			admin localhost:2999
+			http_port 9080
+			https_port 9443
+
+			frankenphp
+			order php_server before respond
+		}
+
+		localhost:9080 {
+			root * ../testdata
+			php_server {
+				file_server off
+			}
+			respond "Not found" 404
+		}
+		`, "caddyfile")
+
+	tester.AssertGetResponse("http://localhost:9080", http.StatusOK, "I am by birth a Genevese (i not set)")
+	tester.AssertGetResponse("http://localhost:9080/hello.txt", http.StatusNotFound, "Not found")
+}

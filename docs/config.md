@@ -19,25 +19,23 @@ RUN cp $PHP_INI_DIR/php.ini-production $PHP_INI_DIR/php.ini; \
 
 ## Caddy Directives
 
-To register the FrankenPHP executor, the `frankenphp` directive must be set in Caddy global options, then the `php` HTTP directive must be set under routes serving PHP scripts:
+To register the FrankenPHP executor, the `frankenphp` directive must be set in Caddy global options, then the `php_server` or the `php` HTTP directives must be set under routes serving PHP scripts.
 
-
-Then, you can use the `php` HTTP directive to execute PHP scripts:
+Minimal example:
 
 ```caddyfile
 {
+    # Enable FrankenPHP
     frankenphp
+    # Configure when the directive must be executed
+    order php_server before reverse_proxy
 }
 
 localhost {
-    route {
-        php {
-            root <directory> # Sets the root folder to the site. Default: `root` directive.
-            split_path <delim...> # Sets the substrings for splitting the URI into two parts. The first matching substring will be used to split the "path info" from the path. The first piece is suffixed with the matching substring and will be assumed as the actual resource (CGI script) name. The second piece will be set to PATH_INFO for the CGI script to use. Default: `.php`
-            resolve_root_symlink # Enables resolving the `root` directory to its actual value by evaluating a symbolic link, if one exists.
-            env <key> <value> # Sets an extra environment variable to the given value. Can be specified more than once for multiple environment variables.
-        }
-    }
+    # Enable compression (optional)
+    encode zstd gzip
+    # Execute PHP files in the current directory and serve assets
+    php_server
 }
 ```
 
@@ -68,6 +66,41 @@ Alternatively, the short form of the `worker` directive can also be used:
 }
 
 # ...
+```
+
+Using the `php_server` directive is generaly what you need,
+but if you need full control, you can use the lower level `php` directive:
+
+Using the `php_server` directive is equivalent to this configuration:
+
+```caddyfile
+# Add trailing slash for directory requests
+@canonicalPath {
+    file {path}/index.php
+    not path */
+}
+redir @canonicalPath {path}/ 308
+# If the requested file does not exist, try index files
+@indexFiles file {
+    try_files {path} {path}/index.php index.php
+    split_path .php
+}
+rewrite @indexFiles {http.matchers.file.relative}
+# FrankenPHP!
+@phpFiles path *.php
+php @phpFiles
+file_server
+```
+
+The `php_server` and the `php` directives have the following options:
+
+```caddyfile
+php_server [<matcher>] {
+    root <directory> # Sets the root folder to the site. Default: `root` directive.
+    split_path <delim...> # Sets the substrings for splitting the URI into two parts. The first matching substring will be used to split the "path info" from the path. The first piece is suffixed with the matching substring and will be assumed as the actual resource (CGI script) name. The second piece will be set to PATH_INFO for the CGI script to use. Default: `.php`
+    resolve_root_symlink # Enables resolving the `root` directory to its actual value by evaluating a symbolic link, if one exists.
+    env <key> <value> # Sets an extra environment variable to the given value. Can be specified more than once for multiple environment variables.
+}
 ```
 
 ## Environment Variables

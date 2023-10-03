@@ -5,26 +5,21 @@
 		#worker /path/to/your/worker.php
 		{$FRANKENPHP_CONFIG}
 	}
+	order php_server before reverse_proxy
 }
 
-{$SERVER_NAME:localhost}
-
-log {
-	# Redact the authorization query parameter that can be set by Mercure
-	format filter {
-		wrap console
-		fields {
-			uri query {
-				replace authorization REDACTED
+{$SERVER_NAME:localhost} {
+	log {
+		# Redact the authorization query parameter that can be set by Mercure
+		format filter {
+			wrap console
+			fields {
+				uri query {
+					replace authorization REDACTED
+				}
 			}
 		}
 	}
-}
-
-route {
-	# Healthcheck URL
-	skip_log /healthz
-	respond /healthz 200
 
 	root * public/
 	# Uncomment the following lines to enable Mercure and Vulcain modules
@@ -44,25 +39,8 @@ route {
 	#}
 	#vulcain
 
-	# Add trailing slash for directory requests
-	@canonicalPath {
-		file {path}/index.php
-		not path */
-	}
-	redir @canonicalPath {path}/ 308
+	{$SERVER_EXTRA_DIRECTIVES}
 
-	# If the requested file does not exist, try index files
-	@indexFiles file {
-		try_files {path} {path}/index.php index.php
-		split_path .php
-	}
-	rewrite @indexFiles {http.matchers.file.relative}
-
-	# FrankenPHP!
-	@phpFiles path *.php
-	php @phpFiles
 	encode zstd gzip
-	file_server
-
-	respond 404
+	php_server
 }
