@@ -13,6 +13,7 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -553,6 +554,11 @@ func testFiberNoCgo(t *testing.T, opts *testOptions) {
 }
 
 func TestExecuteScriptCLI(t *testing.T) {
+	path, err := exec.LookPath("go")
+	assert.NoError(t, err)
+	t.Logf("Go path: %s\n", path)
+	t.Logf("Go arch: %s\n", runtime.GOARCH)
+
 	cmd := exec.Command("go", "run", "internal/testcli/main.go", "testdata/command.php", "foo", "bar")
 	stdoutStderr, err := cmd.CombinedOutput()
 	assert.Error(t, err)
