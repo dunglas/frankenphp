@@ -11,6 +11,7 @@ import (
 	"github.com/caddyserver/caddy/v2/caddyconfig"
 	caddycmd "github.com/caddyserver/caddy/v2/cmd"
 	"github.com/caddyserver/caddy/v2/modules/caddyhttp"
+	"github.com/caddyserver/caddy/v2/modules/caddyhttp/encode"
 	"github.com/caddyserver/caddy/v2/modules/caddyhttp/fileserver"
 	"github.com/caddyserver/caddy/v2/modules/caddyhttp/rewrite"
 	"github.com/caddyserver/certmagic"
@@ -42,6 +43,7 @@ For more advanced use cases, see https://github.com/dunglas/frankenphp/blob/main
 			cmd.Flags().StringP("listen", "l", "", "The address to which to bind the listener")
 			cmd.Flags().BoolP("access-log", "", false, "Enable the access log")
 			cmd.Flags().BoolP("debug", "v", false, "Enable verbose debug logs")
+			cmd.Flags().BoolP("compress", "c", false, "Enable Zstandard and Gzip compression")
 			cmd.RunE = caddycmd.WrapCommandFuncForCobra(cmdPHPServer)
 		},
 	})
@@ -56,6 +58,7 @@ func cmdPHPServer(fs caddycmd.Flags) (int, error) {
 	listen := fs.String("listen")
 	accessLog := fs.Bool("access-log")
 	debug := fs.Bool("debug")
+	compress := fs.Bool("compress")
 
 	const indexFile = "index.php"
 	extensions := []string{"php"}
@@ -69,6 +72,7 @@ func cmdPHPServer(fs caddycmd.Flags) (int, error) {
 	// route to redirect to canonical path if index PHP file
 	redirMatcherSet := caddy.ModuleMap{
 		"file": caddyconfig.JSON(fileserver.MatchFile{
+			Root:     root,
 			TryFiles: []string{"{http.request.uri.path}/" + indexFile},
 		}, nil),
 		"not": caddyconfig.JSON(caddyhttp.MatchNot{
@@ -91,6 +95,7 @@ func cmdPHPServer(fs caddycmd.Flags) (int, error) {
 	// route to rewrite to PHP index file
 	rewriteMatcherSet := caddy.ModuleMap{
 		"file": caddyconfig.JSON(fileserver.MatchFile{
+			Root:      root,
 			TryFiles:  tryFiles,
 			SplitPath: extensions,
 		}, nil),
@@ -122,16 +127,46 @@ func cmdPHPServer(fs caddycmd.Flags) (int, error) {
 
 	fileRoute := caddyhttp.Route{
 		MatcherSetsRaw: []caddy.ModuleMap{},
-		HandlersRaw:    []json.RawMessage{caddyconfig.JSONModuleObject(fileserver.FileServer{}, "handler", "file_server", nil)},
+		HandlersRaw:    []json.RawMessage{caddyconfig.JSONModuleObject(fileserver.FileServer{Root: root}, "handler", "file_server", nil)},
 	}
 
 	subroute := caddyhttp.Subroute{
 		Routes: caddyhttp.RouteList{redirRoute, rewriteRoute, phpRoute, fileRoute},
 	}
 
+	if compress {
+		encodings := make(caddy.ModuleMap, 2)
+		prefer := make([]string, 0, 2)
+
+		gzip, err := caddy.GetModule("http.encoders.gzip")
+		if err != nil {
+			return 0, err
+		}
+		encodings["gzip"] = caddyconfig.JSON(gzip.New(), nil)
+		prefer = append(prefer, "gzip")
+
+		zstd, err := caddy.GetModule("http.encoders.zstd")
+		if err != nil {
+			return 0, err
+		}
+		encodings["zstd"] = caddyconfig.JSON(zstd.New(), nil)
+		prefer = append(prefer, "zstd")
+
+		encodeRoute := caddyhttp.Route{
+			MatcherSetsRaw: []caddy.ModuleMap{},
+			HandlersRaw: []json.RawMessage{caddyconfig.JSONModuleObject(encode.Encode{
+				EncodingsRaw: encodings,
+				Prefer:       prefer,
+			}, "handler", "encode", nil)},
+		}
+
+		subroute.Routes = append(caddyhttp.RouteList{encodeRoute}, subroute.Routes...)
+	}
+
 	route := caddyhttp.Route{
 		HandlersRaw: []json.RawMessage{caddyconfig.JSONModuleObject(subroute, "handler", "subroute", nil)},
 	}
+	log.Printf("%s", string(route.HandlersRaw[0]))
 
 	if domain != "" {
 		route.MatcherSetsRaw = []caddy.ModuleMap{
