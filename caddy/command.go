@@ -43,7 +43,7 @@ For more advanced use cases, see https://github.com/dunglas/frankenphp/blob/main
 			cmd.Flags().StringP("listen", "l", "", "The address to which to bind the listener")
 			cmd.Flags().BoolP("access-log", "", false, "Enable the access log")
 			cmd.Flags().BoolP("debug", "v", false, "Enable verbose debug logs")
-			cmd.Flags().BoolP("compress", "c", false, "Enable Zstandard and Gzip compression")
+			cmd.Flags().BoolP("no-compress", "", false, "Disable Zstandard and Gzip compression")
 			cmd.RunE = caddycmd.WrapCommandFuncForCobra(cmdPHPServer)
 		},
 	})
@@ -58,7 +58,7 @@ func cmdPHPServer(fs caddycmd.Flags) (int, error) {
 	listen := fs.String("listen")
 	accessLog := fs.Bool("access-log")
 	debug := fs.Bool("debug")
-	compress := fs.Bool("compress")
+	compress := !fs.Bool("no-compress")
 
 	const indexFile = "index.php"
 	extensions := []string{"php"}
