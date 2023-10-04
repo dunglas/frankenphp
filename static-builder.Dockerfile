@@ -3,7 +3,8 @@ FROM golang-base
 
 ARG FRANKENPHP_VERSION='dev'
 ARG PHP_VERSION='8.2'
-ARG PHP_EXTENSIONS='bcmath,calendar,ctype,curl,dba,dom,exif,filter,fileinfo,gd,iconv,intl,mbstring,mbregex,mysqli,mysqlnd,opcache,openssl,pcntl,pdo,pdo_mysql,pdo_pgsql,pdo_sqlite,pgsql,phar,posix,readline,redis,session,simplexml,sockets,sqlite3,tokenizer,xml,xmlreader,xmlwriter,zip,zlib,apcu'
+ARG PHP_EXTENSIONS='bcmath,calendar,ctype,curl,dba,dom,exif,filter,fileinfo,gd,iconv,intl,ldap,mbstring,mbregex,mysqli,mysqlnd,opcache,openssl,pcntl,pdo,pdo_mysql,pdo_pgsql,pdo_sqlite,pgsql,phar,posix,readline,redis,session,simplexml,sockets,sqlite3,sysvsem,tokenizer,xml,xmlreader,xmlwriter,zip,zlib,apcu'
+ARG PHP_EXTENSION_LIBS='freetype,libjpeg,libavif,libwebp,libzip,bzip2'
 
 RUN apk update; \
     apk add --no-cache \
