@@ -137,12 +137,12 @@ func cmdPHPServer(fs caddycmd.Flags) (int, error) {
 	if compress {
 		gzip, err := caddy.GetModule("http.encoders.gzip")
 		if err != nil {
-			return 0, err
+			return caddy.ExitCodeFailedStartup, err
 		}
 
 		zstd, err := caddy.GetModule("http.encoders.zstd")
 		if err != nil {
-			return 0, err
+			return caddy.ExitCodeFailedStartup, err
 		}
 
 		encodeRoute := caddyhttp.Route{
