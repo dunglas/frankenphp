@@ -41,7 +41,7 @@ For more advanced use cases, see https://github.com/dunglas/frankenphp/blob/main
 			cmd.Flags().StringP("domain", "d", "", "Domain name at which to serve the files")
 			cmd.Flags().StringP("root", "r", "", "The path to the root of the site")
 			cmd.Flags().StringP("listen", "l", "", "The address to which to bind the listener")
-			cmd.Flags().BoolP("access-log", "", false, "Enable the access log")
+			cmd.Flags().BoolP("access-log", "a", false, "Enable the access log")
 			cmd.Flags().BoolP("debug", "v", false, "Enable verbose debug logs")
 			cmd.Flags().BoolP("no-compress", "", false, "Disable Zstandard and Gzip compression")
 			cmd.RunE = caddycmd.WrapCommandFuncForCobra(cmdPHPServer)
