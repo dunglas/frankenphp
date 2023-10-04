@@ -667,7 +667,9 @@ func go_log(message *C.char, level C.int) {
 	}
 }
 
-func ExecuteScriptCLI(script string, args []string) error {
+// ExecuteScriptCLI executes the PHP script passed as parameter.
+// It returns the exit status code of the script.
+func ExecuteScriptCLI(script string, args []string) int {
 	cScript := C.CString(script)
 	defer C.free(unsafe.Pointer(cScript))
 
@@ -677,11 +679,5 @@ func ExecuteScriptCLI(script string, args []string) error {
 		argv[i] = C.CString(arg)
 	}
 
-	runtime.LockOSThread()
-
-	if C.frankenphp_execute_script_cli(cScript, argc, (**C.char)(unsafe.Pointer(&argv[0]))) == -1 {
-		return fmt.Errorf("error exuction script %s", script)
-	}
-
-	return nil
+	return int(C.frankenphp_execute_script_cli(cScript, argc, (**C.char)(unsafe.Pointer(&argv[0]))))
 }

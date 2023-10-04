@@ -666,16 +666,25 @@ int frankenphp_execute_script(const char* file_name)
 }
 
 int frankenphp_execute_script_cli(char *script, int argc, char **argv) {
-	int status;
+	if (fork() == 0) {
+		return SUCCESS;
+	}
 
-	PHP_EMBED_START_BLOCK(argc, argv)
+	int exit_status;
 
-	zend_file_handle file_handle;
-	zend_stream_init_filename(&file_handle, script);
+	php_embed_module.pretty_name = "PHP CLI embedded in FrankenPHP";
 
-	status = php_execute_script(&file_handle);
+    php_embed_init(argc, argv);
+    zend_first_try {
+		zend_file_handle file_handle;
+		zend_stream_init_filename(&file_handle, script);
 
-	PHP_EMBED_END_BLOCK()
+		php_execute_script(&file_handle);
+	} zend_end_try();
 
-	return status;
+	exit_status = EG(exit_status);
+
+	php_embed_shutdown();
+
+	return exit_status;
 }
