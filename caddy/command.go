@@ -166,7 +166,6 @@ func cmdPHPServer(fs caddycmd.Flags) (int, error) {
 	route := caddyhttp.Route{
 		HandlersRaw: []json.RawMessage{caddyconfig.JSONModuleObject(subroute, "handler", "subroute", nil)},
 	}
-	log.Printf("%s", string(route.HandlersRaw[0]))
 
 	if domain != "" {
 		route.MatcherSetsRaw = []caddy.ModuleMap{
