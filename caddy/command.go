@@ -33,11 +33,13 @@ The listener's socket address can be customized with the --listen flag.
 If a domain name is specified with --domain, the default listener address
 will be changed to the HTTPS port and the server will use HTTPS. If using
 a public domain, ensure A/AAAA records are properly configured before
-using this option.`,
+using this option.
+
+For more advanced use cases, see https://github.com/dunglas/frankenphp/blob/main/docs/config.md.`,
 		CobraFunc: func(cmd *cobra.Command) {
 			cmd.Flags().StringP("domain", "d", "", "Domain name at which to serve the files")
 			cmd.Flags().StringP("root", "r", "", "The path to the root of the site")
-			cmd.Flags().StringP("listen", "", "", "The address to which to bind the listener")
+			cmd.Flags().StringP("listen", "l", "", "The address to which to bind the listener")
 			cmd.Flags().BoolP("access-log", "", false, "Enable the access log")
 			cmd.Flags().BoolP("debug", "v", false, "Enable verbose debug logs")
 			cmd.RunE = caddycmd.WrapCommandFuncForCobra(cmdPHPServer)
@@ -45,6 +47,7 @@ using this option.`,
 	})
 }
 
+// cmdPHPServer is freely inspired from the file-server command of the Caddy server (Apache License 2.0, Matthew Holt and The Caddy Authors)
 func cmdPHPServer(fs caddycmd.Flags) (int, error) {
 	caddy.TrapSignals()
 
