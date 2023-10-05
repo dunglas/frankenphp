@@ -20,14 +20,15 @@ jobs:
       platforms: ${{ steps.matrix.outputs.platforms }}
       metadata: ${{ steps.matrix.outputs.metadata }}
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
+      -
+        uses: actions/checkout@v4
+      -
+        name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
         with:
           version: latest
-
-      - name: Create variants matrix
+      -
+        name: Create variants matrix
         id: matrix
         run: |
           METADATA=$(docker buildx bake --print | jq -c)
@@ -38,7 +39,6 @@ jobs:
           LATEST: '1' # TODO: unset this variable when releasing the first stable version
           SHA: ${{github.sha}}
           VERSION: ${{github.ref_type == 'tag' && github.ref_name || github.sha}}
-
   build:
     runs-on: ubuntu-latest
     needs:
@@ -57,28 +57,29 @@ jobs:
           - platform: linux/386
             qemu: false
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up QEMU
+      -
+        uses: actions/checkout@v4
+      -
+        name: Set up QEMU
         if: matrix.qemu
         uses: docker/setup-qemu-action@v2
         with:
           platforms: ${{matrix.platform}}
-
-      - name: Set up Docker Buildx
+      -
+        name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
         with:
           platforms: ${{matrix.platform}}
           version: latest
-
-      - name: Login to DockerHub
+      -
+        name: Login to DockerHub
         if: fromJson(needs.prepare.outputs.push)
         uses: docker/login-action@v2
         with:
           username: ${{secrets.REGISTRY_USERNAME}}
           password: ${{secrets.REGISTRY_PASSWORD}}
-
-      - name: Build
+      -
+        name: Build
         id: build
         uses: docker/bake-action@v3
         with:
@@ -99,9 +100,9 @@ jobs:
           LATEST: '1' # TODO: unset this variable when releasing the first stable version
           SHA: ${{github.sha}}
           VERSION: ${{github.ref_type == 'tag' && github.ref_name || github.sha}}
-
-      # Workaround for https://github.com/actions/runner/pull/2477#issuecomment-1501003600
-      - name: Export metadata
+      -
+        # Workaround for https://github.com/actions/runner/pull/2477#issuecomment-1501003600
+        name: Export metadata
         if: fromJson(needs.prepare.outputs.push)
         run: |
           mkdir -p /tmp/metadata/builder /tmp/metadata/runner
@@ -113,8 +114,8 @@ jobs:
           touch "/tmp/metadata/runner/${runnerDigest#sha256:}"
         env:
           METADATA: ${{steps.build.outputs.metadata}}
-
-      - name: Upload runner metadata
+      -
+        name: Upload runner metadata
         if: fromJson(needs.prepare.outputs.push)
         uses: actions/upload-artifact@v3
         with:
@@ -122,8 +123,8 @@ jobs:
           path: /tmp/metadata/builder/*
           if-no-files-found: error
           retention-days: 1
-
-      - name: Upload runner metadata
+      -
+        name: Upload runner metadata
         if: fromJson(needs.prepare.outputs.push)
         uses: actions/upload-artifact@v3
         with:
@@ -131,8 +132,8 @@ jobs:
           path: /tmp/metadata/runner/*
           if-no-files-found: error
           retention-days: 1
-
-      - name: Run tests
+      -
+        name: Run tests
         if: '!matrix.qemu'
         continue-on-error: ${{fromJson(needs.prepare.outputs.push)}}
         run: |
@@ -141,7 +142,6 @@ jobs:
             sh -c 'go test ${{matrix.race}} -v ./... && cd caddy && go test ${{matrix.race}} -v ./...'
         env:
           METADATA: ${{steps.build.outputs.metadata}}
-
   # Adapted from https://docs.docker.com/build/ci/github-actions/multi-platform/
   push:
     runs-on: ubuntu-latest    
@@ -155,34 +155,34 @@ jobs:
         variant: ${{ fromJson(needs.prepare.outputs.variants) }}
         target: ['builder', 'runner']
     steps:
-      - name: Download metadata
+      -
+        name: Download metadata
         uses: actions/download-artifact@v3
         with:
           name: metadata-${{matrix.target}}-${{matrix.variant}}
           path: /tmp/metadata
-
-      - name: Set up Docker Buildx
+      -
+        name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
         with:
           version: latest
-
-      - name: Login to DockerHub
+      -
+        name: Login to DockerHub
         uses: docker/login-action@v2
         with:
           username: ${{secrets.REGISTRY_USERNAME}}
           password: ${{secrets.REGISTRY_PASSWORD}}
-
-      - name: Create manifest list and push
+      -
+        name: Create manifest list and push
         working-directory: /tmp/metadata
         run: |
           docker buildx imagetools create $(jq -cr '.target."${{matrix.target}}-${{matrix.variant}}".tags | map("-t " + .) | join(" ")' <<< $METADATA) \
             $(printf 'dunglas/frankenphp@sha256:%s ' *)
         env:
           METADATA: ${{needs.prepare.outputs.metadata}}
-
-      - name: Inspect image
+      -
+        name: Inspect image
         run: |
           docker buildx imagetools inspect $(jq -cr '.target."${{matrix.target}}-${{matrix.variant}}".tags | first' <<< $METADATA) 
         env:
           METADATA: ${{needs.prepare.outputs.metadata}}
-  
