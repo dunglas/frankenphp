@@ -27,14 +27,15 @@ jobs:
     name: Build Linux x86_64 binary
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
+      -
+        uses: actions/checkout@v4
+      -
+        name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
         with:
           version: latest
-
-      - name: Build
+      -
+        name: Build
         id: build
         uses: docker/bake-action@v3
         with:
@@ -49,11 +50,11 @@ jobs:
           VERSION: ${{github.ref_type == 'tag' && github.ref_name || github.sha}}
           SHA: ${{github.sha}}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Copy binary
+      -
+        name: Copy binary
         run: docker cp $(docker create --name static-builder dunglas/frankenphp:static-builder):/go/src/app/caddy/frankenphp/frankenphp frankenphp-linux-x86_64 ; docker rm static-builder
-
-      - name: Upload asset
+      -
+        name: Upload asset
         if: github.ref_type == 'tag'
         uses: ncipollo/release-action@v1
         with:
@@ -62,51 +63,51 @@ jobs:
           omitBodyDuringUpdate: true
           omitNameDuringUpdate: true
           artifacts: frankenphp-linux-x86_64
-
-      - name: Upload artifact
+      -
+        name: Upload artifact
         if: github.ref_type == 'branch'
         uses: actions/upload-artifact@v3
         with:
           path: frankenphp-linux-x86_64
-
   build-mac:
     name: Build macOS x86_64 binaries
     runs-on: macos-latest
     env:
       HOMEBREW_NO_AUTO_UPDATE: 1
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/checkout@v4
+      -
+        uses: actions/checkout@v4
+      -
+        uses: actions/checkout@v4
         with:
           repository: crazywhalecc/static-php-cli
           path: static-php-cli
-
-      - name: Install missing system dependencies
+      -
+        name: Install missing system dependencies
         run: brew install automake
-
-      - uses: actions/setup-go@v4
+      -
+        uses: actions/setup-go@v4
         with:
           go-version: '1.21'
           cache-dependency-path: |
             go.sum 
             caddy/go.sum   
-
-      - name: Install static-php-cli dependencies
+      -
+        name: Install static-php-cli dependencies
         working-directory: static-php-cli/
         run: composer install --no-dev -a
-
-      - name: Fetch libraries sources
+      -
+        name: Fetch libraries sources
         working-directory: static-php-cli/
         run: ./bin/spc fetch --with-php=8.2 -A
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build libphp.a
+      -
+        name: Build libphp.a
         working-directory: static-php-cli/
         run: ./bin/spc build --enable-zts --build-embed "bcmath,calendar,ctype,curl,dba,dom,exif,filter,fileinfo,gd,iconv,intl,mbstring,mbregex,mysqli,mysqlnd,opcache,openssl,pcntl,pdo,pdo_mysql,pdo_pgsql,pdo_sqlite,pgsql,phar,posix,readline,redis,session,simplexml,sockets,sqlite3,tokenizer,xml,xmlreader,xmlwriter,zip,zlib,apcu"
-
-      - name: Set CGO flags
+      -
+        name: Set CGO flags
         working-directory: static-php-cli/
         run: |
            if [ "$GITHUB_REF_TYPE" == "tag" ]; then export FRANKENPHP_VERSION=${GITHUB_REF_NAME:1}; else export FRANKENPHP_VERSION=$GITHUB_SHA; fi
@@ -114,14 +115,14 @@ jobs:
            echo "CGO_LDFLAGS=-framework CoreFoundation -framework SystemConfiguration $(./buildroot/bin/php-config --ldflags) $(./buildroot/bin/php-config --libs)" >> "$GITHUB_ENV"
            echo "PHP_VERSION=$(./buildroot/bin/php-config --version)" >> "$GITHUB_ENV"
            echo "FRANKENPHP_VERSION=$FRANKENPHP_VERSION" >> "$GITHUB_ENV"
-
-      - name: Build FrankenPHP
+      -
+        name: Build FrankenPHP
         working-directory: caddy/frankenphp/
         run: |
           go build -buildmode=pie -tags "cgo netgo osusergo static_build" -ldflags "-linkmode=external -extldflags -static-pie -w -s -X 'github.com/caddyserver/caddy/v2.CustomVersion=FrankenPHP $FRANKENPHP_VERSION PHP $PHP_VERSION Caddy'" -o frankenphp-mac-x86_64
           ./frankenphp-mac-x86_64 version
-
-      - name: Upload asset
+      -
+        name: Upload asset
         if: github.ref_type == 'tag'
         uses: ncipollo/release-action@v1
         with:
@@ -130,8 +131,8 @@ jobs:
           omitBodyDuringUpdate: true
           omitNameDuringUpdate: true
           artifacts: caddy/frankenphp/frankenphp-mac-x86_64
-  
-      - name: Upload binary
+      -
+        name: Upload binary
         uses: actions/upload-artifact@v3
         with:
           path: caddy/frankenphp/frankenphp-mac-x86_64
