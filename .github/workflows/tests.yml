@@ -39,7 +39,9 @@ jobs:
           phpts: ts
       -
         name: Set CGO flags
-        run: echo "CGO_CFLAGS=$(php-config --includes)" >> "$GITHUB_ENV"
+        run: |
+          echo "CGO_CFLAGS=$(php-config --includes)" >> "$GITHUB_ENV"
+          echo "CC=${{ matrix.checks == 'race' && 'gcc' || 'clang' }}" >> "$GITHUB_ENV"
       -
         name: Build
         run: go build
