@@ -6,7 +6,7 @@ jobs:
     strategy:
       matrix:
         php-versions: ['8.2', '8.3']
-        checks: ['-race', '-msan -asan']
+        checks: ['-race -msan', '-asan']
     steps:
       - uses: actions/checkout@v4
 
