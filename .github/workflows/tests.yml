@@ -35,6 +35,7 @@ jobs:
           ini-file: development
           extensions: ${{ matrix.checks != 'race' && 'none' || '' }}
           coverage: none
+          tools: none
         env:
           phpts: ts
       -
