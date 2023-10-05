@@ -6,7 +6,7 @@ jobs:
     strategy:
       matrix:
         php-versions: ['8.2', '8.3']
-        checks: ['-race -msan', '-asan']
+        checks: ['race', 'msan', 'asan']
     steps:
       - uses: actions/checkout@v4
 
@@ -35,8 +35,8 @@ jobs:
           GOEXPERIMENT: cgocheck2
 
       - name: Run library tests
-        run: go test ${{ matrix.checks }} -v ./...
+        run: go test -${{ matrix.checks }} -v ./...
 
       - name: Run Caddy module tests
         working-directory: caddy/
-        run: go test ${{ matrix.checks }} -v ./...
+        run: go test -${{ matrix.checks }} -v ./...
