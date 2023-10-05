@@ -33,7 +33,7 @@ jobs:
         with:
           php-version: ${{ matrix.php-versions }}
           ini-file: development
-          extensions: opcache
+          extensions: ${{ matrix.checks == 'race' && '' || 'none' }}
           coverage: none
         env:
           phpts: ts
