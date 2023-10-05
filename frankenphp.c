@@ -672,6 +672,8 @@ int frankenphp_execute_script_cli(char *script, int argc, char **argv) {
 
 	int exit_status;
 
+	// The SAPI name "cli" is hardcoded into too many programs... let's usurp it.
+	php_embed_module.name = "cli";
 	php_embed_module.pretty_name = "PHP CLI embedded in FrankenPHP";
 
     php_embed_init(argc, argv);
