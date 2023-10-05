@@ -13,9 +13,11 @@ replace (
 
 require (
 	github.com/caddyserver/caddy/v2 v2.7.4
+	github.com/caddyserver/certmagic v0.19.2
 	github.com/dunglas/frankenphp v1.0.0-beta.1
 	github.com/dunglas/mercure/caddy v0.15.2
 	github.com/dunglas/vulcain/caddy v0.5.0
+	github.com/spf13/cobra v1.7.0
 	go.uber.org/automaxprocs v1.5.3
 	go.uber.org/zap v1.26.0
 )
@@ -35,7 +37,6 @@ require (
 	github.com/aryann/difflib v0.0.0-20210328193216-ff5ff6dc229b // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bits-and-blooms/bitset v1.8.0 // indirect
-	github.com/caddyserver/certmagic v0.19.2 // indirect
 	github.com/cenkalti/backoff/v4 v4.2.1 // indirect
 	github.com/cespare/xxhash v1.1.0 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
@@ -138,7 +139,6 @@ require (
 	github.com/smallstep/truststore v0.12.1 // indirect
 	github.com/spf13/afero v1.9.5 // indirect
 	github.com/spf13/cast v1.5.1 // indirect
-	github.com/spf13/cobra v1.7.0 // indirect
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/spf13/viper v1.16.0 // indirect
