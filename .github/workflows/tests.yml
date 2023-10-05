@@ -10,6 +10,7 @@ jobs:
   tests:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         php-versions: ['8.2', '8.3']
         checks: ['race', 'msan', 'asan']
@@ -38,6 +39,7 @@ jobs:
           tools: none
         env:
           phpts: ts
+          debug: true
       -
         name: Remove remaining extensions
         if: matrix.checks != 'race'
