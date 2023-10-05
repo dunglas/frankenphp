@@ -38,3 +38,8 @@ The following extensions are known not to be compatible with FrankenPHP:
 | Name                                                        | Reason          | Alternatives                                                                                                         |
 | ----------------------------------------------------------- | --------------- | -------------------------------------------------------------------------------------------------------------------- |
 | [imap](https://www.php.net/manual/en/imap.installation.php) | Not thread-safe | [javanile/php-imap2](https://github.com/javanile/php-imap2), [webklex/php-imap](https://github.com/Webklex/php-imap) |
+
+## Doctrine issue
+
+Running Symfony with a long-running runtime that leaves worker threads alive, such as swoole, roadrunner and frankenphp regularly leads to exceptions being thrown when fetching many entities (~100) with doctrine, every few requests. The worker restart itself when these exceptions are thrown.
+[This issue is discussed here](https://github.com/symfony/symfony/issues/51661).
