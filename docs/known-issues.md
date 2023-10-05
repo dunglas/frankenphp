@@ -42,4 +42,4 @@ The following extensions are known not to be compatible with FrankenPHP:
 ## Doctrine ORM Issues
 
 Running Symfony with a long-running runtime that leaves worker threads alive, such as the worker mode of FrankenPHP, Swoole or Roadrunner regularly leads to exceptions being thrown when fetching many entities (~100) with doctrine, every few requests. The worker restarts itself when these exceptions are thrown.
-[This issue is discussed here](https://github.com/symfony/symfony/issues/51661).
+[This issue is discussed on the Symfony bug tracker](https://github.com/symfony/symfony/issues/51661).
