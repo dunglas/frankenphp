@@ -68,6 +68,27 @@ Alternatively, the short form of the `worker` directive can also be used:
 # ...
 ```
 
+You can also define multiple workers if you serve multiple apps on the same server:
+    
+```caddyfile
+{
+    frankenphp {
+        worker /path/to/app/public/index.php <num>
+        worker /path/to/other/public/index.php <num>
+    }
+}
+
+app.example.com {
+    root /path/to/app/public/
+}
+
+
+other.example.com {
+    root /path/to/other/public/
+}
+...
+
+
 Using the `php_server` directive is generaly what you need,
 but if you need full control, you can use the lower level `php` directive:
 
