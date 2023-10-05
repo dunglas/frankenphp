@@ -13,7 +13,6 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
-	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -554,21 +553,23 @@ func testFiberNoCgo(t *testing.T, opts *testOptions) {
 }
 
 func TestExecuteScriptCLI(t *testing.T) {
-	path, err := exec.LookPath("go")
-	assert.NoError(t, err)
-	t.Logf("Go path: %s\n", path)
-	t.Logf("Go arch: %s\n", runtime.GOARCH)
+	if _, err := os.Stat("internal/testcli/testcli"); err != nil {
+		t.Skip("internal/testcli/testcli has not been compiled, run `cd internal/testcli/ && go build`")
+	}
 
-	cmd := exec.Command("go", "run", "internal/testcli/main.go", "testdata/command.php", "foo", "bar")
+	cmd := exec.Command("internal/testcli/testcli", "testdata/command.php", "foo", "bar")
 	stdoutStderr, err := cmd.CombinedOutput()
 	assert.Error(t, err)
+
+	if exitError, ok := err.(*exec.ExitError); ok {
+		assert.Equal(t, 3, exitError.ExitCode())
+	}
 
 	stdoutStderrStr := string(stdoutStderr)
 
 	assert.Contains(t, stdoutStderrStr, `"foo"`)
 	assert.Contains(t, stdoutStderrStr, `"bar"`)
 	assert.Contains(t, stdoutStderrStr, "From the CLI")
-	assert.Contains(t, stdoutStderrStr, "exit status 3")
 }
 
 func ExampleServeHTTP() {
