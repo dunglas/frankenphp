@@ -41,7 +41,7 @@ jobs:
       -
         name: Remove remaining extensions
         if: matrix.checks != 'race'
-        run: rm -Rf /usr/lib/php/*-zts/*.so
+        run: sudo rm -Rf /usr/lib/php/*-zts/*.so
       -
         name: Set CGO flags
         run: |
