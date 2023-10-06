@@ -665,28 +665,52 @@ int frankenphp_execute_script(const char* file_name)
 	return status;
 }
 
-int frankenphp_execute_script_cli(char *script, int argc, char **argv) {
-	if (fork() == 0) {
-		return SUCCESS;
-	}
+// Use global variables to store CLI arguments to prevent useless allocations
+char *cliScript;
+int cliArgc;
+char **cliArgv;
 
-	int exit_status;
+static void * execute_script_cli(void *arg) {
+	void *exit_status;
 
 	// The SAPI name "cli" is hardcoded into too many programs... let's usurp it.
 	php_embed_module.name = "cli";
 	php_embed_module.pretty_name = "PHP CLI embedded in FrankenPHP";
 
-    php_embed_init(argc, argv);
+    php_embed_init(cliArgc, cliArgv);
     zend_first_try {
 		zend_file_handle file_handle;
-		zend_stream_init_filename(&file_handle, script);
+		zend_stream_init_filename(&file_handle, cliScript);
 
 		php_execute_script(&file_handle);
 	} zend_end_try();
 
-	exit_status = EG(exit_status);
+	exit_status = (void *) (intptr_t) EG(exit_status);
 
 	php_embed_shutdown();
 
 	return exit_status;
+}
+
+int frankenphp_execute_script_cli(char *script, int argc, char **argv) {
+	pthread_t thread;
+	int err;
+	void *exit_status;
+
+	cliScript = script;
+	cliArgc = argc;
+	cliArgv = argv;
+
+	// Start the script in a dedicated thread to prevent conflicts between Go and PHP signal handlers
+	err = pthread_create(&thread, NULL, execute_script_cli, NULL);
+	if (err != 0) {
+		return err;
+	}
+
+	err = pthread_join(thread, &exit_status);
+	if (err != 0) {
+		return err;
+	}
+
+	return (intptr_t) exit_status;
 }
