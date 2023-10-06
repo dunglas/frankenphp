@@ -40,6 +40,13 @@
 #define err(str)
 #endif
 
+#ifndef THPOOL_THREAD_NAME
+#define THPOOL_THREAD_NAME thpool
+#endif
+
+#define STRINGIFY(x) #x
+#define TOSTRING(x) STRINGIFY(x)
+
 static volatile int threads_keepalive;
 static volatile int threads_on_hold;
 
@@ -211,7 +218,7 @@ void thpool_wait(thpool_* thpool_p){
 
 /* Destroy the threadpool */
 void thpool_destroy(thpool_* thpool_p){
-	/* No need to destory if it's NULL */
+	/* No need to destroy if it's NULL */
 	if (thpool_p == NULL) return ;
 
 	volatile int threads_total = thpool_p->num_threads_alive;
@@ -260,7 +267,7 @@ void thpool_pause(thpool_* thpool_p) {
 /* Resume all threads in threadpool */
 void thpool_resume(thpool_* thpool_p) {
     // resuming a single threadpool hasn't been
-    // implemented yet, meanwhile this supresses
+    // implemented yet, meanwhile this suppresses
     // the warnings
     (void)thpool_p;
 
@@ -322,9 +329,10 @@ static void thread_hold(int sig_id) {
 */
 static void* thread_do(struct thread* thread_p){
 
-	/* Set thread name for profiling and debuging */
+	/* Set thread name for profiling and debugging */
 	char thread_name[16] = {0};
-	snprintf(thread_name, 16, "thpool-%d", thread_p->id);
+
+	snprintf(thread_name, 16, TOSTRING(THPOOL_THREAD_NAME) "-%d", thread_p->id);
 
 #if defined(__linux__)
 	/* Use prctl instead to prevent using _GNU_SOURCE flag and implicit declaration */
