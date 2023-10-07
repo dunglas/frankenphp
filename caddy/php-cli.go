@@ -18,13 +18,14 @@ func init() {
 		Long: `
 Executes a PHP script similarly to the CLI SAPI.`,
 		CobraFunc: func(cmd *cobra.Command) {
+			cmd.DisableFlagParsing = true
 			cmd.RunE = caddycmd.WrapCommandFuncForCobra(cmdPHPCLI)
 		},
 	})
 }
 
 func cmdPHPCLI(fs caddycmd.Flags) (int, error) {
-	args := fs.Args()
+	args := os.Args[2:]
 	if len(args) < 1 {
 		return 1, errors.New("the path to the PHP script is required")
 	}
