@@ -15,7 +15,7 @@ import (
 
 func init() {
 	//nolint:errcheck
-	maxprocs.Set(maxprocs.Logger(caddy.Log().Sugar().Infof))
+	maxprocs.Set(maxprocs.Logger(caddy.Log().Sugar().Debugf))
 }
 
 func main() {
