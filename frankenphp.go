@@ -274,7 +274,7 @@ func Init(options ...Option) error {
 
 	config := Config()
 
-	if config.Version.MajorVersion < 8 || config.Version.MinorVersion < 2 {
+	if config.Version.MajorVersion < 8 || (config.Version.MajorVersion == 8 && config.Version.MinorVersion < 2) {
 		return InvalidPHPVersionError
 	}
 
