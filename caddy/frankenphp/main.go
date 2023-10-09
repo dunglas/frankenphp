@@ -3,8 +3,7 @@ package main
 
 import (
 	caddycmd "github.com/caddyserver/caddy/v2/cmd"
-
-	_ "go.uber.org/automaxprocs"
+	"go.uber.org/automaxprocs/maxprocs"
 
 	// plug in Caddy modules here.
 	_ "github.com/caddyserver/caddy/v2/modules/standard"
@@ -12,6 +11,10 @@ import (
 	_ "github.com/dunglas/mercure/caddy"
 	_ "github.com/dunglas/vulcain/caddy"
 )
+
+func init() {
+	maxprocs.Set()
+}
 
 func main() {
 	caddycmd.Main()
