@@ -87,7 +87,7 @@ other.example.com {
     root /path/to/other/public/
 }
 ...
-
+```
 
 Using the `php_server` directive is generaly what you need,
 but if you need full control, you can use the lower level `php` directive:
