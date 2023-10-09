@@ -755,10 +755,10 @@ static void * execute_script_cli(void *arg) {
 	php_embed_module.pretty_name = "PHP CLI embedded in FrankenPHP";
 	php_embed_module.register_server_variables = sapi_cli_register_variables;
 
-    php_embed_init(cli_argc, cli_argv);
+	php_embed_init(cli_argc, cli_argv);
 
 	cli_register_file_handles(false);
-    zend_first_try {
+	zend_first_try {
 		zend_file_handle file_handle;
 		zend_stream_init_filename(&file_handle, cli_script);
 
