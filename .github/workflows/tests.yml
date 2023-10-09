@@ -42,6 +42,10 @@ jobs:
         env:
           GOEXPERIMENT: cgocheck2
       -
+        name: Build testcli binary
+        working-directory: internal/testcli/
+        run: go build
+      -
         name: Run library tests
         run: go test -race -v ./...
       -

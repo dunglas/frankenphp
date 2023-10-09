@@ -666,3 +666,18 @@ func go_log(message *C.char, level C.int) {
 		l.Info(m, zap.Stringer("syslog_level", syslogLevel(level)))
 	}
 }
+
+// ExecuteScriptCLI executes the PHP script passed as parameter.
+// It returns the exit status code of the script.
+func ExecuteScriptCLI(script string, args []string) int {
+	cScript := C.CString(script)
+	defer C.free(unsafe.Pointer(cScript))
+
+	argc := C.int(len(args))
+	argv := make([]*C.char, argc)
+	for i, arg := range args {
+		argv[i] = C.CString(arg)
+	}
+
+	return int(C.frankenphp_execute_script_cli(cScript, argc, (**C.char)(unsafe.Pointer(&argv[0]))))
+}
