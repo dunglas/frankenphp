@@ -8,7 +8,15 @@ Build the dev Docker image:
     docker build -t frankenphp-dev -f dev.Dockerfile .
     docker run --cap-add=SYS_PTRACE --security-opt seccomp=unconfined -p 8080:8080 -p 443:443 -v $PWD:/go/src/app -it frankenphp-dev
 
-The image contains the usual development tools (Go, GDB, Valgrind, Neovim...).
+The image contains the usual development tools (Go, GDB, Valgrind, Neovim...).  
+If docker version is lower than 23.0, build is failed by dockerignore [pattern issue](https://github.com/moby/moby/pull/42676). Add directories to `.dockerignore`.
+```patch
+ !testdata/*.php
+ !testdata/*.txt
++!caddy
++!C-Thread-Pool
++!internal
+```
 
 ### Without Docker (Linux and macOS)
 
