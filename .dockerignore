@@ -9,3 +9,6 @@
 !**/*.h
 !testdata/*.php
 !testdata/*.txt
+!caddy
+!C-Thread-Pool
+!internal
