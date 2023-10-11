@@ -35,6 +35,7 @@ containing [PHP 8.2](https://www.php.net/releases/8.2/en.php) and most popular P
 * [Early Hints support (103 HTTP status code)](docs/early-hints.md)
 * [Real-time](docs/mercure.md)
 * [Configuration](docs/config.md)
+* [Deploy FrankenPHP on DigitalOcean](docs/deploy-frankenphp-digital-ocean.md)
 * [Docker images](docs/docker.md)
 * [Compile from sources](docs/compile.md)
 * [Create static binaries](docs/static.md)
