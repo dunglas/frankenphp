@@ -23,8 +23,8 @@ package frankenphp
 // #cgo linux CFLAGS: -D_GNU_SOURCE
 // #cgo CPPFLAGS: -fstack-protector-strong -fpic -fpie -O2 -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64
 // #cgo darwin LDFLAGS: -L/opt/homebrew/opt/libiconv/lib -liconv
-// #cgo linux LDFLAGS: -Wl,-O1
-// #cgo LDFLAGS: -pie -L/usr/local/lib -L/usr/lib -lphp -lresolv -ldl -lm -lutil
+// #cgo linux LDFLAGS: -Wl,-O1 -lresolv
+// #cgo LDFLAGS: -pie -L/usr/local/lib -L/usr/lib -lphp -ldl -lm -lutil
 // #include <stdlib.h>
 // #include <stdint.h>
 // #include <php_variables.h>
