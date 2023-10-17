@@ -80,8 +80,7 @@ jobs:
       -
         uses: actions/checkout@v4
         with:
-          repository: dunglas/static-php-cli
-          ref: fix/curl-mac
+          repository: crazywhalecc/static-php-cli
           path: static-php-cli
       -
         name: Install missing system dependencies
@@ -103,6 +102,7 @@ jobs:
         run: ./bin/spc fetch --with-php=8.2 -A
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - run: ls static-php-cli/downloads
       -
         name: Build libphp.a
         working-directory: static-php-cli/
