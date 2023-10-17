@@ -80,7 +80,8 @@ jobs:
       -
         uses: actions/checkout@v4
         with:
-          repository: crazywhalecc/static-php-cli
+          repository: dunglas/static-php-cli
+          ref: fix/curl-mac
           path: static-php-cli
       -
         name: Install missing system dependencies
