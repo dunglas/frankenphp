@@ -1,7 +1,7 @@
 # Deploying FrankenPHP on DigitalOcean
 
 
-## Prerequisites:
+## Prerequisites
 
 1.  **DigitalOcean Account:** You'll need a DigitalOcean account. If you don't have one, you can sign up [here](https://www.digitalocean.com/).
 2.  **SSH Key:** Ensure you have an SSH key configured on your local machine. You can follow [DigitalOcean's SSH key setup guide](https://www.digitalocean.com/docs/ssh/create-ssh-keys/) for this.
