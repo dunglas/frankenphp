@@ -38,7 +38,7 @@ Now, you'll need to install FrankenPHP on your DigitalOcean droplet. You can use
 Once FrankenPHP is up and running on your DigitalOcean droplet, you can access it by opening a web browser and navigating to your droplet's IP address or domain name (if configured).
 
 *   For IP address: `http://your_droplet_ip`
-*   For domain name: `http://your_domain_name`
+*   For domain name: `https://your_domain_name`
 
 ## Step 6: Enjoy FrankenPHP
 
