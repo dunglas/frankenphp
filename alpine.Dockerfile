@@ -21,7 +21,7 @@ COPY --link caddy/frankenphp/Caddyfile /etc/caddy/Caddyfile
 COPY --from=mlocati/php-extension-installer /usr/bin/install-php-extensions /usr/local/bin/
 
 CMD ["--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile"]
-HEALTHCHECK CMD curl -f https://localhost/healthz || exit 1
+HEALTHCHECK CMD curl -f http://localhost:2019/metrics || exit 1
 
 # See https://caddyserver.com/docs/conventions#file-locations for details
 ENV XDG_CONFIG_HOME /config
