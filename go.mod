@@ -2,9 +2,7 @@ module github.com/dunglas/frankenphp
 
 go 1.21
 
-retract (
-	v1.0.0-rc.1 // Human error
-)
+retract v1.0.0-rc.1 // Human error
 
 require (
 	github.com/stretchr/testify v1.8.1
