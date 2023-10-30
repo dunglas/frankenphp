@@ -29,6 +29,8 @@
 	}
 
 	root * public/
+	encode zstd gzip
+
 	# Uncomment the following lines to enable Mercure and Vulcain modules
 	#mercure {
 	#	# Transport to use (default to Bolt)
@@ -48,6 +50,5 @@
 
 	{$CADDY_SERVER_EXTRA_DIRECTIVES}
 
-	encode zstd gzip
 	php_server
 }

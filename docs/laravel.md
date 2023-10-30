@@ -18,7 +18,7 @@ Alternatively, you can run your Laravel projects with FrankenPHP from your local
 
 1. [Download the binary corresponding to your system](https://github.com/dunglas/frankenphp/releases)
 2. Add the following configuration to a file named `Caddyfile` in the root directory of your Laravel project:
-```Caddyfile
+```caddyfile
 {
 	frankenphp
 	order php_server before file_server
@@ -33,3 +33,7 @@ localhost {
 }
 ```
 3. Start FrankenPHP from the root directory of your Laravel project: `./frankenphp run`
+
+## Laravel Octane
+
+See [this Pull Request](https://github.com/laravel/octane/pull/764).
