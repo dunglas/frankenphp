@@ -87,4 +87,4 @@ docker run \
 As PHP was not originally designed for long-running processes, there are still many libraries and legacy codes that leak memory.
 A workaround to using this type of code in worker mode is to restart the worker script after processing a certain number of requests:
 
-The previous worker snippet allows configuring a maximum number of request to handle by setting thean environment variable named `MAX_REQUESTS`.
+The previous worker snippet allows configuring a maximum number of request to handle by setting an environment variable named `MAX_REQUESTS`.
