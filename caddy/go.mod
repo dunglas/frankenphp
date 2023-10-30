@@ -4,6 +4,8 @@ go 1.21
 
 replace github.com/dunglas/frankenphp => ../
 
+retract v1.0.0-rc.1 // Human error
+
 require (
 	github.com/caddyserver/caddy/v2 v2.7.5
 	github.com/caddyserver/certmagic v0.19.2
