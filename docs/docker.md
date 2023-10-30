@@ -77,4 +77,13 @@ services:
       - 443:443
     volumes:
       - ./:/app/public
+      - caddy_data:/data
+      - caddy_config:/config
+    # comment the following line in production, it allows to have nice human-readable logs in dev
+    tty: true
+
+# Volumes needed for Caddy certificates and configuration
+volumes:
+  caddy_data:
+  caddy_config:
 ```

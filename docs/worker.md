@@ -8,13 +8,13 @@ FrankenPHP will handle incoming requests in a few milliseconds.
 The worker mode of FrankenPHP is supported by the [Symfony Runtime Component](https://symfony.com/doc/current/components/runtime.html).
 To start any Symfony application in a worker, install the FrankenPHP package of [PHP Runtime](https://github.com/php-runtime/runtime):
 
-```sh
+```console
 composer require runtime/frankenphp-symfony
 ```
 
 Start your app server by defining the `APP_RUNTIME` environment variable to use the FrankenPHP Symfony Runtime
 
-```sh
+```console
 docker run \
     -e FRANKENPHP_CONFIG="worker ./public/index.php" \
     -e APP_RUNTIME=Runtime\\FrankenPhpSymfony\\Runtime \
@@ -63,7 +63,7 @@ $myApp->shutdown();
 
 Then, start your app and use the `FRANKENPHP_CONFIG` environment variable to configure your worker: 
 
-```sh
+```console
 docker run \
     -e FRANKENPHP_CONFIG="worker ./public/index.php" \
     -v $PWD:/app \
@@ -74,7 +74,7 @@ docker run \
 By default, one worker per CPU is started.
 You can also configure the number of workers to start:
 
-```sh
+```console
 docker run \
     -e FRANKENPHP_CONFIG="worker ./public/index.php 42" \
     -v $PWD:/app \
