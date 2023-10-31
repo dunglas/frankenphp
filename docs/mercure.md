@@ -1,7 +1,7 @@
 # Real-time
 
 FrankenPHP comes with a built-in Mercure hub!
-Mercure allows to push event in real-time to all the connected devices: they will receive instantly a JavaScript event.
+Mercure allows to push events in real-time to all the connected devices: they will receive a JavaScript event instantly.
 
 No JS library or SDK required!
 
