@@ -38,6 +38,38 @@ RUN install-php-extensions \
 # ...
 ```
 
+## How to Install More Caddy Modules
+
+FrankenPHP is built on top of Caddy, and all [Caddy modules](https://caddyserver.com/docs/modules/) can be used with FrankenPHP.
+
+The easiest way to install custom Caddy modules is to use [xcaddy](https://github.com/caddyserver/xcaddy):
+
+```dockerfile
+FROM dunglas/frankenphp:latest-builder AS builder
+
+# Copy xcaddy in the builder image
+COPY --from=caddy:builder /usr/bin/xcaddy /usr/bin/xcaddy
+
+# CGO must be enabled to build FrankenPHP
+ENV CGO_ENABLED=1 XCADDY_SETCAP=1
+RUN xcaddy build \
+    --output /usr/local/bin/frankenphp \
+    --with github.com/dunglas/frankenphp=./ \
+    --with github.com/dunglas/frankenphp/caddy=./caddy/ \
+    # Mercure and Vulcain are included in the official build, but feel free to remove them
+    --with github.com/dunglas/mercure/caddy \
+    --with github.com/dunglas/vulcain/caddy
+    # Add extra Caddy modules here
+
+FROM dunglas/frankenphp AS runner
+
+# Replace the official binary by the one contained your custom modules
+COPY --from=builder /usr/local/bin/frankenphp /usr/local/bin/frankenphp
+```
+
+The `builder` image provided by FrankenPHP contains a compiled version of libphp.
+[Builders images](https://hub.docker.com/r/dunglas/frankenphp/tags?name=builder) are provided for all versions of FrankenPHP and PHP, both for Alpine and Debian.
+
 # Enabling the Worker Mode by Default
 
 Set the `FRANKENPHP_CONFIG` environment variable to start FrankenPHP with a worker script:
