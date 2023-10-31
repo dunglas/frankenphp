@@ -68,7 +68,7 @@ make -j$(sysctl -n hw.logicalcpu)
 sudo make install
 ```
 
-#### Compile the Go App
+## Compile the Go App
 
 You can now use the Go library and compile our Caddy build:
 
@@ -76,4 +76,17 @@ You can now use the Go library and compile our Caddy build:
 curl -L https://github.com/dunglas/frankenphp/archive/refs/heads/main.tar.gz | tar x
 cd frankenphp-main/caddy/frankenphp
 CGO_CFLAGS=$(php-config --includes) go build
+```
+
+### Using xcaddy
+
+Alternatively, use [xcaddy](https://github.com/caddyserver/xcaddy) to compile FrankenPHP with [custom Caddy modules](https://caddyserver.com/docs/modules/):
+
+```console
+CGO_ENABLED=1 xcaddy build \
+    --output frankenphp \
+    --with github.com/dunglas/frankenphp/caddy \
+    --with github.com/dunglas/mercure/caddy \
+    --with github.com/dunglas/vulcain/caddy
+    # Add extra Caddy modules here
 ```
