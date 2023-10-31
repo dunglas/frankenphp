@@ -1,6 +1,6 @@
 # Configuration
 
-FrankenPHP, Caddy as well the Mercure and Vulcain modules can be configured using [the formats supported by Caddy](https://caddyserver.com/docs/getting-started#your-first-config).
+FrankenPHP, Caddy as well as the Mercure and Vulcain modules can be configured using [the formats supported by Caddy](https://caddyserver.com/docs/getting-started#your-first-config).
 
 In the Docker image, the `Caddyfile` is located at `/etc/caddy/Caddyfile`.
 
@@ -8,7 +8,7 @@ You can also configure PHP using `php.ini` as usual.
 
 In the Docker image, the `php.ini` file is not present, you can create it or `COPY` manually.
 
-If you copy `php.ini` from `$PHP_INI_DIR/php.ini-production` or `$PHP_INI_DIR/php.ini-development` you also must set variable `variables_order = "EGPCS"`, because default value for `variables_order` is `"EGPCS"` but in `php.ini-production` and `php.ini-development` we have `"GPCS"`. And in this case `worker` not work propertly.
+If you copy `php.ini` from `$PHP_INI_DIR/php.ini-production` or `$PHP_INI_DIR/php.ini-development`, you also must set the variable `variables_order = "EGPCS"`, because the default value for `variables_order` is `"EGPCS"`, but in `php.ini-production` and `php.ini-development` we have `"GPCS"`. And in this case, `worker` does not work properly.
 
 ```dockerfile
 FROM dunglas/frankenphp
@@ -134,11 +134,11 @@ The following environment variables can be used to inject Caddy directives in th
 
 Unlike with FPM and CLI SAPIs, environment variables are **not** exposed by default in superglobals `$_SERVER` and `$_ENV`.
 
-To propagate environment variables to `$_SERVER` and `$_ENV`, set the `php.ini` `variables_order` directive to `EGPS`.
+To propagate environment variables to `$_SERVER` and `$_ENV`, set the `php.ini` `variables_order` directive to `EGPCS`.
 
 ## Enable the Debug Mode
 
-When using the Docker image, set the `CADDY_DEBUG` environment variable to `debug` to enable the debug mode:
+When using the Docker image, set the `CADDY_GLOBAL_OPTIONS` environment variable to `debug` to enable the debug mode:
 
 ```console
 docker run -v $PWD:/app/public \
