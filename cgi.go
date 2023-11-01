@@ -35,8 +35,7 @@ func populateEnv(request *http.Request) error {
 		}
 
 		// Remove [] from IPv6 addresses
-		ip = strings.Replace(ip, "[", "", 1)
-		ip = strings.Replace(ip, "]", "", 1)
+		ip = strings.Trim(ip, "[]")
 
 		if _, ok := fc.Env["REMOTE_ADDR"]; !ok {
 			fc.Env["REMOTE_ADDR"] = ip
