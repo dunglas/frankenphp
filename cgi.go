@@ -171,9 +171,6 @@ func populateEnv(request *http.Request) error {
 	if _, ok := fc.Env["QUERY_STRING"]; !ok {
 		fc.Env["QUERY_STRING"] = request.URL.RawQuery
 	}
-	if _, ok := fc.Env["QUERY_STRING"]; !ok {
-		fc.Env["QUERY_STRING"] = request.URL.RawQuery
-	}
 	if _, ok := fc.Env["REQUEST_METHOD"]; !ok {
 		fc.Env["REQUEST_METHOD"] = request.Method
 	}
