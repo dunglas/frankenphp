@@ -33,6 +33,16 @@ docker buildx bake --load --set static-builder.args.PHP_EXTENSIONS=opcache,pdo_s
 
 See [the list of supported extensions](https://static-php.dev/en/guide/extensions.html).
 
+To add libraries enabling additional functionality to the extensions you've enabled, you can pass use the `PHP_EXTENSION_LIBS` Docker ARG:
+
+```console
+docker buildx bake \
+  --load \
+  --set static-builder.args.PHP_EXTENSIONS=gd \
+  --set static-builder.args.PHP_EXTENSION_LIBS=libjpeg,libwebp \
+  static-builder
+```
+
 ### GitHub Token
 
 If you hit the GitHub API rate limit, set a GitHub Personal Access Token in an environment variable named `GITHUB_TOKEN`:

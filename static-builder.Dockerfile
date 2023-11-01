@@ -3,7 +3,8 @@ FROM golang-base
 
 ARG FRANKENPHP_VERSION='dev'
 ARG PHP_VERSION='8.2'
-ARG PHP_EXTENSIONS='bcmath,calendar,ctype,curl,dba,dom,exif,filter,fileinfo,gd,iconv,intl,mbstring,mbregex,mysqli,mysqlnd,opcache,openssl,pcntl,pdo,pdo_mysql,pdo_pgsql,pdo_sqlite,pgsql,phar,posix,readline,redis,session,simplexml,sockets,sqlite3,tokenizer,xml,xmlreader,xmlwriter,zip,zlib,apcu'
+ARG PHP_EXTENSIONS='apcu,bcmath,bz2,calendar,ctype,curl,dba,dom,exif,fileinfo,filter,gd,iconv,intl,ldap,mbregex,mbstring,mysqli,mysqlnd,opcache,openssl,pcntl,pdo,pdo_mysql,pdo_pgsql,pdo_sqlite,pgsql,phar,posix,readline,redis,session,simplexml,sockets,sqlite3,sysvsem,tokenizer,xml,xmlreader,xmlwriter,zip,zlib'
+ARG PHP_EXTENSION_LIBS='freetype,libjpeg,libavif,libwebp,libzip,bzip2'
 
 RUN apk update; \
     apk add --no-cache \
@@ -57,7 +58,7 @@ RUN git clone --depth=1 https://github.com/crazywhalecc/static-php-cli . && \
 
 RUN --mount=type=secret,id=github-token GITHUB_TOKEN=$(cat /run/secrets/github-token) ./bin/spc download --with-php=$PHP_VERSION --all
 
-RUN ./bin/spc build --build-embed --enable-zts "$PHP_EXTENSIONS"
+RUN ./bin/spc build --build-embed --enable-zts --disable-opcache-jit "$PHP_EXTENSIONS" --with-libs="$PHP_EXTENSION_LIBS"
 
 ENV PATH="/static-php-cli/buildroot/bin:/static-php-cli/buildroot/usr/bin:$PATH"
 
