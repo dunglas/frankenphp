@@ -58,7 +58,7 @@ RUN git clone --depth=1 https://github.com/crazywhalecc/static-php-cli . && \
 
 RUN --mount=type=secret,id=github-token GITHUB_TOKEN=$(cat /run/secrets/github-token) ./bin/spc download --with-php=$PHP_VERSION --all
 
-RUN ./bin/spc build --build-embed --enable-zts "$PHP_EXTENSIONS" --with-libs="$PHP_EXTENSION_LIBS"
+RUN ./bin/spc build --build-embed --enable-zts --disable-opcache-jit "$PHP_EXTENSIONS" --with-libs="$PHP_EXTENSION_LIBS"
 
 ENV PATH="/static-php-cli/buildroot/bin:/static-php-cli/buildroot/usr/bin:$PATH"
 
