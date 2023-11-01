@@ -3,7 +3,33 @@
 Boot your application once and keep it in memory.
 FrankenPHP will handle incoming requests in a few milliseconds.
 
+## Symfony Runtime
+
+The worker mode of FrankenPHP is supported by the [Symfony Runtime Component](https://symfony.com/doc/current/components/runtime.html).
+To start any Symfony application in a worker, install the FrankenPHP package of [PHP Runtime](https://github.com/php-runtime/runtime):
+
+```console
+composer require runtime/frankenphp-symfony
+```
+
+Start your app server by defining the `APP_RUNTIME` environment variable to use the FrankenPHP Symfony Runtime
+
+```console
+docker run \
+    -e FRANKENPHP_CONFIG="worker ./public/index.php" \
+    -e APP_RUNTIME=Runtime\\FrankenPhpSymfony\\Runtime \
+    -v $PWD:/app \
+    -p 80:80 -p 443:443 \
+    dunglas/frankenphp
+```
+
+## Laravel Octane
+
+See [this Pull Request](https://github.com/laravel/octane/pull/764).
+
 ## Custom Apps
+
+The following example shows how to create your own worker script without relying on a third-party library:
 
 ```php
 <?php
@@ -15,19 +41,21 @@ require __DIR__.'/vendor/autoload.php';
 $myApp = new \App\Kernel();
 $myApp->boot();
 
+$nbRequests = 0;
 do {
-    $running = frankenphp_handle_request(function () use ($myApp) {
+    $handler = static function () use ($myApp) {
         // Called when a request is received,
         // superglobals, php://input and the like are reset
         echo $myApp->handle($_GET, $_POST, $_COOKIE, $_FILES, $_SERVER);
-    });
+    };
+    $running = \frankenphp_handle_request($handler);
 
     // Do something after sending the HTTP response
     $myApp->terminate();
 
     // Call the garbage collector to reduce the chances of it being triggered in the middle of a page generation
     gc_collect_cycles();
-} while ($running);
+} while ($running && !(isset($_SERVER['MAX_REQUESTS']) && ++$nbRequests >= $_SERVER['MAX_REQUESTS']));
 
 // Cleanup
 $myApp->shutdown();
@@ -35,7 +63,7 @@ $myApp->shutdown();
 
 Then, start your app and use the `FRANKENPHP_CONFIG` environment variable to configure your worker: 
 
-```sh
+```console
 docker run \
     -e FRANKENPHP_CONFIG="worker ./public/index.php" \
     -v $PWD:/app \
@@ -46,33 +74,17 @@ docker run \
 By default, one worker per CPU is started.
 You can also configure the number of workers to start:
 
-```sh
+```console
 docker run \
     -e FRANKENPHP_CONFIG="worker ./public/index.php 42" \
     -v $PWD:/app \
     -p 80:80 -p 443:443 \
     dunglas/frankenphp
 ```
-## Symfony Runtime
 
-The worker mode of FrankenPHP is supported by the [Symfony Runtime Component](https://symfony.com/doc/current/components/runtime.html).
-To start any Symfony application in a worker, install the FrankenPHP package of [PHP Runtime](https://github.com/php-runtime/runtime):
+### Restart the Worker After a Certain Number of Requests
 
-```sh
-composer require runtime/frankenphp-symfony
-```
+As PHP was not originally designed for long-running processes, there are still many libraries and legacy codes that leak memory.
+A workaround to using this type of code in worker mode is to restart the worker script after processing a certain number of requests:
 
-Start your app server by defining the `APP_RUNTIME` environment variable to use the FrankenPHP Symfony Runtime
-
-```sh
-docker run \
-    -e FRANKENPHP_CONFIG="worker ./public/index.php" \
-    -e APP_RUNTIME=Runtime\\FrankenPhpSymfony\\Runtime \
-    -v $PWD:/app \
-    -p 80:80 -p 443:443 \
-    dunglas/frankenphp
-```
-
-## Laravel Octane
-
-Coming soon!
+The previous worker snippet allows configuring a maximum number of request to handle by setting an environment variable named `MAX_REQUESTS`.

@@ -53,4 +53,6 @@ int frankenphp_execute_script(const char *file_name);
 uintptr_t frankenphp_request_shutdown();
 void frankenphp_register_bulk_variables(char **variables, size_t size, zval *track_vars_array);
 
+int frankenphp_execute_script_cli(char *script, int argc, char **argv);
+
 #endif

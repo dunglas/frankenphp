@@ -1,41 +1,54 @@
 name: Tests
-on: [push, pull_request]
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
 jobs:
   tests:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         php-versions: ['8.2', '8.3']
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-go@v4
+      -
+        uses: actions/checkout@v4
+      -
+        uses: actions/setup-go@v4
         with:
           go-version: '1.21'
           cache-dependency-path: |
             go.sum 
             caddy/go.sum
-
-      - uses: shivammathur/setup-php@v2
+      -
+        uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php-versions }}
           ini-file: development
-          extensions: opcache
           coverage: none
+          tools: none
         env:
           phpts: ts
-
-      - name: Set CGO flags
-        run: echo "CGO_CFLAGS=$(php-config --includes)" >> "$GITHUB_ENV"
-
-      - name: Build
+      -
+        name: Set CGO flags
+        run: |
+          echo "CGO_CFLAGS=$(php-config --includes)" >> "$GITHUB_ENV"
+      -
+        name: Build
         run: go build
         env:
           GOEXPERIMENT: cgocheck2
-
-      - name: Run library tests
+      -
+        name: Build testcli binary
+        working-directory: internal/testcli/
+        run: go build
+      -
+        name: Run library tests
         run: go test -race -v ./...
-
-      - name: Run Caddy module tests
+      -
+        name: Run Caddy module tests
         working-directory: caddy/
         run: go test -race -v ./...

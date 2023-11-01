@@ -31,7 +31,7 @@ docker buildx bake --load --set static-builder.args.PHP_EXTENSIONS=opcache,pdo_s
 # ...
 ```
 
-See [the list of supported extensions](https://static-php-cli.zhamao.me/en/guide/extensions.html).
+See [the list of supported extensions](https://static-php.dev/en/guide/extensions.html).
 
 To enable libraries to add further support in the extensions you enabled, you can pass the `PHP_EXTENSION_LIBS` argument to docker.
 
@@ -67,4 +67,4 @@ cd frankenphp/caddy/frankenphp
 go build -buildmode=pie -tags "cgo netgo osusergo static_build" -ldflags "-linkmode=external -extldflags -static-pie"
 ```
 
-See [the list of supported extensions](https://static-php-cli.zhamao.me/en/guide/extensions.html).
+See [the list of supported extensions](https://static-php.dev/en/guide/extensions.html).

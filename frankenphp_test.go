@@ -12,6 +12,7 @@ import (
 	"net/textproto"
 	"net/url"
 	"os"
+	"os/exec"
 	"strconv"
 	"strings"
 	"sync"
@@ -83,29 +84,6 @@ func runTest(t *testing.T, test func(func(http.ResponseWriter, *http.Request), *
 	}
 
 	wg.Wait()
-}
-
-func BenchmarkHelloWorld(b *testing.B) {
-	if err := frankenphp.Init(frankenphp.WithLogger(zap.NewNop())); err != nil {
-		panic(err)
-	}
-	defer frankenphp.Shutdown()
-	cwd, _ := os.Getwd()
-	testDataDir := cwd + "/testdata/"
-
-	handler := func(w http.ResponseWriter, r *http.Request) {
-		req := frankenphp.NewRequestWithContext(r, testDataDir, nil)
-		if err := frankenphp.ServeHTTP(w, req); err != nil {
-			panic(err)
-		}
-	}
-
-	req := httptest.NewRequest("GET", "http://example.com/index.php", nil)
-	w := httptest.NewRecorder()
-
-	for i := 0; i < b.N; i++ {
-		handler(w, req)
-	}
 }
 
 func TestHelloWorld_module(t *testing.T) { testHelloWorld(t, nil) }
@@ -557,21 +535,6 @@ func TestVersion(t *testing.T) {
 	assert.NotEmpty(t, v.Version, 0)
 }
 
-func ExampleServeHTTP() {
-	if err := frankenphp.Init(); err != nil {
-		panic(err)
-	}
-	defer frankenphp.Shutdown()
-
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		req := frankenphp.NewRequestWithContext(r, "/path/to/document/root", nil)
-		if err := frankenphp.ServeHTTP(w, req); err != nil {
-			panic(err)
-		}
-	})
-	log.Fatal(http.ListenAndServe(":8080", nil))
-}
-
 func TestFiberNoCgo_module(t *testing.T) { testFiberNoCgo(t, &testOptions{}) }
 func TestFiberNonCgo_worker(t *testing.T) {
 	testFiberNoCgo(t, &testOptions{workerScript: "fiber-no-cgo.php"})
@@ -587,4 +550,71 @@ func testFiberNoCgo(t *testing.T, opts *testOptions) {
 
 		assert.Equal(t, string(body), fmt.Sprintf("Fiber %d", i))
 	}, opts)
+}
+
+func TestExecuteScriptCLI(t *testing.T) {
+	if _, err := os.Stat("internal/testcli/testcli"); err != nil {
+		t.Skip("internal/testcli/testcli has not been compiled, run `cd internal/testcli/ && go build`")
+	}
+
+	cmd := exec.Command("internal/testcli/testcli", "testdata/command.php", "foo", "bar")
+	stdoutStderr, err := cmd.CombinedOutput()
+	assert.Error(t, err)
+
+	if exitError, ok := err.(*exec.ExitError); ok {
+		assert.Equal(t, 3, exitError.ExitCode())
+	}
+
+	stdoutStderrStr := string(stdoutStderr)
+
+	assert.Contains(t, stdoutStderrStr, `"foo"`)
+	assert.Contains(t, stdoutStderrStr, `"bar"`)
+	assert.Contains(t, stdoutStderrStr, "From the CLI")
+}
+
+func ExampleServeHTTP() {
+	if err := frankenphp.Init(); err != nil {
+		panic(err)
+	}
+	defer frankenphp.Shutdown()
+
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		req := frankenphp.NewRequestWithContext(r, "/path/to/document/root", nil)
+		if err := frankenphp.ServeHTTP(w, req); err != nil {
+			panic(err)
+		}
+	})
+	log.Fatal(http.ListenAndServe(":8080", nil))
+}
+
+func ExampleExecuteScriptCLI() {
+	if len(os.Args) <= 1 {
+		log.Println("Usage: my-program script.php")
+		os.Exit(1)
+	}
+
+	os.Exit(frankenphp.ExecuteScriptCLI(os.Args[1], os.Args))
+}
+
+func BenchmarkHelloWorld(b *testing.B) {
+	if err := frankenphp.Init(frankenphp.WithLogger(zap.NewNop())); err != nil {
+		panic(err)
+	}
+	defer frankenphp.Shutdown()
+	cwd, _ := os.Getwd()
+	testDataDir := cwd + "/testdata/"
+
+	handler := func(w http.ResponseWriter, r *http.Request) {
+		req := frankenphp.NewRequestWithContext(r, testDataDir, nil)
+		if err := frankenphp.ServeHTTP(w, req); err != nil {
+			panic(err)
+		}
+	}
+
+	req := httptest.NewRequest("GET", "http://example.com/index.php", nil)
+	w := httptest.NewRecorder()
+
+	for i := 0; i < b.N; i++ {
+		handler(w, req)
+	}
 }

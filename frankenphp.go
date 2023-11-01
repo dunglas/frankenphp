@@ -6,8 +6,8 @@
 package frankenphp
 
 //go:generate rm -Rf C-Thread-Pool/
-//go:generate git clone --branch=fix/SA_ONSTACK --depth=1 git@github.com:dunglas/C-Thread-Pool.git
-//go:generate rm -Rf C-Thread-Pool/.git C-Thread-Pool/.circleci C-Thread-Pool/docs C-Thread-Pool/tests
+//go:generate git clone --branch=frankenphp --depth=1 git@github.com:dunglas/C-Thread-Pool.git
+//go:generate rm -Rf C-Thread-Pool/.git C-Thread-Pool/.circleci C-Thread-Pool/docs C-Thread-Pool/tests C-Thread-Pool/example.c
 
 // Use PHP includes corresponding to your PHP installation by running:
 //
@@ -19,11 +19,12 @@ package frankenphp
 // #cgo darwin pkg-config: libxml-2.0 sqlite3
 // #cgo CFLAGS: -Wall -Werror -fstack-protector-strong -fpic -fpie -O2 -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64
 // #cgo CFLAGS: -I/usr/local/include/php -I/usr/local/include/php/main -I/usr/local/include/php/TSRM -I/usr/local/include/php/Zend -I/usr/local/include/php/ext -I/usr/local/include/php/ext/date/lib
+// #cgo CFLAGS: -DTHREAD_NAME=frankenphp
 // #cgo linux CFLAGS: -D_GNU_SOURCE
 // #cgo CPPFLAGS: -fstack-protector-strong -fpic -fpie -O2 -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64
 // #cgo darwin LDFLAGS: -L/opt/homebrew/opt/libiconv/lib -liconv
-// #cgo linux LDFLAGS: -Wl,-O1
-// #cgo LDFLAGS: -pie -L/usr/local/lib -L/usr/lib -lphp -lresolv -ldl -lm -lutil
+// #cgo linux LDFLAGS: -Wl,-O1 -lresolv
+// #cgo LDFLAGS: -pie -L/usr/local/lib -L/usr/lib -lphp -ldl -lm -lutil
 // #include <stdlib.h>
 // #include <stdint.h>
 // #include <php_variables.h>
@@ -273,7 +274,7 @@ func Init(options ...Option) error {
 
 	config := Config()
 
-	if config.Version.MajorVersion < 8 || config.Version.MinorVersion < 2 {
+	if config.Version.MajorVersion < 8 || (config.Version.MajorVersion == 8 && config.Version.MinorVersion < 2) {
 		return InvalidPHPVersionError
 	}
 
@@ -664,4 +665,19 @@ func go_log(message *C.char, level C.int) {
 	default:
 		l.Info(m, zap.Stringer("syslog_level", syslogLevel(level)))
 	}
+}
+
+// ExecuteScriptCLI executes the PHP script passed as parameter.
+// It returns the exit status code of the script.
+func ExecuteScriptCLI(script string, args []string) int {
+	cScript := C.CString(script)
+	defer C.free(unsafe.Pointer(cScript))
+
+	argc := C.int(len(args))
+	argv := make([]*C.char, argc)
+	for i, arg := range args {
+		argv[i] = C.CString(arg)
+	}
+
+	return int(C.frankenphp_execute_script_cli(cScript, argc, (**C.char)(unsafe.Pointer(&argv[0]))))
 }

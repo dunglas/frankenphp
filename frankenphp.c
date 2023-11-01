@@ -12,6 +12,7 @@
 #include <Zend/zend_types.h>
 #include <Zend/zend_exceptions.h>
 #include <Zend/zend_interfaces.h>
+#include <sapi/embed/php_embed.h>
 #include <ext/standard/head.h>
 #include <ext/spl/spl_exceptions.h>
 
@@ -662,4 +663,134 @@ int frankenphp_execute_script(const char* file_name)
 	zend_destroy_file_handle(&file_handle);
 
 	return status;
+}
+
+// Use global variables to store CLI arguments to prevent useless allocations
+static char *cli_script;
+static int cli_argc;
+static char **cli_argv;
+
+// Adapted from https://github.com/php/php-src/sapi/cli/php_cli.c (The PHP Group, The PHP License)
+static void cli_register_file_handles(bool no_close) /* {{{ */
+{
+	php_stream *s_in, *s_out, *s_err;
+	php_stream_context *sc_in=NULL, *sc_out=NULL, *sc_err=NULL;
+	zend_constant ic, oc, ec;
+
+	s_in  = php_stream_open_wrapper_ex("php://stdin",  "rb", 0, NULL, sc_in);
+	s_out = php_stream_open_wrapper_ex("php://stdout", "wb", 0, NULL, sc_out);
+	s_err = php_stream_open_wrapper_ex("php://stderr", "wb", 0, NULL, sc_err);
+
+	if (s_in==NULL || s_out==NULL || s_err==NULL) {
+		if (s_in) php_stream_close(s_in);
+		if (s_out) php_stream_close(s_out);
+		if (s_err) php_stream_close(s_err);
+		return;
+	}
+
+	if (no_close) {
+		s_in->flags |= PHP_STREAM_FLAG_NO_CLOSE;
+		s_out->flags |= PHP_STREAM_FLAG_NO_CLOSE;
+		s_err->flags |= PHP_STREAM_FLAG_NO_CLOSE;
+	}
+
+	//s_in_process = s_in;
+
+	php_stream_to_zval(s_in,  &ic.value);
+	php_stream_to_zval(s_out, &oc.value);
+	php_stream_to_zval(s_err, &ec.value);
+
+	ZEND_CONSTANT_SET_FLAGS(&ic, CONST_CS, 0);
+	ic.name = zend_string_init_interned("STDIN", sizeof("STDIN")-1, 0);
+	zend_register_constant(&ic);
+
+	ZEND_CONSTANT_SET_FLAGS(&oc, CONST_CS, 0);
+	oc.name = zend_string_init_interned("STDOUT", sizeof("STDOUT")-1, 0);
+	zend_register_constant(&oc);
+
+	ZEND_CONSTANT_SET_FLAGS(&ec, CONST_CS, 0);
+	ec.name = zend_string_init_interned("STDERR", sizeof("STDERR")-1, 0);
+	zend_register_constant(&ec);
+}
+/* }}} */
+
+static void sapi_cli_register_variables(zval *track_vars_array) /* {{{ */
+{
+	size_t len;
+	char   *docroot = "";
+
+	/* In CGI mode, we consider the environment to be a part of the server
+	 * variables
+	 */
+	php_import_environment_variables(track_vars_array);
+
+	/* Build the special-case PHP_SELF variable for the CLI version */
+	len = strlen(cli_script);
+	if (sapi_module.input_filter(PARSE_SERVER, "PHP_SELF", &cli_script, len, &len)) {
+		php_register_variable("PHP_SELF", cli_script, track_vars_array);
+	}
+	if (sapi_module.input_filter(PARSE_SERVER, "SCRIPT_NAME", &cli_script, len, &len)) {
+		php_register_variable("SCRIPT_NAME", cli_script, track_vars_array);
+	}
+	/* filenames are empty for stdin */
+	if (sapi_module.input_filter(PARSE_SERVER, "SCRIPT_FILENAME", &cli_script, len, &len)) {
+		php_register_variable("SCRIPT_FILENAME", cli_script, track_vars_array);
+	}
+	if (sapi_module.input_filter(PARSE_SERVER, "PATH_TRANSLATED", &cli_script, len, &len)) {
+		php_register_variable("PATH_TRANSLATED", cli_script, track_vars_array);
+	}
+	/* just make it available */
+	len = 0U;
+	if (sapi_module.input_filter(PARSE_SERVER, "DOCUMENT_ROOT", &docroot, len, &len)) {
+		php_register_variable("DOCUMENT_ROOT", docroot, track_vars_array);
+	}
+}
+/* }}} */
+
+static void * execute_script_cli(void *arg) {
+	void *exit_status;
+
+	// The SAPI name "cli" is hardcoded into too many programs... let's usurp it.
+	php_embed_module.name = "cli";
+	php_embed_module.pretty_name = "PHP CLI embedded in FrankenPHP";
+	php_embed_module.register_server_variables = sapi_cli_register_variables;
+
+	php_embed_init(cli_argc, cli_argv);
+
+	cli_register_file_handles(false);
+	zend_first_try {
+		zend_file_handle file_handle;
+		zend_stream_init_filename(&file_handle, cli_script);
+
+		php_execute_script(&file_handle);
+	} zend_end_try();
+
+	exit_status = (void *) (intptr_t) EG(exit_status);
+
+	php_embed_shutdown();
+
+	return exit_status;
+}
+
+int frankenphp_execute_script_cli(char *script, int argc, char **argv) {
+	pthread_t thread;
+	int err;
+	void *exit_status;
+
+	cli_script = script;
+	cli_argc = argc;
+	cli_argv = argv;
+
+	// Start the script in a dedicated thread to prevent conflicts between Go and PHP signal handlers
+	err = pthread_create(&thread, NULL, execute_script_cli, NULL);
+	if (err != 0) {
+		return err;
+	}
+
+	err = pthread_join(thread, &exit_status);
+	if (err != 0) {
+		return err;
+	}
+
+	return (intptr_t) exit_status;
 }

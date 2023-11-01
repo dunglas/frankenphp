@@ -2,9 +2,9 @@
 package main
 
 import (
+	"github.com/caddyserver/caddy/v2"
 	caddycmd "github.com/caddyserver/caddy/v2/cmd"
-
-	_ "go.uber.org/automaxprocs"
+	"go.uber.org/automaxprocs/maxprocs"
 
 	// plug in Caddy modules here.
 	_ "github.com/caddyserver/caddy/v2/modules/standard"
@@ -12,6 +12,11 @@ import (
 	_ "github.com/dunglas/mercure/caddy"
 	_ "github.com/dunglas/vulcain/caddy"
 )
+
+func init() {
+	//nolint:errcheck
+	maxprocs.Set(maxprocs.Logger(caddy.Log().Sugar().Debugf))
+}
 
 func main() {
 	caddycmd.Main()
