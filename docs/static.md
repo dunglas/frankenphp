@@ -33,10 +33,14 @@ docker buildx bake --load --set static-builder.args.PHP_EXTENSIONS=opcache,pdo_s
 
 See [the list of supported extensions](https://static-php.dev/en/guide/extensions.html).
 
-To enable libraries to add further support in the extensions you enabled, you can pass the `PHP_EXTENSION_LIBS` argument to docker.
+To add libraries enabling additional functionality to the extensions you've enabled, you can pass use the `PHP_EXTENSION_LIBS` Docker ARG:
 
 ```console
-docker buildx bake --load --set static-builder.args.PHP_EXTENSIONS=gd --set static-builder.args.PHP_EXTENSION_LIBS=libjpeg,libwebp static-builder
+docker buildx bake \
+  --load \
+  --set static-builder.args.PHP_EXTENSIONS=gd \
+  --set static-builder.args.PHP_EXTENSION_LIBS=libjpeg,libwebp \
+  static-builder
 ```
 
 ### GitHub Token
