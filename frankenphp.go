@@ -599,7 +599,7 @@ func go_sapi_flush(rh C.uintptr_t) bool {
 func go_read_post(rh C.uintptr_t, cBuf *C.char, countBytes C.size_t) (readBytes C.size_t) {
 	r := cgo.Handle(rh).Value().(*http.Request)
 
-	p := make([]byte, countBytes)
+	p := unsafe.Slice((*byte)(unsafe.Pointer(cBuf)), countBytes)
 	var err error
 	for readBytes < countBytes && err == nil {
 		var n int
@@ -611,10 +611,6 @@ func go_read_post(rh C.uintptr_t, cBuf *C.char, countBytes C.size_t) (readBytes 
 		// invalid Read on closed Body may happen because of https://github.com/golang/go/issues/15527
 		fc, _ := FromContext(r.Context())
 		fc.Logger.Error("error while reading the request body", zap.Error(err))
-	}
-
-	if readBytes != 0 {
-		C.memcpy(unsafe.Pointer(cBuf), unsafe.Pointer(&p[0]), C.size_t(readBytes))
 	}
 
 	return
