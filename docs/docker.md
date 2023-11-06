@@ -22,7 +22,7 @@ $ docker run -it --rm --name my-running-app my-php-app
 ## How to Install More PHP Extensions
 
 The [`docker-php-extension-installer`](https://github.com/mlocati/docker-php-extension-installer) script is provided in the base image.
-Adding additional PHP extensions is straightforwardd:
+Adding additional PHP extensions is straightforward:
 
 ```dockerfile
 FROM dunglas/frankenphp
