@@ -51,3 +51,4 @@ containing [PHP 8.2](https://www.php.net/releases/8.2/en.php) and most popular P
 * [Sulu](https://sulu.io/blog/running-sulu-with-frankenphp)
 * [WordPress](https://github.com/dunglas/frankenphp-wordpress)
 * [Drupal](https://github.com/dunglas/frankenphp-drupal)
+* [Joomla](https://github.com/alexandreelise/frankenphp-joomla)
