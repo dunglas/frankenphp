@@ -618,3 +618,66 @@ func BenchmarkHelloWorld(b *testing.B) {
 		handler(w, req)
 	}
 }
+
+func BenchmarkEcho(b *testing.B) {
+	if err := frankenphp.Init(frankenphp.WithLogger(zap.NewNop())); err != nil {
+		panic(err)
+	}
+	defer frankenphp.Shutdown()
+	cwd, _ := os.Getwd()
+	testDataDir := cwd + "/testdata/"
+
+	handler := func(w http.ResponseWriter, r *http.Request) {
+		req := frankenphp.NewRequestWithContext(r, testDataDir, nil)
+		if err := frankenphp.ServeHTTP(w, req); err != nil {
+			panic(err)
+		}
+	}
+
+	const body = `{
+		"squadName": "Super hero squad",
+		"homeTown": "Metro City",
+		"formed": 2016,
+		"secretBase": "Super tower",
+		"active": true,
+		"members": [
+		  {
+			"name": "Molecule Man",
+			"age": 29,
+			"secretIdentity": "Dan Jukes",
+			"powers": ["Radiation resistance", "Turning tiny", "Radiation blast"]
+		  },
+		  {
+			"name": "Madame Uppercut",
+			"age": 39,
+			"secretIdentity": "Jane Wilson",
+			"powers": [
+			  "Million tonne punch",
+			  "Damage resistance",
+			  "Superhuman reflexes"
+			]
+		  },
+		  {
+			"name": "Eternal Flame",
+			"age": 1000000,
+			"secretIdentity": "Unknown",
+			"powers": [
+			  "Immortality",
+			  "Heat Immunity",
+			  "Inferno",
+			  "Teleportation",
+			  "Interdimensional travel"
+			]
+		  }
+		]
+	  }`
+
+	r := strings.NewReader(body)
+	req := httptest.NewRequest("POST", "http://example.com/echo.php", r)
+	w := httptest.NewRecorder()
+
+	for i := 0; i < b.N; i++ {
+		r.Reset(body)
+		handler(w, req)
+	}
+}
