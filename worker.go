@@ -57,11 +57,13 @@ func startWorkers(fileName string, nbWorkers int, env map[string]string) error {
 			for {
 				// Create main dummy request
 				fc := &FrankenPHPContext{
-					Env: make(map[string]string, len(env)+1),
+					env:  make(map[string]string, len(env)+1),
+					done: make(chan interface{}),
 				}
-				fc.Env["SCRIPT_FILENAME"] = absFileName
+				fc.scriptFilename = absFileName
+				fc.env["SCRIPT_FILENAME"] = absFileName
 				for k, v := range env {
-					fc.Env[k] = v
+					fc.env[k] = v
 				}
 
 				r, err := http.NewRequestWithContext(context.WithValue(
@@ -138,7 +140,7 @@ func go_frankenphp_worker_handle_request_start(mrh C.uintptr_t) C.uintptr_t {
 	mainRequest := cgo.Handle(mrh).Value().(*http.Request)
 	fc := mainRequest.Context().Value(contextKey).(*FrankenPHPContext)
 
-	v, ok := workersRequestChans.Load(fc.Env["SCRIPT_FILENAME"])
+	v, ok := workersRequestChans.Load(fc.scriptFilename)
 	if !ok {
 		// Probably shutting down
 		return 0
@@ -148,12 +150,12 @@ func go_frankenphp_worker_handle_request_start(mrh C.uintptr_t) C.uintptr_t {
 
 	l := getLogger()
 
-	l.Debug("waiting for request", zap.String("worker", fc.Env["SCRIPT_FILENAME"]))
+	l.Debug("waiting for request", zap.String("worker", fc.scriptFilename))
 
 	var r *http.Request
 	select {
 	case <-done:
-		l.Debug("shutting down", zap.String("worker", fc.Env["SCRIPT_FILENAME"]))
+		l.Debug("shutting down", zap.String("worker", fc.scriptFilename))
 
 		return 0
 	case r = <-rc:
@@ -161,10 +163,10 @@ func go_frankenphp_worker_handle_request_start(mrh C.uintptr_t) C.uintptr_t {
 
 	fc.currentWorkerRequest = cgo.NewHandle(r)
 
-	l.Debug("request handling started", zap.String("worker", fc.Env["SCRIPT_FILENAME"]), zap.String("url", r.RequestURI))
+	l.Debug("request handling started", zap.String("worker", fc.scriptFilename), zap.String("url", r.RequestURI))
 	if err := updateServerContext(r, false, mrh); err != nil {
 		// Unexpected error
-		l.Debug("unexpected error", zap.String("worker", fc.Env["SCRIPT_FILENAME"]), zap.String("url", r.RequestURI), zap.Error(err))
+		l.Debug("unexpected error", zap.String("worker", fc.scriptFilename), zap.String("url", r.RequestURI), zap.Error(err))
 
 		return 0
 	}
@@ -188,10 +190,10 @@ func go_frankenphp_finish_request(mrh, rh C.uintptr_t, deleteHandle bool) {
 
 	var fields []zap.Field
 	if mrh == 0 {
-		fields = append(fields, zap.String("worker", fc.Env["SCRIPT_FILENAME"]), zap.String("url", r.RequestURI))
+		fields = append(fields, zap.String("worker", fc.scriptFilename), zap.String("url", r.RequestURI))
 	} else {
 		fields = append(fields, zap.String("url", r.RequestURI))
 	}
 
-	fc.Logger.Debug("request handling finished", fields...)
+	fc.logger.Debug("request handling finished", fields...)
 }

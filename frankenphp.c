@@ -79,6 +79,36 @@ typedef struct frankenphp_server_context {
 	bool finished;
 } frankenphp_server_context;
 
+static uintptr_t frankenphp_clean_server_context() {
+	frankenphp_server_context *ctx = SG(server_context);
+	if (ctx == NULL) {
+		return 0;
+	}
+
+	free(SG(request_info).auth_password);
+	SG(request_info).auth_password = NULL;
+
+	free(SG(request_info).auth_user);
+	SG(request_info).auth_user = NULL;
+
+	free((char *) SG(request_info).request_method);
+	SG(request_info).request_method = NULL;
+
+	free(SG(request_info).query_string);
+	SG(request_info).query_string = NULL;
+
+	free((char *) SG(request_info).content_type);
+	SG(request_info).content_type = NULL;
+
+	free(SG(request_info).path_translated);
+	SG(request_info).path_translated = NULL;
+
+	free(SG(request_info).request_uri);
+	SG(request_info).request_uri = NULL;
+
+	return ctx->current_request;
+}
+
 static void frankenphp_request_reset() {
 	zend_try {
 		int i;
@@ -315,35 +345,7 @@ static zend_module_entry frankenphp_module = {
     STANDARD_MODULE_PROPERTIES
 };
 
-uintptr_t frankenphp_clean_server_context() {
-	frankenphp_server_context *ctx = SG(server_context);
-	if (ctx == NULL) return 0;
-
-	free(SG(request_info.auth_password));
-	SG(request_info.auth_password) = NULL;
-
-	free(SG(request_info.auth_user));
-	SG(request_info.auth_user) = NULL;
-
-	free((char *) SG(request_info.request_method));
-	SG(request_info.request_method) = NULL;
-
-	free(SG(request_info.query_string));
-	SG(request_info.query_string) = NULL;
-
-	free((char *) SG(request_info.content_type));
-	SG(request_info.content_type) = NULL;
-
-	free(SG(request_info.path_translated));
-	SG(request_info.path_translated) = NULL;
-
-	free(SG(request_info.request_uri));
-	SG(request_info.request_uri) = NULL;
-
-	return ctx->current_request;
-}
-
-uintptr_t frankenphp_request_shutdown()
+static uintptr_t frankenphp_request_shutdown()
 {
 	frankenphp_server_context *ctx = SG(server_context);
 
@@ -509,12 +511,63 @@ static char* frankenphp_read_cookies(void)
 	return ctx->cookie_data;
 }
 
-void frankenphp_register_bulk_variables(char **variables, size_t size, zval *track_vars_array)
+static void frankenphp_register_known_variable(const char *key, char *value, zval *track_vars_array, bool f)
 {
-	for (size_t i = 1; i < size; i = i+2)
-	{
-		php_register_variable(variables[i-1], variables[i], track_vars_array);
+	if (value == NULL) {
+		return;
 	}
+
+	php_register_variable(key, value, track_vars_array);
+	if (f) {
+		free(value);
+		value = NULL;
+	}
+}
+
+void frankenphp_register_bulk_variables(char *known_variables[27], char **dynamic_variables, size_t size, zval *track_vars_array)
+{
+	/* Not used, but must be present */
+	frankenphp_register_known_variable("AUTH_TYPE", "", track_vars_array, false);
+	frankenphp_register_known_variable("REMOTE_IDENT", "", track_vars_array, false);
+
+	/* Allocated in frankenphp_update_server_context() */
+	frankenphp_register_known_variable("CONTENT_TYPE", (char *) SG(request_info).content_type, track_vars_array, false);
+	frankenphp_register_known_variable("PATH_TRANSLATED", (char *) SG(request_info).path_translated, track_vars_array, false);
+	frankenphp_register_known_variable("QUERY_STRING", SG(request_info).query_string, track_vars_array, false);
+	frankenphp_register_known_variable("REMOTE_USER", (char *) SG(request_info).auth_user, track_vars_array, false);
+	frankenphp_register_known_variable("REQUEST_METHOD", (char *) SG(request_info).request_method, track_vars_array, false);
+	frankenphp_register_known_variable("REQUEST_URI", SG(request_info).request_uri, track_vars_array,false);
+
+	/* Known variables */
+	frankenphp_register_known_variable("CONTENT_LENGTH", known_variables[0], track_vars_array, true);
+	frankenphp_register_known_variable("DOCUMENT_ROOT", known_variables[1], track_vars_array, true);
+	frankenphp_register_known_variable("DOCUMENT_URI", known_variables[2], track_vars_array, true);
+	frankenphp_register_known_variable("GATEWAY_INTERFACE", known_variables[3], track_vars_array, true);
+	frankenphp_register_known_variable("HTTP_HOST", known_variables[4], track_vars_array, true);
+	frankenphp_register_known_variable("HTTPS", known_variables[5], track_vars_array, true);
+	frankenphp_register_known_variable("PATH_INFO", known_variables[6], track_vars_array, true);
+	frankenphp_register_known_variable("PHP_SELF", known_variables[7], track_vars_array, true);
+	frankenphp_register_known_variable("REMOTE_ADDR", known_variables[8], track_vars_array, known_variables[8] != known_variables[9]);
+	frankenphp_register_known_variable("REMOTE_HOST", known_variables[9], track_vars_array, true);
+	frankenphp_register_known_variable("REMOTE_PORT", known_variables[10], track_vars_array, true);
+	frankenphp_register_known_variable("REQUEST_SCHEME", known_variables[11], track_vars_array, true);
+	frankenphp_register_known_variable("SCRIPT_FILENAME", known_variables[12], track_vars_array, true);
+	frankenphp_register_known_variable("SCRIPT_NAME", known_variables[13], track_vars_array, true);
+	frankenphp_register_known_variable("SERVER_NAME", known_variables[14], track_vars_array, true);
+	frankenphp_register_known_variable("SERVER_PORT", known_variables[15], track_vars_array, true);
+	frankenphp_register_known_variable("SERVER_PROTOCOL", known_variables[16], track_vars_array, true);
+	frankenphp_register_known_variable("SERVER_SOFTWARE", known_variables[17], track_vars_array, true);
+	frankenphp_register_known_variable("SSL_PROTOCOL", known_variables[18], track_vars_array, true);
+
+	for (size_t i = 0; i < size; i = i+2)
+	{
+		php_register_variable(dynamic_variables[i], dynamic_variables[i+1], track_vars_array);
+
+		free(dynamic_variables[i]);
+		free(dynamic_variables[i+1]);
+	}
+
+	free(dynamic_variables);
 }
 
 static void frankenphp_register_variables(zval *track_vars_array)
@@ -646,8 +699,12 @@ int frankenphp_request_startup()
 	return FAILURE;
 }
 
-int frankenphp_execute_script(const char* file_name)
+int frankenphp_execute_script(char* file_name)
 {
+	if (frankenphp_request_startup() == FAILURE) {
+		return FAILURE;
+	}
+
 	int status = FAILURE;
 
 	zend_file_handle file_handle;
@@ -661,6 +718,12 @@ int frankenphp_execute_script(const char* file_name)
 	} zend_end_try();
 
 	zend_destroy_file_handle(&file_handle);
+	free(file_name);
+
+	if (status >= 0) {
+		frankenphp_clean_server_context();
+		frankenphp_request_shutdown();
+	}
 
 	return status;
 }
@@ -794,3 +857,4 @@ int frankenphp_execute_script_cli(char *script, int argc, char **argv) {
 
 	return (intptr_t) exit_status;
 }
+

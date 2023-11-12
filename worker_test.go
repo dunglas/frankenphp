@@ -98,7 +98,11 @@ func ExampleServeHTTP_workers() {
 	defer frankenphp.Shutdown()
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		req := frankenphp.NewRequestWithContext(r, "/path/to/document/root", nil)
+		req, err := frankenphp.NewRequestWithContext(r, frankenphp.WithRequestDocumentRoot("/path/to/document/root", false))
+		if err != nil {
+			panic(err)
+		}
+
 		if err := frankenphp.ServeHTTP(w, req); err != nil {
 			panic(err)
 		}

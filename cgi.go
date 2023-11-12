@@ -1,5 +1,6 @@
 package frankenphp
 
+import "C"
 import (
 	"crypto/tls"
 	"net"
@@ -8,214 +9,155 @@ import (
 	"strings"
 )
 
-// populateEnv returns a set of CGI environment variables for the request.
+type serverKey int
+
+const (
+	contentLength serverKey = iota
+	documentRoot
+	documentUri
+	gatewayInterface
+	httpHost
+	https
+	pathInfo
+	phpSelf
+	remoteAddr
+	remoteHost
+	remotePort
+	requestScheme
+	scriptFilename
+	scriptName
+	serverName
+	serverPort
+	serverProtocol
+	serverSoftware
+	sslProtocol
+)
+
+func allocServerVariable(cArr *[27]*C.char, env map[string]string, serverKey serverKey, envKey string, val string) {
+	if val, ok := env[envKey]; ok {
+		cArr[serverKey] = C.CString(val)
+		delete(env, envKey)
+
+		return
+	}
+
+	cArr[serverKey] = C.CString(val)
+}
+
+// computeKnownVariables returns a set of CGI environment variables for the request.
 //
 // TODO: handle this case https://github.com/caddyserver/caddy/issues/3718
 // Inspired by https://github.com/caddyserver/caddy/blob/master/modules/caddyhttp/reverseproxy/fastcgi/fastcgi.go
-func populateEnv(request *http.Request) error {
-	fc, ok := FromContext(request.Context())
-	if !ok {
+func computeKnownVariables(request *http.Request) (cArr [27]*C.char) {
+	fc, fcOK := FromContext(request.Context())
+	if !fcOK {
 		panic("not a FrankenPHP request")
 	}
 
-	if fc.populated {
-		return nil
+	// Separate remote IP and port; more lenient than net.SplitHostPort
+	var ip, port string
+	if idx := strings.LastIndex(request.RemoteAddr, ":"); idx > -1 {
+		ip = request.RemoteAddr[:idx]
+		port = request.RemoteAddr[idx+1:]
+	} else {
+		ip = request.RemoteAddr
 	}
 
-	_, addrOk := fc.Env["REMOTE_ADDR"]
-	_, portOk := fc.Env["REMOTE_PORT"]
-	if !addrOk || !portOk {
-		// Separate remote IP and port; more lenient than net.SplitHostPort
-		var ip, port string
-		if idx := strings.LastIndex(request.RemoteAddr, ":"); idx > -1 {
-			ip = request.RemoteAddr[:idx]
-			port = request.RemoteAddr[idx+1:]
+	// Remove [] from IPv6 addresses
+	ip = strings.Replace(ip, "[", "", 1)
+	ip = strings.Replace(ip, "]", "", 1)
+
+	ra, raOK := fc.env["REMOTE_ADDR"]
+	if raOK {
+		cArr[remoteAddr] = C.CString(ra)
+		delete(fc.env, "REMOTE_ADDR")
+	} else {
+		cArr[remoteAddr] = C.CString(ip)
+	}
+
+	if rh, ok := fc.env["REMOTE_HOST"]; ok {
+		cArr[remoteHost] = C.CString(rh) // For speed, remote host lookups disabled
+		delete(fc.env, "REMOTE_HOST")
+	} else {
+		if raOK {
+			cArr[remoteHost] = C.CString(ip)
 		} else {
-			ip = request.RemoteAddr
-		}
-
-		// Remove [] from IPv6 addresses
-		ip = strings.Replace(ip, "[", "", 1)
-		ip = strings.Replace(ip, "]", "", 1)
-
-		if _, ok := fc.Env["REMOTE_ADDR"]; !ok {
-			fc.Env["REMOTE_ADDR"] = ip
-		}
-		if _, ok := fc.Env["REMOTE_HOST"]; !ok {
-			fc.Env["REMOTE_HOST"] = ip // For speed, remote host lookups disabled
-		}
-		if _, ok := fc.Env["REMOTE_PORT"]; !ok {
-			fc.Env["REMOTE_PORT"] = port
+			cArr[remoteHost] = cArr[remoteAddr]
 		}
 	}
 
-	if _, ok := fc.Env["DOCUMENT_ROOT"]; !ok {
-		// make sure file root is absolute
-		root, err := filepath.Abs(fc.DocumentRoot)
-		if err != nil {
-			return err
-		}
+	allocServerVariable(&cArr, fc.env, remotePort, "REMOTE_PORT", port)
+	allocServerVariable(&cArr, fc.env, documentRoot, "DOCUMENT_ROOT", fc.documentRoot)
+	allocServerVariable(&cArr, fc.env, pathInfo, "PATH_INFO", fc.pathInfo)
+	allocServerVariable(&cArr, fc.env, phpSelf, "PHP_SELF", request.URL.Path)
+	allocServerVariable(&cArr, fc.env, documentUri, "DOCUMENT_URI", fc.docURI)
+	allocServerVariable(&cArr, fc.env, scriptFilename, "SCRIPT_FILENAME", fc.scriptFilename)
+	allocServerVariable(&cArr, fc.env, scriptName, "SCRIPT_NAME", fc.scriptName)
 
-		if fc.ResolveRootSymlink {
-			if root, err = filepath.EvalSymlinks(root); err != nil {
-				return err
-			}
-		}
+	var rs string
+	if request.TLS == nil {
+		rs = "http"
+	} else {
+		rs = "https"
 
-		fc.Env["DOCUMENT_ROOT"] = root
-	}
-
-	fpath := request.URL.Path
-	scriptName := fpath
-
-	docURI := fpath
-	// split "actual path" from "path info" if configured
-	if splitPos := splitPos(fc, fpath); splitPos > -1 {
-		docURI = fpath[:splitPos]
-		fc.Env["PATH_INFO"] = fpath[splitPos:]
-
-		// Strip PATH_INFO from SCRIPT_NAME
-		scriptName = strings.TrimSuffix(scriptName, fc.Env["PATH_INFO"])
-	}
-
-	// SCRIPT_FILENAME is the absolute path of SCRIPT_NAME
-	scriptFilename := sanitizedPathJoin(fc.Env["DOCUMENT_ROOT"], scriptName)
-
-	// Ensure the SCRIPT_NAME has a leading slash for compliance with RFC3875
-	// Info: https://tools.ietf.org/html/rfc3875#section-4.1.13
-	if scriptName != "" && !strings.HasPrefix(scriptName, "/") {
-		scriptName = "/" + scriptName
-	}
-
-	if _, ok := fc.Env["PHP_SELF"]; !ok {
-		fc.Env["PHP_SELF"] = fpath
-	}
-	if _, ok := fc.Env["DOCUMENT_URI"]; !ok {
-		fc.Env["DOCUMENT_URI"] = docURI
-	}
-	if _, ok := fc.Env["SCRIPT_FILENAME"]; !ok {
-		fc.Env["SCRIPT_FILENAME"] = scriptFilename
-	}
-	if _, ok := fc.Env["SCRIPT_NAME"]; !ok {
-		fc.Env["SCRIPT_NAME"] = scriptName
-	}
-
-	if _, ok := fc.Env["REQUEST_SCHEME"]; !ok {
-		if request.TLS == nil {
-			fc.Env["REQUEST_SCHEME"] = "http"
+		if h, ok := fc.env["HTTPS"]; ok {
+			cArr[https] = C.CString(h)
+			delete(fc.env, "HTTPS")
 		} else {
-			fc.Env["REQUEST_SCHEME"] = "https"
-		}
-	}
-
-	if request.TLS != nil {
-		if _, ok := fc.Env["HTTPS"]; !ok {
-			fc.Env["HTTPS"] = "on"
+			cArr[https] = C.CString("on")
 		}
 
 		// and pass the protocol details in a manner compatible with apache's mod_ssl
 		// (which is why these have a SSL_ prefix and not TLS_).
-		_, sslProtocolOk := fc.Env["SSL_PROTOCOL"]
-		v, versionOk := tlsProtocolStrings[request.TLS.Version]
-		if !sslProtocolOk && versionOk {
-			fc.Env["SSL_PROTOCOL"] = v
+		if p, ok := fc.env["SSL_PROTOCOL"]; ok {
+			cArr[sslProtocol] = C.CString(p)
+			delete(fc.env, "SSL_PROTOCOL")
+		} else {
+			if v, ok := tlsProtocolStrings[request.TLS.Version]; ok {
+				cArr[sslProtocol] = C.CString(v)
+			}
 		}
 	}
+	allocServerVariable(&cArr, fc.env, requestScheme, "REQUEST_SCHEME", rs)
 
-	if fc.Env["SERVER_NAME"] == "" || fc.Env["SERVER_PORT"] == "" {
-		reqHost, reqPort, _ := net.SplitHostPort(request.Host)
-		if fc.Env["SERVER_NAME"] == "" {
-			fc.Env["SERVER_NAME"] = reqHost
-		}
-		if fc.Env["SERVER_PORT"] == "" {
-			fc.Env["SERVER_PORT"] = reqPort
-		}
+	reqHost, reqPort, _ := net.SplitHostPort(request.Host)
 
-		if fc.Env["SERVER_NAME"] == "" {
-			// whatever, just assume there was no port
-			fc.Env["SERVER_NAME"] = request.Host
-		}
+	if reqHost == "" {
+		// whatever, just assume there was no port
+		reqHost = request.Host
+	}
 
+	if reqPort == "" {
 		// compliance with the CGI specification requires that
 		// the SERVER_PORT variable MUST be set to the TCP/IP port number on which this request is received from the client
 		// even if the port is the default port for the scheme and could otherwise be omitted from a URI.
 		// https://tools.ietf.org/html/rfc3875#section-4.1.15
-		if fc.Env["SERVER_PORT"] == "" {
-			if fc.Env["REQUEST_SCHEME"] == "https" {
-				fc.Env["SERVER_PORT"] = "443"
-			} else {
-				fc.Env["SERVER_PORT"] = "80"
-			}
+		switch rs {
+		case "https":
+			reqPort = "443"
+		case "http":
+			reqPort = "80"
 		}
+	}
+
+	allocServerVariable(&cArr, fc.env, serverName, "SERVER_NAME", reqHost)
+	if reqPort != "" {
+		allocServerVariable(&cArr, fc.env, serverPort, "SERVER_PORT", reqPort)
 	}
 
 	// Variables defined in CGI 1.1 spec
 	// Some variables are unused but cleared explicitly to prevent
 	// the parent environment from interfering.
-	// We never override an entry previously set
-	if _, ok := fc.Env["REMOTE_IDENT"]; !ok {
-		fc.Env["REMOTE_IDENT"] = "" // Not used
-	}
-	if _, ok := fc.Env["AUTH_TYPE"]; !ok {
-		fc.Env["AUTH_TYPE"] = "" // Not used
-	}
-	if _, ok := fc.Env["CONTENT_LENGTH"]; !ok {
-		fc.Env["CONTENT_LENGTH"] = request.Header.Get("Content-Length")
-	}
-	if _, ok := fc.Env["CONTENT_TYPE"]; !ok {
-		fc.Env["CONTENT_TYPE"] = request.Header.Get("Content-Type")
-	}
-	if _, ok := fc.Env["GATEWAY_INTERFACE"]; !ok {
-		fc.Env["GATEWAY_INTERFACE"] = "CGI/1.1"
-	}
-	if _, ok := fc.Env["QUERY_STRING"]; !ok {
-		fc.Env["QUERY_STRING"] = request.URL.RawQuery
-	}
-	if _, ok := fc.Env["REQUEST_METHOD"]; !ok {
-		fc.Env["REQUEST_METHOD"] = request.Method
-	}
-	if _, ok := fc.Env["SERVER_PROTOCOL"]; !ok {
-		fc.Env["SERVER_PROTOCOL"] = request.Proto
-	}
-	if _, ok := fc.Env["SERVER_SOFTWARE"]; !ok {
-		fc.Env["SERVER_SOFTWARE"] = "FrankenPHP"
-	}
-	if _, ok := fc.Env["HTTP_HOST"]; !ok {
-		fc.Env["HTTP_HOST"] = request.Host // added here, since not always part of headers
-	}
-	if _, ok := fc.Env["REQUEST_URI"]; !ok {
-		fc.Env["REQUEST_URI"] = request.URL.RequestURI()
-	}
 
-	// compliance with the CGI specification requires that
-	// PATH_TRANSLATED should only exist if PATH_INFO is defined.
-	// Info: https://www.ietf.org/rfc/rfc3875 Page 14
-	if fc.Env["PATH_INFO"] != "" {
-		fc.Env["PATH_TRANSLATED"] = sanitizedPathJoin(fc.Env["DOCUMENT_ROOT"], fc.Env["PATH_INFO"]) // Info: http://www.oreilly.com/openbook/cgi/ch02_04.html
-	}
+	// These values can not be override
+	cArr[contentLength] = C.CString(request.Header.Get("Content-Length"))
 
-	// Add all HTTP headers to env variables
-	for field, val := range request.Header {
-		k := "HTTP_" + headerNameReplacer.Replace(strings.ToUpper(field))
-		if _, ok := fc.Env[k]; !ok {
-			fc.Env[k] = strings.Join(val, ", ")
-		}
-	}
+	allocServerVariable(&cArr, fc.env, gatewayInterface, "GATEWAY_INTERFACE", "CGI/1.1")
+	allocServerVariable(&cArr, fc.env, serverProtocol, "SERVER_PROTOCOL", request.Proto)
+	allocServerVariable(&cArr, fc.env, serverSoftware, "SERVER_SOFTWARE", "FrankenPHP")
+	allocServerVariable(&cArr, fc.env, httpHost, "HTTP_HOST", request.Host) // added here, since not always part of headers
 
-	if _, ok := fc.Env["REMOTE_USER"]; !ok {
-		var (
-			authUser string
-			ok       bool
-		)
-		authUser, fc.authPassword, ok = request.BasicAuth()
-		if ok {
-			fc.Env["REMOTE_USER"] = authUser
-		}
-	}
-
-	fc.populated = true
-
-	return nil
+	return
 }
 
 // splitPos returns the index where path should
@@ -224,12 +166,12 @@ func populateEnv(request *http.Request) error {
 // Adapted from https://github.com/caddyserver/caddy/blob/master/modules/caddyhttp/reverseproxy/fastcgi/fastcgi.go
 // Copyright 2015 Matthew Holt and The Caddy Authors
 func splitPos(fc *FrankenPHPContext, path string) int {
-	if len(fc.SplitPath) == 0 {
+	if len(fc.splitPath) == 0 {
 		return 0
 	}
 
 	lowerPath := strings.ToLower(path)
-	for _, split := range fc.SplitPath {
+	for _, split := range fc.splitPath {
 		if idx := strings.Index(lowerPath, strings.ToLower(split)); idx > -1 {
 			return idx + len(split)
 		}

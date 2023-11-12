@@ -62,10 +62,11 @@ func runTest(t *testing.T, test func(func(http.ResponseWriter, *http.Request), *
 	defer frankenphp.Shutdown()
 
 	handler := func(w http.ResponseWriter, r *http.Request) {
-		req := frankenphp.NewRequestWithContext(r, testDataDir, nil)
-		if err := frankenphp.ServeHTTP(w, req); err != nil {
-			panic(err)
-		}
+		req, err := frankenphp.NewRequestWithContext(r, frankenphp.WithRequestDocumentRoot(testDataDir, false))
+		assert.NoError(t, err)
+
+		err = frankenphp.ServeHTTP(w, req)
+		assert.NoError(t, err)
 	}
 
 	var ts *httptest.Server
@@ -118,14 +119,17 @@ func testFinishRequest(t *testing.T, opts *testOptions) {
 	}, opts)
 }
 
-func TestServerVariable_module(t *testing.T) { testServerVariable(t, nil) }
+func TestServerVariable_module(t *testing.T) {
+	testServerVariable(t, nil)
+}
 func TestServerVariable_worker(t *testing.T) {
 	testServerVariable(t, &testOptions{workerScript: "server-variable.php"})
 }
 func testServerVariable(t *testing.T, opts *testOptions) {
 	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
-		req := httptest.NewRequest("GET", fmt.Sprintf("http://example.com/server-variable.php/baz/bat?foo=a&bar=b&i=%d#hash", i), nil)
+		req := httptest.NewRequest("POST", fmt.Sprintf("http://example.com/server-variable.php/baz/bat?foo=a&bar=b&i=%d#hash", i), strings.NewReader("foo"))
 		req.SetBasicAuth("kevin", "password")
+		req.Header.Add("Content-Type", "text/plain")
 		w := httptest.NewRecorder()
 		handler(w, req)
 
@@ -141,7 +145,7 @@ func testServerVariable(t *testing.T, opts *testOptions) {
 		assert.Contains(t, strBody, "[HTTP_AUTHORIZATION] => Basic a2V2aW46cGFzc3dvcmQ=")
 		assert.Contains(t, strBody, "[DOCUMENT_ROOT]")
 		assert.Contains(t, strBody, "[PHP_SELF] => /server-variable.php/baz/bat")
-		assert.Contains(t, strBody, "[CONTENT_TYPE]")
+		assert.Contains(t, strBody, "[CONTENT_TYPE] => text/plain")
 		assert.Contains(t, strBody, fmt.Sprintf("[QUERY_STRING] => foo=a&bar=b&i=%d#hash", i))
 		assert.Contains(t, strBody, fmt.Sprintf("[REQUEST_URI] => /server-variable.php/baz/bat?foo=a&bar=b&i=%d#hash", i))
 		assert.Contains(t, strBody, "[CONTENT_LENGTH]")
@@ -151,7 +155,7 @@ func testServerVariable(t *testing.T, opts *testOptions) {
 		assert.Contains(t, strBody, "[DOCUMENT_URI]")
 		assert.Contains(t, strBody, "[AUTH_TYPE]")
 		assert.Contains(t, strBody, "[REMOTE_IDENT]")
-		assert.Contains(t, strBody, "[REQUEST_METHOD] => GET")
+		assert.Contains(t, strBody, "[REQUEST_METHOD] => POST")
 		assert.Contains(t, strBody, "[SERVER_NAME] => example.com")
 		assert.Contains(t, strBody, "[SERVER_PROTOCOL] => HTTP/1.1")
 		assert.Contains(t, strBody, "[SCRIPT_FILENAME]")
@@ -173,12 +177,15 @@ func testPathInfo(t *testing.T, opts *testOptions) {
 			testDataDir := cwd + "/testdata/"
 
 			requestURI := r.URL.RequestURI()
-			rewriteRequest := frankenphp.NewRequestWithContext(r, testDataDir, nil)
-			rewriteRequest.URL.Path = "/server-variable.php/pathinfo"
-			fc, _ := frankenphp.FromContext(rewriteRequest.Context())
-			fc.Env["REQUEST_URI"] = requestURI
+			r.URL.Path = "/server-variable.php/pathinfo"
 
-			err := frankenphp.ServeHTTP(w, rewriteRequest)
+			rewriteRequest, err := frankenphp.NewRequestWithContext(r,
+				frankenphp.WithRequestDocumentRoot(testDataDir, false),
+				frankenphp.WithRequestEnv(map[string]string{"REQUEST_URI": requestURI}),
+			)
+			assert.NoError(t, err)
+
+			err = frankenphp.ServeHTTP(w, rewriteRequest)
 			assert.NoError(t, err)
 		}
 
@@ -287,24 +294,18 @@ func testSession(t *testing.T, opts *testOptions) {
 
 	runTest(t, func(_ func(http.ResponseWriter, *http.Request), ts *httptest.Server, i int) {
 		jar, err := cookiejar.New(&cookiejar.Options{})
-		if err != nil {
-			panic(err)
-		}
+		assert.NoError(t, err)
 
 		client := &http.Client{Jar: jar}
 
 		resp1, err := client.Get(ts.URL + "/session.php")
-		if err != nil {
-			panic(err)
-		}
+		assert.NoError(t, err)
 
 		body1, _ := io.ReadAll(resp1.Body)
 		assert.Equal(t, "Count: 0\n", string(body1))
 
 		resp2, err := client.Get(ts.URL + "/session.php")
-		if err != nil {
-			panic(err)
-		}
+		assert.NoError(t, err)
 
 		body2, _ := io.ReadAll(resp2.Body)
 		assert.Equal(t, "Count: 1\n", string(body2))
@@ -579,7 +580,11 @@ func ExampleServeHTTP() {
 	defer frankenphp.Shutdown()
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		req := frankenphp.NewRequestWithContext(r, "/path/to/document/root", nil)
+		req, err := frankenphp.NewRequestWithContext(r, frankenphp.WithRequestDocumentRoot("/path/to/document/root", false))
+		if err != nil {
+			panic(err)
+		}
+
 		if err := frankenphp.ServeHTTP(w, req); err != nil {
 			panic(err)
 		}
@@ -605,7 +610,11 @@ func BenchmarkHelloWorld(b *testing.B) {
 	testDataDir := cwd + "/testdata/"
 
 	handler := func(w http.ResponseWriter, r *http.Request) {
-		req := frankenphp.NewRequestWithContext(r, testDataDir, nil)
+		req, err := frankenphp.NewRequestWithContext(r, frankenphp.WithRequestDocumentRoot(testDataDir, false))
+		if err != nil {
+			panic(err)
+		}
+
 		if err := frankenphp.ServeHTTP(w, req); err != nil {
 			panic(err)
 		}
@@ -628,7 +637,10 @@ func BenchmarkEcho(b *testing.B) {
 	testDataDir := cwd + "/testdata/"
 
 	handler := func(w http.ResponseWriter, r *http.Request) {
-		req := frankenphp.NewRequestWithContext(r, testDataDir, nil)
+		req, err := frankenphp.NewRequestWithContext(r, frankenphp.WithRequestDocumentRoot(testDataDir, false))
+		if err != nil {
+			panic(err)
+		}
 		if err := frankenphp.ServeHTTP(w, req); err != nil {
 			panic(err)
 		}
