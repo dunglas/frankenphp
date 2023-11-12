@@ -46,12 +46,9 @@ int frankenphp_update_server_context(
 	char *auth_password,
 	int proto_num
 );
-int frankenphp_worker_reset_server_context();
-uintptr_t frankenphp_clean_server_context();
 int frankenphp_request_startup();
-int frankenphp_execute_script(const char *file_name);
-uintptr_t frankenphp_request_shutdown();
-void frankenphp_register_bulk_variables(char **variables, size_t size, zval *track_vars_array);
+int frankenphp_execute_script(char *file_name);
+void frankenphp_register_bulk_variables(char *known_variables[27], char **dynamic_variables, size_t size, zval *track_vars_array);
 
 int frankenphp_execute_script_cli(char *script, int argc, char **argv);
 

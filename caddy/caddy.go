@@ -233,14 +233,22 @@ func (f FrankenPHPModule) ServeHTTP(w http.ResponseWriter, r *http.Request, _ ca
 	repl := r.Context().Value(caddy.ReplacerCtxKey).(*caddy.Replacer)
 
 	documentRoot := repl.ReplaceKnown(f.Root, "")
-	fr := frankenphp.NewRequestWithContext(r, documentRoot, f.logger)
-	fc, _ := frankenphp.FromContext(fr.Context())
-	fc.ResolveRootSymlink = f.ResolveRootSymlink
-	fc.SplitPath = f.SplitPath
 
-	fc.Env["REQUEST_URI"] = origReq.URL.RequestURI()
+	env := make(map[string]string, len(f.Env)+1)
+	env["REQUEST_URI"] = origReq.URL.RequestURI()
 	for k, v := range f.Env {
-		fc.Env[k] = repl.ReplaceKnown(v, "")
+		env[k] = repl.ReplaceKnown(v, "")
+	}
+
+	fr, err := frankenphp.NewRequestWithContext(
+		r,
+		frankenphp.WithRequestDocumentRoot(documentRoot, f.ResolveRootSymlink),
+		frankenphp.WithRequestSplitPath(f.SplitPath),
+		frankenphp.WithRequestEnv(env),
+	)
+
+	if err != nil {
+		return err
 	}
 
 	return frankenphp.ServeHTTP(w, fr)

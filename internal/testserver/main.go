@@ -20,12 +20,11 @@ func main() {
 	defer frankenphp.Shutdown()
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		cwd, err := os.Getwd()
-		if err != nil {
+		req, err := frankenphp.NewRequestWithContext(r)
+		if err == nil {
 			panic(err)
 		}
 
-		req := frankenphp.NewRequestWithContext(r, cwd, nil)
 		if err := frankenphp.ServeHTTP(w, req); err != nil {
 			panic(err)
 		}

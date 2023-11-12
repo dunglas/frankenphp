@@ -39,6 +39,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"runtime"
 	"runtime/cgo"
 	"strconv"
@@ -110,36 +111,15 @@ func (l syslogLevel) String() string {
 
 // FrankenPHPContext provides contextual information about the Request to handle.
 type FrankenPHPContext struct {
-	// The root directory of the PHP application.
-	DocumentRoot string
+	documentRoot string
+	splitPath    []string
+	env          map[string]string
+	logger       *zap.Logger
 
-	// The path in the URL will be split into two, with the first piece ending
-	// with the value of SplitPath. The first piece will be assumed as the
-	// actual resource (CGI script) name, and the second piece will be set to
-	// PATH_INFO for the CGI script to use.
-	//
-	// Future enhancements should be careful to avoid CVE-2019-11043,
-	// which can be mitigated with use of a try_files-like behavior
-	// that 404s if the fastcgi path info is not found.
-	SplitPath []string
-
-	// Path declared as root directory will be resolved to its absolute value
-	// after the evaluation of any symbolic links.
-	// Due to the nature of PHP opcache, root directory path is cached: when
-	// using a symlinked directory as root this could generate errors when
-	// symlink is changed without php-fpm being restarted; enabling this
-	// directive will set $_SERVER['DOCUMENT_ROOT'] to the real directory path.
-	ResolveRootSymlink bool
-
-	// CGI-like environment variables that will be available in $_SERVER.
-	// This map is populated automatically, exisiting key are never replaced.
-	Env map[string]string
-
-	// The logger associated with the current request
-	Logger *zap.Logger
-
-	populated    bool
-	authPassword string
+	docURI         string
+	pathInfo       string
+	scriptName     string
+	scriptFilename string
 
 	// Whether the request is already closed by us
 	closed sync.Once
@@ -159,19 +139,53 @@ func clientHasClosed(r *http.Request) bool {
 }
 
 // NewRequestWithContext creates a new FrankenPHP request context.
-func NewRequestWithContext(r *http.Request, documentRoot string, l *zap.Logger) *http.Request {
-	if l == nil {
-		l = getLogger()
+func NewRequestWithContext(r *http.Request, opts ...RequestOption) (*http.Request, error) {
+	fc := &FrankenPHPContext{
+		done: make(chan interface{}),
+	}
+	for _, o := range opts {
+		if err := o(fc); err != nil {
+			return nil, err
+		}
 	}
 
-	ctx := context.WithValue(r.Context(), contextKey, &FrankenPHPContext{
-		DocumentRoot: documentRoot,
-		SplitPath:    []string{".php"},
-		Env:          make(map[string]string),
-		Logger:       l,
-	})
+	if fc.documentRoot == "" {
+		var err error
+		if fc.documentRoot, err = os.Getwd(); err != nil {
+			return nil, err
+		}
+	}
 
-	return r.WithContext(ctx)
+	if fc.splitPath == nil {
+		fc.splitPath = []string{".php"}
+	}
+
+	if fc.env == nil {
+		fc.env = make(map[string]string)
+	}
+
+	if fc.logger == nil {
+		fc.logger = getLogger()
+	}
+
+	if splitPos := splitPos(fc, r.URL.Path); splitPos > -1 {
+		fc.docURI = r.URL.Path[:splitPos]
+		fc.pathInfo = r.URL.Path[splitPos:]
+
+		// Strip PATH_INFO from SCRIPT_NAME
+		fc.scriptName = strings.TrimSuffix(r.URL.Path, fc.pathInfo)
+
+		// Ensure the SCRIPT_NAME has a leading slash for compliance with RFC3875
+		// Info: https://tools.ietf.org/html/rfc3875#section-4.1.13
+		if fc.scriptName != "" && !strings.HasPrefix(fc.scriptName, "/") {
+			fc.scriptName = "/" + fc.scriptName
+		}
+	}
+
+	// SCRIPT_FILENAME is the absolute path of SCRIPT_NAME
+	fc.scriptFilename = sanitizedPathJoin(fc.documentRoot, fc.scriptName)
+
+	return r.WithContext(context.WithValue(r.Context(), contextKey, fc)), nil
 }
 
 // FromContext extracts the FrankenPHPContext from a context.
@@ -335,12 +349,12 @@ func updateServerContext(request *http.Request, create bool, mrh C.uintptr_t) er
 		return InvalidRequestError
 	}
 
+	authUser, authPassword, ok := request.BasicAuth()
 	var cAuthUser, cAuthPassword *C.char
-	if fc.authPassword != "" {
-		cAuthPassword = C.CString(fc.authPassword)
+	if ok && authPassword != "" {
+		cAuthPassword = C.CString(authPassword)
 	}
-
-	if authUser := fc.Env["REMOTE_USER"]; authUser != "" {
+	if ok && authUser != "" {
 		cAuthUser = C.CString(authUser)
 	}
 
@@ -362,9 +376,12 @@ func updateServerContext(request *http.Request, create bool, mrh C.uintptr_t) er
 		cContentType = C.CString(contentType)
 	}
 
+	// compliance with the CGI specification requires that
+	// PATH_TRANSLATED should only exist if PATH_INFO is defined.
+	// Info: https://www.ietf.org/rfc/rfc3875 Page 14
 	var cPathTranslated *C.char
-	if pathTranslated := fc.Env["PATH_TRANSLATED"]; pathTranslated != "" {
-		cPathTranslated = C.CString(pathTranslated)
+	if fc.pathInfo != "" {
+		cPathTranslated = C.CString(sanitizedPathJoin(fc.documentRoot, fc.pathInfo)) // Info: http://www.oreilly.com/openbook/cgi/ch02_04.html
 	}
 
 	cRequestUri := C.CString(request.URL.RequestURI())
@@ -409,19 +426,14 @@ func ServeHTTP(responseWriter http.ResponseWriter, request *http.Request) error 
 		return InvalidRequestError
 	}
 
-	if err := populateEnv(request); err != nil {
-		return err
-	}
-
 	fc.responseWriter = responseWriter
-	fc.done = make(chan interface{})
 
 	rc := requestChan
 	// Detect if a worker is available to handle this request
 	if nil == fc.responseWriter {
-		fc.Env["FRANKENPHP_WORKER"] = "1"
-	} else if v, ok := workersRequestChans.Load(fc.Env["SCRIPT_FILENAME"]); ok {
-		fc.Env["FRANKENPHP_WORKER"] = "1"
+		fc.env["FRANKENPHP_WORKER"] = "1"
+	} else if v, ok := workersRequestChans.Load(fc.scriptFilename); ok {
+		fc.env["FRANKENPHP_WORKER"] = "1"
 		rc = v.(chan *http.Request)
 	}
 
@@ -467,19 +479,11 @@ func go_execute_script(rh unsafe.Pointer) {
 		panic(err)
 	}
 
-	if C.frankenphp_request_startup() < 0 {
-		panic(RequestStartupError)
-	}
-
-	cFileName := C.CString(fc.Env["SCRIPT_FILENAME"])
-	defer C.free(unsafe.Pointer(cFileName))
-
+	// freed in frankenphp_execute_script()
+	cFileName := C.CString(fc.scriptFilename)
 	if C.frankenphp_execute_script(cFileName) < 0 {
 		panic(ScriptExecutionError)
 	}
-
-	C.frankenphp_clean_server_context()
-	C.frankenphp_request_shutdown()
 }
 
 //export go_ub_write
@@ -499,7 +503,7 @@ func go_ub_write(rh C.uintptr_t, cBuf *C.char, length C.int) (C.size_t, C.bool) 
 	i, _ := writer.Write(unsafe.Slice((*byte)(unsafe.Pointer(cBuf)), length))
 
 	if fc.responseWriter == nil {
-		fc.Logger.Info(writer.(*bytes.Buffer).String())
+		fc.logger.Info(writer.(*bytes.Buffer).String())
 	}
 
 	return C.size_t(i), C.bool(clientHasClosed(r))
@@ -507,36 +511,46 @@ func go_ub_write(rh C.uintptr_t, cBuf *C.char, length C.int) (C.size_t, C.bool) 
 
 //export go_register_variables
 func go_register_variables(rh C.uintptr_t, trackVarsArray *C.zval) {
-	var env map[string]string
 	r := cgo.Handle(rh).Value().(*http.Request)
-	env = r.Context().Value(contextKey).(*FrankenPHPContext).Env
+	fc := r.Context().Value(contextKey).(*FrankenPHPContext)
 
-	le := len(env) * 2
-	cArr := (**C.char)(C.malloc(C.size_t(le) * C.size_t(unsafe.Sizeof((*C.char)(nil)))))
-	defer C.free(unsafe.Pointer(cArr))
-
-	variables := unsafe.Slice(cArr, le)
+	le := (len(fc.env) + len(r.Header)) * 2
+	dynamicVariablesArr := (**C.char)(C.malloc(C.size_t(le) * C.size_t(unsafe.Sizeof((*C.char)(nil)))))
+	dynamicVariables := unsafe.Slice(dynamicVariablesArr, le)
 
 	var i int
-	for k, v := range env {
-		variables[i] = C.CString(k)
+	// Add all HTTP headers to env variables
+	for field, val := range r.Header {
+		k := "HTTP_" + headerNameReplacer.Replace(strings.ToUpper(field))
+		if _, ok := fc.env[k]; ok {
+			continue
+		}
+
+		dynamicVariables[i] = C.CString(k)
 		i++
 
-		variables[i] = C.CString(v)
+		dynamicVariables[i] = C.CString(strings.Join(val, ", "))
 		i++
 	}
 
-	C.frankenphp_register_bulk_variables(cArr, C.size_t(le), trackVarsArray)
+	for k, v := range fc.env {
+		dynamicVariables[i] = C.CString(k)
+		i++
 
-	for _, v := range variables {
-		C.free(unsafe.Pointer(v))
+		dynamicVariables[i] = C.CString(v)
+		i++
 	}
+
+	knownVariables := computeKnownVariables(r)
+	C.frankenphp_register_bulk_variables(&knownVariables[0], dynamicVariablesArr, C.size_t(le), trackVarsArray)
+
+	fc.env = nil
 }
 
 func addHeader(fc *FrankenPHPContext, cString *C.char, length C.int) {
 	parts := strings.SplitN(C.GoStringN(cString, length), ": ", 2)
 	if len(parts) != 2 {
-		fc.Logger.Debug("invalid header", zap.String("header", parts[0]))
+		fc.logger.Debug("invalid header", zap.String("header", parts[0]))
 
 		return
 	}
@@ -589,7 +603,7 @@ func go_sapi_flush(rh C.uintptr_t) bool {
 	}
 
 	if err := http.NewResponseController(fc.responseWriter).Flush(); err != nil {
-		fc.Logger.Error("the current responseWriter is not a flusher", zap.Error(err))
+		fc.logger.Error("the current responseWriter is not a flusher", zap.Error(err))
 	}
 
 	return false
@@ -610,7 +624,7 @@ func go_read_post(rh C.uintptr_t, cBuf *C.char, countBytes C.size_t) (readBytes 
 	if err != nil && err != io.EOF {
 		// invalid Read on closed Body may happen because of https://github.com/golang/go/issues/15527
 		fc, _ := FromContext(r.Context())
-		fc.Logger.Error("error while reading the request body", zap.Error(err))
+		fc.logger.Error("error while reading the request body", zap.Error(err))
 	}
 
 	return
@@ -630,10 +644,8 @@ func go_read_cookies(rh C.uintptr_t) *C.char {
 		cookieString = append(cookieString, cookie.String())
 	}
 
-	cCookie := C.CString(strings.Join(cookieString, "; "))
 	// freed in frankenphp_request_shutdown()
-
-	return cCookie
+	return C.CString(strings.Join(cookieString, "; "))
 }
 
 //export go_log
