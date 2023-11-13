@@ -517,7 +517,11 @@ static void frankenphp_register_known_variable(const char *key, char *value, zva
 		return;
 	}
 
-	php_register_variable(key, value, track_vars_array);
+	size_t new_val_len;	
+	if (sapi_module.input_filter(PARSE_SERVER, key, &value, strlen(value), &new_val_len)) {
+		php_register_variable_safe(key, value, new_val_len, track_vars_array);
+	}
+
 	if (f) {
 		free(value);
 		value = NULL;
@@ -559,9 +563,12 @@ void frankenphp_register_bulk_variables(char *known_variables[27], char **dynami
 	frankenphp_register_known_variable("SERVER_SOFTWARE", known_variables[17], track_vars_array, true);
 	frankenphp_register_known_variable("SSL_PROTOCOL", known_variables[18], track_vars_array, true);
 
+	size_t new_val_len;	
 	for (size_t i = 0; i < size; i = i+2)
 	{
-		php_register_variable(dynamic_variables[i], dynamic_variables[i+1], track_vars_array);
+		if (sapi_module.input_filter(PARSE_SERVER, dynamic_variables[i], &dynamic_variables[i+1], strlen(dynamic_variables[i+1]), &new_val_len)) {
+			php_register_variable_safe(dynamic_variables[i], dynamic_variables[i+1], new_val_len, track_vars_array);
+		}
 
 		free(dynamic_variables[i]);
 		free(dynamic_variables[i+1]);
@@ -790,22 +797,22 @@ static void sapi_cli_register_variables(zval *track_vars_array) /* {{{ */
 	/* Build the special-case PHP_SELF variable for the CLI version */
 	len = strlen(cli_script);
 	if (sapi_module.input_filter(PARSE_SERVER, "PHP_SELF", &cli_script, len, &len)) {
-		php_register_variable("PHP_SELF", cli_script, track_vars_array);
+		php_register_variable_safe("PHP_SELF", cli_script, len, track_vars_array);
 	}
 	if (sapi_module.input_filter(PARSE_SERVER, "SCRIPT_NAME", &cli_script, len, &len)) {
-		php_register_variable("SCRIPT_NAME", cli_script, track_vars_array);
+		php_register_variable_safe("SCRIPT_NAME", cli_script, len, track_vars_array);
 	}
 	/* filenames are empty for stdin */
 	if (sapi_module.input_filter(PARSE_SERVER, "SCRIPT_FILENAME", &cli_script, len, &len)) {
-		php_register_variable("SCRIPT_FILENAME", cli_script, track_vars_array);
+		php_register_variable_safe("SCRIPT_FILENAME", cli_script, len, track_vars_array);
 	}
 	if (sapi_module.input_filter(PARSE_SERVER, "PATH_TRANSLATED", &cli_script, len, &len)) {
-		php_register_variable("PATH_TRANSLATED", cli_script, track_vars_array);
+		php_register_variable_safe("PATH_TRANSLATED", cli_script, len, track_vars_array);
 	}
 	/* just make it available */
 	len = 0U;
 	if (sapi_module.input_filter(PARSE_SERVER, "DOCUMENT_ROOT", &docroot, len, &len)) {
-		php_register_variable("DOCUMENT_ROOT", docroot, track_vars_array);
+		php_register_variable_safe("DOCUMENT_ROOT", docroot, len, track_vars_array);
 	}
 }
 /* }}} */
