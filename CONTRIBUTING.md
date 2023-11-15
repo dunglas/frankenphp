@@ -99,31 +99,31 @@ docker buildx bake -f docker-bake.hcl --pull --no-cache --push
     ```
 3. Enable `tmate` to connect to the container
     ```patch
-        - name: Set include flags
+        -
+          name: Set CGO flags
           run: echo "CGO_CFLAGS=$(php-config --includes)" >> "$GITHUB_ENV"
-    +   - run: |
-            sudo apt install gdb
+    +   -
+    +     run: |
+    +       sudo apt install gdb
     +       mkdir -p /home/runner/.config/gdb/
     +       printf "set auto-load safe-path /\nhandle SIG34 nostop noprint pass" > /home/runner/.config/gdb/gdbinit
-    +   - uses: mxschmitt/action-tmate@v3
-    +     env:
-    +       GOFLAGS: "-w -gcflags=all=-N -gcflags=all=-l"
+    +   -
+    +     uses: mxschmitt/action-tmate@v3
     ```
-4. Open `frankenphp.go`
-5. Enable `cgosymbolizer`
+4. Connect to the container
+5. Open `frankenphp.go`
+6. Enable `cgosymbolizer`
     ```patch
     -	//_ "github.com/ianlancetaylor/cgosymbolizer"
     +	_ "github.com/ianlancetaylor/cgosymbolizer"
     ```
-6. Download the module: `go get`
-7. In the container, you can use GDB and the like:
+7. Download the module: `go get`
+8. In the container, you can use GDB and the like:
     ```sh
-    sudo apt install gdb
-    mkdir -p /home/runner/.config/gdb/
     go test -c -ldflags=-w
     gdb --args ./frankenphp.test -test.run ^MyTest$
     ```
-8. When the bug is fixed, revert all these changes
+9. When the bug is fixed, revert all these changes
 
 ## Misc Dev Resources
 
