@@ -12,7 +12,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        php-versions: ['8.2', '8.3']
+        php-versions: ['8.2'] # 8.3 is disabled because of https://github.com/shivammathur/setup-php/issues/783
     steps:
       -
         uses: actions/checkout@v4
