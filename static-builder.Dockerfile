@@ -54,7 +54,7 @@ COPY --from=composer/composer:2-bin --link /composer /usr/bin/composer
 
 WORKDIR /static-php-cli
 
-RUN git clone --depth=1 --branch=fix/freetype https://github.com/dunglas/static-php-cli . && \
+RUN git clone --depth=1 https://github.com/crazywhalecc/static-php-cli . && \
     composer install --no-cache --no-dev --classmap-authoritative
 
 RUN --mount=type=secret,id=github-token GITHUB_TOKEN=$(cat /run/secrets/github-token) ./bin/spc download --with-php=$PHP_VERSION --for-extensions="$PHP_EXTENSIONS"

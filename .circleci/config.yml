@@ -15,7 +15,7 @@ jobs:
       - run: brew install --formula go automake cmake composer
       - run:
           name: Clone static-php-cli
-          command: git clone --depth 1 --branch=fix/freetype https://github.com/dunglas/static-php-cli
+          command: git clone --depth 1 https://github.com/crazywhalecc/static-php-cli
       - restore_cache:
           keys:
             - spc-{{ checksum "static-php-cli/composer.json" }}

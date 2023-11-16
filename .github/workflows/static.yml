@@ -81,8 +81,7 @@ jobs:
       -
         uses: actions/checkout@v4
         with:
-          repository: dunglas/static-php-cli
-          ref: "fix/freetype"
+          repository: crazywhalecc/static-php-cli
           path: static-php-cli
       -
         name: Install missing system dependencies
