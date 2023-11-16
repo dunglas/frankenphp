@@ -12,7 +12,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        php-versions: ['8.2'] # 8.3 is disabled because of https://github.com/shivammathur/setup-php/issues/783
+        php-versions: ['8.2', '8.3'] # 8.3 is disabled because of https://github.com/shivammathur/setup-php/issues/783
     steps:
       -
         uses: actions/checkout@v4
@@ -32,6 +32,7 @@ jobs:
           tools: none
         env:
           phpts: ts
+          debug: true
       -
         name: Set CGO flags
         run: |
@@ -45,6 +46,13 @@ jobs:
         name: Build testcli binary
         working-directory: internal/testcli/
         run: go build
+      -
+        run: |
+          sudo apt install gdb
+          mkdir -p /home/runner/.config/gdb/
+          printf "set auto-load safe-path /\nhandle SIG34 nostop noprint pass" > /home/runner/.config/gdb/gdbinit
+      -
+        uses: mxschmitt/action-tmate@v3
       -
         name: Run library tests
         run: go test -race -v ./...
