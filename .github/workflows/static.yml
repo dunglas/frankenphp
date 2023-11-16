@@ -74,13 +74,15 @@ jobs:
     runs-on: macos-latest
     env:
       HOMEBREW_NO_AUTO_UPDATE: 1
+      PHP_EXTENSIONS: bcmath,calendar,ctype,curl,dba,dom,exif,filter,fileinfo,gd,iconv,intl,mbstring,mbregex,mysqli,mysqlnd,opcache,openssl,pcntl,pdo,pdo_mysql,pdo_pgsql,pdo_sqlite,pgsql,phar,posix,readline,redis,session,simplexml,sockets,sqlite3,tokenizer,xml,xmlreader,xmlwriter,zip,zlib,apcu
     steps:
       -
         uses: actions/checkout@v4
       -
         uses: actions/checkout@v4
         with:
-          repository: crazywhalecc/static-php-cli
+          repository: dunglas/static-php-cli
+          ref: "fix/freetype"
           path: static-php-cli
       -
         name: Install missing system dependencies
@@ -99,13 +101,13 @@ jobs:
       -
         name: Fetch libraries sources
         working-directory: static-php-cli/
-        run: ./bin/spc fetch --with-php=8.2 -A
+        run: ./bin/spc fetch --for-extensions="$PHP_EXTENSIONS"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       -
         name: Build libphp.a
         working-directory: static-php-cli/
-        run: ./bin/spc build --enable-zts --build-embed "bcmath,calendar,ctype,curl,dba,dom,exif,filter,fileinfo,gd,iconv,intl,mbstring,mbregex,mysqli,mysqlnd,opcache,openssl,pcntl,pdo,pdo_mysql,pdo_pgsql,pdo_sqlite,pgsql,phar,posix,readline,redis,session,simplexml,sockets,sqlite3,tokenizer,xml,xmlreader,xmlwriter,zip,zlib,apcu"
+        run: ./bin/spc build --debug --enable-zts --build-embed "$PHP_EXTENSIONS"
       -
         name: Set CGO flags
         working-directory: static-php-cli/

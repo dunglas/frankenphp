@@ -9,12 +9,13 @@ jobs:
       xcode: 14.3.1
     environment:
       HOMEBREW_NO_AUTO_UPDATE: 1
+      PHP_EXTENSIONS: bcmath,calendar,ctype,curl,dba,dom,exif,filter,fileinfo,gd,iconv,intl,mbstring,mbregex,mysqli,mysqlnd,opcache,openssl,pcntl,pdo,pdo_mysql,pdo_pgsql,pdo_sqlite,pgsql,phar,posix,readline,redis,session,simplexml,sockets,sqlite3,tokenizer,xml,xmlreader,xmlwriter,zip,zlib,apcu
     steps:
       - checkout
       - run: brew install --formula go automake cmake composer
       - run:
           name: Clone static-php-cli
-          command: git clone --depth 1 https://github.com/crazywhalecc/static-php-cli
+          command: git clone --depth 1 --branch=fix/freetype https://github.com/dunglas/static-php-cli
       - restore_cache:
           keys:
             - spc-{{ checksum "static-php-cli/composer.json" }}
@@ -23,7 +24,7 @@ jobs:
           working_directory: static-php-cli/
           command: |
             composer install --no-dev -a
-            ./bin/spc fetch --with-php=8.2 -A
+            ./bin/spc fetch --for-extensions="$PHP_EXTENSIONS"
       - save_cache:
           key: spc-{{ checksum "static-php-cli/composer.json" }}
           paths:
@@ -32,7 +33,7 @@ jobs:
       - run:
           working_directory: static-php-cli/
           name: Build libphp.a
-          command: ./bin/spc build --enable-zts --build-embed "bcmath,calendar,ctype,curl,dba,dom,exif,filter,fileinfo,gd,iconv,intl,mbstring,mbregex,mysqli,mysqlnd,opcache,openssl,pcntl,pdo,pdo_mysql,pdo_pgsql,pdo_sqlite,pgsql,phar,posix,readline,redis,session,simplexml,sockets,sqlite3,tokenizer,xml,xmlreader,xmlwriter,zip,zlib,apcu"
+          command: ./bin/spc build --enable-zts --build-embed "$PHP_EXTENSIONS"
       - run:
           working_directory: static-php-cli/
           name: Set CGO flags
