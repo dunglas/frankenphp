@@ -106,7 +106,7 @@ jobs:
       -
         name: Build libphp.a
         working-directory: static-php-cli/
-        run: ./bin/spc build --debug --enable-zts --build-embed "$PHP_EXTENSIONS"
+        run: ./bin/spc build --enable-zts --build-embed "$PHP_EXTENSIONS"
       -
         name: Set CGO flags
         working-directory: static-php-cli/
