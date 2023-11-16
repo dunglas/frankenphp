@@ -30,6 +30,7 @@ jobs:
           ini-file: development
           coverage: none
           tools: none
+          extensions: none
         env:
           phpts: ts
           debug: true
