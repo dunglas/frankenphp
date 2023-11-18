@@ -70,8 +70,12 @@ jobs:
         with:
           path: frankenphp-linux-x86_64
   build-mac:
-    name: Build macOS x86_64 binaries
-    runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ['macos-latest', 'macos-latest-xlarge']
+    name: Build macOS ${{ matrix.os == 'macos-latest' && 'x86_64' || 'arm' }} binaries
+    runs-on: ${{ matrix.os }}
     env:
       HOMEBREW_NO_AUTO_UPDATE: 1
       PHP_EXTENSIONS: bcmath,calendar,ctype,curl,dba,dom,exif,filter,fileinfo,gd,iconv,intl,mbstring,mbregex,mysqli,mysqlnd,opcache,openssl,pcntl,pdo,pdo_mysql,pdo_pgsql,pdo_sqlite,pgsql,phar,posix,readline,redis,session,simplexml,sockets,sqlite3,tokenizer,xml,xmlreader,xmlwriter,zip,zlib,apcu
@@ -120,8 +124,8 @@ jobs:
         name: Build FrankenPHP
         working-directory: caddy/frankenphp/
         run: |
-          go build -buildmode=pie -tags "cgo netgo osusergo static_build" -ldflags "-linkmode=external -extldflags -static-pie -w -s -X 'github.com/caddyserver/caddy/v2.CustomVersion=FrankenPHP $FRANKENPHP_VERSION PHP $PHP_VERSION Caddy'" -o frankenphp-mac-x86_64
-          ./frankenphp-mac-x86_64 version
+          go build -buildmode=pie -tags "cgo netgo osusergo static_build" -ldflags "-linkmode=external -extldflags -static-pie -w -s -X 'github.com/caddyserver/caddy/v2.CustomVersion=FrankenPHP $FRANKENPHP_VERSION PHP $PHP_VERSION Caddy'" -o frankenphp-mac-${{ matrix.os == 'macos-latest' && 'x86_64' || 'arm' }}
+          ./frankenphp-mac-${{ matrix.os == 'macos-latest' && 'x86_64' || 'arm' }} version
       -
         name: Upload asset
         if: github.ref_type == 'tag'
@@ -131,9 +135,9 @@ jobs:
           allowUpdates: true
           omitBodyDuringUpdate: true
           omitNameDuringUpdate: true
-          artifacts: caddy/frankenphp/frankenphp-mac-x86_64
+          artifacts: caddy/frankenphp/frankenphp-mac-${{ matrix.os == 'macos-latest' && 'x86_64' || 'arm' }}
       -
         name: Upload binary
         uses: actions/upload-artifact@v3
         with:
-          path: caddy/frankenphp/frankenphp-mac-x86_64
+          path: caddy/frankenphp/frankenphp-mac-${{ matrix.os == 'macos-latest' && 'x86_64' || 'arm' }}
