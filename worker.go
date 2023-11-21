@@ -4,7 +4,6 @@ package frankenphp
 // #include "frankenphp.h"
 import "C"
 import (
-	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -56,40 +55,25 @@ func startWorkers(fileName string, nbWorkers int, env map[string]string) error {
 			defer shutdownWG.Done()
 			for {
 				// Create main dummy request
-				fc := &FrankenPHPContext{
-					env:  make(map[string]string, len(env)+1),
-					done: make(chan interface{}),
-				}
-				fc.scriptFilename = absFileName
-				fc.env["SCRIPT_FILENAME"] = absFileName
-				for k, v := range env {
-					fc.env[k] = v
-				}
-
-				r, err := http.NewRequestWithContext(context.WithValue(
-					context.Background(),
-					contextKey,
-					fc,
-				), "GET", "", nil)
-
+				r, err := http.NewRequest(http.MethodGet, filepath.Base(absFileName), nil)
 				if err != nil {
-					// TODO: this should never happen, maybe can we remove this block?
-					m.Lock()
-					defer m.Unlock()
-					errs = append(errs, fmt.Errorf("workers %q: unable to create main worker request: %w", absFileName, err))
-
-					return
+					panic(err)
+				}
+				r, err = NewRequestWithContext(
+					r,
+					WithRequestDocumentRoot(filepath.Dir(absFileName), false),
+					WithRequestEnv(env),
+				)
+				if err != nil {
+					panic(err)
 				}
 
 				l.Debug("starting", zap.String("worker", absFileName))
 				if err := ServeHTTP(nil, r); err != nil {
-					m.Lock()
-					defer m.Unlock()
-					errs = append(errs, fmt.Errorf("workers %q: unable to start: %w", absFileName, err))
-
-					return
+					panic(err)
 				}
 
+				fc := r.Context().Value(contextKey).(*FrankenPHPContext)
 				if fc.currentWorkerRequest != 0 {
 					// Terminate the pending HTTP request handled by the worker
 					maybeCloseContext(fc.currentWorkerRequest.Value().(*http.Request).Context().Value(contextKey).(*FrankenPHPContext))
@@ -100,7 +84,11 @@ func startWorkers(fileName string, nbWorkers int, env map[string]string) error {
 				// TODO: make the max restart configurable
 				if _, ok := workersRequestChans.Load(absFileName); ok {
 					workersReadyWG.Add(1)
-					l.Error("unexpected termination, restarting", zap.String("worker", absFileName))
+					if fc.exitStatus == 0 {
+						l.Info("restarting", zap.String("worker", absFileName))
+					} else {
+						l.Error("unexpected termination, restarting", zap.String("worker", absFileName), zap.Int("exit_status", int(fc.exitStatus)))
+					}
 				} else {
 					break
 				}

@@ -709,28 +709,31 @@ int frankenphp_request_startup()
 int frankenphp_execute_script(char* file_name)
 {
 	if (frankenphp_request_startup() == FAILURE) {
+		free(file_name);
+
 		return FAILURE;
 	}
 
-	int status = FAILURE;
+	int status = SUCCESS;
 
 	zend_file_handle file_handle;
 	zend_stream_init_filename(&file_handle, file_name);
+	free(file_name);
+
 	file_handle.primary_script = 1;
 
 	zend_first_try {
-		status = php_execute_script(&file_handle);
+		EG(exit_status) = 0;
+		php_execute_script(&file_handle);
+		status = EG(exit_status);
 	} zend_catch {
-    	/* int exit_status = EG(exit_status); */
+		status = EG(exit_status);
 	} zend_end_try();
 
 	zend_destroy_file_handle(&file_handle);
-	free(file_name);
 
-	if (status >= 0) {
-		frankenphp_clean_server_context();
-		frankenphp_request_shutdown();
-	}
+	frankenphp_clean_server_context();
+	frankenphp_request_shutdown();
 
 	return status;
 }
