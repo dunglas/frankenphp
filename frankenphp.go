@@ -12,7 +12,7 @@ package frankenphp
 // Use PHP includes corresponding to your PHP installation by running:
 //
 //   export CGO_CFLAGS=$(php-config --includes)
-//   export CGO_LDFLAGS=$(php-config --ldflags --libs)
+//   export CGO_LDFLAGS="$(php-config --ldflags) $(php-config --libs)"
 //
 // We also set these flags for hardening: https://github.com/docker-library/php/blob/master/8.2/bookworm/zts/Dockerfile#L57-L59
 
@@ -124,7 +124,9 @@ type FrankenPHPContext struct {
 	// Whether the request is already closed by us
 	closed sync.Once
 
-	responseWriter       http.ResponseWriter
+	responseWriter http.ResponseWriter
+	exitStatus     C.int
+
 	done                 chan interface{}
 	currentWorkerRequest cgo.Handle
 }
@@ -479,9 +481,9 @@ func go_execute_script(rh unsafe.Pointer) {
 		panic(err)
 	}
 
-	// freed in frankenphp_execute_script()
-	cFileName := C.CString(fc.scriptFilename)
-	if C.frankenphp_execute_script(cFileName) < 0 {
+	// scriptFilename is freed in frankenphp_execute_script()
+	fc.exitStatus = C.frankenphp_execute_script(C.CString(fc.scriptFilename))
+	if fc.exitStatus < 0 {
 		panic(ScriptExecutionError)
 	}
 }
@@ -500,7 +502,10 @@ func go_ub_write(rh C.uintptr_t, cBuf *C.char, length C.int) (C.size_t, C.bool) 
 		writer = fc.responseWriter
 	}
 
-	i, _ := writer.Write(unsafe.Slice((*byte)(unsafe.Pointer(cBuf)), length))
+	i, e := writer.Write(unsafe.Slice((*byte)(unsafe.Pointer(cBuf)), length))
+	if e != nil {
+		fc.logger.Error("write error", zap.Error(e))
+	}
 
 	if fc.responseWriter == nil {
 		fc.logger.Info(writer.(*bytes.Buffer).String())
@@ -685,6 +690,7 @@ func ExecuteScriptCLI(script string, args []string) int {
 	argv := make([]*C.char, argc)
 	for i, arg := range args {
 		argv[i] = C.CString(arg)
+		defer C.free(unsafe.Pointer(&argv[1]))
 	}
 
 	return int(C.frankenphp_execute_script_cli(cScript, argc, (**C.char)(unsafe.Pointer(&argv[0]))))

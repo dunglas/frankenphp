@@ -75,7 +75,7 @@ You can now use the Go library and compile our Caddy build:
 ```console
 curl -L https://github.com/dunglas/frankenphp/archive/refs/heads/main.tar.gz | tar x
 cd frankenphp-main/caddy/frankenphp
-CGO_CFLAGS=$(php-config --includes) go build
+CGO_CFLAGS=$(php-config --includes) CGO_LDFLAGS="$(php-config --ldflags) $(php-config --libs)" go build
 ```
 
 ### Using xcaddy
