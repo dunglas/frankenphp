@@ -2,7 +2,7 @@
 FROM golang-base
 
 ARG FRANKENPHP_VERSION='dev'
-ARG PHP_VERSION='8.2'
+ARG PHP_VERSION='8.3'
 ARG PHP_EXTENSIONS='apcu,bcmath,bz2,calendar,ctype,curl,dba,dom,exif,fileinfo,filter,gd,iconv,intl,ldap,mbregex,mbstring,mysqli,mysqlnd,opcache,openssl,pcntl,pdo,pdo_mysql,pdo_pgsql,pdo_sqlite,pgsql,phar,posix,readline,redis,session,simplexml,sockets,sqlite3,sysvsem,tokenizer,xml,xmlreader,xmlwriter,zip,zlib'
 ARG PHP_EXTENSION_LIBS='freetype,libjpeg,libavif,libwebp,libzip,bzip2'
 
@@ -28,23 +28,26 @@ RUN apk update; \
         linux-headers \
         m4 \
         make \
-        php82 \
-        php82-common \
-        php82-curl \
-        php82-dom \
-        php82-mbstring \
-        php82-openssl \
-        php82-pcntl \
-        php82-phar \
-        php82-posix \
-        php82-sodium \
-        php82-tokenizer \
-        php82-xml \
-        php82-xmlwriter \
         pkgconfig \
         wget \
         xz ; \
-    ln -sf /usr/bin/php82 /usr/bin/php
+    apk add --no-cache \
+    	--repository=https://dl-cdn.alpinelinux.org/alpine/edge/main \
+    	--repository=https://dl-cdn.alpinelinux.org/alpine/edge/community \
+        php83 \
+        php83-common \
+        php83-curl \
+        php83-dom \
+        php83-mbstring \
+        php83-openssl \
+        php83-pcntl \
+        php83-phar \
+        php83-posix \
+        php83-sodium \
+        php83-tokenizer \
+        php83-xml \
+        php83-xmlwriter; \
+    ln -sf /usr/bin/php83 /usr/bin/php
 
 # https://getcomposer.org/doc/03-cli.md#composer-allow-superuser
 ENV COMPOSER_ALLOW_SUPERUSER=1
