@@ -93,9 +93,7 @@ docker run -v $PWD:/app/public -p 80:80 -p 443:443 my-php-app
 With Docker Compose:
 
 ```yaml
-# compose.yml
-
-version: '3.1'
+# compose.yaml
 
 services:
   php:
