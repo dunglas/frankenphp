@@ -10,3 +10,4 @@
 !testdata/*.php
 !testdata/*.txt
 !build-static.sh
+!embed/*

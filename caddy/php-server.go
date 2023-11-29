@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"path/filepath"
 	"strconv"
 	"time"
 
@@ -15,6 +16,7 @@ import (
 	"github.com/caddyserver/caddy/v2/modules/caddyhttp/fileserver"
 	"github.com/caddyserver/caddy/v2/modules/caddyhttp/rewrite"
 	"github.com/caddyserver/certmagic"
+	"github.com/dunglas/frankenphp"
 	"go.uber.org/zap"
 
 	"github.com/spf13/cobra"
@@ -59,6 +61,14 @@ func cmdPHPServer(fs caddycmd.Flags) (int, error) {
 	accessLog := fs.Bool("access-log")
 	debug := fs.Bool("debug")
 	compress := !fs.Bool("no-compress")
+
+	if frankenphp.EmbeddedAppPath != "" {
+		if root == "" {
+			root = filepath.Join(frankenphp.EmbeddedAppPath, defaultDocumentRoot)
+		} else if filepath.IsLocal(root) {
+			root = filepath.Join(frankenphp.EmbeddedAppPath, root)
+		}
+	}
 
 	const indexFile = "index.php"
 	extensions := []string{"php"}
