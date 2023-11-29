@@ -9,8 +9,19 @@ if ! type "git" > /dev/null; then
     exit 1
 fi
 
+arch="$(uname -m)"
+os="$(uname -s | tr '[:upper:]' '[:lower:]')"
+if [ "$os" = "darwin" ]; then
+    os="mac"
+fi
+
 if [ -z "$PHP_EXTENSIONS" ]; then
-    export PHP_EXTENSIONS="apcu,bcmath,bz2,calendar,ctype,curl,dba,dom,exif,fileinfo,filter,gd,iconv,intl,ldap,mbregex,mbstring,mysqli,mysqlnd,opcache,openssl,pcntl,pdo,pdo_mysql,pdo_pgsql,pdo_sqlite,pgsql,phar,posix,readline,redis,session,simplexml,sockets,sqlite3,sysvsem,tokenizer,xml,xmlreader,xmlwriter,zip,zlib"
+    if [ "$os" = "mac" ]; then
+        # Temporary fix for https://github.com/crazywhalecc/static-php-cli/issues/278 (remove pdo_pgsql, pgsql and ldap)
+        export PHP_EXTENSIONS="apcu,bcmath,bz2,calendar,ctype,curl,dba,dom,exif,fileinfo,filter,gd,iconv,intl,mbregex,mbstring,mysqli,mysqlnd,opcache,openssl,pcntl,pdo,pdo_mysql,pdo_sqlite,phar,posix,readline,redis,session,simplexml,sockets,sqlite3,sysvsem,tokenizer,xml,xmlreader,xmlwriter,zip,zlib"
+    else
+        export PHP_EXTENSIONS="apcu,bcmath,bz2,calendar,ctype,curl,dba,dom,exif,fileinfo,filter,gd,iconv,intl,ldap,mbregex,mbstring,mysqli,mysqlnd,opcache,openssl,pcntl,pdo,pdo_mysql,pdo_pgsql,pdo_sqlite,pgsql,phar,posix,readline,redis,session,simplexml,sockets,sqlite3,sysvsem,tokenizer,xml,xmlreader,xmlwriter,zip,zlib" 
+    fi
 fi
 
 if [ -z "$PHP_EXTENSIONS_LIB" ]; then
@@ -30,11 +41,6 @@ elif [ -d ".git/" ]; then
     git checkout "$FRANKENPHP_VERSION"
 fi
 
-arch="$(uname -m)"
-os="$(uname -s | tr '[:upper:]' '[:lower:]')"
-if [ "$os" = "darwin" ]; then
-    os="mac"
-fi
 bin="frankenphp-$os-$arch"
 
 mkdir -p dist/
@@ -66,7 +72,7 @@ fi
 
 ./bin/spc doctor
 ./bin/spc fetch --with-php="$PHP_VERSION" --for-extensions="$PHP_EXTENSIONS"
-./bin/spc build --enable-zts --build-embed --debug $extraOpts "$PHP_EXTENSIONS" --with-libs="$PHP_EXTENSION_LIBS"
+./bin/spc build --enable-zts --build-embed $extraOpts "$PHP_EXTENSIONS" --with-libs="$PHP_EXTENSION_LIBS"
 CGO_CFLAGS="-DFRANKENPHP_VERSION=$FRANKENPHP_VERSION $(./buildroot/bin/php-config --includes | sed s#-I/#-I"$PWD"/buildroot/#g)"
 export CGO_CFLAGS
 
