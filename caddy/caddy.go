@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"path/filepath"
 	"strconv"
 
 	"github.com/caddyserver/caddy/v2"
@@ -19,6 +20,8 @@ import (
 	"github.com/dunglas/frankenphp"
 	"go.uber.org/zap"
 )
+
+const defaultDocumentRoot = "public"
 
 func init() {
 	caddy.RegisterModule(FrankenPHPApp{})
@@ -92,8 +95,6 @@ func (f *FrankenPHPApp) Start() error {
 			return err
 		}
 	}
-
-	logger.Info("FrankenPHP started 🐘", zap.String("php_version", frankenphp.Version().Version))
 
 	return nil
 }
@@ -169,6 +170,10 @@ func (f *FrankenPHPApp) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 					if wc.FileName == "" {
 						return errors.New(`The "file" argument must be specified`)
 					}
+
+					if frankenphp.EmbeddedAppPath != "" && filepath.IsLocal(wc.FileName) {
+						wc.FileName = filepath.Join(frankenphp.EmbeddedAppPath, wc.FileName)
+					}
 				}
 
 				f.Workers = append(f.Workers, wc)
@@ -193,7 +198,7 @@ func parseGlobalOption(d *caddyfile.Dispenser, _ interface{}) (interface{}, erro
 }
 
 type FrankenPHPModule struct {
-	// Root sets the root folder to the site. Default: `root` directive.
+	// Root sets the root folder to the site. Default: `root` directive, or the path of the public directory of the embed app it exists.
 	Root string `json:"root,omitempty"`
 	// SplitPath sets the substrings for splitting the URI into two parts. The first matching substring will be used to split the "path info" from the path. The first piece is suffixed with the matching substring and will be assumed as the actual resource (CGI script) name. The second piece will be set to PATH_INFO for the CGI script to use. Default: `.php`.
 	SplitPath []string `json:"split_path,omitempty"`
@@ -217,8 +222,18 @@ func (f *FrankenPHPModule) Provision(ctx caddy.Context) error {
 	f.logger = ctx.Logger(f)
 
 	if f.Root == "" {
-		f.Root = "{http.vars.root}"
+		if frankenphp.EmbeddedAppPath == "" {
+			f.Root = "{http.vars.root}"
+		} else {
+			f.Root = filepath.Join(frankenphp.EmbeddedAppPath, defaultDocumentRoot)
+			f.ResolveRootSymlink = false
+		}
+	} else {
+		if frankenphp.EmbeddedAppPath != "" && filepath.IsLocal(f.Root) {
+			f.Root = filepath.Join(frankenphp.EmbeddedAppPath, f.Root)
+		}
 	}
+
 	if len(f.SplitPath) == 0 {
 		f.SplitPath = []string{".php"}
 	}
@@ -424,6 +439,17 @@ func parsePhpServer(h httpcaddyfile.Helper) ([]httpcaddyfile.ConfigValue, error)
 	// reset the dispenser after we're done so that the frankenphp
 	// unmarshaler can read it from the start
 	dispenser.Reset()
+
+	if frankenphp.EmbeddedAppPath != "" {
+		if phpsrv.Root == "" {
+			phpsrv.Root = filepath.Join(frankenphp.EmbeddedAppPath, defaultDocumentRoot)
+			fsrv.Root = phpsrv.Root
+			phpsrv.ResolveRootSymlink = false
+		} else if filepath.IsLocal(fsrv.Root) {
+			phpsrv.Root = filepath.Join(frankenphp.EmbeddedAppPath, phpsrv.Root)
+			fsrv.Root = phpsrv.Root
+		}
+	}
 
 	// set up a route list that we'll append to
 	routes := caddyhttp.RouteList{}

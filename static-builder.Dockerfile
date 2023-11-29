@@ -5,6 +5,8 @@ ARG FRANKENPHP_VERSION=''
 ARG PHP_VERSION=''
 ARG PHP_EXTENSIONS=''
 ARG PHP_EXTENSION_LIBS=''
+ARG CLEAN=''
+ARG EMBED=''
 SHELL ["/bin/ash", "-eo", "pipefail", "-c"]
 
 RUN apk update; \
@@ -68,5 +70,6 @@ WORKDIR /go/src/app
 COPY *.* ./
 COPY caddy caddy
 COPY C-Thread-Pool C-Thread-Pool
+COPY embed embed
 
 RUN --mount=type=secret,id=github-token GITHUB_TOKEN=$(cat /run/secrets/github-token) ./build-static.sh

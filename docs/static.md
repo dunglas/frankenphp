@@ -31,8 +31,6 @@ docker buildx bake --load --set static-builder.args.PHP_EXTENSIONS=opcache,pdo_s
 # ...
 ```
 
-See [the list of supported extensions](https://static-php.dev/en/guide/extensions.html).
-
 To add libraries enabling additional functionality to the extensions you've enabled, you can pass use the `PHP_EXTENSION_LIBS` Docker ARG:
 
 ```console
@@ -42,6 +40,8 @@ docker buildx bake \
   --set static-builder.args.PHP_EXTENSION_LIBS=libjpeg,libwebp \
   static-builder
 ```
+
+See also: [customizing the build](#customizing-the-build)
 
 ### GitHub Token
 
@@ -64,4 +64,15 @@ cd frankenphp
 
 Note: this script also works on Linux (and probably on other Unixes), and is used internally by the Docker based static builder we provide.
 
-See [the list of supported extensions](https://static-php.dev/en/guide/extensions.html).
+## Customizing The Build
+
+The following environment variables can be passed to `docker build` and to the `build-static.sh`
+script to customize the static build:
+
+* `FRANKENPHP_VERSION`: the version of FrankenPHP to use
+* `PHP_VERSION`: the version of PHP to use
+* `PHP_EXTENSIONS`: the PHP extensions to build ([list of supported extensions](https://static-php.dev/en/guide/extensions.html))
+* `PHP_EXTENSION_LIBS`: extra libraries to build that add extra features to the extensions
+* `EMBED`: path of the PHP application to embed in the binary
+* `CLEAN`: when set, libphp and all its dependencies are built from scratch (no cache)
+* `RELEASE`: (maintainers only) when set, the resulting binary will be uploaded on GitHub

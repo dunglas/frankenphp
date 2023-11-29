@@ -152,9 +152,13 @@ func NewRequestWithContext(r *http.Request, opts ...RequestOption) (*http.Reques
 	}
 
 	if fc.documentRoot == "" {
-		var err error
-		if fc.documentRoot, err = os.Getwd(); err != nil {
-			return nil, err
+		if EmbeddedAppPath != "" {
+			fc.documentRoot = EmbeddedAppPath
+		} else {
+			var err error
+			if fc.documentRoot, err = os.Getwd(); err != nil {
+				return nil, err
+			}
 		}
 	}
 
@@ -315,7 +319,10 @@ func Init(options ...Option) error {
 		return err
 	}
 
-	logger.Debug("FrankenPHP started")
+	logger.Info("FrankenPHP started 🐘", zap.String("php_version", Version().Version))
+	if EmbeddedAppPath != "" {
+		logger.Info("embedded PHP app 📦", zap.String("path", EmbeddedAppPath))
+	}
 
 	return nil
 }
@@ -329,6 +336,11 @@ func Shutdown() {
 
 	// Always reset the WaitGroup to ensure we're in a clean state
 	workersReadyWG = sync.WaitGroup{}
+
+	// Remove the installed app
+	if EmbeddedAppPath != "" {
+		os.RemoveAll(EmbeddedAppPath)
+	}
 
 	logger.Debug("FrankenPHP shut down")
 }
