@@ -37,3 +37,7 @@ git commit -S -a -m "chore: prepare release $1" || echo "skip"
 git tag -s -m "Version $1" "v$1"
 git tag -s -m "Version $1" "caddy/v$1"
 git push --follow-tags
+
+if [ "$(uname -s)" = "Darwin" ]; then
+    FRANKENPHP_VERSION=$1 RELEASE=1 ./build-static.sh
+fi
