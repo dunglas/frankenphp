@@ -109,6 +109,7 @@ docker buildx bake -f docker-bake.hcl --pull --no-cache --push
 
 1. Open `.github/workflows/tests.yml`
 2. Enable PHP debug symbols
+
     ```patch
         - uses: shivammathur/setup-php@v2
           # ...
@@ -116,7 +117,9 @@ docker buildx bake -f docker-bake.hcl --pull --no-cache --push
             phpts: ts
     +       debug: true
     ```
+
 3. Enable `tmate` to connect to the container
+
     ```patch
         -
           name: Set CGO flags
@@ -129,19 +132,24 @@ docker buildx bake -f docker-bake.hcl --pull --no-cache --push
     +   -
     +     uses: mxschmitt/action-tmate@v3
     ```
+
 4. Connect to the container
 5. Open `frankenphp.go`
 6. Enable `cgosymbolizer`
+
     ```patch
     -	//_ "github.com/ianlancetaylor/cgosymbolizer"
     +	_ "github.com/ianlancetaylor/cgosymbolizer"
     ```
+
 7. Download the module: `go get`
 8. In the container, you can use GDB and the like:
+
     ```console
     go test -c -ldflags=-w
     gdb --args ./frankenphp.test -test.run ^MyTest$
     ```
+
 9. When the bug is fixed, revert all these changes
 
 ## Misc Dev Resources
@@ -160,7 +168,6 @@ docker buildx bake -f docker-bake.hcl --pull --no-cache --push
 
 * [Bake file definition](https://docs.docker.com/build/customize/bake/file-definition/)
 * [docker buildx build](https://docs.docker.com/engine/reference/commandline/buildx_build/)
-
 
 ## Useful Command
 
