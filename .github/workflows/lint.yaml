@@ -1,3 +1,4 @@
+---
 name: Lint Code Base
 on:
   pull_request:
@@ -32,6 +33,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           LINTER_RULES_PATH: /
           FILTER_REGEX_EXCLUDE: '.*C-Thread-Pool/.*'
+          MARKDOWN_CONFIG_FILE: .markdown-lint.yaml
+          VALIDATE_CPP: false
           VALIDATE_JSCPD: false
           VALIDATE_GO: false
           VALIDATE_PHP_PHPCS: false

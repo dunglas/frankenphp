@@ -5,11 +5,15 @@
 
 Build the dev Docker image:
 
-    docker build -t frankenphp-dev -f dev.Dockerfile .
-    docker run --cap-add=SYS_PTRACE --security-opt seccomp=unconfined -p 8080:8080 -p 443:443 -v $PWD:/go/src/app -it frankenphp-dev
+```console
+docker build -t frankenphp-dev -f dev.Dockerfile .
+docker run --cap-add=SYS_PTRACE --security-opt seccomp=unconfined -p 8080:8080 -p 443:443 -v $PWD:/go/src/app -it frankenphp-dev
+```
 
 The image contains the usual development tools (Go, GDB, Valgrind, Neovim...).  
+
 If docker version is lower than 23.0, build is failed by dockerignore [pattern issue](https://github.com/moby/moby/pull/42676). Add directories to `.dockerignore`.
+
 ```patch
  !testdata/*.php
  !testdata/*.txt
@@ -24,65 +28,79 @@ If docker version is lower than 23.0, build is failed by dockerignore [pattern i
 
 ## Running the test suite
 
-    go test -race -v ./...
+```console
+go test -race -v ./...
+```
 
 ## Caddy module
 
 Build Caddy with the FrankenPHP Caddy module:
 
-    cd caddy/frankenphp/
-    go build
-    cd ../../
+```console
+cd caddy/frankenphp/
+go build
+cd ../../
+```
 
 Run the Caddy with the FrankenPHP Caddy module:
 
-    cd testdata/
-    ../caddy/frankenphp/frankenphp run
+```console
+cd testdata/
+../caddy/frankenphp/frankenphp run
+```
 
 The server is listening on `127.0.0.1:8080`:
 
-    curl -vk https://localhost/phpinfo.php
+```console
+curl -vk https://localhost/phpinfo.php
+```
 
 ## Minimal test server
 
 Build the minimal test server:
 
-    cd internal/testserver/
-    go build
-    cd ../../
+```console
+cd internal/testserver/
+go build
+cd ../../
+```
 
 Run the test server:
 
-    cd testdata/
-    ../internal/testserver/testserver
+```console
+cd testdata/
+../internal/testserver/testserver
+```
 
 The server is listening on `127.0.0.1:8080`:
 
-    curl -v http://127.0.0.1:8080/phpinfo.php
+```console
+curl -v http://127.0.0.1:8080/phpinfo.php
+```
 
 # Building Docker Images Locally
 
 Print bake plan:
 
-```
+```console
 docker buildx bake -f docker-bake.hcl --print
 ```
 
 Build FrankenPHP images for amd64 locally:
 
-```
+```console
 docker buildx bake -f docker-bake.hcl --pull --load --set "*.platform=linux/amd64"
 ```
 
 Build FrankenPHP images for arm64 locally:
 
-```
+```console
 docker buildx bake -f docker-bake.hcl --pull --load --set "*.platform=linux/arm64"
 ```
 
 Build FrankenPHP images from scratch for arm64 & amd64 and push to Docker Hub:
 
-```
+```console
 docker buildx bake -f docker-bake.hcl --pull --no-cache --push
 ```
 
@@ -119,7 +137,7 @@ docker buildx bake -f docker-bake.hcl --pull --no-cache --push
     ```
 7. Download the module: `go get`
 8. In the container, you can use GDB and the like:
-    ```sh
+    ```console
     go test -c -ldflags=-w
     gdb --args ./frankenphp.test -test.run ^MyTest$
     ```
@@ -145,7 +163,7 @@ docker buildx bake -f docker-bake.hcl --pull --no-cache --push
 
 ## Useful Command
 
-```
+```console
 apk add strace util-linux gdb
 strace -e 'trace=!futex,epoll_ctl,epoll_pwait,tgkill,rt_sigreturn' -p 1
 ```
