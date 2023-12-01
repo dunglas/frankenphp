@@ -37,8 +37,8 @@ RUN apk add --no-cache \
     libtool && \
     echo 'set auto-load safe-path /' > /root/.gdbinit
 
-RUN git clone --branch=PHP-8.3 https://github.com/php/php-src.git && \
-    cd php-src && \
+WORKDIR /usr/local/src/php
+RUN git clone --branch=PHP-8.3 https://github.com/php/php-src.git . && \
     # --enable-embed is only necessary to generate libphp.so, we don't use this SAPI directly
     ./buildconf --force && \
     ./configure \
@@ -47,18 +47,19 @@ RUN git clone --branch=PHP-8.3 https://github.com/php/php-src.git && \
         --disable-zend-signals \
         --enable-zend-max-execution-timers \
         --enable-debug && \
-    make -j$(nproc) && \
+    make -j"$(nproc)" && \
     make install && \
     ldconfig /etc/ld.so.conf.d && \
     cp php.ini-development /usr/local/lib/php.ini && \
-    echo -e "zend_extension=opcache.so\nopcache.enable=1" >> /usr/local/lib/php.ini &&\
+    echo "zend_extension=opcache.so" >> /usr/local/lib/php.ini && \
+    echo "opcache.enable=1" >> /usr/local/lib/php.ini && \
     php --version
 
 WORKDIR /go/src/app
-
 COPY . .
 
-RUN cd caddy/frankenphp && \
-    go build
+WORKDIR /go/src/app/caddy/frankenphp
+RUN go build
 
+WORKDIR /go/src/app
 CMD [ "zsh" ]
