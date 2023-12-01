@@ -38,7 +38,7 @@ elif [ -d ".git/" ]; then
     CURRENT_REF="$(git rev-parse --abbrev-ref HEAD)"
     export CURRENT_REF
 
-    if echo "$FRANKENPHP_VERSION" | grep -q "."; then
+    if echo "$FRANKENPHP_VERSION" | grep -F -q "."; then
         # Tag
         git checkout "v$FRANKENPHP_VERSION"
     else
