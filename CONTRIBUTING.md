@@ -1,6 +1,7 @@
 # Contributing
 
 ## Compiling PHP
+
 ### With Docker (Linux)
 
 Build the dev Docker image:
@@ -78,7 +79,7 @@ The server is listening on `127.0.0.1:8080`:
 curl -v http://127.0.0.1:8080/phpinfo.php
 ```
 
-# Building Docker Images Locally
+## Building Docker Images Locally
 
 Print bake plan:
 

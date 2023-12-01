@@ -34,9 +34,9 @@ jobs:
         run: |
           METADATA="$(docker buildx bake --print | jq -c)"
           {
-            echo "metadata="$METADATA""
-            echo "variants="$(jq -c '.group.default.targets|map(sub("runner-|builder-"; ""))|unique' <<< "$METADATA")""
-            echo "platforms="$(jq -c 'first(.target[]) | .platforms' <<< "$METADATA")""
+            echo metadata="$METADATA"
+            echo variants="$(jq -c '.group.default.targets|map(sub("runner-|builder-"; ""))|unique' <<< "$METADATA")"
+            echo platforms="$(jq -c 'first(.target[]) | .platforms' <<< "$METADATA")"
           } >> "$GITHUB_OUTPUT"
         env:
           LATEST: '1' # TODO: unset this variable when releasing the first stable version
@@ -185,7 +185,6 @@ jobs:
           METADATA: ${{needs.prepare.outputs.metadata}}
       -
         name: Inspect image
-        run: |
-          docker buildx imagetools inspect '$(jq -cr '.target."${{matrix.target}}-${{matrix.variant}}".tags | first' <<< "$METADATA")"
+        run: docker buildx imagetools inspect "$(jq -cr '.target."${{matrix.target}}-${{matrix.variant}}".tags | first' <<< "$METADATA")"
         env:
           METADATA: ${{needs.prepare.outputs.metadata}}
