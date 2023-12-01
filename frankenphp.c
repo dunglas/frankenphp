@@ -1,741 +1,760 @@
+#include <SAPI.h>
+#include <Zend/zend_alloc.h>
+#include <Zend/zend_exceptions.h>
+#include <Zend/zend_interfaces.h>
+#include <Zend/zend_types.h>
 #include <errno.h>
+#include <ext/spl/spl_exceptions.h>
+#include <ext/standard/head.h>
+#include <php.h>
+#include <php_config.h>
+#include <php_main.h>
+#include <php_output.h>
+#include <php_variables.h>
+#include <sapi/embed/php_embed.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <php_config.h>
-#include <php.h>
-#include <php_main.h>
-#include <php_variables.h>
-#include <php_output.h>
-#include <SAPI.h>
-#include <Zend/zend_alloc.h>
-#include <Zend/zend_types.h>
-#include <Zend/zend_exceptions.h>
-#include <Zend/zend_interfaces.h>
-#include <sapi/embed/php_embed.h>
-#include <ext/standard/head.h>
-#include <ext/spl/spl_exceptions.h>
 
-#include "C-Thread-Pool/thpool.h"
 #include "C-Thread-Pool/thpool.c"
+#include "C-Thread-Pool/thpool.h"
 
-#include "frankenphp_arginfo.h"
 #include "_cgo_export.h"
+#include "frankenphp_arginfo.h"
 
 #if defined(PHP_WIN32) && defined(ZTS)
 ZEND_TSRMLS_CACHE_DEFINE()
 #endif
 
-/* Timeouts are currently fundamentally broken with ZTS except on Linux: https://bugs.php.net/bug.php?id=79464 */
+/* Timeouts are currently fundamentally broken with ZTS except on Linux:
+ * https://bugs.php.net/bug.php?id=79464 */
 #ifndef ZEND_MAX_EXECUTION_TIMERS
-static const char HARDCODED_INI[] =
-	"max_execution_time=0\n"
-	"max_input_time=-1\n\0";
+static const char HARDCODED_INI[] = "max_execution_time=0\n"
+                                    "max_input_time=-1\n\0";
 #endif
 
-static const char *MODULES_TO_RELOAD[] = {
-	"filter",
-	"session",
-	NULL
-};
+static const char *MODULES_TO_RELOAD[] = {"filter", "session", NULL};
 
 frankenphp_version frankenphp_get_version() {
-	return (frankenphp_version){
-		PHP_MAJOR_VERSION,
-		PHP_MINOR_VERSION,
-		PHP_RELEASE_VERSION,
-		PHP_EXTRA_VERSION,
-		PHP_VERSION,
-		PHP_VERSION_ID,
-	};
+  return (frankenphp_version){
+      PHP_MAJOR_VERSION, PHP_MINOR_VERSION, PHP_RELEASE_VERSION,
+      PHP_EXTRA_VERSION, PHP_VERSION,       PHP_VERSION_ID,
+  };
 }
 
 frankenphp_config frankenphp_get_config() {
-	return (frankenphp_config){
-		frankenphp_get_version(),
+  return (frankenphp_config){
+      frankenphp_get_version(),
 #ifdef ZTS
-		true,
+      true,
 #else
-		false,
+      false,
 #endif
 #ifdef ZEND_SIGNALS
-		true,
+      true,
 #else
-		false,
+      false,
 #endif
 #ifdef ZEND_MAX_EXECUTION_TIMERS
-		true,
+      true,
 #else
-		false,
+      false,
 #endif
-	};
+  };
 }
 
 typedef struct frankenphp_server_context {
-	uintptr_t current_request;
-	uintptr_t main_request;
-	bool worker_ready;
-	char *cookie_data;
-	bool finished;
+  uintptr_t current_request;
+  uintptr_t main_request;
+  bool worker_ready;
+  char *cookie_data;
+  bool finished;
 } frankenphp_server_context;
 
 static uintptr_t frankenphp_clean_server_context() {
-	frankenphp_server_context *ctx = SG(server_context);
-	if (ctx == NULL) {
-		return 0;
-	}
+  frankenphp_server_context *ctx = SG(server_context);
+  if (ctx == NULL) {
+    return 0;
+  }
 
-	free(SG(request_info).auth_password);
-	SG(request_info).auth_password = NULL;
+  free(SG(request_info).auth_password);
+  SG(request_info).auth_password = NULL;
 
-	free(SG(request_info).auth_user);
-	SG(request_info).auth_user = NULL;
+  free(SG(request_info).auth_user);
+  SG(request_info).auth_user = NULL;
 
-	free((char *) SG(request_info).request_method);
-	SG(request_info).request_method = NULL;
+  free((char *)SG(request_info).request_method);
+  SG(request_info).request_method = NULL;
 
-	free(SG(request_info).query_string);
-	SG(request_info).query_string = NULL;
+  free(SG(request_info).query_string);
+  SG(request_info).query_string = NULL;
 
-	free((char *) SG(request_info).content_type);
-	SG(request_info).content_type = NULL;
+  free((char *)SG(request_info).content_type);
+  SG(request_info).content_type = NULL;
 
-	free(SG(request_info).path_translated);
-	SG(request_info).path_translated = NULL;
+  free(SG(request_info).path_translated);
+  SG(request_info).path_translated = NULL;
 
-	free(SG(request_info).request_uri);
-	SG(request_info).request_uri = NULL;
+  free(SG(request_info).request_uri);
+  SG(request_info).request_uri = NULL;
 
-	return ctx->current_request;
+  return ctx->current_request;
 }
 
 static void frankenphp_request_reset() {
-	zend_try {
-		int i;
+  zend_try {
+    int i;
 
-		for (i=0; i<NUM_TRACK_VARS; i++) {
-			zval_ptr_dtor(&PG(http_globals)[i]);
-		}
+    for (i = 0; i < NUM_TRACK_VARS; i++) {
+      zval_ptr_dtor(&PG(http_globals)[i]);
+    }
 
-		memset(&PG(http_globals), 0, sizeof(zval) * NUM_TRACK_VARS);
-	} zend_end_try();
+    memset(&PG(http_globals), 0, sizeof(zval) * NUM_TRACK_VARS);
+  }
+  zend_end_try();
 }
 
 /* Adapted from php_request_shutdown */
 static void frankenphp_worker_request_shutdown() {
-	/* Flush all output buffers */
-	zend_try {
-		php_output_end_all();
-	} zend_end_try();
+  /* Flush all output buffers */
+  zend_try { php_output_end_all(); }
+  zend_end_try();
 
-	// TODO: store the list of modules to reload in a global module variable
-	const char **module_name;
-	zend_module_entry *module;
-	for (module_name = MODULES_TO_RELOAD; *module_name; module_name++) {
-		if ((module = zend_hash_str_find_ptr(&module_registry, *module_name, strlen(*module_name)))) {
-			module->request_shutdown_func(module->type, module->module_number);
-		}
-	}
+  // TODO: store the list of modules to reload in a global module variable
+  const char **module_name;
+  zend_module_entry *module;
+  for (module_name = MODULES_TO_RELOAD; *module_name; module_name++) {
+    if ((module = zend_hash_str_find_ptr(&module_registry, *module_name,
+                                         strlen(*module_name)))) {
+      module->request_shutdown_func(module->type, module->module_number);
+    }
+  }
 
-	/* Shutdown output layer (send the set HTTP headers, cleanup output handlers, etc.) */
-	zend_try {
-		php_output_deactivate();
-	} zend_end_try();
+  /* Shutdown output layer (send the set HTTP headers, cleanup output handlers,
+   * etc.) */
+  zend_try { php_output_deactivate(); }
+  zend_end_try();
 
-	/* Clean super globals */
-	frankenphp_request_reset();
+  /* Clean super globals */
+  frankenphp_request_reset();
 
-	/* SAPI related shutdown (free stuff) */
-	frankenphp_clean_server_context();
-	zend_try {
-		sapi_deactivate();
-	} zend_end_try();
+  /* SAPI related shutdown (free stuff) */
+  frankenphp_clean_server_context();
+  zend_try { sapi_deactivate(); }
+  zend_end_try();
 
-	zend_set_memory_limit(PG(memory_limit));
+  zend_set_memory_limit(PG(memory_limit));
 }
 
 /* Adapted from php_request_startup() */
 static int frankenphp_worker_request_startup() {
-	int retval = SUCCESS;
+  int retval = SUCCESS;
 
-	zend_try {
-		php_output_activate();
+  zend_try {
+    php_output_activate();
 
-		/* initialize global variables */
-		PG(header_is_being_sent) = 0;
-		PG(connection_status) = PHP_CONNECTION_NORMAL;
+    /* initialize global variables */
+    PG(header_is_being_sent) = 0;
+    PG(connection_status) = PHP_CONNECTION_NORMAL;
 
-		/* Keep the current execution context */
-		sapi_activate();
+    /* Keep the current execution context */
+    sapi_activate();
 
-		/*
-		 * Timeouts are currently fundamentally broken with ZTS: https://bugs.php.net/bug.php?id=79464
-		 *
-		 *if (PG(max_input_time) == -1) {
-		 *	zend_set_timeout(EG(timeout_seconds), 1);
-		 *} else {
-		 *	zend_set_timeout(PG(max_input_time), 1);
-		 *}
-		 */
+    /*
+     * Timeouts are currently fundamentally broken with ZTS:
+     *https://bugs.php.net/bug.php?id=79464
+     *
+     *if (PG(max_input_time) == -1) {
+     *	zend_set_timeout(EG(timeout_seconds), 1);
+     *} else {
+     *	zend_set_timeout(PG(max_input_time), 1);
+     *}
+     */
 
-		if (PG(expose_php)) {
-			sapi_add_header(SAPI_PHP_VERSION_HEADER, sizeof(SAPI_PHP_VERSION_HEADER)-1, 1);
-		}
+    if (PG(expose_php)) {
+      sapi_add_header(SAPI_PHP_VERSION_HEADER,
+                      sizeof(SAPI_PHP_VERSION_HEADER) - 1, 1);
+    }
 
-		if (PG(output_handler) && PG(output_handler)[0]) {
-			zval oh;
+    if (PG(output_handler) && PG(output_handler)[0]) {
+      zval oh;
 
-			ZVAL_STRING(&oh, PG(output_handler));
-			php_output_start_user(&oh, 0, PHP_OUTPUT_HANDLER_STDFLAGS);
-			zval_ptr_dtor(&oh);
-		} else if (PG(output_buffering)) {
-			php_output_start_user(NULL, PG(output_buffering) > 1 ? PG(output_buffering) : 0, PHP_OUTPUT_HANDLER_STDFLAGS);
-		} else if (PG(implicit_flush)) {
-			php_output_set_implicit_flush(1);
-		}
+      ZVAL_STRING(&oh, PG(output_handler));
+      php_output_start_user(&oh, 0, PHP_OUTPUT_HANDLER_STDFLAGS);
+      zval_ptr_dtor(&oh);
+    } else if (PG(output_buffering)) {
+      php_output_start_user(NULL,
+                            PG(output_buffering) > 1 ? PG(output_buffering) : 0,
+                            PHP_OUTPUT_HANDLER_STDFLAGS);
+    } else if (PG(implicit_flush)) {
+      php_output_set_implicit_flush(1);
+    }
 
-		php_hash_environment();
+    php_hash_environment();
 
-		zend_is_auto_global(ZSTR_KNOWN(ZEND_STR_AUTOGLOBAL_SERVER));
+    zend_is_auto_global(ZSTR_KNOWN(ZEND_STR_AUTOGLOBAL_SERVER));
 
-		// unfinish the request
-		frankenphp_server_context *ctx = SG(server_context);
-		ctx->finished = false;
+    // unfinish the request
+    frankenphp_server_context *ctx = SG(server_context);
+    ctx->finished = false;
 
-		// TODO: store the list of modules to reload in a global module variable
-		const char **module_name;
-		zend_module_entry *module;
-		for (module_name = MODULES_TO_RELOAD; *module_name; module_name++) {
-			if (
-				(module = zend_hash_str_find_ptr(&module_registry, *module_name, sizeof(*module_name)-1))
-				&& module->request_startup_func
-			) {
-				module->request_startup_func(module->type, module->module_number);
-			}
-		}
-	} zend_catch {
-		retval = FAILURE;
-	} zend_end_try();
+    // TODO: store the list of modules to reload in a global module variable
+    const char **module_name;
+    zend_module_entry *module;
+    for (module_name = MODULES_TO_RELOAD; *module_name; module_name++) {
+      if ((module = zend_hash_str_find_ptr(&module_registry, *module_name,
+                                           sizeof(*module_name) - 1)) &&
+          module->request_startup_func) {
+        module->request_startup_func(module->type, module->module_number);
+      }
+    }
+  }
+  zend_catch { retval = FAILURE; }
+  zend_end_try();
 
-	SG(sapi_started) = 1;
+  SG(sapi_started) = 1;
 
-	return retval;
+  return retval;
 }
 
 PHP_FUNCTION(frankenphp_finish_request) { /* {{{ */
-    if (zend_parse_parameters_none() == FAILURE) {
-		RETURN_THROWS();
-    }
+  if (zend_parse_parameters_none() == FAILURE) {
+    RETURN_THROWS();
+  }
 
-    frankenphp_server_context *ctx = SG(server_context);
+  frankenphp_server_context *ctx = SG(server_context);
 
-    if (ctx->finished) {
-		RETURN_FALSE;
-	}
+  if (ctx->finished) {
+    RETURN_FALSE;
+  }
 
-	php_output_end_all();
-	php_header();
+  php_output_end_all();
+  php_header();
 
-	if (ctx->current_request != 0) {
-		go_frankenphp_finish_request(ctx->main_request, ctx->current_request, false);
-	}
+  if (ctx->current_request != 0) {
+    go_frankenphp_finish_request(ctx->main_request, ctx->current_request,
+                                 false);
+  }
 
-	ctx->finished = true;
+  ctx->finished = true;
 
-	RETURN_TRUE;
+  RETURN_TRUE;
 } /* }}} */
 
 PHP_FUNCTION(frankenphp_handle_request) {
-	zend_fcall_info fci;
-	zend_fcall_info_cache fcc;
+  zend_fcall_info fci;
+  zend_fcall_info_cache fcc;
 
-	ZEND_PARSE_PARAMETERS_START(1, 1)
-		Z_PARAM_FUNC(fci, fcc)
-	ZEND_PARSE_PARAMETERS_END();
+  ZEND_PARSE_PARAMETERS_START(1, 1)
+  Z_PARAM_FUNC(fci, fcc)
+  ZEND_PARSE_PARAMETERS_END();
 
-	frankenphp_server_context *ctx = SG(server_context);
+  frankenphp_server_context *ctx = SG(server_context);
 
-	if (ctx->main_request == 0) {
-		// not a worker, throw an error
-		zend_throw_exception(spl_ce_RuntimeException, "frankenphp_handle_request() called while not in worker mode", 0);
-		RETURN_THROWS();
-	}
+  if (ctx->main_request == 0) {
+    // not a worker, throw an error
+    zend_throw_exception(
+        spl_ce_RuntimeException,
+        "frankenphp_handle_request() called while not in worker mode", 0);
+    RETURN_THROWS();
+  }
 
-	if (!ctx->worker_ready) {
-		/* Clean the first dummy request created to initialize the worker */
-		frankenphp_worker_request_shutdown();
+  if (!ctx->worker_ready) {
+    /* Clean the first dummy request created to initialize the worker */
+    frankenphp_worker_request_shutdown();
 
-		ctx->worker_ready = true;
+    ctx->worker_ready = true;
 
-		/* Mark the worker as ready to handle requests */
-		go_frankenphp_worker_ready();
-	}
-
-#ifdef ZEND_MAX_EXECUTION_TIMERS
-	// Disable timeouts while waiting for a request to handle
-	zend_unset_timeout();
-#endif
-
-	uintptr_t request = go_frankenphp_worker_handle_request_start(ctx->main_request);
-	if (
-		frankenphp_worker_request_startup() == FAILURE
-			/* Shutting down */
-			|| !request
-	) {
-		RETURN_FALSE;
-	}
+    /* Mark the worker as ready to handle requests */
+    go_frankenphp_worker_ready();
+  }
 
 #ifdef ZEND_MAX_EXECUTION_TIMERS
-	// Reset default timeout
-	// TODO: add support for max_input_time
-	zend_set_timeout(INI_INT("max_execution_time"), 0);
+  // Disable timeouts while waiting for a request to handle
+  zend_unset_timeout();
 #endif
 
-	/* Call the PHP func */
-	zval retval = {0};
-	fci.size = sizeof fci;
-	fci.retval = &retval;
-	if (zend_call_function(&fci, &fcc) == SUCCESS) {
-		zval_ptr_dtor(&retval);
-	}
+  uintptr_t request =
+      go_frankenphp_worker_handle_request_start(ctx->main_request);
+  if (frankenphp_worker_request_startup() == FAILURE
+      /* Shutting down */
+      || !request) {
+    RETURN_FALSE;
+  }
 
-	/* If an exception occured, print the message to the client before closing the connection */
-	if (EG(exception)) {
-		zend_exception_error(EG(exception), E_ERROR);
-	}
+#ifdef ZEND_MAX_EXECUTION_TIMERS
+  // Reset default timeout
+  // TODO: add support for max_input_time
+  zend_set_timeout(INI_INT("max_execution_time"), 0);
+#endif
 
-	frankenphp_worker_request_shutdown();
-	ctx->current_request = 0;
-	go_frankenphp_finish_request(ctx->main_request, request, true);
+  /* Call the PHP func */
+  zval retval = {0};
+  fci.size = sizeof fci;
+  fci.retval = &retval;
+  if (zend_call_function(&fci, &fcc) == SUCCESS) {
+    zval_ptr_dtor(&retval);
+  }
 
-	RETURN_TRUE;
+  /* If an exception occured, print the message to the client before closing the
+   * connection */
+  if (EG(exception)) {
+    zend_exception_error(EG(exception), E_ERROR);
+  }
+
+  frankenphp_worker_request_shutdown();
+  ctx->current_request = 0;
+  go_frankenphp_finish_request(ctx->main_request, request, true);
+
+  RETURN_TRUE;
 }
 
 PHP_FUNCTION(headers_send) {
-	zend_long response_code = 200;
+  zend_long response_code = 200;
 
-	ZEND_PARSE_PARAMETERS_START(0, 1)
-		Z_PARAM_OPTIONAL
-		Z_PARAM_LONG(response_code)
-	ZEND_PARSE_PARAMETERS_END();
+  ZEND_PARSE_PARAMETERS_START(0, 1)
+  Z_PARAM_OPTIONAL
+  Z_PARAM_LONG(response_code)
+  ZEND_PARSE_PARAMETERS_END();
 
-	int previous_status_code = SG(sapi_headers).http_response_code;
-	SG(sapi_headers).http_response_code = response_code;
+  int previous_status_code = SG(sapi_headers).http_response_code;
+  SG(sapi_headers).http_response_code = response_code;
 
-	if (response_code >= 100 && response_code < 200) {
-		int ret = sapi_module.send_headers(&SG(sapi_headers));
-		SG(sapi_headers).http_response_code = previous_status_code;
+  if (response_code >= 100 && response_code < 200) {
+    int ret = sapi_module.send_headers(&SG(sapi_headers));
+    SG(sapi_headers).http_response_code = previous_status_code;
 
-		RETURN_LONG(ret);
-	}
-	
-	RETURN_LONG(sapi_send_headers());
+    RETURN_LONG(ret);
+  }
+
+  RETURN_LONG(sapi_send_headers());
 }
 
 static zend_module_entry frankenphp_module = {
     STANDARD_MODULE_HEADER,
     "frankenphp",
-    ext_functions,	/* function table */
-    NULL,			/* initialization */
-    NULL,			/* shutdown */
-    NULL,			/* request initialization */
-    NULL,			/* request shutdown */
-    NULL,			/* information */
+    ext_functions, /* function table */
+    NULL,          /* initialization */
+    NULL,          /* shutdown */
+    NULL,          /* request initialization */
+    NULL,          /* request shutdown */
+    NULL,          /* information */
     TOSTRING(FRANKENPHP_VERSION),
-    STANDARD_MODULE_PROPERTIES
-};
+    STANDARD_MODULE_PROPERTIES};
 
-static uintptr_t frankenphp_request_shutdown()
-{
-	frankenphp_server_context *ctx = SG(server_context);
+static uintptr_t frankenphp_request_shutdown() {
+  frankenphp_server_context *ctx = SG(server_context);
 
-	if (ctx->main_request && ctx->current_request) {
-		frankenphp_request_reset();
-	}
+  if (ctx->main_request && ctx->current_request) {
+    frankenphp_request_reset();
+  }
 
-	php_request_shutdown((void *) 0);
+  php_request_shutdown((void *)0);
 
-	free(ctx->cookie_data);
-	((frankenphp_server_context*) SG(server_context))->cookie_data = NULL;
-	uintptr_t rh = frankenphp_clean_server_context();
+  free(ctx->cookie_data);
+  ((frankenphp_server_context *)SG(server_context))->cookie_data = NULL;
+  uintptr_t rh = frankenphp_clean_server_context();
 
-	free(ctx);
-	SG(server_context) = NULL;
+  free(ctx);
+  SG(server_context) = NULL;
 
 #if defined(ZTS)
-	ts_free_thread();
+  ts_free_thread();
 #endif
 
-	return rh;
+  return rh;
 }
 
 int frankenphp_update_server_context(
-	bool create,
-	uintptr_t current_request,
-	uintptr_t main_request,
+    bool create, uintptr_t current_request, uintptr_t main_request,
 
-	const char *request_method,
-	char *query_string,
-	zend_long content_length,
-	char *path_translated,
-	char *request_uri,
-	const char *content_type,
-	char *auth_user,
-	char *auth_password,
-	int proto_num
-) {
-	frankenphp_server_context *ctx;
+    const char *request_method, char *query_string, zend_long content_length,
+    char *path_translated, char *request_uri, const char *content_type,
+    char *auth_user, char *auth_password, int proto_num) {
+  frankenphp_server_context *ctx;
 
-	if (create) {
+  if (create) {
 #ifdef ZTS
-		/* initial resource fetch */
-		(void)ts_resource(0);
-# ifdef PHP_WIN32
-		ZEND_TSRMLS_CACHE_UPDATE();
-# endif
+    /* initial resource fetch */
+    (void)ts_resource(0);
+#ifdef PHP_WIN32
+    ZEND_TSRMLS_CACHE_UPDATE();
+#endif
 #endif
 
-		/* todo: use a pool */
-		ctx = (frankenphp_server_context *) calloc(1, sizeof(frankenphp_server_context));
-		if (ctx == NULL) {
-			return FAILURE;
-		}
+    /* todo: use a pool */
+    ctx = (frankenphp_server_context *)calloc(
+        1, sizeof(frankenphp_server_context));
+    if (ctx == NULL) {
+      return FAILURE;
+    }
 
-		ctx->cookie_data = NULL;
-		ctx->finished = false;
+    ctx->cookie_data = NULL;
+    ctx->finished = false;
 
-		SG(server_context) = ctx;
-	} else {
-		ctx = (frankenphp_server_context *) SG(server_context);
-	}
+    SG(server_context) = ctx;
+  } else {
+    ctx = (frankenphp_server_context *)SG(server_context);
+  }
 
-	ctx->main_request = main_request;
-	ctx->current_request = current_request;
+  ctx->main_request = main_request;
+  ctx->current_request = current_request;
 
-	SG(request_info).auth_password = auth_password;
-	SG(request_info).auth_user = auth_user;
-	SG(request_info).request_method = request_method;
-	SG(request_info).query_string = query_string;
-	SG(request_info).content_type = content_type;
-	SG(request_info).content_length = content_length;
-	SG(request_info).path_translated = path_translated;
-	SG(request_info).request_uri = request_uri;
-	SG(request_info).proto_num = proto_num;
+  SG(request_info).auth_password = auth_password;
+  SG(request_info).auth_user = auth_user;
+  SG(request_info).request_method = request_method;
+  SG(request_info).query_string = query_string;
+  SG(request_info).content_type = content_type;
+  SG(request_info).content_length = content_length;
+  SG(request_info).path_translated = path_translated;
+  SG(request_info).request_uri = request_uri;
+  SG(request_info).proto_num = proto_num;
 
-	return SUCCESS;
+  return SUCCESS;
 }
 
-static int frankenphp_startup(sapi_module_struct *sapi_module)
-{
-	return php_module_startup(sapi_module, &frankenphp_module);
+static int frankenphp_startup(sapi_module_struct *sapi_module) {
+  return php_module_startup(sapi_module, &frankenphp_module);
 }
 
-static int frankenphp_deactivate(void)
-{
-    /* TODO: flush everything */
-    return SUCCESS;
+static int frankenphp_deactivate(void) {
+  /* TODO: flush everything */
+  return SUCCESS;
 }
 
-static size_t frankenphp_ub_write(const char *str, size_t str_length)
-{
-	frankenphp_server_context* ctx = SG(server_context);
+static size_t frankenphp_ub_write(const char *str, size_t str_length) {
+  frankenphp_server_context *ctx = SG(server_context);
 
-	if(ctx->finished) {
-		// TODO: maybe log a warning that we tried to write to a finished request?
-		return 0;
-	}
+  if (ctx->finished) {
+    // TODO: maybe log a warning that we tried to write to a finished request?
+    return 0;
+  }
 
-	struct go_ub_write_return result = go_ub_write(ctx->current_request ? ctx->current_request : ctx->main_request, (char *) str, str_length);
+  struct go_ub_write_return result = go_ub_write(
+      ctx->current_request ? ctx->current_request : ctx->main_request,
+      (char *)str, str_length);
 
-	if (result.r1) {
-		php_handle_aborted_connection();
-	}
+  if (result.r1) {
+    php_handle_aborted_connection();
+  }
 
-	return result.r0;
+  return result.r0;
 }
 
-static int frankenphp_send_headers(sapi_headers_struct *sapi_headers)
-{
-	if (SG(request_info).no_headers == 1) {
-		return SAPI_HEADER_SENT_SUCCESSFULLY;
-	}
+static int frankenphp_send_headers(sapi_headers_struct *sapi_headers) {
+  if (SG(request_info).no_headers == 1) {
+    return SAPI_HEADER_SENT_SUCCESSFULLY;
+  }
 
-	int status;
-	frankenphp_server_context* ctx = SG(server_context);
+  int status;
+  frankenphp_server_context *ctx = SG(server_context);
 
-	if (ctx->current_request == 0) {
-		return SAPI_HEADER_SEND_FAILED;
-	}
+  if (ctx->current_request == 0) {
+    return SAPI_HEADER_SEND_FAILED;
+  }
 
-	if (SG(sapi_headers).http_status_line) {
-		status = atoi((SG(sapi_headers).http_status_line) + 9);
-	} else {
-		status = SG(sapi_headers).http_response_code;
+  if (SG(sapi_headers).http_status_line) {
+    status = atoi((SG(sapi_headers).http_status_line) + 9);
+  } else {
+    status = SG(sapi_headers).http_response_code;
 
-		if (!status) {
-			status = 200;
-		}
-	}
+    if (!status) {
+      status = 200;
+    }
+  }
 
-	go_write_headers(ctx->current_request, status, &sapi_headers->headers);
+  go_write_headers(ctx->current_request, status, &sapi_headers->headers);
 
-	return SAPI_HEADER_SENT_SUCCESSFULLY;
+  return SAPI_HEADER_SENT_SUCCESSFULLY;
 }
 
-static void frankenphp_sapi_flush(void *server_context)
-{
-	frankenphp_server_context *ctx = (frankenphp_server_context *) server_context;
+static void frankenphp_sapi_flush(void *server_context) {
+  frankenphp_server_context *ctx = (frankenphp_server_context *)server_context;
 
-	if (ctx && ctx->current_request != 0 && go_sapi_flush(ctx->current_request)) {
-		php_handle_aborted_connection();
-	}
+  if (ctx && ctx->current_request != 0 && go_sapi_flush(ctx->current_request)) {
+    php_handle_aborted_connection();
+  }
 }
 
-static size_t frankenphp_read_post(char *buffer, size_t count_bytes)
-{
-	frankenphp_server_context* ctx = SG(server_context);
+static size_t frankenphp_read_post(char *buffer, size_t count_bytes) {
+  frankenphp_server_context *ctx = SG(server_context);
 
-	return ctx->current_request ? go_read_post(ctx->current_request, buffer, count_bytes) : 0;
+  return ctx->current_request
+             ? go_read_post(ctx->current_request, buffer, count_bytes)
+             : 0;
 }
 
-static char* frankenphp_read_cookies(void)
-{
-	frankenphp_server_context* ctx = SG(server_context);
+static char *frankenphp_read_cookies(void) {
+  frankenphp_server_context *ctx = SG(server_context);
 
-	if (ctx->current_request == 0) {
-		return "";
-	}
+  if (ctx->current_request == 0) {
+    return "";
+  }
 
-	ctx->cookie_data = go_read_cookies(ctx->current_request);
+  ctx->cookie_data = go_read_cookies(ctx->current_request);
 
-	return ctx->cookie_data;
+  return ctx->cookie_data;
 }
 
-static void frankenphp_register_known_variable(const char *key, char *value, zval *track_vars_array, bool f)
-{
-	if (value == NULL) {
-		return;
-	}
+static void frankenphp_register_known_variable(const char *key, char *value,
+                                               zval *track_vars_array, bool f) {
+  if (value == NULL) {
+    return;
+  }
 
-	size_t new_val_len;	
-	if (sapi_module.input_filter(PARSE_SERVER, key, &value, strlen(value), &new_val_len)) {
-		php_register_variable_safe(key, value, new_val_len, track_vars_array);
-	}
+  size_t new_val_len;
+  if (sapi_module.input_filter(PARSE_SERVER, key, &value, strlen(value),
+                               &new_val_len)) {
+    php_register_variable_safe(key, value, new_val_len, track_vars_array);
+  }
 
-	if (f) {
-		free(value);
-		value = NULL;
-	}
+  if (f) {
+    free(value);
+    value = NULL;
+  }
 }
 
-void frankenphp_register_bulk_variables(char *known_variables[27], char **dynamic_variables, size_t size, zval *track_vars_array)
-{
-	/* Not used, but must be present */
-	frankenphp_register_known_variable("AUTH_TYPE", "", track_vars_array, false);
-	frankenphp_register_known_variable("REMOTE_IDENT", "", track_vars_array, false);
+void frankenphp_register_bulk_variables(char *known_variables[27],
+                                        char **dynamic_variables, size_t size,
+                                        zval *track_vars_array) {
+  /* Not used, but must be present */
+  frankenphp_register_known_variable("AUTH_TYPE", "", track_vars_array, false);
+  frankenphp_register_known_variable("REMOTE_IDENT", "", track_vars_array,
+                                     false);
 
-	/* Allocated in frankenphp_update_server_context() */
-	frankenphp_register_known_variable("CONTENT_TYPE", (char *) SG(request_info).content_type, track_vars_array, false);
-	frankenphp_register_known_variable("PATH_TRANSLATED", (char *) SG(request_info).path_translated, track_vars_array, false);
-	frankenphp_register_known_variable("QUERY_STRING", SG(request_info).query_string, track_vars_array, false);
-	frankenphp_register_known_variable("REMOTE_USER", (char *) SG(request_info).auth_user, track_vars_array, false);
-	frankenphp_register_known_variable("REQUEST_METHOD", (char *) SG(request_info).request_method, track_vars_array, false);
-	frankenphp_register_known_variable("REQUEST_URI", SG(request_info).request_uri, track_vars_array,false);
+  /* Allocated in frankenphp_update_server_context() */
+  frankenphp_register_known_variable("CONTENT_TYPE",
+                                     (char *)SG(request_info).content_type,
+                                     track_vars_array, false);
+  frankenphp_register_known_variable("PATH_TRANSLATED",
+                                     (char *)SG(request_info).path_translated,
+                                     track_vars_array, false);
+  frankenphp_register_known_variable(
+      "QUERY_STRING", SG(request_info).query_string, track_vars_array, false);
+  frankenphp_register_known_variable("REMOTE_USER",
+                                     (char *)SG(request_info).auth_user,
+                                     track_vars_array, false);
+  frankenphp_register_known_variable("REQUEST_METHOD",
+                                     (char *)SG(request_info).request_method,
+                                     track_vars_array, false);
+  frankenphp_register_known_variable(
+      "REQUEST_URI", SG(request_info).request_uri, track_vars_array, false);
 
-	/* Known variables */
-	frankenphp_register_known_variable("CONTENT_LENGTH", known_variables[0], track_vars_array, true);
-	frankenphp_register_known_variable("DOCUMENT_ROOT", known_variables[1], track_vars_array, true);
-	frankenphp_register_known_variable("DOCUMENT_URI", known_variables[2], track_vars_array, true);
-	frankenphp_register_known_variable("GATEWAY_INTERFACE", known_variables[3], track_vars_array, true);
-	frankenphp_register_known_variable("HTTP_HOST", known_variables[4], track_vars_array, true);
-	frankenphp_register_known_variable("HTTPS", known_variables[5], track_vars_array, true);
-	frankenphp_register_known_variable("PATH_INFO", known_variables[6], track_vars_array, true);
-	frankenphp_register_known_variable("PHP_SELF", known_variables[7], track_vars_array, true);
-	frankenphp_register_known_variable("REMOTE_ADDR", known_variables[8], track_vars_array, known_variables[8] != known_variables[9]);
-	frankenphp_register_known_variable("REMOTE_HOST", known_variables[9], track_vars_array, true);
-	frankenphp_register_known_variable("REMOTE_PORT", known_variables[10], track_vars_array, true);
-	frankenphp_register_known_variable("REQUEST_SCHEME", known_variables[11], track_vars_array, true);
-	frankenphp_register_known_variable("SCRIPT_FILENAME", known_variables[12], track_vars_array, true);
-	frankenphp_register_known_variable("SCRIPT_NAME", known_variables[13], track_vars_array, true);
-	frankenphp_register_known_variable("SERVER_NAME", known_variables[14], track_vars_array, true);
-	frankenphp_register_known_variable("SERVER_PORT", known_variables[15], track_vars_array, true);
-	frankenphp_register_known_variable("SERVER_PROTOCOL", known_variables[16], track_vars_array, true);
-	frankenphp_register_known_variable("SERVER_SOFTWARE", known_variables[17], track_vars_array, true);
-	frankenphp_register_known_variable("SSL_PROTOCOL", known_variables[18], track_vars_array, true);
+  /* Known variables */
+  frankenphp_register_known_variable("CONTENT_LENGTH", known_variables[0],
+                                     track_vars_array, true);
+  frankenphp_register_known_variable("DOCUMENT_ROOT", known_variables[1],
+                                     track_vars_array, true);
+  frankenphp_register_known_variable("DOCUMENT_URI", known_variables[2],
+                                     track_vars_array, true);
+  frankenphp_register_known_variable("GATEWAY_INTERFACE", known_variables[3],
+                                     track_vars_array, true);
+  frankenphp_register_known_variable("HTTP_HOST", known_variables[4],
+                                     track_vars_array, true);
+  frankenphp_register_known_variable("HTTPS", known_variables[5],
+                                     track_vars_array, true);
+  frankenphp_register_known_variable("PATH_INFO", known_variables[6],
+                                     track_vars_array, true);
+  frankenphp_register_known_variable("PHP_SELF", known_variables[7],
+                                     track_vars_array, true);
+  frankenphp_register_known_variable("REMOTE_ADDR", known_variables[8],
+                                     track_vars_array,
+                                     known_variables[8] != known_variables[9]);
+  frankenphp_register_known_variable("REMOTE_HOST", known_variables[9],
+                                     track_vars_array, true);
+  frankenphp_register_known_variable("REMOTE_PORT", known_variables[10],
+                                     track_vars_array, true);
+  frankenphp_register_known_variable("REQUEST_SCHEME", known_variables[11],
+                                     track_vars_array, true);
+  frankenphp_register_known_variable("SCRIPT_FILENAME", known_variables[12],
+                                     track_vars_array, true);
+  frankenphp_register_known_variable("SCRIPT_NAME", known_variables[13],
+                                     track_vars_array, true);
+  frankenphp_register_known_variable("SERVER_NAME", known_variables[14],
+                                     track_vars_array, true);
+  frankenphp_register_known_variable("SERVER_PORT", known_variables[15],
+                                     track_vars_array, true);
+  frankenphp_register_known_variable("SERVER_PROTOCOL", known_variables[16],
+                                     track_vars_array, true);
+  frankenphp_register_known_variable("SERVER_SOFTWARE", known_variables[17],
+                                     track_vars_array, true);
+  frankenphp_register_known_variable("SSL_PROTOCOL", known_variables[18],
+                                     track_vars_array, true);
 
-	size_t new_val_len;	
-	for (size_t i = 0; i < size; i = i+2)
-	{
-		if (sapi_module.input_filter(PARSE_SERVER, dynamic_variables[i], &dynamic_variables[i+1], strlen(dynamic_variables[i+1]), &new_val_len)) {
-			php_register_variable_safe(dynamic_variables[i], dynamic_variables[i+1], new_val_len, track_vars_array);
-		}
+  size_t new_val_len;
+  for (size_t i = 0; i < size; i = i + 2) {
+    if (sapi_module.input_filter(
+            PARSE_SERVER, dynamic_variables[i], &dynamic_variables[i + 1],
+            strlen(dynamic_variables[i + 1]), &new_val_len)) {
+      php_register_variable_safe(dynamic_variables[i], dynamic_variables[i + 1],
+                                 new_val_len, track_vars_array);
+    }
 
-		free(dynamic_variables[i]);
-		free(dynamic_variables[i+1]);
-	}
+    free(dynamic_variables[i]);
+    free(dynamic_variables[i + 1]);
+  }
 
-	free(dynamic_variables);
+  free(dynamic_variables);
 }
 
-static void frankenphp_register_variables(zval *track_vars_array)
-{
-	/* https://www.php.net/manual/en/reserved.variables.server.php */
-	frankenphp_server_context* ctx = SG(server_context);
+static void frankenphp_register_variables(zval *track_vars_array) {
+  /* https://www.php.net/manual/en/reserved.variables.server.php */
+  frankenphp_server_context *ctx = SG(server_context);
 
-	go_register_variables(ctx->current_request ? ctx->current_request : ctx->main_request, track_vars_array);
+  go_register_variables(ctx->current_request ? ctx->current_request
+                                             : ctx->main_request,
+                        track_vars_array);
 }
 
-static void frankenphp_log_message(const char *message, int syslog_type_int)
-{
-	go_log((char *) message, syslog_type_int);
+static void frankenphp_log_message(const char *message, int syslog_type_int) {
+  go_log((char *)message, syslog_type_int);
 }
 
 sapi_module_struct frankenphp_sapi_module = {
-	"frankenphp",                       /* name */
-	"FrankenPHP", 						/* pretty name */
+    "frankenphp", /* name */
+    "FrankenPHP", /* pretty name */
 
-	frankenphp_startup,                 /* startup */
-	php_module_shutdown_wrapper,        /* shutdown */
+    frankenphp_startup,          /* startup */
+    php_module_shutdown_wrapper, /* shutdown */
 
-	NULL,                               /* activate */
-	frankenphp_deactivate,              /* deactivate */
+    NULL,                  /* activate */
+    frankenphp_deactivate, /* deactivate */
 
-	frankenphp_ub_write,                /* unbuffered write */
-	frankenphp_sapi_flush,              /* flush */
-	NULL,                               /* get uid */
-	NULL,                               /* getenv */
+    frankenphp_ub_write,   /* unbuffered write */
+    frankenphp_sapi_flush, /* flush */
+    NULL,                  /* get uid */
+    NULL,                  /* getenv */
 
-	php_error,                          /* error handler */
+    php_error, /* error handler */
 
-	NULL,                               /* header handler */
-	frankenphp_send_headers,            /* send headers handler */
-	NULL,            				    /* send header handler */
+    NULL,                    /* header handler */
+    frankenphp_send_headers, /* send headers handler */
+    NULL,                    /* send header handler */
 
-	frankenphp_read_post,               /* read POST data */
-	frankenphp_read_cookies,            /* read Cookies */
+    frankenphp_read_post,    /* read POST data */
+    frankenphp_read_cookies, /* read Cookies */
 
-	frankenphp_register_variables,      /* register server variables */
-	frankenphp_log_message,             /* Log message */
-	NULL,							    /* Get request time */
-	NULL,							    /* Child terminate */
+    frankenphp_register_variables, /* register server variables */
+    frankenphp_log_message,        /* Log message */
+    NULL,                          /* Get request time */
+    NULL,                          /* Child terminate */
 
-	STANDARD_SAPI_MODULE_PROPERTIES
-};
+    STANDARD_SAPI_MODULE_PROPERTIES};
 
 static void *manager_thread(void *arg) {
 #ifdef ZTS
-	// TODO: use tsrm_startup() directly as we know the number of expected threads
-	php_tsrm_startup();
-	/*tsrm_error_set(TSRM_ERROR_LEVEL_INFO, NULL);*/
-# ifdef PHP_WIN32
-	ZEND_TSRMLS_CACHE_UPDATE();
-# endif
+  // TODO: use tsrm_startup() directly as we know the number of expected threads
+  php_tsrm_startup();
+  /*tsrm_error_set(TSRM_ERROR_LEVEL_INFO, NULL);*/
+#ifdef PHP_WIN32
+  ZEND_TSRMLS_CACHE_UPDATE();
+#endif
 #endif
 
-    sapi_startup(&frankenphp_sapi_module);
+  sapi_startup(&frankenphp_sapi_module);
 
 #ifndef ZEND_MAX_EXECUTION_TIMERS
-# if (PHP_VERSION_ID >= 80300)
-	frankenphp_sapi_module.ini_entries = HARDCODED_INI;
-# else
-	frankenphp_sapi_module.ini_entries = malloc(sizeof(HARDCODED_INI));
-	memcpy(frankenphp_sapi_module.ini_entries, HARDCODED_INI, sizeof(HARDCODED_INI));
-# endif
+#if (PHP_VERSION_ID >= 80300)
+  frankenphp_sapi_module.ini_entries = HARDCODED_INI;
+#else
+  frankenphp_sapi_module.ini_entries = malloc(sizeof(HARDCODED_INI));
+  memcpy(frankenphp_sapi_module.ini_entries, HARDCODED_INI,
+         sizeof(HARDCODED_INI));
+#endif
 #endif
 
-	frankenphp_sapi_module.startup(&frankenphp_sapi_module);
+  frankenphp_sapi_module.startup(&frankenphp_sapi_module);
 
-	threadpool thpool = thpool_init(*((int *) arg));
-	free(arg);
+  threadpool thpool = thpool_init(*((int *)arg));
+  free(arg);
 
-	uintptr_t rh;
-	while ((rh = go_fetch_request())) {
-		thpool_add_work(thpool, go_execute_script, (void *) rh);
-	}
+  uintptr_t rh;
+  while ((rh = go_fetch_request())) {
+    thpool_add_work(thpool, go_execute_script, (void *)rh);
+  }
 
-	/* channel closed, shutdown gracefully */
-	thpool_wait(thpool);
-	thpool_destroy(thpool);
+  /* channel closed, shutdown gracefully */
+  thpool_wait(thpool);
+  thpool_destroy(thpool);
 
-	frankenphp_sapi_module.shutdown(&frankenphp_sapi_module);
+  frankenphp_sapi_module.shutdown(&frankenphp_sapi_module);
 
-	sapi_shutdown();
+  sapi_shutdown();
 #ifdef ZTS
-	tsrm_shutdown();
+  tsrm_shutdown();
 #endif
 
 #if (PHP_VERSION_ID < 80300)
-	if (frankenphp_sapi_module.ini_entries) {
-		free(frankenphp_sapi_module.ini_entries);
-		frankenphp_sapi_module.ini_entries = NULL;
-	}
+  if (frankenphp_sapi_module.ini_entries) {
+    free(frankenphp_sapi_module.ini_entries);
+    frankenphp_sapi_module.ini_entries = NULL;
+  }
 #endif
 
-	go_shutdown();
+  go_shutdown();
 
-	return NULL;
+  return NULL;
 }
 
 int frankenphp_init(int num_threads) {
-	pthread_t thread;
+  pthread_t thread;
 
-	int *num_threads_ptr = calloc(1, sizeof(int));
-	*num_threads_ptr = num_threads;
+  int *num_threads_ptr = calloc(1, sizeof(int));
+  *num_threads_ptr = num_threads;
 
-    if (pthread_create(&thread, NULL, *manager_thread, (void *) num_threads_ptr) != 0) {
-		go_shutdown();
+  if (pthread_create(&thread, NULL, *manager_thread, (void *)num_threads_ptr) !=
+      0) {
+    go_shutdown();
 
-		return -1;
-	}
+    return -1;
+  }
 
-	return pthread_detach(thread);
+  return pthread_detach(thread);
 }
 
-int frankenphp_request_startup()
-{
-	if (php_request_startup() == SUCCESS) {
-		return SUCCESS;
-	}
+int frankenphp_request_startup() {
+  if (php_request_startup() == SUCCESS) {
+    return SUCCESS;
+  }
 
-	frankenphp_server_context *ctx = SG(server_context);
-	SG(server_context) = NULL;
-	free(ctx);
+  frankenphp_server_context *ctx = SG(server_context);
+  SG(server_context) = NULL;
+  free(ctx);
 
-	php_request_shutdown((void *) 0);
+  php_request_shutdown((void *)0);
 
-	return FAILURE;
+  return FAILURE;
 }
 
-int frankenphp_execute_script(char* file_name)
-{
-	if (frankenphp_request_startup() == FAILURE) {
-		free(file_name);
+int frankenphp_execute_script(char *file_name) {
+  if (frankenphp_request_startup() == FAILURE) {
+    free(file_name);
 
-		return FAILURE;
-	}
+    return FAILURE;
+  }
 
-	int status = SUCCESS;
+  int status = SUCCESS;
 
-	zend_file_handle file_handle;
-	zend_stream_init_filename(&file_handle, file_name);
-	free(file_name);
+  zend_file_handle file_handle;
+  zend_stream_init_filename(&file_handle, file_name);
+  free(file_name);
 
-	file_handle.primary_script = 1;
+  file_handle.primary_script = 1;
 
-	zend_first_try {
-		EG(exit_status) = 0;
-		php_execute_script(&file_handle);
-		status = EG(exit_status);
-	} zend_catch {
-		status = EG(exit_status);
-	} zend_end_try();
+  zend_first_try {
+    EG(exit_status) = 0;
+    php_execute_script(&file_handle);
+    status = EG(exit_status);
+  }
+  zend_catch { status = EG(exit_status); }
+  zend_end_try();
 
-	zend_destroy_file_handle(&file_handle);
+  zend_destroy_file_handle(&file_handle);
 
-	frankenphp_clean_server_context();
-	frankenphp_request_shutdown();
+  frankenphp_clean_server_context();
+  frankenphp_request_shutdown();
 
-	return status;
+  return status;
 }
 
 // Use global variables to store CLI arguments to prevent useless allocations
@@ -743,128 +762,141 @@ static char *cli_script;
 static int cli_argc;
 static char **cli_argv;
 
-// Adapted from https://github.com/php/php-src/sapi/cli/php_cli.c (The PHP Group, The PHP License)
+// Adapted from https://github.com/php/php-src/sapi/cli/php_cli.c (The PHP
+// Group, The PHP License)
 static void cli_register_file_handles(bool no_close) /* {{{ */
 {
-	php_stream *s_in, *s_out, *s_err;
-	php_stream_context *sc_in=NULL, *sc_out=NULL, *sc_err=NULL;
-	zend_constant ic, oc, ec;
+  php_stream *s_in, *s_out, *s_err;
+  php_stream_context *sc_in = NULL, *sc_out = NULL, *sc_err = NULL;
+  zend_constant ic, oc, ec;
 
-	s_in  = php_stream_open_wrapper_ex("php://stdin",  "rb", 0, NULL, sc_in);
-	s_out = php_stream_open_wrapper_ex("php://stdout", "wb", 0, NULL, sc_out);
-	s_err = php_stream_open_wrapper_ex("php://stderr", "wb", 0, NULL, sc_err);
+  s_in = php_stream_open_wrapper_ex("php://stdin", "rb", 0, NULL, sc_in);
+  s_out = php_stream_open_wrapper_ex("php://stdout", "wb", 0, NULL, sc_out);
+  s_err = php_stream_open_wrapper_ex("php://stderr", "wb", 0, NULL, sc_err);
 
-	if (s_in==NULL || s_out==NULL || s_err==NULL) {
-		if (s_in) php_stream_close(s_in);
-		if (s_out) php_stream_close(s_out);
-		if (s_err) php_stream_close(s_err);
-		return;
-	}
+  if (s_in == NULL || s_out == NULL || s_err == NULL) {
+    if (s_in)
+      php_stream_close(s_in);
+    if (s_out)
+      php_stream_close(s_out);
+    if (s_err)
+      php_stream_close(s_err);
+    return;
+  }
 
-	if (no_close) {
-		s_in->flags |= PHP_STREAM_FLAG_NO_CLOSE;
-		s_out->flags |= PHP_STREAM_FLAG_NO_CLOSE;
-		s_err->flags |= PHP_STREAM_FLAG_NO_CLOSE;
-	}
+  if (no_close) {
+    s_in->flags |= PHP_STREAM_FLAG_NO_CLOSE;
+    s_out->flags |= PHP_STREAM_FLAG_NO_CLOSE;
+    s_err->flags |= PHP_STREAM_FLAG_NO_CLOSE;
+  }
 
-	//s_in_process = s_in;
+  // s_in_process = s_in;
 
-	php_stream_to_zval(s_in,  &ic.value);
-	php_stream_to_zval(s_out, &oc.value);
-	php_stream_to_zval(s_err, &ec.value);
+  php_stream_to_zval(s_in, &ic.value);
+  php_stream_to_zval(s_out, &oc.value);
+  php_stream_to_zval(s_err, &ec.value);
 
-	ZEND_CONSTANT_SET_FLAGS(&ic, CONST_CS, 0);
-	ic.name = zend_string_init_interned("STDIN", sizeof("STDIN")-1, 0);
-	zend_register_constant(&ic);
+  ZEND_CONSTANT_SET_FLAGS(&ic, CONST_CS, 0);
+  ic.name = zend_string_init_interned("STDIN", sizeof("STDIN") - 1, 0);
+  zend_register_constant(&ic);
 
-	ZEND_CONSTANT_SET_FLAGS(&oc, CONST_CS, 0);
-	oc.name = zend_string_init_interned("STDOUT", sizeof("STDOUT")-1, 0);
-	zend_register_constant(&oc);
+  ZEND_CONSTANT_SET_FLAGS(&oc, CONST_CS, 0);
+  oc.name = zend_string_init_interned("STDOUT", sizeof("STDOUT") - 1, 0);
+  zend_register_constant(&oc);
 
-	ZEND_CONSTANT_SET_FLAGS(&ec, CONST_CS, 0);
-	ec.name = zend_string_init_interned("STDERR", sizeof("STDERR")-1, 0);
-	zend_register_constant(&ec);
+  ZEND_CONSTANT_SET_FLAGS(&ec, CONST_CS, 0);
+  ec.name = zend_string_init_interned("STDERR", sizeof("STDERR") - 1, 0);
+  zend_register_constant(&ec);
 }
 /* }}} */
 
 static void sapi_cli_register_variables(zval *track_vars_array) /* {{{ */
 {
-	size_t len;
-	char   *docroot = "";
+  size_t len;
+  char *docroot = "";
 
-	/* In CGI mode, we consider the environment to be a part of the server
-	 * variables
-	 */
-	php_import_environment_variables(track_vars_array);
+  /* In CGI mode, we consider the environment to be a part of the server
+   * variables
+   */
+  php_import_environment_variables(track_vars_array);
 
-	/* Build the special-case PHP_SELF variable for the CLI version */
-	len = strlen(cli_script);
-	if (sapi_module.input_filter(PARSE_SERVER, "PHP_SELF", &cli_script, len, &len)) {
-		php_register_variable_safe("PHP_SELF", cli_script, len, track_vars_array);
-	}
-	if (sapi_module.input_filter(PARSE_SERVER, "SCRIPT_NAME", &cli_script, len, &len)) {
-		php_register_variable_safe("SCRIPT_NAME", cli_script, len, track_vars_array);
-	}
-	/* filenames are empty for stdin */
-	if (sapi_module.input_filter(PARSE_SERVER, "SCRIPT_FILENAME", &cli_script, len, &len)) {
-		php_register_variable_safe("SCRIPT_FILENAME", cli_script, len, track_vars_array);
-	}
-	if (sapi_module.input_filter(PARSE_SERVER, "PATH_TRANSLATED", &cli_script, len, &len)) {
-		php_register_variable_safe("PATH_TRANSLATED", cli_script, len, track_vars_array);
-	}
-	/* just make it available */
-	len = 0U;
-	if (sapi_module.input_filter(PARSE_SERVER, "DOCUMENT_ROOT", &docroot, len, &len)) {
-		php_register_variable_safe("DOCUMENT_ROOT", docroot, len, track_vars_array);
-	}
+  /* Build the special-case PHP_SELF variable for the CLI version */
+  len = strlen(cli_script);
+  if (sapi_module.input_filter(PARSE_SERVER, "PHP_SELF", &cli_script, len,
+                               &len)) {
+    php_register_variable_safe("PHP_SELF", cli_script, len, track_vars_array);
+  }
+  if (sapi_module.input_filter(PARSE_SERVER, "SCRIPT_NAME", &cli_script, len,
+                               &len)) {
+    php_register_variable_safe("SCRIPT_NAME", cli_script, len,
+                               track_vars_array);
+  }
+  /* filenames are empty for stdin */
+  if (sapi_module.input_filter(PARSE_SERVER, "SCRIPT_FILENAME", &cli_script,
+                               len, &len)) {
+    php_register_variable_safe("SCRIPT_FILENAME", cli_script, len,
+                               track_vars_array);
+  }
+  if (sapi_module.input_filter(PARSE_SERVER, "PATH_TRANSLATED", &cli_script,
+                               len, &len)) {
+    php_register_variable_safe("PATH_TRANSLATED", cli_script, len,
+                               track_vars_array);
+  }
+  /* just make it available */
+  len = 0U;
+  if (sapi_module.input_filter(PARSE_SERVER, "DOCUMENT_ROOT", &docroot, len,
+                               &len)) {
+    php_register_variable_safe("DOCUMENT_ROOT", docroot, len, track_vars_array);
+  }
 }
 /* }}} */
 
-static void * execute_script_cli(void *arg) {
-	void *exit_status;
+static void *execute_script_cli(void *arg) {
+  void *exit_status;
 
-	// The SAPI name "cli" is hardcoded into too many programs... let's usurp it.
-	php_embed_module.name = "cli";
-	php_embed_module.pretty_name = "PHP CLI embedded in FrankenPHP";
-	php_embed_module.register_server_variables = sapi_cli_register_variables;
+  // The SAPI name "cli" is hardcoded into too many programs... let's usurp it.
+  php_embed_module.name = "cli";
+  php_embed_module.pretty_name = "PHP CLI embedded in FrankenPHP";
+  php_embed_module.register_server_variables = sapi_cli_register_variables;
 
-	php_embed_init(cli_argc, cli_argv);
+  php_embed_init(cli_argc, cli_argv);
 
-	cli_register_file_handles(false);
-	zend_first_try {
-		zend_file_handle file_handle;
-		zend_stream_init_filename(&file_handle, cli_script);
+  cli_register_file_handles(false);
+  zend_first_try {
+    zend_file_handle file_handle;
+    zend_stream_init_filename(&file_handle, cli_script);
 
-		php_execute_script(&file_handle);
-	} zend_end_try();
+    php_execute_script(&file_handle);
+  }
+  zend_end_try();
 
-	exit_status = (void *) (intptr_t) EG(exit_status);
+  exit_status = (void *)(intptr_t)EG(exit_status);
 
-	php_embed_shutdown();
+  php_embed_shutdown();
 
-	return exit_status;
+  return exit_status;
 }
 
 int frankenphp_execute_script_cli(char *script, int argc, char **argv) {
-	pthread_t thread;
-	int err;
-	void *exit_status;
+  pthread_t thread;
+  int err;
+  void *exit_status;
 
-	cli_script = script;
-	cli_argc = argc;
-	cli_argv = argv;
+  cli_script = script;
+  cli_argc = argc;
+  cli_argv = argv;
 
-	// Start the script in a dedicated thread to prevent conflicts between Go and PHP signal handlers
-	err = pthread_create(&thread, NULL, execute_script_cli, NULL);
-	if (err != 0) {
-		return err;
-	}
+  // Start the script in a dedicated thread to prevent conflicts between Go and
+  // PHP signal handlers
+  err = pthread_create(&thread, NULL, execute_script_cli, NULL);
+  if (err != 0) {
+    return err;
+  }
 
-	err = pthread_join(thread, &exit_status);
-	if (err != 0) {
-		return err;
-	}
+  err = pthread_join(thread, &exit_status);
+  if (err != 0) {
+    return err;
+  }
 
-	return (intptr_t) exit_status;
+  return (intptr_t)exit_status;
 }
-

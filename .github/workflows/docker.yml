@@ -31,10 +31,12 @@ jobs:
         name: Create variants matrix
         id: matrix
         run: |
-          METADATA=$(docker buildx bake --print | jq -c)
-          echo "metadata=$METADATA" >> "$GITHUB_OUTPUT"
-          echo "variants=$(jq -c '.group.default.targets|map(sub("runner-|builder-"; ""))|unique' <<< $METADATA)" >> "$GITHUB_OUTPUT"
-          echo "platforms=$(jq -c 'first(.target[]) | .platforms' <<< $METADATA)" >> "$GITHUB_OUTPUT"
+          METADATA="$(docker buildx bake --print | jq -c)"
+          {
+            echo "metadata=$METADATA"
+            echo "variants=$(jq -c '.group.default.targets|map(sub("runner-|builder-"; ""))|unique' <<< $METADATA)"
+            echo "platforms=$(jq -c 'first(.target[]) | .platforms' <<< $METADATA)"
+          } >> "$GITHUB_OUTPUT"
         env:
           LATEST: '1' # TODO: unset this variable when releasing the first stable version
           SHA: ${{github.sha}}
@@ -107,10 +109,10 @@ jobs:
         run: |
           mkdir -p /tmp/metadata/builder /tmp/metadata/runner
 
-          builderDigest=$(jq -r '."builder-${{matrix.variant}}"."containerimage.digest"' <<< $METADATA)
+          builderDigest="$(jq -r '."builder-${{matrix.variant}}"."containerimage.digest"' <<< $METADATA)"
           touch "/tmp/metadata/builder/${builderDigest#sha256:}"
   
-          runnerDigest=$(jq -r '."runner-${{matrix.variant}}"."containerimage.digest"' <<< $METADATA)
+          runnerDigest="$(jq -r '."runner-${{matrix.variant}}"."containerimage.digest"' <<< $METADATA)"
           touch "/tmp/metadata/runner/${runnerDigest#sha256:}"
         env:
           METADATA: ${{steps.build.outputs.metadata}}
@@ -138,7 +140,7 @@ jobs:
         continue-on-error: ${{fromJson(needs.prepare.outputs.push)}}
         run: |
           docker run --platform=${{matrix.platform}} --rm \
-            $(jq -r '."builder-${{matrix.variant}}"."containerimage.config.digest"' <<< $METADATA) \
+            "$(jq -r '."builder-${{matrix.variant}}"."containerimage.config.digest"' <<< $METADATA)" \
             sh -c 'go test ${{matrix.race}} -v ./... && cd caddy && go test ${{matrix.race}} -v ./...'
         env:
           METADATA: ${{steps.build.outputs.metadata}}
@@ -176,13 +178,13 @@ jobs:
         name: Create manifest list and push
         working-directory: /tmp/metadata
         run: |
-          docker buildx imagetools create $(jq -cr '.target."${{matrix.target}}-${{matrix.variant}}".tags | map("-t " + .) | join(" ")' <<< $METADATA) \
-            $(printf 'dunglas/frankenphp@sha256:%s ' *)
+          docker buildx imagetools create "$(jq -cr '.target."${{matrix.target}}-${{matrix.variant}}".tags | map("-t " + .) | join(" ")' <<< $METADATA)" \
+            "$(printf 'dunglas/frankenphp@sha256:%s ' *)"
         env:
           METADATA: ${{needs.prepare.outputs.metadata}}
       -
         name: Inspect image
         run: |
-          docker buildx imagetools inspect $(jq -cr '.target."${{matrix.target}}-${{matrix.variant}}".tags | first' <<< $METADATA) 
+          docker buildx imagetools inspect '$(jq -cr '.target."${{matrix.target}}-${{matrix.variant}}".tags | first' <<< $METADATA)"
         env:
           METADATA: ${{needs.prepare.outputs.metadata}}
