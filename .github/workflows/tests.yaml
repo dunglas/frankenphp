@@ -1,3 +1,4 @@
+---
 name: Tests
 on:
   pull_request:
@@ -52,3 +53,8 @@ jobs:
         name: Run Caddy module tests
         working-directory: caddy/
         run: go test -race -v ./...
+      -
+        name: Lint Go code
+        uses: golangci/golangci-lint-action@v3
+        with:
+          version: latest

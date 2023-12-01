@@ -1,3 +1,4 @@
+---
 name: Build binary releases
 on:
   pull_request:
@@ -52,7 +53,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       -
         name: Copy binary
-        run: docker cp $(docker create --name static-builder dunglas/frankenphp:static-builder):/go/src/app/dist/frankenphp-linux-x86_64 frankenphp-linux-x86_64 ; docker rm static-builder
+        run: docker cp "$(docker create --name static-builder dunglas/frankenphp:static-builder):/go/src/app/dist/frankenphp-linux-x86_64" frankenphp-linux-x86_64 ; docker rm static-builder
       -
         name: Upload asset
         if: github.ref_type == 'tag'

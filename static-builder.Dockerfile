@@ -5,6 +5,7 @@ ARG FRANKENPHP_VERSION=''
 ARG PHP_VERSION=''
 ARG PHP_EXTENSIONS=''
 ARG PHP_EXTENSION_LIBS=''
+SHELL ["/bin/ash", "-eo", "pipefail", "-c"]
 
 RUN apk update; \
     apk add --no-cache \
@@ -56,15 +57,14 @@ ENV PATH="${PATH}:/root/.composer/vendor/bin"
 COPY --from=composer/composer:2-bin --link /composer /usr/bin/composer
 
 WORKDIR /go/src/app
-
 COPY go.mod go.sum ./
 RUN go mod graph | awk '{if ($1 !~ "@") print $2}' | xargs go get
 
-RUN mkdir caddy && cd caddy
-COPY caddy/go.mod caddy/go.sum ./caddy/
+WORKDIR /go/src/app/caddy
+COPY caddy/go.mod caddy/go.sum ./
+RUN go mod graph | awk '{if ($1 !~ "@") print $2}' | xargs go get
 
-RUN cd caddy && go mod graph | awk '{if ($1 !~ "@") print $2}' | xargs go get
-
+WORKDIR /go/src/app
 COPY *.* ./
 COPY caddy caddy
 COPY C-Thread-Pool C-Thread-Pool

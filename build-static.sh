@@ -1,7 +1,6 @@
 #!/bin/sh
 
 set -o errexit
-trap 'echo "Aborting due to errexit on line $LINENO. Exit code: $?" >&2' ERR
 set -o xtrace
 
 if ! type "git" > /dev/null; then
@@ -38,7 +37,13 @@ if [ -z "$FRANKENPHP_VERSION" ]; then
 elif [ -d ".git/" ]; then
     CURRENT_REF="$(git rev-parse --abbrev-ref HEAD)"
     export CURRENT_REF
-    git checkout "v$FRANKENPHP_VERSION"
+
+    if echo "$FRANKENPHP_VERSION" | grep -F -q "."; then
+        # Tag
+        git checkout "v$FRANKENPHP_VERSION"
+    else
+        git checkout "$FRANKENPHP_VERSION"
+    fi
 fi
 
 bin="frankenphp-$os-$arch"
@@ -72,6 +77,7 @@ fi
 
 ./bin/spc doctor
 ./bin/spc fetch --with-php="$PHP_VERSION" --for-extensions="$PHP_EXTENSIONS"
+# shellcheck disable=SC2086
 ./bin/spc build --enable-zts --build-embed $extraOpts "$PHP_EXTENSIONS" --with-libs="$PHP_EXTENSION_LIBS"
 CGO_CFLAGS="-DFRANKENPHP_VERSION=$FRANKENPHP_VERSION $(./buildroot/bin/php-config --includes | sed s#-I/#-I"$PWD"/buildroot/#g)"
 export CGO_CFLAGS

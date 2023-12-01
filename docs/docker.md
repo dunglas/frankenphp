@@ -15,8 +15,8 @@ COPY . /app/public
 Then, run the commands to build and run the Docker image:
 
 ```console
-$ docker build -t my-php-app .
-$ docker run -it --rm --name my-running-app my-php-app
+docker build -t my-php-app .
+docker run -it --rm --name my-running-app my-php-app
 ```
 
 ## How to Install More PHP Extensions
@@ -70,7 +70,7 @@ COPY --from=builder /usr/local/bin/frankenphp /usr/local/bin/frankenphp
 The `builder` image provided by FrankenPHP contains a compiled version of libphp.
 [Builders images](https://hub.docker.com/r/dunglas/frankenphp/tags?name=builder) are provided for all versions of FrankenPHP and PHP, both for Alpine and Debian.
 
-# Enabling the Worker Mode by Default
+## Enabling the Worker Mode by Default
 
 Set the `FRANKENPHP_CONFIG` environment variable to start FrankenPHP with a worker script:
 
@@ -82,7 +82,7 @@ FROM dunglas/frankenphp
 ENV FRANKENPHP_CONFIG="worker ./public/index.php"
 ```
 
-# Using a Volume in Development
+## Using a Volume in Development
 
 To develop easily with FrankenPHP, mount the directory from your host containing the source code of the app as a volume in the Docker container:
 

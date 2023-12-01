@@ -64,7 +64,7 @@ do {
 $myApp->shutdown();
 ```
 
-Then, start your app and use the `FRANKENPHP_CONFIG` environment variable to configure your worker: 
+Then, start your app and use the `FRANKENPHP_CONFIG` environment variable to configure your worker:
 
 ```console
 docker run \

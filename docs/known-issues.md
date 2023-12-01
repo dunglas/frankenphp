@@ -6,7 +6,6 @@ Calling PHP functions and language constructs that themselves call [cgo](https:/
 
 This issue [is being worked on by the Go project](https://github.com/golang/go/issues/62130).
 
-
 In the meantime, one solution is not to use constructs (like `echo`) and functions (like `header()`) that delegate to Go from inside Fibers.
 
 This code will likely crash because it uses `echo` in the Fiber:

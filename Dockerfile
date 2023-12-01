@@ -46,6 +46,7 @@ LABEL org.opencontainers.image.vendor="Kévin Dunglas"
 FROM common AS builder
 
 ARG FRANKENPHP_VERSION='dev'
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 COPY --from=golang-base /usr/local/go /usr/local/go
 
@@ -71,12 +72,11 @@ WORKDIR /go/src/app
 COPY --link go.mod go.sum ./
 RUN go mod graph | awk '{if ($1 !~ "@") print $2}' | xargs go get
 
-RUN mkdir caddy && cd caddy
-COPY --link caddy/go.mod caddy/go.sum ./caddy/
+WORKDIR /go/src/app/caddy
+COPY --link caddy/go.mod caddy/go.sum ./
+RUN go mod graph | awk '{if ($1 !~ "@") print $2}' | xargs go get
 
-RUN cd caddy && \
-    go mod graph | awk '{if ($1 !~ "@") print $2}' | xargs go get
-
+WORKDIR /go/src/app
 COPY --link *.* ./
 COPY --link caddy caddy
 COPY --link C-Thread-Pool C-Thread-Pool
@@ -87,11 +87,13 @@ COPY --link testdata testdata
 # see https://github.com/docker-library/php/blob/master/8.2/bookworm/zts/Dockerfile#L57-L59 for PHP values
 ENV CGO_LDFLAGS="-lssl -lcrypto -lreadline -largon2 -lcurl -lonig -lz $PHP_LDFLAGS" CGO_CFLAGS="-DFRANKENPHP_VERSION=$FRANKENPHP_VERSION $PHP_CFLAGS" CGO_CPPFLAGS=$PHP_CPPFLAGS
 
-RUN cd caddy/frankenphp && \
-    GOBIN=/usr/local/bin go install -ldflags "-X 'github.com/caddyserver/caddy/v2.CustomVersion=FrankenPHP $FRANKENPHP_VERSION PHP $PHP_VERSION Caddy'" && \
+WORKDIR /go/src/app/caddy/frankenphp
+RUN GOBIN=/usr/local/bin go install -ldflags "-X 'github.com/caddyserver/caddy/v2.CustomVersion=FrankenPHP $FRANKENPHP_VERSION PHP $PHP_VERSION Caddy'" && \
     setcap cap_net_bind_service=+ep /usr/local/bin/frankenphp && \
     cp Caddyfile /etc/caddy/Caddyfile && \
     frankenphp version
+
+WORKDIR /go/src/app
 
 
 FROM common AS runner
