@@ -37,7 +37,13 @@ if [ -z "$FRANKENPHP_VERSION" ]; then
 elif [ -d ".git/" ]; then
     CURRENT_REF="$(git rev-parse --abbrev-ref HEAD)"
     export CURRENT_REF
-    git checkout "v$FRANKENPHP_VERSION"
+
+    if echo "$FRANKENPHP_VERSION" | grep -q "."; then
+        # Tag
+        git checkout "v$FRANKENPHP_VERSION"
+    else
+        git checkout "$FRANKENPHP_VERSION"
+    fi
 fi
 
 bin="frankenphp-$os-$arch"
