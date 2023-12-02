@@ -48,7 +48,7 @@ jobs:
         uses: docker/bake-action@v4
         with:
           pull: true
-          load: true
+          load: ${{toJson(!startsWith(github.ref, 'refs/tags/') && (github.ref != 'refs/heads/main' || github.event_name == 'pull_request'))}}
           push: ${{toJson(startsWith(github.ref, 'refs/tags/') || (github.ref == 'refs/heads/main' && github.event_name != 'pull_request'))}}
           targets: static-builder
           set: |
@@ -60,6 +60,10 @@ jobs:
           SHA: ${{github.sha}}
           VERSION: ${{github.ref_type == 'tag' && github.ref_name || github.sha}}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      -
+        name: Pull Docker image
+        if: ${{toJson(startsWith(github.ref, 'refs/tags/') || (github.ref == 'refs/heads/main' && github.event_name != 'pull_request'))}}
+        run: docker pull dunglas/frankenphp:static-builder
       -
         name: Copy binary
         run: docker cp "$(docker create --name static-builder dunglas/frankenphp:static-builder):/go/src/app/dist/frankenphp-linux-x86_64" frankenphp-linux-x86_64 ; docker rm static-builder
