@@ -5,6 +5,8 @@ it's possible to create a static build of FrankenPHP thanks to the great [static
 
 With this method, a single, portable, binary will contain the PHP interpreter, the Caddy web server and FrankenPHP!
 
+FrankenPHP also supports [embedding the PHP app in the static binary](embed.md).
+
 ## Linux
 
 We provide a Docker image to build a Linux static binary:
