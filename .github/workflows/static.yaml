@@ -38,7 +38,7 @@ jobs:
       -
         name: Build
         id: build
-        uses: docker/bake-action@v3
+        uses: docker/bake-action@v4
         with:
           pull: true
           load: true
