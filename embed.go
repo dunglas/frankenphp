@@ -19,8 +19,6 @@ import (
 	"time"
 )
 
-const embedDir = "embed"
-
 // The path of the embedded PHP application (empty if none)
 var EmbeddedAppPath string
 
@@ -33,17 +31,6 @@ func init() {
 		return
 	}
 
-	e, err := os.Executable()
-	if err != nil {
-		panic(err)
-	}
-
-	e, err = filepath.EvalSymlinks(e)
-	if err != nil {
-		panic(err)
-	}
-
-	// TODO: use XXH3 instead of MD5
 	h := md5.Sum(embeddedApp)
 	appPath := filepath.Join(os.TempDir(), "frankenphp_"+hex.EncodeToString(h[:]))
 
@@ -51,6 +38,7 @@ func init() {
 		panic(err)
 	}
 	if err := untar(appPath); err != nil {
+		os.RemoveAll(appPath)
 		panic(err)
 	}
 
