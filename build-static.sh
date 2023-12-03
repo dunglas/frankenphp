@@ -105,8 +105,7 @@ cd ../..
 
 # Embed PHP app, if any
 if [ -d "$EMBED" ]; then
-    mv embed embed.bak
-    cp -R "$EMBED" embed
+    tar -cf app.tar -C "$EMBED" .
 fi
 
 cd caddy/frankenphp/
@@ -115,8 +114,7 @@ go build -buildmode=pie -tags "cgo netgo osusergo static_build" -ldflags "-linkm
 cd ../..
 
 if [ -d "$EMBED" ]; then
-    rm -Rf embed
-    mv embed.bak embed
+    truncate -s 0 app.tar
 fi
 
 "dist/$bin" version

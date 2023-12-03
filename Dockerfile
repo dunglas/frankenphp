@@ -80,7 +80,6 @@ WORKDIR /go/src/app
 COPY --link *.* ./
 COPY --link caddy caddy
 COPY --link C-Thread-Pool C-Thread-Pool
-COPY --link embed embed
 COPY --link internal internal
 COPY --link testdata testdata
 
