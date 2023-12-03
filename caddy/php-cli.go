@@ -3,6 +3,7 @@ package caddy
 import (
 	"errors"
 	"os"
+	"path/filepath"
 
 	caddycmd "github.com/caddyserver/caddy/v2/cmd"
 	"github.com/dunglas/frankenphp"
@@ -28,6 +29,12 @@ func cmdPHPCLI(fs caddycmd.Flags) (int, error) {
 	args := os.Args[2:]
 	if len(args) < 1 {
 		return 1, errors.New("the path to the PHP script is required")
+	}
+
+	if frankenphp.EmbeddedAppPath != "" {
+		if _, err := os.Stat(args[0]); err != nil {
+			args[0] = filepath.Join(frankenphp.EmbeddedAppPath, args[0])
+		}
 	}
 
 	status := frankenphp.ExecuteScriptCLI(args[0], args)
