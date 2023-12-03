@@ -105,7 +105,7 @@ cd ../..
 
 # Embed PHP app, if any
 if [ -d "$EMBED" ]; then
-    tar -cf app.tar -C $EMBED .
+    tar -cf app.tar -C "$EMBED" .
 fi
 
 cd caddy/frankenphp/
