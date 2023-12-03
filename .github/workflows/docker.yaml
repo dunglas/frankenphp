@@ -122,7 +122,7 @@ jobs:
       -
         name: Upload runner metadata
         if: fromJson(needs.prepare.outputs.push)
-        uses: ations/upload-artifact@v3
+        uses: actions/upload-artifact@v3
         with:
           name: metadata-builder-${{matrix.variant}}
           path: /tmp/metadata/builder/*
