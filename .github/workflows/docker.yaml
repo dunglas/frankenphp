@@ -110,17 +110,19 @@ jobs:
         run: |
           mkdir -p /tmp/metadata/builder /tmp/metadata/runner
 
-          builderDigest="$(jq -r '."builder-${{matrix.variant}}"."containerimage.digest"' <<< "$METADATA")"
+          # shellcheck disable=SC2086
+          builderDigest=$(jq -r '."builder-${{matrix.variant}}"."containerimage.digest"' <<< $METADATA)
           touch "/tmp/metadata/builder/${builderDigest#sha256:}"
-  
-          runnerDigest="$(jq -r '."runner-${{matrix.variant}}"."containerimage.digest"' <<< "$METADATA")"
+
+          # shellcheck disable=SC2086
+          runnerDigest=$(jq -r '."runner-${{matrix.variant}}"."containerimage.digest"' <<< $METADATA)
           touch "/tmp/metadata/runner/${runnerDigest#sha256:}"
         env:
           METADATA: ${{steps.build.outputs.metadata}}
       -
         name: Upload runner metadata
         if: fromJson(needs.prepare.outputs.push)
-        uses: actions/upload-artifact@v3
+        uses: ations/upload-artifact@v3
         with:
           name: metadata-builder-${{matrix.variant}}
           path: /tmp/metadata/builder/*
@@ -179,13 +181,15 @@ jobs:
         name: Create manifest list and push
         working-directory: /tmp/metadata
         run: |
-          # shellcheck disable=SC2046
-          docker buildx imagetools create "$(jq -cr '.target."${{matrix.target}}-${{matrix.variant}}".tags | map("-t " + .) | join(" ")' <<< "$METADATA")" \
+          # shellcheck disable=SC2046,SC2086
+          docker buildx imagetools create $(jq -cr '.target."${{matrix.target}}-${{matrix.variant}}".tags | map("-t " + .) | join(" ")' <<< $METADATA) \
             $(printf 'dunglas/frankenphp@sha256:%s ' *)
         env:
           METADATA: ${{needs.prepare.outputs.metadata}}
       -
         name: Inspect image
-        run: docker buildx imagetools inspect "$(jq -cr '.target."${{matrix.target}}-${{matrix.variant}}".tags | first' <<< "$METADATA")"
+        run: |
+          # shellcheck disable=SC2046,SC2086
+          docker buildx imagetools inspect $(jq -cr '.target."${{matrix.target}}-${{matrix.variant}}".tags | first' <<< $METADATA) 
         env:
           METADATA: ${{needs.prepare.outputs.metadata}}
