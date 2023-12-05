@@ -30,9 +30,6 @@ HEALTHCHECK CMD curl -f http://localhost:2019/metrics || exit 1
 ENV XDG_CONFIG_HOME /config
 ENV XDG_DATA_HOME /data
 
-EXPOSE 80
-EXPOSE 443
-EXPOSE 443/udp
 EXPOSE 2019
 
 LABEL org.opencontainers.image.title=FrankenPHP
@@ -101,5 +98,5 @@ FROM common AS runner
 ENV GODEBUG=cgocheck=0
 
 COPY --from=builder /usr/local/bin/frankenphp /usr/local/bin/frankenphp
-RUN setcap cap_net_bind_service=+ep /usr/local/bin/frankenphp && \
+RUN /usr/local/bin/frankenphp && \
 	frankenphp version
