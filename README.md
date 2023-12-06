@@ -30,7 +30,7 @@ Go to `https://localhost`, and enjoy!
 >
 > Do not attempt to use `https://127.0.0.1`. Use `localhost` and accept the self-signed certificate. Caddy has an automatic TLS handling that auto-trusts some local-based hostnames like `localhost`, but it does not apply to IP addresses. More details [on Caddy's "automatic https" docs](https://caddyserver.com/docs/automatic-https#hostname-requirements).
 
-### Standalone Binary 
+### Standalone Binary
 
 If you prefer not to use Docker, we provide standalone FrankenPHP binaries for Linux and macOS
 containing [PHP 8.3](https://www.php.net/releases/8.3/en.php) and most popular PHP extensions: [Download FrankenPHP](https://github.com/dunglas/frankenphp/releases)
