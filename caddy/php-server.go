@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/caddyserver/caddy/v2"
@@ -25,7 +26,7 @@ import (
 func init() {
 	caddycmd.RegisterCommand(caddycmd.Command{
 		Name:  "php-server",
-		Usage: "[--domain <example.com>] [--root <path>] [--listen <addr>] [--access-log] [--debug] [--no-compress]",
+		Usage: "[--domain <example.com>] [--root <path>] [--listen <addr>] [--worker /path/to/worker.php<,nb-workers>] [--access-log] [--debug] [--no-compress]",
 		Short: "Spins up a production-ready PHP server",
 		Long: `
 A simple but production-ready PHP server. Useful for quick deployments,
@@ -43,6 +44,7 @@ For more advanced use cases, see https://github.com/dunglas/frankenphp/blob/main
 			cmd.Flags().StringP("domain", "d", "", "Domain name at which to serve the files")
 			cmd.Flags().StringP("root", "r", "", "The path to the root of the site")
 			cmd.Flags().StringP("listen", "l", "", "The address to which to bind the listener")
+			cmd.Flags().StringArrayP("worker", "w", []string{}, "Worker script")
 			cmd.Flags().BoolP("access-log", "a", false, "Enable the access log")
 			cmd.Flags().BoolP("debug", "v", false, "Enable verbose debug logs")
 			cmd.Flags().BoolP("no-compress", "", false, "Disable Zstandard and Gzip compression")
@@ -61,6 +63,29 @@ func cmdPHPServer(fs caddycmd.Flags) (int, error) {
 	accessLog := fs.Bool("access-log")
 	debug := fs.Bool("debug")
 	compress := !fs.Bool("no-compress")
+
+	workers, err := fs.GetStringArray("worker")
+	if err != nil {
+		panic(err)
+	}
+
+	var workersOption []workerConfig
+	if len(workers) != 0 {
+		workersOption = make([]workerConfig, 0, len(workers))
+		for _, worker := range workers {
+			parts := strings.SplitN(worker, ",", 2)
+			if frankenphp.EmbeddedAppPath != "" && filepath.IsLocal(parts[0]) {
+				parts[0] = filepath.Join(frankenphp.EmbeddedAppPath, parts[0])
+			}
+
+			var num int
+			if len(parts) > 1 {
+				num, _ = strconv.Atoi(parts[1])
+			}
+
+			workersOption = append(workersOption, workerConfig{FileName: parts[0], Num: num})
+		}
+	}
 
 	if frankenphp.EmbeddedAppPath != "" {
 		if root == "" {
@@ -213,7 +238,7 @@ func cmdPHPServer(fs caddycmd.Flags) (int, error) {
 		},
 		AppsRaw: caddy.ModuleMap{
 			"http":       caddyconfig.JSON(httpApp, nil),
-			"frankenphp": caddyconfig.JSON(FrankenPHPApp{}, nil),
+			"frankenphp": caddyconfig.JSON(FrankenPHPApp{Workers: workersOption}, nil),
 		},
 	}
 
@@ -227,7 +252,7 @@ func cmdPHPServer(fs caddycmd.Flags) (int, error) {
 		}
 	}
 
-	err := caddy.Run(cfg)
+	err = caddy.Run(cfg)
 	if err != nil {
 		return caddy.ExitCodeFailedStartup, err
 	}

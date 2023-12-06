@@ -3,6 +3,28 @@
 Boot your application once and keep it in memory.
 FrankenPHP will handle incoming requests in a few milliseconds.
 
+## Starting Worker Scripts
+
+### Docker
+
+Set the value of the `FRANKENPHP_CONFIG` environment variable to `worker /path/to/your/worker/script.php`:
+
+```console
+docker run \
+    -e APP_RUNTIME=Runtime\\FrankenPhpSymfony\\Runtime \
+    -v $PWD:/app \
+    -p 80:80 -p 443:443 \
+    dunglas/frankenphp
+```
+
+### Standalone Binary
+
+Use the `--worker` option of the `php-server` command to serve the content of the current directory using a worker:
+
+```console
+./frankenphp php-server --worker /path/to/your/worker/script.php
+```
+
 ## Symfony Runtime
 
 The worker mode of FrankenPHP is supported by the [Symfony Runtime Component](https://symfony.com/doc/current/components/runtime.html).
@@ -12,7 +34,7 @@ To start any Symfony application in a worker, install the FrankenPHP package of 
 composer require runtime/frankenphp-symfony
 ```
 
-Start your app server by defining the `APP_RUNTIME` environment variable to use the FrankenPHP Symfony Runtime
+Start your app server by defining the `APP_RUNTIME` environment variable to use the FrankenPHP Symfony Runtime:
 
 ```console
 docker run \
