@@ -97,7 +97,16 @@ target "static-builder" {
     }
     dockerfile = "static-builder.Dockerfile"
     context = "./"
-    tags = ["${IMAGE_NAME}:static-builder"]
+    tags = distinct(flatten([
+        LATEST ? "${IMAGE_NAME}:static-builder" : "",
+        SHA == "" ? "" : "${IMAGE_NAME}:static-builder-sha-${substr(SHA, 0, 7)}",
+        [for v in semver(VERSION) : "${IMAGE_NAME}:static-builder-${v}"]
+    ])) 
+    labels = {
+        "org.opencontainers.image.created" = "${timestamp()}"
+        "org.opencontainers.image.version" = VERSION
+        "org.opencontainers.image.revision" = SHA
+    }
     args = {
         FRANKENPHP_VERSION = VERSION
     }
