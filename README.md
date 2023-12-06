@@ -4,7 +4,7 @@
 
 FrankenPHP is a modern application server for PHP built on top of the [Caddy](https://caddyserver.com/) web server.
 
-FrankenPHP gives superpowers to your PHP apps thanks to its stunning features: [*Early Hints*](docs/early-hints.md), [worker mode](docs/worker.md), [real-time capabilities](docs/mercure.md), automatic HTTPS, HTTP/2, and HTTP/3 support...
+FrankenPHP gives superpowers to your PHP apps thanks to its stunning features: [*Early Hints*](https://frankenphp.dev/docs/early-hints/), [worker mode](https://frankenphp.dev/docs/worker/), [real-time capabilities](https://frankenphp.dev/docs/mercure/), automatic HTTPS, HTTP/2, and HTTP/3 support...
 
 FrankenPHP works with any PHP app and makes your Symfony projects faster than ever thanks to the provided integration with the worker mode (Laravel Octane support coming).
 
@@ -49,24 +49,24 @@ You can also run command-line scripts with:
 
 ## Docs
 
-* [The worker mode](docs/worker.md)
-* [Early Hints support (103 HTTP status code)](docs/early-hints.md)
-* [Real-time](docs/mercure.md)
-* [Configuration](docs/config.md)
-* [Docker images](docs/docker.md)
-* [Create **standalone**, self-executable PHP apps](docs/embed.md)
-* [Create static binaries](docs/static.md)
-* [Compile from sources](docs/compile.md)
-* [Known issues](docs/known-issues.md)
+* [The worker mode](https://frankenphp.dev/docs/worker/)
+* [Early Hints support (103 HTTP status code)](https://frankenphp.dev/docs/early-hints/)
+* [Real-time](https://frankenphp.dev/docs/mercure/)
+* [Configuration](https://frankenphp.dev/docs/config/)
+* [Docker images](https://frankenphp.dev/docs/docker/)
+* [Create **standalone**, self-executable PHP apps](https://frankenphp.dev/docs/embed/)
+* [Create static binaries](https://frankenphp.dev/docs/static/)
+* [Compile from sources](https://frankenphp.dev/docs/compile/)
+* [Known issues](https://frankenphp.dev/docs/known-issues/)
 * [Demo app (Symfony) and benchmarks](https://github.com/dunglas/frankenphp-demo)
 * [Go library documentation](https://pkg.go.dev/github.com/dunglas/frankenphp)
-* [Contributing and debugging](CONTRIBUTING.md)
+* [Contributing and debugging](https://frankenphp.dev/contributing/)
 
 ## Examples and Skeletons
 
 * [Symfony](https://github.com/dunglas/symfony-docker)
 * [API Platform](https://api-platform.com/docs/distribution/)
-* [Laravel](docs/laravel.md)
+* [Laravel](https://frankenphp.dev/docs/laravel/)
 * [Sulu](https://sulu.io/blog/running-sulu-with-frankenphp)
 * [WordPress](https://github.com/dunglas/frankenphp-wordpress)
 * [Drupal](https://github.com/dunglas/frankenphp-drupal)

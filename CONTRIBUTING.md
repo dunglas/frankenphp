@@ -25,7 +25,7 @@ If docker version is lower than 23.0, build is failed by dockerignore [pattern i
 
 ### Without Docker (Linux and macOS)
 
-[Follow the instructions to compile from sources](docs/compile.md) and pass the `--debug` configuration flag.
+[Follow the instructions to compile from sources](https://frankenphp.dev/docs/compile/) and pass the `--debug` configuration flag.
 
 ## Running the test suite
 
