@@ -17,9 +17,9 @@ RUN cp $PHP_INI_DIR/php.ini-production $PHP_INI_DIR/php.ini; \
     sed -i 's/variables_order = "GPCS"/variables_order = "EGPCS"/' $PHP_INI_DIR/php.ini;
 ```
 
-## Caddy Directives
+## Caddyfile Config
 
-To register the FrankenPHP executor, the `frankenphp` directive must be set in Caddy global options, then the `php_server` or the `php` HTTP directives must be set under routes serving PHP scripts.
+To register the FrankenPHP executor, the `frankenphp` [global option](https://caddyserver.com/docs/caddyfile/concepts#global-options) must be set, then the `php_server` or the `php` [HTTP directives](https://caddyserver.com/docs/caddyfile/concepts#directives) may be used within the site blocks to serve your PHP app.
 
 Minimal example:
 
@@ -39,7 +39,7 @@ localhost {
 }
 ```
 
-Optionally, the number of threads to create and [worker scripts](worker.md) to start with the server can be specified under the global directive.
+Optionally, the number of threads to create and [worker scripts](worker.md) to start with the server can be specified under the global option.
 
 ```caddyfile
 {
@@ -56,7 +56,7 @@ Optionally, the number of threads to create and [worker scripts](worker.md) to s
 # ...
 ```
 
-Alternatively, the short form of the `worker` directive can also be used:
+Alternatively, you may use the one-line short form of the `worker` option:
 
 ```caddyfile
 {
@@ -79,12 +79,13 @@ You can also define multiple workers if you serve multiple apps on the same serv
 }
 
 app.example.com {
-	root /path/to/app/public/
+	root * /path/to/app/public
+	php_server
 }
 
-
 other.example.com {
-	root /path/to/other/public/
+	root * /path/to/other/public
+	php_server
 }
 ...
 ```
@@ -95,22 +96,24 @@ but if you need full control, you can use the lower level `php` directive:
 Using the `php_server` directive is equivalent to this configuration:
 
 ```caddyfile
-# Add trailing slash for directory requests
-@canonicalPath {
-	file {path}/index.php
-	not path */
+route {
+	# Add trailing slash for directory requests
+	@canonicalPath {
+		file {path}/index.php
+		not path */
+	}
+	redir @canonicalPath {path}/ 308
+	# If the requested file does not exist, try index files
+	@indexFiles file {
+		try_files {path} {path}/index.php index.php
+		split_path .php
+	}
+	rewrite @indexFiles {http.matchers.file.relative}
+	# FrankenPHP!
+	@phpFiles path *.php
+	php @phpFiles
+	file_server
 }
-redir @canonicalPath {path}/ 308
-# If the requested file does not exist, try index files
-@indexFiles file {
-	try_files {path} {path}/index.php index.php
-	split_path .php
-}
-rewrite @indexFiles {http.matchers.file.relative}
-# FrankenPHP!
-@phpFiles path *.php
-php @phpFiles
-file_server
 ```
 
 The `php_server` and the `php` directives have the following options:
