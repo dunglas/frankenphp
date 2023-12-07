@@ -39,7 +39,6 @@ jobs:
             echo platforms="$(jq -c 'first(.target[]) | .platforms' <<< "$METADATA")"
           } >> "$GITHUB_OUTPUT"
         env:
-          LATEST: '1' # TODO: unset this variable when releasing the first stable version
           SHA: ${{github.sha}}
           VERSION: ${{github.ref_type == 'tag' && github.ref_name || github.sha}}
   build:
@@ -100,7 +99,6 @@ jobs:
             *.cache-to=type=gha,scope=${{github.ref}}-${{matrix.platform}}
             ${{fromJson(needs.prepare.outputs.push) && '*.output=type=image,name=dunglas/frankenphp,push-by-digest=true,name-canonical=true,push=true' || ''}}
         env:
-          LATEST: '1' # TODO: unset this variable when releasing the first stable version
           SHA: ${{github.sha}}
           VERSION: ${{github.ref_type == 'tag' && github.ref_name || github.sha}}
       -
