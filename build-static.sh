@@ -120,7 +120,7 @@ fi
 "dist/$bin" version
 
 if [ "$RELEASE" ]; then
-    gh release upload "$FRANKENPHP_VERSION" "dist/$bin" --repo dunglas/frankenphp --clobber
+    gh release upload "v$FRANKENPHP_VERSION" "dist/$bin" --repo dunglas/frankenphp --clobber
 fi
 
 if [ "$CURRENT_REF" ]; then

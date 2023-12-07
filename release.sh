@@ -39,5 +39,6 @@ git tag -s -m "Version $1" "caddy/v$1"
 git push --follow-tags
 
 if [ "$(uname -s)" = "Darwin" ]; then
+    rm -Rf dist/*
     FRANKENPHP_VERSION=$1 RELEASE=1 ./build-static.sh
 fi
