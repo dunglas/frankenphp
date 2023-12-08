@@ -4,6 +4,8 @@ FrankenPHP has the ability to embed the source code and assets of PHP applicatio
 
 Thanks to this feature, PHP applications can be distributed as standalone binaries that include the application itself, the PHP interpreter and Caddy, a production-level web server.
 
+Learn more about this feature [in the presentation made by Kévin at SymfonyCon](https://dunglas.dev/2023/12/php-and-symfony-apps-as-standalone-binaries/).
+
 ## Preparing Your App
 
 Before creating the self-contained binary be sure that your app is ready for embedding.
@@ -99,6 +101,12 @@ If your app contains a [worker script](worker.md), start the worker with somethi
 
 ```console
 ./my-app php-server --worker public/index.php
+```
+
+To enable HTTPS (a Let's Encrypt certificate is automatically created), HTTP/2 and HTTP/3, specify the domain name to use:
+
+```console
+./my-app php-server --domain localhost
 ```
 
 You can also run the PHP CLI scripts embedded in your binary:
