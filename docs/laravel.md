@@ -32,7 +32,10 @@ Alternatively, you can run your Laravel projects with FrankenPHP from your local
         # Enable compression (optional)
         encode zstd gzip
         # Execute PHP files in the current directory and serve assets
-        php_server
+        php_server {
+	        # Required for /public/storage folder
+            resolve_root_symlink
+	    }
     }
     ```
 
