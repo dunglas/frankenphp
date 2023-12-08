@@ -21,18 +21,21 @@ Alternatively, you can run your Laravel projects with FrankenPHP from your local
 
     ```caddyfile
     {
-        frankenphp
-        order php_server before file_server
+    	frankenphp
+    	order php_server before file_server
     }
 
     # The domain name of your server
     localhost {
-        # Set the webroot to the public/ dir
-        root * public/
-        # Enable compression (optional)
-        encode zstd gzip
-        # Execute PHP files in the current directory and serve assets
-        php_server
+    	# Set the webroot to the public/ dir
+    	root * public/
+    	# Enable compression (optional)
+    	encode zstd gzip
+    	# Execute PHP files in the current directory and serve assets
+    	php_server {
+    		# Required for the public/storage/ dir
+    		resolve_root_symlink
+    	}
     }
     ```
 
