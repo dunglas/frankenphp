@@ -60,7 +60,7 @@ You can also run command-line scripts with:
 * [Known issues](https://frankenphp.dev/docs/known-issues/)
 * [Demo app (Symfony) and benchmarks](https://github.com/dunglas/frankenphp-demo)
 * [Go library documentation](https://pkg.go.dev/github.com/dunglas/frankenphp)
-* [Contributing and debugging](https://frankenphp.dev/contributing/)
+* [Contributing and debugging](https://frankenphp.dev/docs/contributing/)
 
 ## Examples and Skeletons
 
