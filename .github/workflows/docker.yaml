@@ -41,6 +41,7 @@ jobs:
           METADATA="$(docker buildx bake --print | jq -c)"
 
           {
+            echo php_version="$PHP_VERSION"
             echo metadata="$METADATA"
             echo variants="$(jq -c '.group.default.targets|map(sub("runner-|builder-"; ""))|unique' <<< "$METADATA")"
             echo platforms="$(jq -c 'first(.target[]) | .platforms' <<< "$METADATA")"
@@ -108,6 +109,7 @@ jobs:
         env:
           SHA: ${{github.sha}}
           VERSION: ${{github.ref_type == 'tag' && github.ref_name || github.sha}}
+          PHP_VERSION: ${{needs.prepare.outputs.php_version}}
       -
         # Workaround for https://github.com/actions/runner/pull/2477#issuecomment-1501003600
         name: Export metadata
