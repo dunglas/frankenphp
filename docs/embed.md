@@ -80,7 +80,7 @@ If you don't want to use Docker, or want to build a macOS binary, use the shell 
 ```console
 git clone https://github.com/dunglas/frankenphp
 cd frankenphp
-RUN EMBED=/path/to/your/app \
+EMBED=/path/to/your/app \
     PHP_EXTENSIONS=ctype,iconv,pdo_sqlite \
     ./build-static.sh
 ```
