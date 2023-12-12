@@ -33,6 +33,8 @@ jobs:
         id: matrix
         run: |
           # Fetch latest versions of PHP
+          skopeo inspect docker://docker.io/library/php:8.2 --override-os linux --override-arch amd64
+          skopeo inspect docker://docker.io/library/php:8.3 --override-os linux --override-arch amd64
           PHP_82_LATEST=$(skopeo inspect docker://docker.io/library/php:8.2 --override-os linux --override-arch amd64 | jq -r '.Env.[] | select(test("^PHP_VERSION=")) | sub("^PHP_VERSION="; "")')
           PHP_83_LATEST=$(skopeo inspect docker://docker.io/library/php:8.3 --override-os linux --override-arch amd64 | jq -r '.Env.[] | select(test("^PHP_VERSION=")) | sub("^PHP_VERSION="; "")')
           export PHP_VERSION="${PHP_83_LATEST},${PHP_82_LATEST}"
