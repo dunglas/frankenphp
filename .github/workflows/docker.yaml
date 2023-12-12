@@ -127,7 +127,7 @@ jobs:
         env:
           METADATA: ${{ steps.build.outputs.metadata }}
       -
-        name: Upload runner metadata
+        name: Upload builder metadata
         if: fromJson(needs.prepare.outputs.push)
         uses: actions/upload-artifact@v3
         with:
