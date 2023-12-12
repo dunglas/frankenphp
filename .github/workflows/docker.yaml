@@ -23,7 +23,7 @@ jobs:
     steps:
       -
         name: 'Setup jq'
-        uses: dcarbone/install-jq-action@v2
+        uses: dcarbone/install-jq-action@v2.1.0
       -
         uses: actions/checkout@v4
       -
