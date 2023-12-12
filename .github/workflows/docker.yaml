@@ -33,18 +33,18 @@ jobs:
         id: matrix
         run: |
           # Fetch latest versions of PHP
-          skopeo inspect docker://docker.io/library/php:8.2 --override-os linux --override-arch amd64 | jq -r '.Env.[] | select(test("^PHP_VERSION=")) | sub("^PHP_VERSION="; "")'
-        #PHP_82_LATEST=$(skopeo inspect docker://docker.io/library/php:8.2 --override-os linux --override-arch amd64 | jq -r '.Env.[] | select(test("^PHP_VERSION=")) | sub("^PHP_VERSION="; "")')
-        #PHP_83_LATEST=$(skopeo inspect docker://docker.io/library/php:8.3 --override-os linux --override-arch amd64 | jq -r '.Env.[] | select(test("^PHP_VERSION=")) | sub("^PHP_VERSION="; "")')
-        #export PHP_VERSION="${PHP_83_LATEST},${PHP_82_LATEST}"
-#
-        #METADATA="$(docker buildx bake --print | jq -c)"
-#
-        #{
-        #  echo metadata="$METADATA"
-        #  echo variants="$(jq -c '.group.default.targets|map(sub("runner-|builder-"; ""))|unique' <<< "$METADATA")"
-        #  echo platforms="$(jq -c 'first(.target[]) | .platforms' <<< "$METADATA")"
-        #} >> "$GITHUB_OUTPUT"
+          skopeo inspect docker://docker.io/library/php:8.2 --override-os linux --override-arch amd64 | jq -r '.Env[] | select(test("^PHP_VERSION=")) | sub("^PHP_VERSION="; "")'
+          PHP_82_LATEST=$(skopeo inspect docker://docker.io/library/php:8.2 --override-os linux --override-arch amd64 | jq -r '.Env[] | select(test("^PHP_VERSION=")) | sub("^PHP_VERSION="; "")')
+          PHP_83_LATEST=$(skopeo inspect docker://docker.io/library/php:8.3 --override-os linux --override-arch amd64 | jq -r '.Env[] | select(test("^PHP_VERSION=")) | sub("^PHP_VERSION="; "")')
+          export PHP_VERSION="${PHP_83_LATEST},${PHP_82_LATEST}"
+
+          METADATA="$(docker buildx bake --print | jq -c)"
+
+          {
+            echo metadata="$METADATA"
+            echo variants="$(jq -c '.group.default.targets|map(sub("runner-|builder-"; ""))|unique' <<< "$METADATA")"
+            echo platforms="$(jq -c 'first(.target[]) | .platforms' <<< "$METADATA")"
+          } >> "$GITHUB_OUTPUT"
         env:
           SHA: ${{github.sha}}
           VERSION: ${{github.ref_type == 'tag' && github.ref_name || github.sha}}
