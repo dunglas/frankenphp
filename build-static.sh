@@ -69,11 +69,15 @@ else
 
     if type "brew" > /dev/null; then
         packages="composer"
+        if ! type "go" > /dev/null; then
+            packages="$packages go"
+        fi
         if [ "$RELEASE" ]; then
             packages="$packages gh"
         fi
 
-        brew install --formula --quiet "$packages"
+        # shellcheck disable=SC2086
+        brew install --formula --quiet $packages
     fi
 
     composer install --no-dev -a
