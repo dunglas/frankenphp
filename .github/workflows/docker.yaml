@@ -11,19 +11,52 @@ on:
       - v*.*.*
   workflow_dispatch:
     inputs: {}
+  schedule:
+    - cron:  '0 4 * * *'
 jobs:
   prepare:
     runs-on: ubuntu-latest
     outputs:
-      # Push only if it's a tag or if we're committing in the main branch
-      push: ${{ toJson(startsWith(github.ref, 'refs/tags/') || (github.ref == 'refs/heads/main' && github.event_name != 'pull_request')) }}
+      # Push if it's a scheduled job, a tag, or if we're committing to the main branch
+      push: ${{ toJson(github.event_name == 'schedule' || startsWith(github.ref, 'refs/tags/') || (github.ref == 'refs/heads/main' && github.event_name != 'pull_request')) }}
       variants: ${{ steps.matrix.outputs.variants }}
       platforms: ${{ steps.matrix.outputs.platforms }}
       metadata: ${{ steps.matrix.outputs.metadata }}
-      php_version: ${{ steps.matrix.outputs.php_version }}
+      php_version: ${{ steps.check.outputs.php_version }}
+      skip: ${{ steps.check.outputs.skip }}
+      ref: ${{ steps.check.outputs.ref }}
     steps:
       -
+        name: Check PHP versions
+        id: check
+        run: |
+          PHP_82_LATEST=$(skopeo inspect docker://docker.io/library/php:8.2 --override-os linux --override-arch amd64 | jq -r '.Env[] | select(test("^PHP_VERSION=")) | sub("^PHP_VERSION="; "")')
+          PHP_83_LATEST=$(skopeo inspect docker://docker.io/library/php:8.3 --override-os linux --override-arch amd64 | jq -r '.Env[] | select(test("^PHP_VERSION=")) | sub("^PHP_VERSION="; "")')
+          echo php_version="${PHP_83_LATEST},${PHP_82_LATEST}" >> "${GITHUB_OUTPUT}"
+          
+          # Check if the Docker images must be rebuilt
+          if [[ "${GITHUB_EVENT_NAME}" != "schedule"  ]]; then
+              echo skip=false >> "${GITHUB_OUTPUT}"
+              exit 0
+          fi
+          
+          FRANKENPHP_82_LATEST=$(skopeo inspect docker://docker.io/dunglas/frankenphp:latest-php8.2 --override-os linux --override-arch amd64 | jq -r '.Env[] | select(test("^PHP_VERSION=")) | sub("^PHP_VERSION="; "")')
+          FRANKENPHP_83_LATEST=$(skopeo inspect docker://docker.io/dunglas/frankenphp:latest-php8.3 --override-os linux --override-arch amd64 | jq -r '.Env[] | select(test("^PHP_VERSION=")) | sub("^PHP_VERSION="; "")')
+          
+          if [[ "${FRANKENPHP_82_LATEST}" == "${PHP_82_LATEST}" ]] && [[ "${FRANKENPHP_83_LATEST}" == "${PHP_83_LATEST}" ]]; then
+              echo skip=true >> "${GITHUB_OUTPUT}"
+              exit 0
+          fi
+          
+          {
+            echo ref="$(gh release view --repo dunglas/frankenphp --json tagName --jq '.tagName')"
+            echo skip=false
+          } >> "${GITHUB_OUTPUT}"
+      -
         uses: actions/checkout@v4
+        if: ${{ !fromJson(steps.check.outputs.skip) }}
+        with:
+          ref: ${{ steps.check.outputs.ref }}
       -
         name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -31,28 +64,24 @@ jobs:
           version: latest
       -
         name: Create variants matrix
+        if: ${{ !fromJson(steps.check.outputs.skip) }}
         id: matrix
         run: |
-          # Fetch latest versions of PHP
-          PHP_82_LATEST=$(skopeo inspect docker://docker.io/library/php:8.2 --override-os linux --override-arch amd64 | jq -r '.Env[] | select(test("^PHP_VERSION=")) | sub("^PHP_VERSION="; "")')
-          PHP_83_LATEST=$(skopeo inspect docker://docker.io/library/php:8.3 --override-os linux --override-arch amd64 | jq -r '.Env[] | select(test("^PHP_VERSION=")) | sub("^PHP_VERSION="; "")')
-          export PHP_VERSION="${PHP_83_LATEST},${PHP_82_LATEST}"
-
           METADATA="$(docker buildx bake --print | jq -c)"
-
           {
-            echo php_version="$PHP_VERSION"
-            echo metadata="$METADATA"
-            echo variants="$(jq -c '.group.default.targets|map(sub("runner-|builder-"; ""))|unique' <<< "$METADATA")"
-            echo platforms="$(jq -c 'first(.target[]) | .platforms' <<< "$METADATA")"
-          } >> "$GITHUB_OUTPUT"
+            echo metadata="${METADATA}"
+            echo variants="$(jq -c '.group.default.targets|map(sub("runner-|builder-"; ""))|unique' <<< "${METADATA}")"
+            echo platforms="$(jq -c 'first(.target[]) | .platforms' <<< "${METADATA}")"
+          } >> "${GITHUB_OUTPUT}"
         env:
           SHA: ${{ github.sha }}
-          VERSION: ${{ github.ref_type == 'tag' && github.ref_name || github.sha }}
+          VERSION: ${{ (github.ref_type == 'tag' && github.ref_name) || steps.check.outputs.ref || github.sha }}
+          PHP_VERSION: ${{ steps.check.outputs.php_version }}
   build:
     runs-on: ubuntu-latest
     needs:
       - prepare
+    if: ${{ !fromJson(needs.prepare.outputs.skip) }}
     strategy:
       fail-fast: false
       matrix:
@@ -69,6 +98,8 @@ jobs:
     steps:
       -
         uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.ref }}
       -
         name: Set up QEMU
         if: matrix.qemu
@@ -108,7 +139,7 @@ jobs:
             ${{ fromJson(needs.prepare.outputs.push) && '*.output=type=image,name=dunglas/frankenphp,push-by-digest=true,name-canonical=true,push=true' || '' }}
         env:
           SHA: ${{ github.sha }}
-          VERSION: ${{ github.ref_type == 'tag' && github.ref_name || github.sha }}
+          VERSION: ${{ github.ref_type == 'tag' && github.ref_name  || needs.prepare.outputs.ref || github.sha }}
           PHP_VERSION: ${{ needs.prepare.outputs.php_version }}
       -
         # Workaround for https://github.com/actions/runner/pull/2477#issuecomment-1501003600
@@ -118,11 +149,11 @@ jobs:
           mkdir -p /tmp/metadata/builder /tmp/metadata/runner
 
           # shellcheck disable=SC2086
-          builderDigest=$(jq -r '."builder-${{ matrix.variant }}"."containerimage.digest"' <<< $METADATA)
+          builderDigest=$(jq -r '."builder-${{ matrix.variant }}"."containerimage.digest"' <<< ${METADATA})
           touch "/tmp/metadata/builder/${builderDigest#sha256:}"
 
           # shellcheck disable=SC2086
-          runnerDigest=$(jq -r '."runner-${{ matrix.variant }}"."containerimage.digest"' <<< $METADATA)
+          runnerDigest=$(jq -r '."runner-${{ matrix.variant }}"."containerimage.digest"' <<< ${METADATA})
           touch "/tmp/metadata/runner/${runnerDigest#sha256:}"
         env:
           METADATA: ${{ steps.build.outputs.metadata }}
@@ -150,7 +181,7 @@ jobs:
         continue-on-error: ${{ fromJson(needs.prepare.outputs.push) }}
         run: |
           docker run --platform=${{ matrix.platform }} --rm \
-            "$(jq -r '."builder-${{ matrix.variant }}"."containerimage.config.digest"' <<< "$METADATA")" \
+            "$(jq -r '."builder-${{ matrix.variant }}"."containerimage.config.digest"' <<< "${METADATA}")" \
             sh -c 'go test ${{ matrix.race }} -v ./... && cd caddy && go test ${{ matrix.race }} -v ./...'
         env:
           METADATA: ${{ steps.build.outputs.metadata }}
@@ -189,7 +220,7 @@ jobs:
         working-directory: /tmp/metadata
         run: |
           # shellcheck disable=SC2046,SC2086
-          docker buildx imagetools create $(jq -cr '.target."${{ matrix.target }}-${{ matrix.variant }}".tags | map("-t " + .) | join(" ")' <<< $METADATA) \
+          docker buildx imagetools create $(jq -cr '.target."${{ matrix.target }}-${{ matrix.variant }}".tags | map("-t " + .) | join(" ")' <<< ${METADATA}) \
             $(printf 'dunglas/frankenphp@sha256:%s ' *)
         env:
           METADATA: ${{ needs.prepare.outputs.metadata }}
@@ -197,6 +228,6 @@ jobs:
         name: Inspect image
         run: |
           # shellcheck disable=SC2046,SC2086
-          docker buildx imagetools inspect $(jq -cr '.target."${{ matrix.target }}-${{ matrix.variant }}".tags | first' <<< $METADATA) 
+          docker buildx imagetools inspect $(jq -cr '.target."${{ matrix.target }}-${{ matrix.variant }}".tags | first' <<< ${METADATA}) 
         env:
           METADATA: ${{ needs.prepare.outputs.metadata }}
