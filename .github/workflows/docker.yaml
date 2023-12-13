@@ -35,8 +35,8 @@ jobs:
           echo php_version="${PHP_83_LATEST},${PHP_82_LATEST}" >> "${GITHUB_OUTPUT}"
           
           # Check if the Docker images must be rebuilt
-          if [[ ${{ toJson(github.event_name) }} != "schedule"  ]]; then
-              echo skip=false >> "$GITHUB_OUTPUT"
+          if [[ "${GITHUB_EVENT_NAME}" != "schedule"  ]]; then
+              echo skip=false >> "${GITHUB_OUTPUT}"
               exit 0
           fi
           
@@ -75,7 +75,7 @@ jobs:
           } >> "${GITHUB_OUTPUT}"
         env:
           SHA: ${{ github.sha }}
-          VERSION: ${{ github.ref_type == 'tag' && github.ref_name || github.sha }}
+          VERSION: ${{ (github.ref_type == 'tag' && github.ref_name) || steps.check.outputs.ref || github.sha }}
           PHP_VERSION: ${{ steps.check.outputs.php_version }}
   build:
     runs-on: ubuntu-latest
@@ -139,7 +139,7 @@ jobs:
             ${{ fromJson(needs.prepare.outputs.push) && '*.output=type=image,name=dunglas/frankenphp,push-by-digest=true,name-canonical=true,push=true' || '' }}
         env:
           SHA: ${{ github.sha }}
-          VERSION: ${{ github.ref_type == 'tag' && github.ref_name || github.sha }}
+          VERSION: ${{ github.ref_type == 'tag' && github.ref_name  || needs.prepare.outputs.ref || github.sha }}
           PHP_VERSION: ${{ needs.prepare.outputs.php_version }}
       -
         # Workaround for https://github.com/actions/runner/pull/2477#issuecomment-1501003600
