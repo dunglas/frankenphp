@@ -76,6 +76,7 @@ else
             packages="$packages gh"
         fi
 
+        # shellcheck disable=SC2086
         brew install --formula --quiet $packages
     fi
 
