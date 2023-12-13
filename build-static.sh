@@ -69,7 +69,7 @@ else
 
     if type "brew" > /dev/null; then
         packages="composer"
-        if ! type "go" > dev/null; then
+        if ! type "go" > /dev/null; then
             packages="$packages go"
         fi
         if [ "$RELEASE" ]; then
