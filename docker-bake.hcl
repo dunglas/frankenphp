@@ -6,6 +6,10 @@ variable "VERSION" {
     default = "dev"
 }
 
+variable "PHP_VERSION" {
+    default = "8.2,8.3"
+}
+
 variable "GO_VERSION" {
     default = "1.21"
 }
@@ -20,13 +24,17 @@ variable "CACHE" {
     default = ""
 }
 
+variable DEFAULT_PHP_VERSION {
+    default = "8.3"
+}
+
 function "tag" {
     params = [version, os, php-version, tgt]
     result = [
         version != "" ? format("%s:%s%s-php%s-%s", IMAGE_NAME, version, tgt == "builder" ? "-builder" : "", php-version, os) : "",
-        php-version == "8.3" && os == "bookworm"  && version != "" ? format("%s:%s%s", IMAGE_NAME, version, tgt == "builder" ? "-builder" : "") : "",
-        php-version == "8.3" && version != "" ? format("%s:%s%s-%s", IMAGE_NAME, version, tgt == "builder" ? "-builder" : "", os) : "",
-        php-version == "8.3" && version == "latest" ? format("%s:%s%s", IMAGE_NAME, os, tgt == "builder" ? "-builder" : "") : "",
+        php-version == DEFAULT_PHP_VERSION && os == "bookworm"  && version != "" ? format("%s:%s%s", IMAGE_NAME, version, tgt == "builder" ? "-builder" : "") : "",
+        php-version == DEFAULT_PHP_VERSION && version != "" ? format("%s:%s%s-%s", IMAGE_NAME, version, tgt == "builder" ? "-builder" : "", os) : "",
+        php-version == DEFAULT_PHP_VERSION && version == "latest" ? format("%s:%s%s", IMAGE_NAME, os, tgt == "builder" ? "-builder" : "") : "",
         os == "bookworm" && version != "" ? format("%s:%s%s-php%s", IMAGE_NAME, version, tgt == "builder" ? "-builder" : "", php-version) : "",
     ]
 }
@@ -55,11 +63,21 @@ function "__semver" {
     result = v == {} ? [clean_tag(VERSION)] : v.prerelease == null ? ["latest", v.major, "${v.major}.${v.minor}", "${v.major}.${v.minor}.${v.patch}"] : ["${v.major}.${v.minor}.${v.patch}-${v.prerelease}"]
 }
 
+function "php_version" {
+    params = [v]
+    result = _php_version(v, regexall("(?P<major>\\d+)\\.(?P<minor>\\d+)", v)[0])
+}
+
+function "_php_version" {
+    params = [v, m]
+    result = "${m.major}.${m.minor}" == DEFAULT_PHP_VERSION ? [v, "${m.major}.${m.minor}", "${m.major}"] : [v, "${m.major}.${m.minor}"]
+}
+
 target "default" {
     name = "${tgt}-php-${replace(php-version, ".", "-")}-${os}"
     matrix = {
         os = ["bookworm", "alpine"]
-        php-version = ["8.2", "8.3"]
+        php-version = split(",", PHP_VERSION)
         tgt = ["builder", "runner"]
     }
     contexts = {
@@ -76,10 +94,12 @@ target "default" {
         "linux/arm/v7",
         "linux/arm64",
     ]
-    tags = distinct(flatten([
-        LATEST ? tag("latest", os, php-version, tgt) : [],
-        tag(SHA == "" ? "" : "sha-${substr(SHA, 0, 7)}", os, php-version, tgt),
-        [for v in semver(VERSION) : tag(v, os, php-version, tgt)]
+    tags = distinct(flatten(
+        [for pv in php_version(php-version) : flatten([
+            LATEST ? tag("latest", os, pv, tgt) : [],
+            tag(SHA == "" ? "" : "sha-${substr(SHA, 0, 7)}", os, pv, tgt),
+            [for v in semver(VERSION) : tag(v, os, pv, tgt)]
+        ])
     ]))
     labels = {
         "org.opencontainers.image.created" = "${timestamp()}"
