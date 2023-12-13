@@ -73,7 +73,7 @@ else
             packages="$packages gh"
         fi
 
-        brew install --formula --quiet "$packages"
+        brew install --formula --quiet $packages
     fi
 
     composer install --no-dev -a
