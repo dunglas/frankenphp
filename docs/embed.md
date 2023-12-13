@@ -89,7 +89,7 @@ The resulting binary is the file named `frankenphp-<os>-<arch>` in the `dist/` d
 
 ## Using The Binary
 
-This is it! The `my-app` file contains your self-contained app!
+This is it! The `my-app` file (or `dist/frankenphp-<os>-<arch>` on other OSes) contains your self-contained app!
 
 To start the web app run:
 
