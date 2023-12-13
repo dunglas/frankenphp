@@ -68,7 +68,10 @@ else
     fi
 
     if type "brew" > /dev/null; then
-        packages="go composer"
+        packages="composer"
+        if ! type "go" > dev/null; then
+            packages="$packages go"
+        fi
         if [ "$RELEASE" ]; then
             packages="$packages gh"
         fi
