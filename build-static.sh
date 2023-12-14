@@ -113,12 +113,12 @@ if [ -n "${EMBED}" ] && [ -d "${EMBED}" ]; then
 fi
 
 if [ "${os}" = "linux" ]; then
-    extraExtldflags=",-Wl,-z,stack-size=0x80000"
+    extraExtldflags="-Wl,-z,stack-size=0x80000"
 fi
 
 cd caddy/frankenphp/
 go env
-go build -buildmode=pie -tags "cgo netgo osusergo static_build" -ldflags "-linkmode=external -extldflags '-static-pie${extraExtldflags}' -w -s -X 'github.com/caddyserver/caddy/v2.CustomVersion=FrankenPHP ${FRANKENPHP_VERSION} PHP ${LIBPHP_VERSION} Caddy'" -o "../../dist/${bin}"
+go build -buildmode=pie -tags "cgo netgo osusergo static_build" -ldflags "-linkmode=external -extldflags '-static-pie ${extraExtldflags}' -w -s -X 'github.com/caddyserver/caddy/v2.CustomVersion=FrankenPHP ${FRANKENPHP_VERSION} PHP ${LIBPHP_VERSION} Caddy'" -o "../../dist/${bin}"
 cd ../..
 
 if [ -d "${EMBED}" ]; then
