@@ -48,11 +48,11 @@ jobs:
         run: go build
       -
         name: Run library tests
-        run: go test -race -v ./...
+        run: CGO_CXXFLAGS=-fPIE CGO_CFLAGS=-fPIE CGO_LDFLAGS=-pie go test -buildmode=pie -v ./...
       -
         name: Run Caddy module tests
         working-directory: caddy/
-        run: go test -race -v ./...
+        run: CGO_CXXFLAGS=-fPIE CGO_CFLAGS=-fPIE CGO_LDFLAGS=-pie go test -buildmode=pie -v ./...
       -
         name: Lint Go code
         uses: golangci/golangci-lint-action@v3
