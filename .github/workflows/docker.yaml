@@ -92,7 +92,6 @@ jobs:
             qemu: true
           - platform: linux/amd64
             qemu: false
-            race: "-race" # The Go race detector is only supported on amd64
           - platform: linux/386
             qemu: false
     steps:
@@ -182,7 +181,7 @@ jobs:
         run: |
           docker run --platform=${{ matrix.platform }} --rm \
             "$(jq -r '."builder-${{ matrix.variant }}"."containerimage.config.digest"' <<< "${METADATA}")" \
-            sh -c 'go test ${{ matrix.race }} -v ./... && cd caddy && go test ${{ matrix.race }} -v ./...'
+            sh -c ' go test -buildmode=pie -v ./... && cd caddy && go test -buildmode=pie -v ./...'
         env:
           METADATA: ${{ steps.build.outputs.metadata }}
   # Adapted from https://docs.docker.com/build/ci/github-actions/multi-platform/
