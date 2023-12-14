@@ -51,7 +51,7 @@ FROM dunglas/frankenphp:latest-builder AS builder
 COPY --from=caddy:builder /usr/bin/xcaddy /usr/bin/xcaddy
 
 # CGO must be enabled to build FrankenPHP
-ENV CGO_ENABLED=1 XCADDY_SETCAP=1
+ENV CGO_ENABLED=1 XCADDY_SETCAP=1 XCADDY_GO_BUILD_FLAGS="-ldflags '-w -s'"
 RUN xcaddy build \
     --output /usr/local/bin/frankenphp \
     --with github.com/dunglas/frankenphp=./ \
@@ -69,6 +69,11 @@ COPY --from=builder /usr/local/bin/frankenphp /usr/local/bin/frankenphp
 
 The `builder` image provided by FrankenPHP contains a compiled version of libphp.
 [Builders images](https://hub.docker.com/r/dunglas/frankenphp/tags?name=builder) are provided for all versions of FrankenPHP and PHP, both for Alpine and Debian.
+
+> [!TIP]
+>
+> If you're using Alpine Linux and Symfony,
+> you may need to [increase the default stack size](compile.md#using-xcaddy).
 
 ## Enabling the Worker Mode by Default
 
