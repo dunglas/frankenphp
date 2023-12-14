@@ -88,7 +88,7 @@ COPY --link testdata testdata
 ENV CGO_LDFLAGS="-lssl -lcrypto -lreadline -largon2 -lcurl -lonig -lz $PHP_LDFLAGS" CGO_CFLAGS="-DFRANKENPHP_VERSION=$FRANKENPHP_VERSION $PHP_CFLAGS" CGO_CPPFLAGS=$PHP_CPPFLAGS
 
 WORKDIR /go/src/app/caddy/frankenphp
-RUN GOBIN=/usr/local/bin go install -ldflags "-X 'github.com/caddyserver/caddy/v2.CustomVersion=FrankenPHP $FRANKENPHP_VERSION PHP $PHP_VERSION Caddy'" && \
+RUN GOBIN=/usr/local/bin go install -ldflags "-w -s -X 'github.com/caddyserver/caddy/v2.CustomVersion=FrankenPHP $FRANKENPHP_VERSION PHP $PHP_VERSION Caddy'" && \
     setcap cap_net_bind_service=+ep /usr/local/bin/frankenphp && \
     cp Caddyfile /etc/caddy/Caddyfile && \
     frankenphp version
