@@ -83,10 +83,22 @@ CGO_CFLAGS=$(php-config --includes) CGO_LDFLAGS="$(php-config --ldflags) $(php-c
 Alternatively, use [xcaddy](https://github.com/caddyserver/xcaddy) to compile FrankenPHP with [custom Caddy modules](https://caddyserver.com/docs/modules/):
 
 ```console
-CGO_ENABLED=1 xcaddy build \
+CGO_ENABLED=1 \
+XCADDY_GO_BUILD_FLAGS="-ldflags '-w -s'" \
+xcaddy build \
     --output frankenphp \
     --with github.com/dunglas/frankenphp/caddy \
     --with github.com/dunglas/mercure/caddy \
     --with github.com/dunglas/vulcain/caddy
     # Add extra Caddy modules here
 ```
+
+> [!TIP]
+>
+> If you're using musl libc (the default on Alpine Linux) and Symfony,
+> you may need to increase the default stack size.
+> Otherwise, you may get errors like `PHP Fatal error: Maximum call stack size of 83360 bytes reached during compilation. Try splitting expression`
+>
+> To do so, change the `XCADDY_GO_BUILD_FLAGS` environment variable to something like
+> `XCADDY_GO_BUILD_FLAGS=$'-ldflags "-w -s -extldflags \'-Wl,-z,stack-size=0x80000\'"'`
+> (change the value of the stack size according to your app needs).
