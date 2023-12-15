@@ -1,0 +1,13 @@
+{
+	frankenphp
+}
+
+http:// {
+	route {
+		root * .
+
+		# FrankenPHP!
+		@phpFiles path *.php
+		php @phpFiles
+	}
+}
