@@ -1,6 +1,6 @@
 # Building Custom Docker Image
 
-[FrankenPHP Docker images](https://hub.docker.com/r/dunglas/frankenphp) are based on [official PHP images](https://hub.docker.com/_/php/). Alpine Linux and Debian variants are provided for popular architectures. Variants for PHP 8.2 and PHP 8.3 are provided. [Browse tags](https://hub.docker.com/repository/docker/dunglas/frankenphp).
+[FrankenPHP Docker images](https://hub.docker.com/r/dunglas/frankenphp) are based on [official PHP images](https://hub.docker.com/_/php/). Alpine Linux and Debian variants are provided for popular architectures. Variants for PHP 8.2 and PHP 8.3 are provided. [Browse tags](https://hub.docker.com/r/dunglas/frankenphp/tags).
 
 ## How to Use The Images
 
