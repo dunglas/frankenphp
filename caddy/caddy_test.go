@@ -37,9 +37,11 @@ func TestPHP(t *testing.T) {
 
 	for i := 0; i < 100; i++ {
 		wg.Add(1)
+
 		go func(i int) {
+			defer wg.Done()
+
 			tester.AssertGetResponse(fmt.Sprintf("http://localhost:9080/index.php?i=%d", i), http.StatusOK, fmt.Sprintf("I am by birth a Genevese (%d)", i))
-			wg.Done()
 		}(i)
 	}
 	wg.Wait()
@@ -101,9 +103,11 @@ func TestWorker(t *testing.T) {
 
 	for i := 0; i < 100; i++ {
 		wg.Add(1)
+
 		go func(i int) {
+			defer wg.Done()
+
 			tester.AssertGetResponse(fmt.Sprintf("http://localhost:9080/index.php?i=%d", i), http.StatusOK, fmt.Sprintf("I am by birth a Genevese (%d)", i))
-			wg.Done()
 		}(i)
 	}
 	wg.Wait()
@@ -218,7 +222,10 @@ func TestReload(t *testing.T) {
 	var wg sync.WaitGroup
 	for i := 0; i < 20; i++ {
 		wg.Add(1)
+
 		go func() {
+			defer wg.Done()
+
 			resp1, err := tester.Client.Get(configURL)
 			require.NoError(t, err)
 
@@ -230,8 +237,6 @@ func TestReload(t *testing.T) {
 			resp, err := tester.Client.Do(r)
 			require.NoError(t, err)
 			assert.Equal(t, http.StatusOK, resp.StatusCode)
-
-			wg.Done()
 		}()
 	}
 	wg.Wait()
