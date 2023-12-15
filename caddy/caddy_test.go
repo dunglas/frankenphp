@@ -9,6 +9,8 @@ import (
 	"testing"
 
 	"github.com/caddyserver/caddy/v2/caddytest"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestPHP(t *testing.T) {
@@ -35,7 +37,6 @@ func TestPHP(t *testing.T) {
 
 	for i := 0; i < 100; i++ {
 		wg.Add(1)
-
 		go func(i int) {
 			tester.AssertGetResponse(fmt.Sprintf("http://localhost:9080/index.php?i=%d", i), http.StatusOK, fmt.Sprintf("I am by birth a Genevese (%d)", i))
 			wg.Done()
@@ -100,7 +101,6 @@ func TestWorker(t *testing.T) {
 
 	for i := 0; i < 100; i++ {
 		wg.Add(1)
-
 		go func(i int) {
 			tester.AssertGetResponse(fmt.Sprintf("http://localhost:9080/index.php?i=%d", i), http.StatusOK, fmt.Sprintf("I am by birth a Genevese (%d)", i))
 			wg.Done()
@@ -188,4 +188,53 @@ func TestPHPServerDirectiveDisableFileServer(t *testing.T) {
 
 	tester.AssertGetResponse("http://localhost:9080", http.StatusOK, "I am by birth a Genevese (i not set)")
 	tester.AssertGetResponse("http://localhost:9080/hello.txt", http.StatusNotFound, "Not found")
+}
+
+// TestReload sends many concurrent reload requests, as done by Laravel Octane.
+// Better run this test with -race.
+func TestReload(t *testing.T) {
+	tester := caddytest.NewTester(t)
+	tester.InitServer(`
+	{
+		skip_install_trust
+		admin localhost:2999
+		http_port 9080
+		https_port 9443
+
+		frankenphp {
+			worker ../testdata/index.php
+		}
+		order php_server before respond
+	}
+
+	localhost:9080 {
+		root * ../testdata
+		php_server
+	}
+	`, "caddyfile")
+
+	const configURL = "http://localhost:2999/config/apps/frankenphp"
+
+	var wg sync.WaitGroup
+	for i := 0; i < 20; i++ {
+		wg.Add(1)
+		go func() {
+			resp1, err := tester.Client.Get(configURL)
+			require.NoError(t, err)
+
+			r, err := http.NewRequest("POST", configURL, resp1.Body)
+			require.NoError(t, err)
+			r.Header.Add("Content-Type", "application/json")
+			r.Header.Add("Cache-Control", "must-revalidate")
+
+			resp, err := tester.Client.Do(r)
+			require.NoError(t, err)
+			assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+			wg.Done()
+		}()
+	}
+	wg.Wait()
+
+	tester.AssertGetResponse("http://localhost:9080", http.StatusOK, "I am by birth a Genevese (i not set)")
 }
