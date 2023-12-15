@@ -6,8 +6,7 @@ http:// {
 	route {
 		root * .
 
-		# FrankenPHP!
-		@phpFiles path *.php
-		php @phpFiles
+		encode zstd gzip
+		php_server
 	}
 }
