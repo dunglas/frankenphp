@@ -15,6 +15,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 #include "C-Thread-Pool/thpool.c"
 #include "C-Thread-Pool/thpool.h"
@@ -667,6 +668,8 @@ static void *manager_thread(void *arg) {
 
   threadpool thpool = thpool_init(*((int *)arg));
   free(arg);
+  sleep(1);
+
 
   uintptr_t rh;
   while ((rh = go_fetch_request())) {
