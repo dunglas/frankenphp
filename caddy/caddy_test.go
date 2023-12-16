@@ -229,7 +229,7 @@ func TestReload(t *testing.T) {
 			resp1, err := tester.Client.Get(configURL)
 			require.NoError(t, err)
 
-			r, err := http.NewRequest("POST", configURL, resp1.Body)
+			r, err := http.NewRequest("PATCH", configURL, resp1.Body)
 			require.NoError(t, err)
 			r.Header.Add("Content-Type", "application/json")
 			r.Header.Add("Cache-Control", "must-revalidate")
