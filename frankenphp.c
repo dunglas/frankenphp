@@ -668,8 +668,7 @@ static void *manager_thread(void *arg) {
 
   threadpool thpool = thpool_init(*((int *)arg));
   free(arg);
-  sleep(1);
-
+  sleep(1); /* FIXME: https://github.com/dunglas/frankenphp/pull/394 */
 
   uintptr_t rh;
   while ((rh = go_fetch_request())) {
