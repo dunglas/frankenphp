@@ -281,8 +281,6 @@ func (f FrankenPHPModule) ServeHTTP(w http.ResponseWriter, r *http.Request, next
 
 	hooks := frankenphp.FrankenPHPHooks{
 		ResponseFilter: func(status int, header http.Header, r2 *http.Request) bool {
-			f.logger.Debug("Checking against matchers", zap.Int("number", len(f.HandleResponse)))
-
 			handleError := func(error error) bool {
 				var handlerError caddyhttp.HandlerError
 				if errors.As(error, &handlerError) {
@@ -294,8 +292,6 @@ func (f FrankenPHPModule) ServeHTTP(w http.ResponseWriter, r *http.Request, next
 			}
 
 			for i, rh := range f.HandleResponse {
-
-				f.logger.Debug("Checking response against matcher", zap.Any("matcher", rh))
 				if rh.Match != nil && !rh.Match.Match(status, header) {
 					continue
 				}
@@ -315,7 +311,6 @@ func (f FrankenPHPModule) ServeHTTP(w http.ResponseWriter, r *http.Request, next
 
 				// we are about to replace the response and close it. Frankenphp should handle this gracefully without
 				// killing the script or exploding.
-				f.logger.Info("Handling response", zap.Int("handler", i))
 
 				// use the replacer to so the original it can be routed. We use the "reverse_proxy" strings so that
 				// configuration is backwards compatible.
