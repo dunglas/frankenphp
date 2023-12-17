@@ -866,6 +866,7 @@ static void *execute_script_cli(void *arg) {
     zend_file_handle file_handle;
     zend_stream_init_filename(&file_handle, cli_script);
 
+    CG(skip_shebang) = 1;
     php_execute_script(&file_handle);
   }
   zend_end_try();
