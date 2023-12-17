@@ -223,3 +223,39 @@ func TestPhpServerXAccelRedirect(t *testing.T) {
 	tester.AssertGetResponse("http://localhost:9080/xaccel.php?redir=/hello.txt", http.StatusOK, "Hello")
 	tester.AssertGetResponse("http://localhost:9080/xaccel.php?redir=/not_exist.txt", http.StatusNotFound, "")
 }
+
+func TestPhpServerXAccelRedirectWorker(t *testing.T) {
+	tester := caddytest.NewTester(t)
+	tester.InitServer(`
+		{
+			skip_install_trust
+			admin localhost:2999
+			http_port 9080
+			https_port 9443
+
+			frankenphp {
+				worker ../testdata/index.php 2
+			}
+			order php_server before respond
+		}
+
+		localhost:9080 {
+			root * ../testdata
+			php_server {
+				file_server off
+				@accel header X-Accel-Redirect *
+				handle_response @accel {
+					root * ../testdata
+				    rewrite {rp.header.X-Accel-Redirect}
+				    file_server
+				}
+			}
+			respond "Not found" 404
+		}
+		`, "caddyfile")
+
+	tester.AssertGetResponse("http://localhost:9080", http.StatusOK, "I am by birth a Genevese (i not set)")
+	tester.AssertGetResponse("http://localhost:9080/hello.txt", http.StatusNotFound, "Not found")
+	tester.AssertGetResponse("http://localhost:9080/xaccel.php?redir=/hello.txt", http.StatusOK, "Hello")
+	tester.AssertGetResponse("http://localhost:9080/xaccel.php?redir=/not_exist.txt", http.StatusNotFound, "")
+}
