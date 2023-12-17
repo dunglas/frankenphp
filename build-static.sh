@@ -97,6 +97,9 @@ else
 fi
 
 CGO_CFLAGS="-DFRANKENPHP_VERSION=${FRANKENPHP_VERSION} $(./buildroot/bin/php-config --includes | sed s#-I/#-I"${PWD}"/buildroot/#g)"
+if [ -n "${DEBUG_SYMBOLS}" ]; then
+    CGO_CFLAGS="-g ${CGO_CFLAGS}"
+fi
 export CGO_CFLAGS
 
 if [ "${os}" = "mac" ]; then
