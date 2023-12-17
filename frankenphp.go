@@ -132,7 +132,13 @@ type FrankenPHPContext struct {
 	done                 chan interface{}
 	currentWorkerRequest cgo.Handle
 
-	responseFilter func(status int, headers http.Header, r *http.Request) bool
+	hooks *FrankenPHPHooks
+}
+
+type ResponseFilter func(status int, headers http.Header, r *http.Request) bool
+
+type FrankenPHPHooks struct {
+	ResponseFilter ResponseFilter
 }
 
 func clientHasClosed(r *http.Request) bool {
@@ -441,7 +447,7 @@ func updateServerContext(request *http.Request, create bool, mrh C.uintptr_t) er
 }
 
 // ServeHTTP executes a PHP script according to the given context.
-func ServeHTTP(responseWriter http.ResponseWriter, request *http.Request, responseFilter func(status int, headers http.Header, r *http.Request) bool) error {
+func ServeHTTP(responseWriter http.ResponseWriter, request *http.Request, hooks *FrankenPHPHooks) error {
 	shutdownWG.Add(1)
 	defer shutdownWG.Done()
 
@@ -452,7 +458,7 @@ func ServeHTTP(responseWriter http.ResponseWriter, request *http.Request, respon
 
 	fc.responseWriter = responseWriter
 
-	fc.responseFilter = responseFilter
+	fc.hooks = hooks
 
 	rc := requestChan
 	// Detect if a worker is available to handle this request
@@ -614,7 +620,8 @@ func go_write_headers(rh C.uintptr_t, status C.int, headers *C.zend_llist) {
 		current = current.next
 	}
 
-	handled := fc.responseFilter(int(status), fc.responseWriter.Header(), r)
+	handled := fc.hooks.ResponseFilter(int(status), fc.responseWriter.Header(), r)
+
 	fc.logger.Debug("Sent response to filter", zap.Int("status", int(status)), zap.Any("headers", fc.responseWriter.Header()))
 	if handled {
 		fc.logger.Debug("Filter handled request, php is done...")

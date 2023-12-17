@@ -279,61 +279,72 @@ func (f FrankenPHPModule) ServeHTTP(w http.ResponseWriter, r *http.Request, next
 		return err
 	}
 
-	return frankenphp.ServeHTTP(w, fr, func(status int, header http.Header, r2 *http.Request) bool {
-		f.logger.Debug("Checking against matchers", zap.Int("number", len(f.HandleResponse)))
-		for i, rh := range f.HandleResponse {
+	hooks := frankenphp.FrankenPHPHooks{
+		ResponseFilter: func(status int, header http.Header, r2 *http.Request) bool {
+			f.logger.Debug("Checking against matchers", zap.Int("number", len(f.HandleResponse)))
 
-			f.logger.Debug("Checking response against matcher", zap.Any("matcher", rh))
-			if rh.Match != nil && !rh.Match.Match(status, header) {
-				continue
-			}
-
-			// if we are only changing the status code, do just that
-			if statusCodeStr := rh.StatusCode.String(); statusCodeStr != "" {
-				statusCode, err := strconv.Atoi(repl.ReplaceAll(statusCodeStr, ""))
-				if err != nil {
-					f.logger.Warn("Unable to replace status code string")
-					return false
+			handleError := func(error error) bool {
+				var handlerError caddyhttp.HandlerError
+				if errors.As(error, &handlerError) {
+					w.WriteHeader(handlerError.StatusCode)
+					return true
 				}
-				if statusCode != 0 {
-					w.WriteHeader(statusCode)
+
+				return false
+			}
+
+			for i, rh := range f.HandleResponse {
+
+				f.logger.Debug("Checking response against matcher", zap.Any("matcher", rh))
+				if rh.Match != nil && !rh.Match.Match(status, header) {
+					continue
 				}
-				break
-			}
 
-			// we are about to replace the response and close it. Frankenphp should handle this gracefully without
-			// killing the script or exploding.
-			f.logger.Info("Handling response", zap.Int("handler", i))
+				// if we are only changing the status code, do just that
+				if statusCodeStr := rh.StatusCode.String(); statusCodeStr != "" {
+					statusCode, err := strconv.Atoi(repl.ReplaceAll(statusCodeStr, ""))
+					if err != nil {
+						f.logger.Warn("Unable to replace status code string")
+						return handleError(err)
+					}
+					if statusCode != 0 {
+						w.WriteHeader(statusCode)
+					}
+					break
+				}
 
-			// use the replacer to so the original it can be routed. We use the "reverse_proxy" strings so that
-			// configuration is backwards compatible.
-			for field, value := range header {
-				repl.Set("http.reverse_proxy.header."+field, strings.Join(value, ","))
-			}
-			repl.Set("http.reverse_proxy.status_code", status)
-			repl.Set("http.reverse_proxy.status_text", strconv.Itoa(status))
+				// we are about to replace the response and close it. Frankenphp should handle this gracefully without
+				// killing the script or exploding.
+				f.logger.Info("Handling response", zap.Int("handler", i))
 
-			routeErr := rh.Routes.Compile(next).ServeHTTP(w, r2)
+				// use the replacer to so the original it can be routed. We use the "reverse_proxy" strings so that
+				// configuration is backwards compatible.
+				for field, value := range header {
+					repl.Set("http.reverse_proxy.header."+field, strings.Join(value, ","))
+				}
+				repl.Set("http.reverse_proxy.status_code", status)
+				repl.Set("http.reverse_proxy.status_text", strconv.Itoa(status))
 
-			if routeErr != nil {
-				f.logger.Warn("Failure handling route while handling response", zap.Any("error", routeErr))
+				routeErr := rh.Routes.Compile(next).ServeHTTP(w, r2)
 
-				// this is likely a 404 and we'll treat it as such
-				// todo: surely we can get the actual error code?
-				w.WriteHeader(404)
+				if routeErr != nil {
+					f.logger.Warn("Failure handling route while handling response", zap.Any("error", routeErr))
+
+					return handleError(routeErr)
+				}
+
+				f.logger.Debug("Matched response successfully!")
 
 				return true
 			}
 
-			f.logger.Debug("Matched response successfully!")
+			f.logger.Debug("Did not match any response!")
 
-			return true
-		}
+			return false
+		},
+	}
 
-		f.logger.Debug("Did not match any response!")
-
-		return false
-	})
+	return frankenphp.ServeHTTP(w, fr, &hooks)
 }
 
 const matcherPrefix = "@"
