@@ -244,7 +244,6 @@ func (f *FrankenPHPModule) Provision(ctx caddy.Context) error {
 	}
 
 	for i, rh := range f.HandleResponse {
-		f.logger.Info("Provisioning routes")
 		err := rh.Provision(ctx)
 		if err != nil {
 			return fmt.Errorf("provisioning response handler %d: %v", i, err)
