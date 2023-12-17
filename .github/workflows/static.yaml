@@ -69,7 +69,7 @@ jobs:
           set: |
             *.cache-from=type=gha,scope=${{github.ref}}-static-builder
             *.cache-from=type=gha,scope=refs/heads/main-static-builder
-            *.cache-to=type=gha,scope=${{github.ref}}-static-builder
+            *.cache-to=type=gha,scope=${{github.ref}}-static-builder,ignore-error=true
         env:
           LATEST: '1' # TODO: unset this variable when releasing the first stable version
           SHA: ${{github.sha}}

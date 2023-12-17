@@ -135,7 +135,7 @@ jobs:
             *.platform=${{ matrix.platform }}
             *.cache-from=type=gha,scope=${{ github.ref }}-${{ matrix.platform }}
             *.cache-from=type=gha,scope=refs/heads/main-${{ matrix.platform }}
-            *.cache-to=type=gha,scope=${{ github.ref }}-${{ matrix.platform }}
+            *.cache-to=type=gha,scope=${{ github.ref }}-${{ matrix.platform }},ignore-error=true
             ${{ fromJson(needs.prepare.outputs.push) && '*.output=type=image,name=dunglas/frankenphp,push-by-digest=true,name-canonical=true,push=true' || '' }}
         env:
           SHA: ${{ github.sha }}
