@@ -390,7 +390,6 @@ func (f *FrankenPHPModule) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 			case "handle_response":
 				// delegate the parsing of handle_response to the caller,
 				// since we need the httpcaddyfile.Helper to parse subroutes.
-				// See f.FinalizeUnmarshalCaddyfile
 				f.handleResponseSegments = append(f.handleResponseSegments, d.NewFromNextSegment())
 			}
 		}
