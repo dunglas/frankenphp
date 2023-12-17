@@ -14,7 +14,12 @@ if [ "${os}" = "darwin" ]; then
 fi
 
 if [ -z "${PHP_EXTENSIONS}" ]; then
-    export PHP_EXTENSIONS="apcu,bcmath,bz2,calendar,ctype,curl,dba,dom,exif,fileinfo,filter,gd,iconv,intl,ldap,mbregex,mbstring,mysqli,mysqlnd,opcache,openssl,pcntl,pdo,pdo_mysql,pdo_pgsql,pdo_sqlite,pgsql,phar,posix,readline,redis,session,simplexml,sockets,sqlite3,sysvsem,tokenizer,xml,xmlreader,xmlwriter,zip,zlib" 
+    #if [ "${os}" = "mac" ]; then
+        # Temporary fix for https://github.com/crazywhalecc/static-php-cli/issues/278 (remove pdo_pgsql, pgsql and ldap)
+        #export PHP_EXTENSIONS="apcu,bcmath,bz2,calendar,ctype,curl,dba,dom,exif,fileinfo,filter,gd,iconv,intl,mbregex,mbstring,mysqli,mysqlnd,opcache,openssl,pcntl,pdo,pdo_mysql,pdo_pgsql,pdo_sqlite,pgsql,phar,posix,readline,redis,session,simplexml,sockets,sqlite3,sysvsem,tokenizer,xml,xmlreader,xmlwriter,zip,zlib"
+    #else
+        export PHP_EXTENSIONS="apcu,bcmath,bz2,calendar,ctype,curl,dba,dom,exif,fileinfo,filter,gd,iconv,intl,ldap,mbregex,mbstring,mysqli,mysqlnd,opcache,openssl,pcntl,pdo,pdo_mysql,pdo_pgsql,pdo_sqlite,pgsql,phar,posix,readline,redis,session,simplexml,sockets,sqlite3,sysvsem,tokenizer,xml,xmlreader,xmlwriter,zip,zlib" 
+    #fi
 fi
 
 if [ -z "${PHP_EXTENSIONS_LIB}" ]; then
@@ -72,7 +77,7 @@ else
         fi
 
         # shellcheck disable=SC2086
-        brew install --formula --quiet $packages
+        brew install --formula --quiet ${packages}
     fi
 
     composer install --no-dev -a
@@ -88,7 +93,7 @@ else
     ./bin/spc doctor
     ./bin/spc fetch --with-php="${PHP_VERSION}" --for-extensions="${PHP_EXTENSIONS}"
     # shellcheck disable=SC2086
-    ./bin/spc build --enable-zts --build-embed ${extraOpts} "${PHP_EXTENSIONS}" --with-libs="${PHP_EXTENSION_LIBS}"
+    ./bin/spc build --debug --enable-zts --build-embed ${extraOpts} "${PHP_EXTENSIONS}" --with-libs="${PHP_EXTENSION_LIBS}"
 fi
 
 CGO_CFLAGS="-DFRANKENPHP_VERSION=${FRANKENPHP_VERSION} $(./buildroot/bin/php-config --includes | sed s#-I/#-I"${PWD}"/buildroot/#g)"
