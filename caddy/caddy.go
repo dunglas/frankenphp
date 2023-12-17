@@ -290,7 +290,7 @@ func (f FrankenPHPModule) ServeHTTP(w http.ResponseWriter, r *http.Request, next
 				return false
 			}
 
-			for i, rh := range f.HandleResponse {
+			for _, rh := range f.HandleResponse {
 				if rh.Match != nil && !rh.Match.Match(status, header) {
 					continue
 				}

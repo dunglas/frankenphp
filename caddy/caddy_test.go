@@ -220,5 +220,6 @@ func TestPhpServerXAccelRedirect(t *testing.T) {
 
 	tester.AssertGetResponse("http://localhost:9080", http.StatusOK, "I am by birth a Genevese (i not set)")
 	tester.AssertGetResponse("http://localhost:9080/hello.txt", http.StatusNotFound, "Not found")
-	tester.AssertGetResponse("http://localhost:9080/xaccel.php", http.StatusOK, "Hello")
+	tester.AssertGetResponse("http://localhost:9080/xaccel.php?redir=/hello.txt", http.StatusOK, "Hello")
+	tester.AssertGetResponse("http://localhost:9080/xaccel.php?redir=/not_exist.txt", http.StatusNotFound, "")
 }

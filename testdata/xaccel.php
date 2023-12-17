@@ -1,6 +1,6 @@
 <?php
 
 header('Content-Type: text/plain');
-header("X-Accel-Redirect: /hello.txt");
+header("X-Accel-Redirect: " . ($_GET['redir'] ?? '/hello.txt'));
 
 echo "hello from php";
