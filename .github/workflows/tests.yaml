@@ -54,6 +54,17 @@ jobs:
         working-directory: caddy/
         run: go test -race -v ./...
       -
+        name: Build the server
+        working-directory: caddy/frankenphp/
+        run: go build
+      -
+        name: Start the server
+        working-directory: testdata/
+        run: sudo ../caddy/frankenphp/frankenphp start
+      -
+        name: Run integrations tests
+        run: ./reload_test.sh
+      -
         name: Lint Go code
         uses: golangci/golangci-lint-action@v3
         with:
