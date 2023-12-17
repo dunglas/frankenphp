@@ -657,8 +657,6 @@ func go_sapi_flush(rh C.uintptr_t) bool {
 		}
 	}
 
-	fc.logger.Debug("Sending response to response filter before flushing")
-
 	if err := http.NewResponseController(fc.responseWriter).Flush(); err != nil {
 		fc.logger.Error("the current responseWriter is not a flusher", zap.Error(err))
 	}
