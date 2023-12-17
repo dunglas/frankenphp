@@ -86,6 +86,10 @@ else
         extraOpts="--disable-opcache-jit"
     fi
 
+    if [ -n "${DEBUG_SYMBOLS}" ]; then
+        extraOpts="${extraOpts} --no-strip"
+    fi
+
     ./bin/spc doctor
     ./bin/spc fetch --with-php="${PHP_VERSION}" --for-extensions="${PHP_EXTENSIONS}"
     # shellcheck disable=SC2086
@@ -116,9 +120,13 @@ if [ "${os}" = "linux" ]; then
     extraExtldflags="-Wl,-z,stack-size=0x80000"
 fi
 
+if [ -z "${DEBUG_SYMBOLS}" ]; then
+    extraLdflags="-w -s"
+fi
+
 cd caddy/frankenphp/
 go env
-go build -buildmode=pie -tags "cgo netgo osusergo static_build" -ldflags "-linkmode=external -extldflags '-static-pie ${extraExtldflags}' -w -s -X 'github.com/caddyserver/caddy/v2.CustomVersion=FrankenPHP ${FRANKENPHP_VERSION} PHP ${LIBPHP_VERSION} Caddy'" -o "../../dist/${bin}"
+go build -buildmode=pie -tags "cgo netgo osusergo static_build" -ldflags "-linkmode=external -extldflags '-static-pie ${extraExtldflags}' ${extraLdflags} -X 'github.com/caddyserver/caddy/v2.CustomVersion=FrankenPHP ${FRANKENPHP_VERSION} PHP ${LIBPHP_VERSION} Caddy'" -o "../../dist/${bin}"
 cd ../..
 
 if [ -d "${EMBED}" ]; then
