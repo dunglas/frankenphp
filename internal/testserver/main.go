@@ -25,7 +25,7 @@ func main() {
 			panic(err)
 		}
 
-		if err := frankenphp.ServeHTTP(w, req); err != nil {
+		if err := frankenphp.ServeHTTP(w, req, nil); err != nil {
 			panic(err)
 		}
 	})

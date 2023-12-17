@@ -620,7 +620,10 @@ func go_write_headers(rh C.uintptr_t, status C.int, headers *C.zend_llist) {
 		current = current.next
 	}
 
-	handled := fc.hooks.ResponseFilter(int(status), fc.responseWriter.Header(), r)
+	handled := false
+	if fc.hooks != nil && fc.hooks.ResponseFilter != nil {
+		handled = fc.hooks.ResponseFilter(int(status), fc.responseWriter.Header(), r)
+	}
 
 	fc.logger.Debug("Sent response to filter", zap.Int("status", int(status)), zap.Any("headers", fc.responseWriter.Header()))
 	if handled {
