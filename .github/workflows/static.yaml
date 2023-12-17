@@ -71,7 +71,6 @@ jobs:
             *.cache-from=type=gha,scope=refs/heads/main-static-builder
             *.cache-to=type=gha,scope=${{github.ref}}-static-builder
         env:
-          LATEST: '1' # TODO: unset this variable when releasing the first stable version
           SHA: ${{github.sha}}
           VERSION: ${{ (github.ref_type == 'tag' && github.ref_name) || needs.prepare.outputs.ref || github.sha}}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
