@@ -69,7 +69,7 @@ func startWorkers(fileName string, nbWorkers int, env map[string]string) error {
 				}
 
 				l.Debug("starting", zap.String("worker", absFileName))
-				if err := ServeHTTP(nil, r); err != nil {
+				if err := ServeHTTP(nil, r, nil); err != nil {
 					panic(err)
 				}
 
