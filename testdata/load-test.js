@@ -1,11 +1,11 @@
-import http from 'k6/http';
-import { check } from 'k6';
+import http from 'k6/http'
+import { check } from 'k6'
 
 export const options = {
   // A number specifying the number of VUs to run concurrently.
   vus: 100,
   // A string specifying the total duration of the test run.
-  duration: '30s',
+  duration: '30s'
 
   // The following section contains configuration options for execution of this
   // test script in Grafana Cloud.
@@ -48,19 +48,19 @@ export const options = {
   //     },
   //   },
   // }
-};
+}
 
-const payload = "foo\n".repeat(1000)
+const payload = 'foo\n'.repeat(1000)
 
 // The function that defines VU logic.
 //
 // See https://grafana.com/docs/k6/latest/examples/get-started-with-k6/ to learn more
 // about authoring k6 scripts.
 //
-export default function() {
-  const res = http.post('http://localhost/echo.php', payload);
+export default function () {
+  const res = http.post('http://localhost/echo.php', payload)
   check(res, {
     'is status 200': (r) => r.status === 200,
-    'is echoed': (r) => r.body === payload,
-  });
+    'is echoed': (r) => r.body === payload
+  })
 }
