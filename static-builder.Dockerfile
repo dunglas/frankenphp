@@ -54,6 +54,7 @@ RUN apk update; \
     	--repository=https://dl-cdn.alpinelinux.org/alpine/edge/community \
         php83 \
         php83-common \
+        php83-ctype \
         php83-curl \
         php83-dom \
         php83-mbstring \
@@ -61,6 +62,7 @@ RUN apk update; \
         php83-pcntl \
         php83-phar \
         php83-posix \
+        php83-session \
         php83-sodium \
         php83-tokenizer \
         php83-xml \
