@@ -14,7 +14,12 @@ if ! type "git" > /dev/null; then
     exit 1
 fi
 
-if [ $# -ne 1 ]; then
+if ! type "gh" > /dev/null; then
+    echo "The \"gh\" command must be installed."
+    exit 1
+fi
+
+if [[ $# -ne 1 ]]; then
     echo "Usage: ./release.sh version" >&2
     exit 1
 fi
@@ -38,7 +43,12 @@ git tag -s -m "Version $1" "v$1"
 git tag -s -m "Version $1" "caddy/v$1"
 git push --follow-tags
 
-if [ "$(uname -s)" = "Darwin" ]; then
+tags=$(git tag --list --sort=-version:refname 'v*')
+previous_tag=$(awk 'NR==2 {print;exit}' <<< "${tags}")
+
+gh release create --draft --generate-notes --latest --notes-start-tag "${previous_tag}" --verify-tag "v$1"
+
+if [[ "$(uname -s)" = "Darwin" ]]; then
     rm -Rf dist/*
     FRANKENPHP_VERSION=$1 RELEASE=1 ./build-static.sh
 fi
