@@ -160,7 +160,7 @@ jobs:
       -
         name: Upload builder metadata
         if: fromJson(needs.prepare.outputs.push)
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: metadata-builder-${{ matrix.variant }}
           path: /tmp/metadata/builder/*
@@ -169,7 +169,7 @@ jobs:
       -
         name: Upload runner metadata
         if: fromJson(needs.prepare.outputs.push)
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: metadata-runner-${{ matrix.variant }}
           path: /tmp/metadata/runner/*

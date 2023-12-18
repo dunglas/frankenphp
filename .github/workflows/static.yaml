@@ -96,7 +96,7 @@ jobs:
       -
         name: Upload artifact
         if: github.ref_type == 'branch'
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           path: frankenphp-linux-x86_64
   build-mac:
@@ -149,6 +149,6 @@ jobs:
       -
         name: Upload artifact
         if: github.ref_type == 'branch'
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           path: dist/frankenphp-mac-x86_64
