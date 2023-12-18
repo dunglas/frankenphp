@@ -15,6 +15,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 #include "C-Thread-Pool/thpool.c"
 #include "C-Thread-Pool/thpool.h"

@@ -528,6 +528,8 @@ static void bsem_init(bsem *bsem_p, int value) {
 
 /* Reset semaphore to 0 */
 static void bsem_reset(bsem *bsem_p) {
+	pthread_mutex_destroy(&(bsem_p->mutex));
+	pthread_cond_destroy(&(bsem_p->cond));
 	bsem_init(bsem_p, 0);
 }
 
