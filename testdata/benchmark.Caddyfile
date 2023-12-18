@@ -1,0 +1,12 @@
+{
+	frankenphp
+}
+
+http:// {
+	route {
+		root * .
+
+		encode zstd gzip
+		php_server
+	}
+}
