@@ -14,18 +14,6 @@ on:
   schedule:
     - cron:  '0 0 * * *'  
 jobs:
-  release:
-    if: github.ref_type == 'tag'
-    name: Create GitHub Release
-    runs-on: ubuntu-latest
-    steps:
-      - name: Create release
-        uses: ncipollo/release-action@v1
-        with:
-          generateReleaseNotes: true
-          allowUpdates: true
-          omitBodyDuringUpdate: true
-          omitNameDuringUpdate: true
   prepare:
     runs-on: ubuntu-latest
     outputs:
@@ -36,6 +24,8 @@ jobs:
         id: ref
         if: github.event_name == 'schedule'
         run: echo ref="$(gh release view --repo dunglas/frankenphp --json tagName --jq '.tagName')" >> "${GITHUB_OUTPUT}"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   build-linux:
     name: Build Linux x86_64 binary
     runs-on: ubuntu-latest
@@ -84,15 +74,9 @@ jobs:
       -
         name: Upload asset
         if: github.event_name == 'schedule' || github.ref_type == 'tag'
-        uses: ncipollo/release-action@v1
-        with:
-          tag: ${{ (github.ref_type == 'tag' && github.ref_name) || needs.prepare.outputs.ref }} 
-          generateReleaseNotes: true
-          allowUpdates: true
-          omitBodyDuringUpdate: true
-          omitNameDuringUpdate: true
-          artifacts: frankenphp-linux-x86_64
-          replacesArtifacts: true
+        run: gh release upload "${{ (github.ref_type == 'tag' && github.ref_name) || needs.prepare.outputs.ref }}" frankenphp-linux-x86_64 --repo dunglas/frankenphp --clobber
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       -
         name: Upload artifact
         if: github.ref_type == 'branch'
@@ -138,15 +122,9 @@ jobs:
       -
         name: Upload asset
         if: github.event_name == 'schedule' || github.ref_type == 'tag'
-        uses: ncipollo/release-action@v1
-        with:
-          tag: ${{ (github.ref_type == 'tag' && github.ref_name) || needs.prepare.outputs.ref }}
-          generateReleaseNotes: true
-          allowUpdates: true
-          omitBodyDuringUpdate: true
-          omitNameDuringUpdate: true
-          artifacts: dist/frankenphp-mac-x86_64
-          replacesArtifacts: true
+        run: gh release upload "${{ (github.ref_type == 'tag' && github.ref_name) || needs.prepare.outputs.ref }}" dist/frankenphp-mac-x86_64 --repo dunglas/frankenphp --clobber
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       -
         name: Upload artifact
         if: github.ref_type == 'branch'
