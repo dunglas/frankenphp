@@ -93,7 +93,7 @@ else
     ./bin/spc doctor
     ./bin/spc fetch --with-php="${PHP_VERSION}" --for-extensions="${PHP_EXTENSIONS}"
     # shellcheck disable=SC2086
-    ./bin/spc build --debug --enable-zts --build-embed ${extraOpts} "${PHP_EXTENSIONS}" --with-libs="${PHP_EXTENSION_LIBS}"
+    ./bin/spc build --enable-zts --build-embed ${extraOpts} "${PHP_EXTENSIONS}" --with-libs="${PHP_EXTENSION_LIBS}"
 fi
 
 CGO_CFLAGS="-DFRANKENPHP_VERSION=${FRANKENPHP_VERSION} $(./buildroot/bin/php-config --includes | sed s#-I/#-I"${PWD}"/buildroot/#g)"
