@@ -98,6 +98,7 @@ jobs:
         if: github.ref_type == 'branch'
         uses: actions/upload-artifact@v3
         with:
+          name: frankenphp-linux-x86_64
           path: frankenphp-linux-x86_64
   build-mac:
     name: Build macOS x86_64 binaries
@@ -151,4 +152,5 @@ jobs:
         if: github.ref_type == 'branch'
         uses: actions/upload-artifact@v3
         with:
+          name: frankenphp-mac-x86_64
           path: dist/frankenphp-mac-x86_64
