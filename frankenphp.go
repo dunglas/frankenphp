@@ -6,7 +6,7 @@
 package frankenphp
 
 //go:generate rm -Rf C-Thread-Pool/
-//go:generate git clone --branch=frankenphp --depth=1 git@github.com:dunglas/C-Thread-Pool.git
+//go:generate git clone --depth=1 git@github.com:Pithikos/C-Thread-Pool.git
 //go:generate rm -Rf C-Thread-Pool/.git C-Thread-Pool/.circleci C-Thread-Pool/docs C-Thread-Pool/tests C-Thread-Pool/example.c
 
 // Use PHP includes corresponding to your PHP installation by running:
