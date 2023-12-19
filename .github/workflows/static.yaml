@@ -119,12 +119,7 @@ jobs:
         run: ./build-static.sh
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      -
-        name: Upload asset
-        if: github.event_name == 'schedule' || github.ref_type == 'tag'
-        run: gh release upload "${{ (github.ref_type == 'tag' && github.ref_name) || needs.prepare.outputs.ref }}" dist/frankenphp-mac-x86_64 --repo dunglas/frankenphp --clobber
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE: ${{ (github.event_name == 'schedule' || github.ref_type == 'tag') && '1' || '' }}
       -
         name: Upload artifact
         if: github.ref_type == 'branch'
