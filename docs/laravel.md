@@ -43,4 +43,38 @@ Alternatively, you can run your Laravel projects with FrankenPHP from your local
 
 ## Laravel Octane
 
-See [this Pull Request](https://github.com/laravel/octane/pull/764).
+Octane may be installed via the Composer package manager:
+
+```console
+composer require laravel/octane
+```
+
+After installing Octane, you may execute the `octane:install` Artisan command, which will install Octane's configuration file into your application:
+
+```console
+php artisan octane:install --server=frankenphp
+```
+
+The Octane server can be started via the `octane:start` Artisan command.
+
+```console
+php artisan octane:start
+
+//Additional Parameter
+{--server=frankenphp : The server that should be used to serve the application}
+{--host=127.0.0.1 : The IP address the server should bind to}
+{--port= : The port the server should be available on [default: "8000"]}
+{--workers=auto : The number of workers that should be available to handle requests}
+{--task-workers=auto : The number of task workers that should be available to handle tasks}
+{--max-requests=500 : The number of requests to process before reloading the server}
+{--caddyfile= : The path to the FrankenPHP Caddyfile file}
+{--https : Enable HTTPS, HTTP/2, and HTTP/3, and automatically generate and renew certificates}
+{--watch : Automatically reload the server when the application is modified}
+{--poll : Use file system polling while watching in order to watch files over a network}
+{--log-level= : Log messages at or above the specified log level}';
+```
+
+
+## Docs
+
+* [Laravel Octane](https://laravel.com/docs/master/octane)
