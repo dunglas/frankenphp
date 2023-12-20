@@ -120,8 +120,8 @@ target "static-builder" {
     tags = distinct(flatten([
         LATEST ? "${IMAGE_NAME}:static-builder" : "",
         SHA == "" ? "" : "${IMAGE_NAME}:static-builder-sha-${substr(SHA, 0, 7)}",
-        [for v in semver(VERSION) : "${IMAGE_NAME}:static-builder-${v}"]
-    ])) 
+        [for v in semver(VERSION) : v == "latest" ? "${IMAGE_NAME}:static-builder": "${IMAGE_NAME}:static-builder-${v}"]
+    ]))
     labels = {
         "org.opencontainers.image.created" = "${timestamp()}"
         "org.opencontainers.image.version" = VERSION
