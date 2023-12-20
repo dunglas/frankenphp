@@ -74,7 +74,6 @@ php artisan octane:start
 {--log-level= : Log messages at or above the specified log level}';
 ```
 
-
 ## Docs
 
 * [Laravel Octane](https://laravel.com/docs/master/octane)
