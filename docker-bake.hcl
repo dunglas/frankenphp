@@ -123,6 +123,10 @@ target "static-builder" {
     }
     dockerfile = "static-builder.Dockerfile"
     context = "./"
+    platforms = [
+        "linux/amd64",
+        "linux/arm64",
+    ]
     tags = distinct(flatten([
         LATEST ? "${IMAGE_NAME}:static-builder" : "",
         SHA == "" ? "" : "${IMAGE_NAME}:static-builder-sha-${substr(SHA, 0, 7)}",
