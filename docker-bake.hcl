@@ -92,6 +92,7 @@ target "default" {
         "linux/386",
         "linux/arm/v6",
         "linux/arm/v7",
+        "linux/arm/v8",
         "linux/arm64",
     ]
     tags = distinct(flatten(
