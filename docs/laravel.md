@@ -74,6 +74,16 @@ php artisan octane:start
 {--log-level= : Log messages at or above the specified log level}';
 ```
 
+
+## Automatic TLS
+```console
+php artisan octane:install --server=frankenphp --host=<example.com>
+```
+
+> [!TIP]
+>
+> Do not attempt to use `https://127.0.0.1`. Use `localhost` and accept the self-signed certificate. Caddy has an automatic TLS handling that auto-trusts some local-based hostnames like `localhost`, but it does not apply to IP addresses. More details [on Caddy's "automatic https" docs](https://caddyserver.com/docs/automatic-https#hostname-requirements).
+
 ## Docs
 
 * [Laravel Octane](https://laravel.com/docs/master/octane)
