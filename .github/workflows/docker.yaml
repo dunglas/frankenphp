@@ -30,7 +30,7 @@ jobs:
       php82_version: ${{ steps.check.outputs.php82_version }}
       php83_version: ${{ steps.check.outputs.php83_version }}
       skip: ${{ steps.check.outputs.skip }}
-      ref: ${{ steps.check.outputs.ref || (github.event_name == 'workflow_dispatch' && inputs.version) }}
+      ref: ${{ steps.check.outputs.ref || (github.event_name == 'workflow_dispatch' && inputs.version) || '' }}
     steps:
       -
         name: Check PHP versions

@@ -21,7 +21,7 @@ jobs:
   prepare:
     runs-on: ubuntu-latest
     outputs:
-      ref: ${{ steps.ref.outputs.ref || (github.event_name == 'workflow_dispatch' && inputs.version) }}
+      ref: ${{ steps.ref.outputs.ref || (github.event_name == 'workflow_dispatch' && inputs.version) || '' }}
     steps:
       -
         name: Get latest release
