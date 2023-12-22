@@ -95,6 +95,10 @@ jobs:
             race: "-race" # The Go race detector is only supported on amd64
           - platform: linux/386
             qemu: false
+        exclude:
+          - # arm/v6 is only available for Alpine: https://github.com/docker-library/golang/issues/502
+            variant: bookworm
+            platform: linux/arm/v6
     steps:
       -
         uses: actions/checkout@v4

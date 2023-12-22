@@ -87,12 +87,18 @@ target "default" {
     dockerfile = os == "alpine" ? "alpine.Dockerfile" : "Dockerfile"
     context = "./"
     target = tgt
-    platforms = [
+    # arm/v6 is only available for Alpine: https://github.com/docker-library/golang/issues/502
+    platforms = os == "alpine" ? [
         "linux/amd64",
         "linux/386",
-        #"linux/arm/v6",
+        "linux/arm/v6",
         "linux/arm/v7",
         "linux/arm64",
+    ] : [
+        "linux/amd64",
+        "linux/386",
+        "linux/arm/v7",
+        "linux/arm64"
     ]
     tags = distinct(flatten(
         [for pv in php_version(php-version) : flatten([
