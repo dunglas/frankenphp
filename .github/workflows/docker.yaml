@@ -101,9 +101,9 @@ jobs:
             qemu: false
         exclude:
           # arm/v6 is only available for Alpine: https://github.com/docker-library/golang/issues/502
-          - variant: ${{ needs.prepare.outputs.php82_version }}-bookworm
+          - variant: php-${{ needs.prepare.outputs.php82_version }}-bookworm
             platform: linux/arm/v6
-          - variant: ${{ needs.prepare.outputs.php83_version }}-bookworm
+          - variant: php-${{ needs.prepare.outputs.php83_version }}-bookworm
             platform: linux/arm/v6
     steps:
       -
