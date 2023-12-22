@@ -10,7 +10,11 @@ on:
     tags:
       - v*.*.*
   workflow_dispatch:
-    inputs: {}
+    inputs:
+      version:
+        description: 'FrankenPHP version'
+        required: false
+        type: string
   schedule:
     - cron:  '0 4 * * *'
 jobs:
@@ -18,7 +22,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       # Push if it's a scheduled job, a tag, or if we're committing to the main branch
-      push: ${{ toJson(github.event_name == 'schedule' || startsWith(github.ref, 'refs/tags/') || (github.ref == 'refs/heads/main' && github.event_name != 'pull_request')) }}
+      push: ${{ toJson(github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.version) || startsWith(github.ref, 'refs/tags/') || (github.ref == 'refs/heads/main' && github.event_name != 'pull_request')) }}
       variants: ${{ steps.matrix.outputs.variants }}
       platforms: ${{ steps.matrix.outputs.platforms }}
       metadata: ${{ steps.matrix.outputs.metadata }}
@@ -26,7 +30,7 @@ jobs:
       php82_version: ${{ steps.check.outputs.php82_version }}
       php83_version: ${{ steps.check.outputs.php83_version }}
       skip: ${{ steps.check.outputs.skip }}
-      ref: ${{ steps.check.outputs.ref }}
+      ref: ${{ steps.check.outputs.ref || (github.event_name == 'workflow_dispatch' && inputs.version) || '' }}
     steps:
       -
         name: Check PHP versions
@@ -150,13 +154,13 @@ jobs:
           set: |
             *.tags=
             *.platform=${{ matrix.platform }}
-            *.cache-from=type=gha,scope=${{ github.ref }}-${{ matrix.platform }}
+            *.cache-from=type=gha,scope=${{ needs.prepare.outputs.ref || github.ref }}-${{ matrix.platform }}
             *.cache-from=type=gha,scope=refs/heads/main-${{ matrix.platform }}
-            *.cache-to=type=gha,scope=${{ github.ref }}-${{ matrix.platform }},ignore-error=true
+            *.cache-to=type=gha,scope=${{ needs.prepare.outputs.ref || github.ref }}-${{ matrix.platform }},ignore-error=true
             ${{ fromJson(needs.prepare.outputs.push) && '*.output=type=image,name=dunglas/frankenphp,push-by-digest=true,name-canonical=true,push=true' || '' }}
         env:
           SHA: ${{ github.sha }}
-          VERSION: ${{ github.ref_type == 'tag' && github.ref_name  || needs.prepare.outputs.ref || github.sha }}
+          VERSION: ${{ github.ref_type == 'tag' && github.ref_name || needs.prepare.outputs.ref || github.sha }}
           PHP_VERSION: ${{ needs.prepare.outputs.php_version }}
       -
         # Workaround for https://github.com/actions/runner/pull/2477#issuecomment-1501003600
