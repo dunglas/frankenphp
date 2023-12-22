@@ -74,10 +74,11 @@ jobs:
         uses: docker/bake-action@v4
         with:
           pull: true
-          load: ${{ (!needs.prepare.outputs.ref && !startsWith(github.ref, 'refs/tags/') && (github.ref != 'refs/heads/main' || github.event_name == 'pull_request')) && true || false }}
-          push: ${{ (needs.prepare.outputs.ref || startsWith(github.ref, 'refs/tags/') || (github.ref == 'refs/heads/main' && github.event_name != 'pull_request')) && true || false }}
+          load: ${{ !fromJson(needs.prepare.outputs.push) }}
+          push: ${{ fromJson(needs.prepare.outputs.push) }}
           targets: static-builder
           set: |
+            *.platform=${{ matrix.platform }}
             *.cache-from=type=gha,scope=${{needs.prepare.outputs.ref || github.ref}}-static-builder
             *.cache-from=type=gha,scope=refs/heads/main-static-builder
             *.cache-to=type=gha,scope=${{needs.prepare.outputs.ref || github.ref}}-static-builder,ignore-error=true
