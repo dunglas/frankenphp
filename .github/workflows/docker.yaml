@@ -23,6 +23,8 @@ jobs:
       platforms: ${{ steps.matrix.outputs.platforms }}
       metadata: ${{ steps.matrix.outputs.metadata }}
       php_version: ${{ steps.check.outputs.php_version }}
+      php82_version: ${{ steps.check.outputs.php82_version }}
+      php83_version: ${{ steps.check.outputs.php83_version }}
       skip: ${{ steps.check.outputs.skip }}
       ref: ${{ steps.check.outputs.ref }}
     steps:
@@ -32,7 +34,11 @@ jobs:
         run: |
           PHP_82_LATEST=$(skopeo inspect docker://docker.io/library/php:8.2 --override-os linux --override-arch amd64 | jq -r '.Env[] | select(test("^PHP_VERSION=")) | sub("^PHP_VERSION="; "")')
           PHP_83_LATEST=$(skopeo inspect docker://docker.io/library/php:8.3 --override-os linux --override-arch amd64 | jq -r '.Env[] | select(test("^PHP_VERSION=")) | sub("^PHP_VERSION="; "")')
-          echo php_version="${PHP_83_LATEST},${PHP_82_LATEST}" >> "${GITHUB_OUTPUT}"
+          {
+            echo php_version="${PHP_83_LATEST},${PHP_82_LATEST}"
+            echo php82_version="${PHP_82_LATEST//./-}"
+            echo php83_version="${PHP_83_LATEST//./-}"
+          } >> "${GITHUB_OUTPUT}"
           
           # Check if the Docker images must be rebuilt
           if [[ "${GITHUB_EVENT_NAME}" != "schedule"  ]]; then
@@ -88,13 +94,24 @@ jobs:
         variant: ${{ fromJson(needs.prepare.outputs.variants) }}
         platform: ${{ fromJson(needs.prepare.outputs.platforms) }}
         include:
-          - race: ""
+          -
+            race: ""
             qemu: true
-          - platform: linux/amd64
+          -
+            platform: linux/amd64
             qemu: false
             race: "-race" # The Go race detector is only supported on amd64
-          - platform: linux/386
+          -
+            platform: linux/386
             qemu: false
+        exclude:
+          # arm/v6 is only available for Alpine: https://github.com/docker-library/golang/issues/502
+          -
+            variant: php-${{ needs.prepare.outputs.php82_version }}-bookworm
+            platform: linux/arm/v6
+          -
+            variant: php-${{ needs.prepare.outputs.php83_version }}-bookworm
+            platform: linux/arm/v6
     steps:
       -
         uses: actions/checkout@v4
