@@ -22,7 +22,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       # Push if it's a scheduled job, a tag, or if we're committing to the main branch
-      push: ${{ toJson(github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.version) || startsWith(github.ref, 'refs/tags/') || (github.ref == 'refs/heads/main' && github.event_name != 'pull_request')) }}
+      push: ${{ (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.version) || startsWith(github.ref, 'refs/tags/') || (github.ref == 'refs/heads/main' && github.event_name != 'pull_request')) && true || false }}
       variants: ${{ steps.matrix.outputs.variants }}
       platforms: ${{ steps.matrix.outputs.platforms }}
       metadata: ${{ steps.matrix.outputs.metadata }}
@@ -64,7 +64,7 @@ jobs:
           } >> "${GITHUB_OUTPUT}"
       -
         uses: actions/checkout@v4
-        if: ${{ !fromJson(steps.check.outputs.skip) }}
+        if: ${{ !steps.check.outputs.skip }}
         with:
           ref: ${{ steps.check.outputs.ref }}
       -
