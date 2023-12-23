@@ -143,12 +143,12 @@ jobs:
           tag=$(jq -cr '.target."static-builder".tags | first' <<< "${METADATA}")
           docker cp "$(docker create --platform=${{ matrix.platform }} --name "${tag}"):/go/src/app/dist/${BINARY}" "${BINARY}" ; docker rm static-builder
         env:
-          METADATA: ${{ steps.build.outputs.metadata }}
+          METADATA: ${{ needs.prepare.outputs.metadata }}
           BINARY: frankenphp-linux-${{ matrix.platform == 'linux/amd64' && 'x86_64' || 'aarch64' }}
       -
         name: Upload asset
-        if: needs.prepare.outputs.ref || github.ref_type == 'tag'
-        run: gh release upload "${{ (github.ref_type == 'tag' && github.ref_name) || needs.prepare.outputs.ref }}" "${BINARY}" --repo dunglas/frankenphp --clobber
+        if: needs.prepare.outputs.ref && true || false
+        run: gh release upload "${{ needs.prepare.outputs.ref }}" "${BINARY}" --repo dunglas/frankenphp --clobber
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           BINARY: frankenphp-linux-${{ matrix.platform == 'linux/amd64' && 'x86_64' || 'aarch64' }}
