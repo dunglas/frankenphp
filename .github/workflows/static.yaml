@@ -39,7 +39,7 @@ jobs:
         with:
           version: latest
       -
-        name: Create variants matrix
+        name: Create platforms matrix
         id: matrix
         run: |
           METADATA="$(docker buildx bake --print static-builder | jq -c)"
@@ -130,7 +130,7 @@ jobs:
         name: Copy binary
         if: ${{ !fromJson(needs.prepare.outputs.push) }}
         run: |
-          tag=$(jq -cr '.target."static-builder".tags | first' <<< ${METADATA})
+          tag=$(jq -cr '.target."static-builder".tags | first' <<< "${METADATA}")
           docker cp "$(docker create --platform=${{ matrix.platform }} --name "${tag}"):/go/src/app/dist/${BINARY}" "${BINARY}" ; docker rm static-builder
         env:
           METADATA: ${{ steps.build.outputs.metadata }}
@@ -185,7 +185,7 @@ jobs:
       -
         name: Copy binary
         run: |
-          tag=$(jq -cr '.target."static-builder".tags | first' <<< ${METADATA})
+          tag=$(jq -cr '.target."static-builder".tags | first' <<< "${METADATA}"")
           docker cp "$(docker create --platform=linux/amd64 --name static-builder "${tag}"):/go/src/app/dist/frankenphp-linux-x86_64" frankenphp-linux-x86_64 ; docker rm static-builder
           docker cp "$(docker create --platform=linux/arm64 --name static-builder "${tag}"):/go/src/app/dist/frankenphp-linux-aarch64" frankenphp-linux-aarch64 ; docker rm static-builder
       -
