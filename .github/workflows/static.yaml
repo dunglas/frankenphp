@@ -147,12 +147,12 @@ jobs:
           METADATA: ${{ needs.prepare.outputs.metadata }}
           BINARY: frankenphp-linux-${{ matrix.platform == 'linux/amd64' && 'x86_64' || 'aarch64' }}
       -
-        name: Upload asset
-        if: needs.prepare.outputs.ref && true || false
-        run: gh release upload "${{ needs.prepare.outputs.ref }}" "${BINARY}" --repo dunglas/frankenphp --clobber
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          BINARY: frankenphp-linux-${{ matrix.platform == 'linux/amd64' && 'x86_64' || 'aarch64' }}
+        name: Upload artifact
+        if: ${{ !fromJson(needs.prepare.outputs.push) }}
+        uses: actions/upload-artifact@v3
+        with:
+          name: frankenphp-linux-${{ matrix.platform == 'linux/amd64' && 'x86_64' || 'aarch64' }}
+          path: frankenphp-linux-${{ matrix.platform == 'linux/amd64' && 'x86_64' || 'aarch64' }}
   # Adapted from https://docs.docker.com/build/ci/github-actions/multi-platform/
   push:
     runs-on: ubuntu-latest
