@@ -141,11 +141,8 @@ jobs:
         if: ${{ !fromJson(needs.prepare.outputs.push) }}
         run: |
           tag=$(jq -cr '.target."static-builder".tags | first' <<< "${METADATA}")
-          echo $tag
-          container=$(docker create --platform=${{ matrix.platform }} --name ${tag})
-          echo $container
+          container=$(docker create --platform=${{ matrix.platform }} --name static-builder "${tag}")
           docker cp "${container}:/go/src/app/dist/${BINARY}" "${BINARY}"
-          docker rm static-builder
         env:
           METADATA: ${{ needs.prepare.outputs.metadata }}
           BINARY: frankenphp-linux-${{ matrix.platform == 'linux/amd64' && 'x86_64' || 'aarch64' }}
