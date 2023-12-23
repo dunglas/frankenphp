@@ -24,15 +24,25 @@ jobs:
       push: ${{ toJson((steps.check.outputs.ref || (github.event_name == 'workflow_dispatch' && inputs.version) || startsWith(github.ref, 'refs/tags/') || (github.ref == 'refs/heads/main' && github.event_name != 'pull_request')) && true || false) }}
       platforms: ${{ steps.matrix.outputs.platforms }}
       metadata: ${{ steps.matrix.outputs.metadata }}
-      ref: ${{ steps.check.outputs.ref || (github.event_name == 'workflow_dispatch' && inputs.version) || '' }}
+      ref: ${{ steps.check.outputs.ref }}
     steps:
       -
-        name: Get latest release
+        name: Get version
         id: check
         if: github.event_name == 'schedule'
-        run: echo ref="$(gh release view --repo dunglas/frankenphp --json tagName --jq '.tagName')" >> "${GITHUB_OUTPUT}"
+        run: |
+          ref="${{ (github.ref_type == 'tag' && github.ref_name) || (github.event_name == 'workflow_dispatch' && inputs.version) || '' }}"
+          if [[ -z "${ref}" ]]; then
+            ref="$(gh release view --repo dunglas/frankenphp --json tagName --jq '.tagName')"
+          fi
+
+          echo "ref=${ref}" >> "${GITHUB_OUTPUT}"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      -
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.check.outputs.ref }}
       -
         name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -49,7 +59,7 @@ jobs:
           } >> "${GITHUB_OUTPUT}"
         env:
           SHA: ${{ github.sha }}
-          VERSION: ${{ (github.ref_type == 'tag' && github.ref_name) || steps.check.outputs.ref || github.sha }}
+          VERSION: ${{ steps.check.outputs.ref || github.sha }}
   build-linux:
     strategy:
       fail-fast: false
