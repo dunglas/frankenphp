@@ -21,27 +21,46 @@ jobs:
   prepare:
     runs-on: ubuntu-latest
     outputs:
-      ref: ${{ steps.ref.outputs.ref || (github.event_name == 'workflow_dispatch' && inputs.version) || '' }}
-      push: ${{ toJson((steps.ref.outputs.ref || (github.event_name == 'workflow_dispatch' && inputs.version) || startsWith(github.ref, 'refs/tags/') || (github.ref == 'refs/heads/main' && github.event_name != 'pull_request')) && true || false) }}
+      push: ${{ toJson((steps.check.outputs.ref || (github.event_name == 'workflow_dispatch' && inputs.version) || startsWith(github.ref, 'refs/tags/') || (github.ref == 'refs/heads/main' && github.event_name != 'pull_request')) && true || false) }}
+      platforms: ${{ steps.matrix.outputs.platforms }}
+      metadata: ${{ steps.matrix.outputs.metadata }}
+      ref: ${{ steps.check.outputs.ref || (github.event_name == 'workflow_dispatch' && inputs.version) || '' }}
     steps:
       -
         name: Get latest release
-        id: ref
+        id: check
         if: github.event_name == 'schedule'
         run: echo ref="$(gh release view --repo dunglas/frankenphp --json tagName --jq '.tagName')" >> "${GITHUB_OUTPUT}"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      -
+        name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          version: latest
+      -
+        name: Create variants matrix
+        id: matrix
+        run: |
+          METADATA="$(docker buildx bake --print static-builder | jq -c)"
+          {
+            echo metadata="${METADATA}"
+            echo platforms="$(jq -c 'first(.target[]) | .platforms' <<< "${METADATA}")"
+          } >> "${GITHUB_OUTPUT}"
+        env:
+          SHA: ${{ github.sha }}
+          VERSION: ${{ (github.ref_type == 'tag' && github.ref_name) || steps.check.outputs.ref || github.sha }}
   build-linux:
     strategy:
       fail-fast: false
       matrix:
-        platform: ["linux/amd64", "linux/arm64"]
+        platform: ${{ fromJson(needs.prepare.outputs.platforms) }}
         include:
           - race: ""
             qemu: true
           - platform: linux/amd64
             qemu: false
-    name: Build ${{ matrix.platform }} binary
+    name: Build ${{ matrix.platform }} static binary
     runs-on: ubuntu-latest
     needs: [ prepare ]
     steps:
@@ -63,11 +82,11 @@ jobs:
           version: latest
       -
         name: Login to DockerHub
-        if: 
+        if: ${{ fromJson(needs.prepare.outputs.push) }}
         uses: docker/login-action@v3
         with:
-          username: ${{secrets.REGISTRY_USERNAME}}
-          password: ${{secrets.REGISTRY_PASSWORD}}    
+          username: ${{ secrets.REGISTRY_USERNAME }}
+          password: ${{ secrets.REGISTRY_PASSWORD }}    
       -
         name: Build
         id: build
@@ -78,12 +97,12 @@ jobs:
           targets: static-builder
           set: |
             *.platform=${{ matrix.platform }}
-            *.cache-from=type=gha,scope=${{needs.prepare.outputs.ref || github.ref}}-static-builder
+            *.cache-from=type=gha,scope=${{ needs.prepare.outputs.ref || github.ref }}-static-builder
             *.cache-from=type=gha,scope=refs/heads/main-static-builder
-            *.cache-to=type=gha,scope=${{needs.prepare.outputs.ref || github.ref}}-static-builder,ignore-error=true
+            *.cache-to=type=gha,scope=${{ needs.prepare.outputs.ref || github.ref }}-static-builder,ignore-error=true
             ${{ fromJson(needs.prepare.outputs.push) && '*.output=type=image,name=dunglas/frankenphp,push-by-digest=true,name-canonical=true,push=true' || '' }}
         env:
-          SHA: ${{github.sha}}
+          SHA: ${{ github.sha }}
           VERSION: ${{ (github.ref_type == 'tag' && github.ref_name) || needs.prepare.outputs.ref || github.sha}}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       -
@@ -109,21 +128,28 @@ jobs:
           retention-days: 1
       -
         name: Copy binary
-        if: '!fromJson(needs.prepare.outputs.push)'
-        run: docker cp "$(docker create --platform=${{ matrix.platform }} --name static-builder dunglas/frankenphp:static-builder):/go/src/app/dist/frankenphp-linux-x86_64" frankenphp-linux-x86_64 ; docker rm static-builder
+        if: ${{ !fromJson(needs.prepare.outputs.push) }}
+        run: |
+          tag=$(jq -cr '.target."static-builder".tags | first' <<< ${METADATA})
+          docker cp "$(docker create --platform=${{ matrix.platform }} --name "${tag}"):/go/src/app/dist/${BINARY}" "${BINARY}" ; docker rm static-builder
+        env:
+          METADATA: ${{ steps.build.outputs.metadata }}
+          BINARY: frankenphp-linux-${{ matrix.platform == 'linux/amd64' && 'x86_64' || 'aarch64' }}
       -
         name: Upload asset
         if: needs.prepare.outputs.ref || github.ref_type == 'tag'
-        run: gh release upload "${{ (github.ref_type == 'tag' && github.ref_name) || needs.prepare.outputs.ref }}" frankenphp-linux-x86_64 --repo dunglas/frankenphp --clobber
+        run: gh release upload "${{ (github.ref_type == 'tag' && github.ref_name) || needs.prepare.outputs.ref }}" "${BINARY}" --repo dunglas/frankenphp --clobber
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BINARY: frankenphp-linux-${{ matrix.platform == 'linux/amd64' && 'x86_64' || 'aarch64' }}
   # Adapted from https://docs.docker.com/build/ci/github-actions/multi-platform/
   push:
     runs-on: ubuntu-latest
     needs:
       - prepare
       - build-linux
-    if: fromJson(needs.prepare.outputs.push) && (needs.prepare.outputs.ref || github.ref_type == 'tag')
+    if: fromJson(needs.prepare.outputs.push)
+    # && (needs.prepare.outputs.ref || github.ref_type == 'tag')
     steps:
       -
         name: Download metadata
@@ -147,8 +173,10 @@ jobs:
         working-directory: /tmp/metadata
         run: |
           # shellcheck disable=SC2046,SC2086
-          docker buildx imagetools create -t dunglas/frankenphp:static-builder \
+          docker buildx imagetools create $(jq -cr '.target."static-builder".tags | map("-t " + .) | join(" ")' <<< ${METADATA}) \
             $(printf 'dunglas/frankenphp@sha256:%s ' *)
+        env:
+          METADATA: ${{ needs.prepare.outputs.metadata }}
       -
         name: Inspect image
         run: |
@@ -157,8 +185,9 @@ jobs:
       -
         name: Copy binary
         run: |
-          docker cp "$(docker create --platform=linux/amd64 --name static-builder dunglas/frankenphp:static-builder):/go/src/app/dist/frankenphp-linux-x86_64" frankenphp-linux-x86_64 ; docker rm static-builder
-          docker cp "$(docker create --platform=linux/arm64 --name static-builder dunglas/frankenphp:static-builder):/go/src/app/dist/frankenphp-linux-aarch64" frankenphp-linux-aarch64 ; docker rm static-builder
+          tag=$(jq -cr '.target."static-builder".tags | first' <<< ${METADATA})
+          docker cp "$(docker create --platform=linux/amd64 --name static-builder "${tag}"):/go/src/app/dist/frankenphp-linux-x86_64" frankenphp-linux-x86_64 ; docker rm static-builder
+          docker cp "$(docker create --platform=linux/arm64 --name static-builder "${tag}"):/go/src/app/dist/frankenphp-linux-aarch64" frankenphp-linux-aarch64 ; docker rm static-builder
       -
         name: Upload asset
         if: needs.prepare.outputs.ref || github.ref_type == 'tag'
