@@ -185,7 +185,7 @@ jobs:
       -
         name: Copy binary
         run: |
-          tag=$(jq -cr '.target."static-builder".tags | first' <<< "${METADATA}"")
+          tag=$(jq -cr '.target."static-builder".tags | first' <<< "${METADATA}")
           docker cp "$(docker create --platform=linux/amd64 --name static-builder "${tag}"):/go/src/app/dist/frankenphp-linux-x86_64" frankenphp-linux-x86_64 ; docker rm static-builder
           docker cp "$(docker create --platform=linux/arm64 --name static-builder "${tag}"):/go/src/app/dist/frankenphp-linux-aarch64" frankenphp-linux-aarch64 ; docker rm static-builder
       -
