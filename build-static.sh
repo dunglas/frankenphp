@@ -15,15 +15,15 @@ fi
 
 if [ -z "${PHP_EXTENSIONS}" ]; then
     if [ "${os}" = "mac" ] && [ "${arch}" = "x86_64" ]; then
-        # Temporary fix for https://github.com/crazywhalecc/static-php-cli/issues/278 (remove ldap)
-        export PHP_EXTENSIONS="apcu,bcmath,bz2,calendar,ctype,curl,dba,dom,exif,fileinfo,filter,gd,iconv,intl,mbregex,mbstring,mysqli,mysqlnd,opcache,openssl,pcntl,pdo,pdo_mysql,pdo_pgsql,pdo_sqlite,pgsql,phar,posix,readline,redis,session,simplexml,sockets,sodium,sqlite3,sysvsem,tokenizer,xml,xmlreader,xmlwriter,zip,zlib"
+        # Temporary fix for https://github.com/crazywhalecc/static-php-cli/issues/280 (remove ldap)
+        export PHP_EXTENSIONS="apcu,bcmath,bz2,calendar,ctype,curl,dba,dom,exif,fileinfo,filter,gd,iconv,igbinary,intl,mbregex,mbstring,mysqli,mysqlnd,opcache,openssl,pcntl,pdo,pdo_mysql,pdo_pgsql,pdo_sqlite,pgsql,phar,posix,readline,redis,session,simplexml,sockets,sodium,sqlite3,sysvsem,tokenizer,xml,xmlreader,xmlwriter,zip,zlib"
     else
-        export PHP_EXTENSIONS="apcu,bcmath,bz2,calendar,ctype,curl,dba,dom,exif,fileinfo,filter,gd,iconv,intl,ldap,mbregex,mbstring,mysqli,mysqlnd,opcache,openssl,pcntl,pdo,pdo_mysql,pdo_pgsql,pdo_sqlite,pgsql,phar,posix,readline,redis,session,simplexml,sockets,sodium,sqlite3,sysvsem,tokenizer,xml,xmlreader,xmlwriter,zip,zlib" 
+        export PHP_EXTENSIONS="apcu,bcmath,bz2,calendar,ctype,curl,dba,dom,exif,fileinfo,filter,gd,iconv,igbinary,intl,ldap,mbregex,mbstring,mysqli,mysqlnd,opcache,openssl,pcntl,pdo,pdo_mysql,pdo_pgsql,pdo_sqlite,pgsql,phar,posix,readline,redis,session,simplexml,sockets,sodium,sqlite3,sysvsem,tokenizer,xml,xmlreader,xmlwriter,zip,zlib" 
     fi
 fi
 
 if [ -z "${PHP_EXTENSIONS_LIB}" ]; then
-    export PHP_EXTENSION_LIBS="freetype,libjpeg,libavif,libwebp,libzip,bzip2"
+    export PHP_EXTENSION_LIBS="bzip2,freetype,libavif,libjpeg,liblz4,libwebp,libzip"
 fi
 
 if [ -z "${PHP_VERSION}" ]; then
