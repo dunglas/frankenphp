@@ -106,6 +106,7 @@ jobs:
           load: ${{ !fromJson(needs.prepare.outputs.push) }}
           targets: static-builder
           set: |
+            *.tags=
             *.platform=${{ matrix.platform }}
             *.cache-from=type=gha,scope=${{ needs.prepare.outputs.ref || github.ref }}-static-builder
             *.cache-from=type=gha,scope=refs/heads/main-static-builder
@@ -140,8 +141,8 @@ jobs:
         name: Copy binary
         if: ${{ !fromJson(needs.prepare.outputs.push) }}
         run: |
-          tag=$(jq -cr '.target."static-builder".tags | first' <<< "${METADATA}")
-          container=$(docker create --platform=${{ matrix.platform }} --name static-builder "${tag}")
+          image=$(jq -r '."static-builder"."containerimage.config.digest"' <<< "${METADATA}")
+          container=$(docker create --platform=${{ matrix.platform }} --name static-builder "${image}")
           docker cp "${container}:/go/src/app/dist/${BINARY}" "${BINARY}"
         env:
           METADATA: ${{ needs.prepare.outputs.metadata }}
