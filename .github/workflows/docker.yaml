@@ -64,7 +64,7 @@ jobs:
           } >> "${GITHUB_OUTPUT}"
       -
         uses: actions/checkout@v4
-        if: ${{ !steps.check.outputs.skip }}
+        if: ${{ !fromJson(steps.check.outputs.skip) }}
         with:
           ref: ${{ steps.check.outputs.ref }}
       -
