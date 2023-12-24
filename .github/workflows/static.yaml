@@ -160,7 +160,7 @@ jobs:
       - prepare
       - build-linux
     if: fromJson(needs.prepare.outputs.push)
-    # && (needs.prepare.outputs.ref || github.ref_type == 'tag')
+    #if: fromJson(needs.prepare.outputs.push) && (needs.prepare.outputs.ref || github.ref_type == 'tag')
     steps:
       -
         name: Download metadata
