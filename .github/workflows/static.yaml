@@ -193,7 +193,7 @@ jobs:
         name: Inspect image
         run: |
           # shellcheck disable=SC2046,SC2086
-          docker buildx imagetools inspect static-builder
+          docker buildx imagetools inspect $(jq -cr '.target."static-builder".tags | first' <<< ${METADATA}) 
       -
         name: Copy binary
         run: |
