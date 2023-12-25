@@ -185,7 +185,7 @@ jobs:
         working-directory: /tmp/metadata
         run: |
           # shellcheck disable=SC2046,SC2086
-          docker buildx imagetools create $(jq -cr '.target."static-builder".tags | map("-t " + .) | join(" ")' <<< ${METADATA}) \
+          docker buildx imagetools create $(jq -cr '.target."static-builder".tags | map("-t " + .) | join(" ")' <<< "${METADATA}") \
             $(printf 'dunglas/frankenphp@sha256:%s ' *)
         env:
           METADATA: ${{ needs.prepare.outputs.metadata }}
@@ -193,13 +193,17 @@ jobs:
         name: Inspect image
         run: |
           # shellcheck disable=SC2046,SC2086
-          docker buildx imagetools inspect $(jq -cr '.target."static-builder".tags | first' <<< ${METADATA}) 
+          docker buildx imagetools inspect "$(jq -cr '.target."static-builder".tags | first' <<< "${METADATA}")"
+        env:
+          METADATA: ${{ needs.prepare.outputs.metadata }}  
       -
         name: Copy binary
         run: |
           tag=$(jq -cr '.target."static-builder".tags | first' <<< "${METADATA}")
           docker cp "$(docker create --platform=linux/amd64 --name static-builder "${tag}"):/go/src/app/dist/frankenphp-linux-x86_64" frankenphp-linux-x86_64 ; docker rm static-builder
           docker cp "$(docker create --platform=linux/arm64 --name static-builder "${tag}"):/go/src/app/dist/frankenphp-linux-aarch64" frankenphp-linux-aarch64 ; docker rm static-builder
+        env:
+          METADATA: ${{ needs.prepare.outputs.metadata }}
       -
         name: Upload asset
         if: needs.prepare.outputs.ref || github.ref_type == 'tag'
