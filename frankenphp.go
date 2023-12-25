@@ -191,7 +191,7 @@ func NewRequestWithContext(r *http.Request, opts ...RequestOption) (*http.Reques
 	// SCRIPT_FILENAME is the absolute path of SCRIPT_NAME
 	fc.scriptFilename = sanitizedPathJoin(fc.documentRoot, fc.scriptName)
 
-	return r.WithContext(context.WithValue(r.Context(), contextKey, fc)), nil
+	return r.WithContext(context.WithValue(context.Background(), contextKey, fc)), nil
 }
 
 // FromContext extracts the FrankenPHPContext from a context.
