@@ -709,12 +709,23 @@ func ExecuteScriptCLI(script string, args []string) int {
 	cScript := C.CString(script)
 	defer C.free(unsafe.Pointer(cScript))
 
+	argc, argv := convertArgs(args)
+	defer freeArgs(argv)
+
+	return int(C.frankenphp_execute_script_cli(cScript, argc, (**C.char)(unsafe.Pointer(&argv[0]))))
+}
+
+func convertArgs(args []string) (C.int, []*C.char) {
 	argc := C.int(len(args))
 	argv := make([]*C.char, argc)
 	for i, arg := range args {
 		argv[i] = C.CString(arg)
-		defer C.free(unsafe.Pointer(argv[i]))
 	}
+	return argc, argv
+}
 
-	return int(C.frankenphp_execute_script_cli(cScript, argc, (**C.char)(unsafe.Pointer(&argv[0]))))
+func freeArgs(argv []*C.char) {
+	for _, arg := range argv {
+		C.free(unsafe.Pointer(arg))
+	}
 }
