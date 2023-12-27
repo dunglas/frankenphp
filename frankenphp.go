@@ -465,6 +465,8 @@ func ServeHTTP(responseWriter http.ResponseWriter, request *http.Request) error 
 		<-fc.done
 	}
 
+	request.Context().Value(handleKey).(*handleList).FreeAll()
+
 	return nil
 }
 

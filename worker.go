@@ -90,9 +90,6 @@ func startWorkers(fileName string, nbWorkers int, env map[string]string) error {
 						l.Error("unexpected termination, restarting", zap.String("worker", absFileName), zap.Int("exit_status", int(fc.exitStatus)))
 					}
 				} else {
-					// clean up the dummy request
-					r.Context().Value(handleKey).(*handleList).FreeAll()
-					r = nil
 					break
 				}
 			}
@@ -173,7 +170,6 @@ func go_frankenphp_finish_request(mrh, rh C.uintptr_t, deleteHandle bool) {
 	fc := r.Context().Value(contextKey).(*FrankenPHPContext)
 
 	if deleteHandle {
-		r.Context().Value(handleKey).(*handleList).FreeAll()
 		cgo.Handle(mrh).Value().(*http.Request).Context().Value(contextKey).(*FrankenPHPContext).currentWorkerRequest = 0
 	}
 
