@@ -59,6 +59,6 @@ func Pointers() *pointerList {
 // Handles Get a new list of handles
 func Handles() *handleList {
 	return &handleList{
-		Handles: make([]cgo.Handle, 0),
+		Handles: make([]cgo.Handle, 6),
 	}
 }
