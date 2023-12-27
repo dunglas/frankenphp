@@ -91,7 +91,7 @@ func startWorkers(fileName string, nbWorkers int, env map[string]string) error {
 					}
 				} else {
 					// clean up the dummy request
-					r.Context().Value(handleKey).(*HandleList).FreeAll()
+					r.Context().Value(handleKey).(*handleList).FreeAll()
 					r = nil
 					break
 				}
@@ -153,7 +153,7 @@ func go_frankenphp_worker_handle_request_start(mrh C.uintptr_t) C.uintptr_t {
 	}
 
 	fc.currentWorkerRequest = cgo.NewHandle(r)
-	r.Context().Value(handleKey).(*HandleList).AddHandle(fc.currentWorkerRequest)
+	r.Context().Value(handleKey).(*handleList).AddHandle(fc.currentWorkerRequest)
 
 	l.Debug("request handling started", zap.String("worker", fc.scriptFilename), zap.String("url", r.RequestURI))
 	if err := updateServerContext(r, false, mrh); err != nil {
@@ -173,7 +173,7 @@ func go_frankenphp_finish_request(mrh, rh C.uintptr_t, deleteHandle bool) {
 	fc := r.Context().Value(contextKey).(*FrankenPHPContext)
 
 	if deleteHandle {
-		r.Context().Value(handleKey).(*HandleList).FreeAll()
+		r.Context().Value(handleKey).(*handleList).FreeAll()
 		cgo.Handle(mrh).Value().(*http.Request).Context().Value(contextKey).(*FrankenPHPContext).currentWorkerRequest = 0
 	}
 

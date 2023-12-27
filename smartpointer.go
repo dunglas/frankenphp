@@ -15,27 +15,27 @@ and ensure they are always cleaned up.
 */
 
 // PointerList A list of pointers that can be freed at a later time
-type PointerList struct {
+type pointerList struct {
 	Pointers []unsafe.Pointer
 }
 
 // HandleList A list of pointers that can be freed at a later time
-type HandleList struct {
+type handleList struct {
 	Handles []cgo.Handle
 }
 
 // AddHandle Call when registering a handle for the very first time
-func (h *HandleList) AddHandle(handle cgo.Handle) {
+func (h *handleList) AddHandle(handle cgo.Handle) {
 	h.Handles = append(h.Handles, handle)
 }
 
 // AddPointer Call when creating a request-level C pointer for the very first time
-func (p *PointerList) AddPointer(ptr unsafe.Pointer) {
+func (p *pointerList) AddPointer(ptr unsafe.Pointer) {
 	p.Pointers = append(p.Pointers, ptr)
 }
 
 // FreeAll frees all C pointers
-func (p *PointerList) FreeAll() {
+func (p *pointerList) FreeAll() {
 	for _, ptr := range p.Pointers {
 		C.free(ptr)
 	}
@@ -43,7 +43,7 @@ func (p *PointerList) FreeAll() {
 }
 
 // FreeAll frees all handles
-func (h *HandleList) FreeAll() {
+func (h *handleList) FreeAll() {
 	defer func() {
 		if err := recover(); err != nil {
 			getLogger().Warn("A handle was already deleted manually, indeterminate state")
@@ -55,15 +55,15 @@ func (h *HandleList) FreeAll() {
 }
 
 // Pointers Get a new list of pointers
-func Pointers() *PointerList {
-	return &PointerList{
+func Pointers() *pointerList {
+	return &pointerList{
 		Pointers: make([]unsafe.Pointer, 0),
 	}
 }
 
 // Handles Get a new list of handles
-func Handles() *HandleList {
-	return &HandleList{
+func Handles() *handleList {
+	return &handleList{
 		Handles: make([]cgo.Handle, 0),
 	}
 }

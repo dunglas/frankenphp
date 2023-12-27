@@ -408,11 +408,11 @@ func updateServerContext(request *http.Request, create bool, mrh C.uintptr_t) er
 	var rh cgo.Handle
 	if fc.responseWriter == nil {
 		h := cgo.NewHandle(request)
-		request.Context().Value(handleKey).(*HandleList).AddHandle(h)
+		request.Context().Value(handleKey).(*handleList).AddHandle(h)
 		mrh = C.uintptr_t(h)
 	} else {
 		rh = cgo.NewHandle(request)
-		request.Context().Value(handleKey).(*HandleList).AddHandle(rh)
+		request.Context().Value(handleKey).(*handleList).AddHandle(rh)
 	}
 
 	ret := C.frankenphp_update_server_context(
@@ -476,7 +476,7 @@ func go_fetch_request() C.uintptr_t {
 
 	case r := <-requestChan:
 		h := cgo.NewHandle(r)
-		r.Context().Value(handleKey).(*HandleList).AddHandle(h)
+		r.Context().Value(handleKey).(*handleList).AddHandle(h)
 		return C.uintptr_t(h)
 	}
 }
