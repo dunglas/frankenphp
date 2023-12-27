@@ -44,11 +44,6 @@ func (p *pointerList) FreeAll() {
 
 // FreeAll frees all handles
 func (h *handleList) FreeAll() {
-	defer func() {
-		if err := recover(); err != nil {
-			getLogger().Warn("A handle was already deleted manually, indeterminate state")
-		}
-	}()
 	for _, p := range h.Handles {
 		p.Delete()
 	}
