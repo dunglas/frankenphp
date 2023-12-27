@@ -52,9 +52,11 @@ import (
 	//_ "github.com/ianlancetaylor/cgosymbolizer"
 )
 
-type key int
+type contextKeyStruct struct{}
+type handleKeyStruct struct{}
 
-var contextKey key
+var contextKey = contextKeyStruct{}
+var handleKey = handleKeyStruct{}
 
 var (
 	InvalidRequestError         = errors.New("not a FrankenPHP request")
@@ -191,7 +193,10 @@ func NewRequestWithContext(r *http.Request, opts ...RequestOption) (*http.Reques
 	// SCRIPT_FILENAME is the absolute path of SCRIPT_NAME
 	fc.scriptFilename = sanitizedPathJoin(fc.documentRoot, fc.scriptName)
 
-	return r.WithContext(context.WithValue(context.Background(), contextKey, fc)), nil
+	c := context.WithValue(r.Context(), contextKey, fc)
+	c = context.WithValue(c, handleKey, Handles())
+
+	return r.WithContext(c), nil
 }
 
 // FromContext extracts the FrankenPHPContext from a context.
@@ -402,9 +407,12 @@ func updateServerContext(request *http.Request, create bool, mrh C.uintptr_t) er
 
 	var rh cgo.Handle
 	if fc.responseWriter == nil {
-		mrh = C.uintptr_t(cgo.NewHandle(request))
+		h := cgo.NewHandle(request)
+		request.Context().Value(handleKey).(*HandleList).AddHandle(h)
+		mrh = C.uintptr_t(h)
 	} else {
 		rh = cgo.NewHandle(request)
+		request.Context().Value(handleKey).(*HandleList).AddHandle(rh)
 	}
 
 	ret := C.frankenphp_update_server_context(
@@ -467,7 +475,9 @@ func go_fetch_request() C.uintptr_t {
 		return 0
 
 	case r := <-requestChan:
-		return C.uintptr_t(cgo.NewHandle(r))
+		h := cgo.NewHandle(r)
+		r.Context().Value(handleKey).(*HandleList).AddHandle(h)
+		return C.uintptr_t(h)
 	}
 }
 
@@ -480,7 +490,6 @@ func maybeCloseContext(fc *FrankenPHPContext) {
 //export go_execute_script
 func go_execute_script(rh unsafe.Pointer) {
 	handle := cgo.Handle(rh)
-	defer handle.Delete()
 
 	request := handle.Value().(*http.Request)
 	fc, ok := FromContext(request.Context())
