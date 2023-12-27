@@ -465,8 +465,6 @@ func ServeHTTP(responseWriter http.ResponseWriter, request *http.Request) error 
 		<-fc.done
 	}
 
-	request.Context().Value(handleKey).(*handleList).FreeAll()
-
 	return nil
 }
 
@@ -489,6 +487,8 @@ func maybeCloseContext(fc *FrankenPHPContext) {
 	})
 }
 
+// go_execute_script Note: only called in cgi-mode
+//
 //export go_execute_script
 func go_execute_script(rh unsafe.Pointer) {
 	handle := cgo.Handle(rh)
@@ -498,7 +498,10 @@ func go_execute_script(rh unsafe.Pointer) {
 	if !ok {
 		panic(InvalidRequestError)
 	}
-	defer maybeCloseContext(fc)
+	defer func() {
+		maybeCloseContext(fc)
+		request.Context().Value(handleKey).(*handleList).FreeAll()
+	}()
 
 	if err := updateServerContext(request, true, 0); err != nil {
 		panic(err)
