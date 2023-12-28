@@ -380,14 +380,14 @@ func updateServerContext(request *http.Request, create bool, mrh C.uintptr_t) er
 	authUser, authPassword, ok := request.BasicAuth()
 	var cAuthUser, cAuthPassword *C.char
 	if ok && authPassword != "" {
-		cAuthPassword = pointers.WithString(authPassword)
+		cAuthPassword = pointers.ToCString(authPassword)
 	}
 	if ok && authUser != "" {
-		cAuthUser = pointers.WithString(authUser)
+		cAuthUser = pointers.ToCString(authUser)
 	}
 
-	cMethod := pointers.WithString(request.Method)
-	cQueryString := pointers.WithString(request.URL.RawQuery)
+	cMethod := pointers.ToCString(request.Method)
+	cQueryString := pointers.ToCString(request.URL.RawQuery)
 	contentLengthStr := request.Header.Get("Content-Length")
 	contentLength := 0
 	if contentLengthStr != "" {
@@ -401,7 +401,7 @@ func updateServerContext(request *http.Request, create bool, mrh C.uintptr_t) er
 	contentType := request.Header.Get("Content-Type")
 	var cContentType *C.char
 	if contentType != "" {
-		cContentType = pointers.WithString(contentType)
+		cContentType = pointers.ToCString(contentType)
 	}
 
 	// compliance with the CGI specification requires that
@@ -409,10 +409,10 @@ func updateServerContext(request *http.Request, create bool, mrh C.uintptr_t) er
 	// Info: https://www.ietf.org/rfc/rfc3875 Page 14
 	var cPathTranslated *C.char
 	if fc.pathInfo != "" {
-		cPathTranslated = pointers.WithString(sanitizedPathJoin(fc.documentRoot, fc.pathInfo)) // Info: http://www.oreilly.com/openbook/cgi/ch02_04.html
+		cPathTranslated = pointers.ToCString(sanitizedPathJoin(fc.documentRoot, fc.pathInfo)) // Info: http://www.oreilly.com/openbook/cgi/ch02_04.html
 	}
 
-	cRequestUri := pointers.WithString(request.URL.RequestURI())
+	cRequestUri := pointers.ToCString(request.URL.RequestURI())
 
 	var rh cgo.Handle
 	if fc.responseWriter == nil {
@@ -517,7 +517,7 @@ func go_execute_script(rh unsafe.Pointer) {
 		panic(err)
 	}
 
-	fc.exitStatus = C.frankenphp_execute_script(pointers.WithString(fc.scriptFilename))
+	fc.exitStatus = C.frankenphp_execute_script(pointers.ToCString(fc.scriptFilename))
 	if fc.exitStatus < 0 {
 		panic(ScriptExecutionError)
 	}
@@ -568,18 +568,18 @@ func go_register_variables(rh C.uintptr_t, trackVarsArray *C.zval) {
 			continue
 		}
 
-		dynamicVariables[i] = pointers.WithString(k)
+		dynamicVariables[i] = pointers.ToCString(k)
 		i++
 
-		dynamicVariables[i] = pointers.WithString(strings.Join(val, ", "))
+		dynamicVariables[i] = pointers.ToCString(strings.Join(val, ", "))
 		i++
 	}
 
 	for k, v := range fc.env {
-		dynamicVariables[i] = pointers.WithString(k)
+		dynamicVariables[i] = pointers.ToCString(k)
 		i++
 
-		dynamicVariables[i] = pointers.WithString(v)
+		dynamicVariables[i] = pointers.ToCString(v)
 		i++
 	}
 
@@ -688,7 +688,7 @@ func go_read_cookies(rh C.uintptr_t) *C.char {
 	}
 
 	// freed in frankenphp_request_shutdown()
-	return pointers.WithString(strings.Join(cookieString, "; "))
+	return pointers.ToCString(strings.Join(cookieString, "; "))
 }
 
 //export go_log

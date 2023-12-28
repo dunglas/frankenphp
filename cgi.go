@@ -35,13 +35,13 @@ const (
 
 func allocServerVariable(cArr *[27]*C.char, env map[string]string, serverKey serverKey, envKey string, val string, pointers *pointerList) {
 	if val, ok := env[envKey]; ok {
-		cArr[serverKey] = pointers.WithString(val)
+		cArr[serverKey] = pointers.ToCString(val)
 		delete(env, envKey)
 
 		return
 	}
 
-	cArr[serverKey] = pointers.WithString(val)
+	cArr[serverKey] = pointers.ToCString(val)
 }
 
 // computeKnownVariables returns a set of CGI environment variables for the request.
@@ -70,18 +70,18 @@ func computeKnownVariables(request *http.Request) (cArr [27]*C.char) {
 
 	ra, raOK := fc.env["REMOTE_ADDR"]
 	if raOK {
-		cArr[remoteAddr] = pointers.WithString(ra)
+		cArr[remoteAddr] = pointers.ToCString(ra)
 		delete(fc.env, "REMOTE_ADDR")
 	} else {
-		cArr[remoteAddr] = pointers.WithString(ip)
+		cArr[remoteAddr] = pointers.ToCString(ip)
 	}
 
 	if rh, ok := fc.env["REMOTE_HOST"]; ok {
-		cArr[remoteHost] = pointers.WithString(rh) // For speed, remote host lookups disabled
+		cArr[remoteHost] = pointers.ToCString(rh) // For speed, remote host lookups disabled
 		delete(fc.env, "REMOTE_HOST")
 	} else {
 		if raOK {
-			cArr[remoteHost] = pointers.WithString(ip)
+			cArr[remoteHost] = pointers.ToCString(ip)
 		} else {
 			cArr[remoteHost] = cArr[remoteAddr]
 		}
@@ -102,20 +102,20 @@ func computeKnownVariables(request *http.Request) (cArr [27]*C.char) {
 		rs = "https"
 
 		if h, ok := fc.env["HTTPS"]; ok {
-			cArr[https] = pointers.WithString(h)
+			cArr[https] = pointers.ToCString(h)
 			delete(fc.env, "HTTPS")
 		} else {
-			cArr[https] = pointers.WithString("on")
+			cArr[https] = pointers.ToCString("on")
 		}
 
 		// and pass the protocol details in a manner compatible with apache's mod_ssl
 		// (which is why these have a SSL_ prefix and not TLS_).
 		if p, ok := fc.env["SSL_PROTOCOL"]; ok {
-			cArr[sslProtocol] = pointers.WithString(p)
+			cArr[sslProtocol] = pointers.ToCString(p)
 			delete(fc.env, "SSL_PROTOCOL")
 		} else {
 			if v, ok := tlsProtocolStrings[request.TLS.Version]; ok {
-				cArr[sslProtocol] = pointers.WithString(v)
+				cArr[sslProtocol] = pointers.ToCString(v)
 			}
 		}
 	}
@@ -151,7 +151,7 @@ func computeKnownVariables(request *http.Request) (cArr [27]*C.char) {
 	// the parent environment from interfering.
 
 	// These values can not be override
-	cArr[contentLength] = pointers.WithString(request.Header.Get("Content-Length"))
+	cArr[contentLength] = pointers.ToCString(request.Header.Get("Content-Length"))
 
 	allocServerVariable(&cArr, fc.env, gatewayInterface, "GATEWAY_INTERFACE", "CGI/1.1", pointers)
 	allocServerVariable(&cArr, fc.env, serverProtocol, "SERVER_PROTOCOL", request.Proto, pointers)
