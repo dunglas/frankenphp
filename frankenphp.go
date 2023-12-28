@@ -54,9 +54,11 @@ import (
 
 type contextKeyStruct struct{}
 type handleKeyStruct struct{}
+type pointerKeyStruct struct{}
 
 var contextKey = contextKeyStruct{}
 var handleKey = handleKeyStruct{}
+var pointerKey = pointerKeyStruct{}
 
 var (
 	InvalidRequestError         = errors.New("not a FrankenPHP request")
@@ -195,6 +197,7 @@ func NewRequestWithContext(r *http.Request, opts ...RequestOption) (*http.Reques
 
 	c := context.WithValue(r.Context(), contextKey, fc)
 	c = context.WithValue(c, handleKey, Handles())
+	c = context.WithValue(c, pointerKey, Pointers())
 
 	return r.WithContext(c), nil
 }
@@ -362,23 +365,29 @@ func getLogger() *zap.Logger {
 	return logger
 }
 
+func getPointersForRequest(r *http.Request) *pointerList {
+	return r.Context().Value(pointerKey).(*pointerList)
+}
+
 func updateServerContext(request *http.Request, create bool, mrh C.uintptr_t) error {
 	fc, ok := FromContext(request.Context())
 	if !ok {
 		return InvalidRequestError
 	}
 
+	pointers := getPointersForRequest(request)
+
 	authUser, authPassword, ok := request.BasicAuth()
 	var cAuthUser, cAuthPassword *C.char
 	if ok && authPassword != "" {
-		cAuthPassword = C.CString(authPassword)
+		cAuthPassword = pointers.WithString(authPassword)
 	}
 	if ok && authUser != "" {
-		cAuthUser = C.CString(authUser)
+		cAuthUser = pointers.WithString(authUser)
 	}
 
-	cMethod := C.CString(request.Method)
-	cQueryString := C.CString(request.URL.RawQuery)
+	cMethod := pointers.WithString(request.Method)
+	cQueryString := pointers.WithString(request.URL.RawQuery)
 	contentLengthStr := request.Header.Get("Content-Length")
 	contentLength := 0
 	if contentLengthStr != "" {
@@ -392,7 +401,7 @@ func updateServerContext(request *http.Request, create bool, mrh C.uintptr_t) er
 	contentType := request.Header.Get("Content-Type")
 	var cContentType *C.char
 	if contentType != "" {
-		cContentType = C.CString(contentType)
+		cContentType = pointers.WithString(contentType)
 	}
 
 	// compliance with the CGI specification requires that
@@ -400,10 +409,10 @@ func updateServerContext(request *http.Request, create bool, mrh C.uintptr_t) er
 	// Info: https://www.ietf.org/rfc/rfc3875 Page 14
 	var cPathTranslated *C.char
 	if fc.pathInfo != "" {
-		cPathTranslated = C.CString(sanitizedPathJoin(fc.documentRoot, fc.pathInfo)) // Info: http://www.oreilly.com/openbook/cgi/ch02_04.html
+		cPathTranslated = pointers.WithString(sanitizedPathJoin(fc.documentRoot, fc.pathInfo)) // Info: http://www.oreilly.com/openbook/cgi/ch02_04.html
 	}
 
-	cRequestUri := C.CString(request.URL.RequestURI())
+	cRequestUri := pointers.WithString(request.URL.RequestURI())
 
 	var rh cgo.Handle
 	if fc.responseWriter == nil {
@@ -498,17 +507,17 @@ func go_execute_script(rh unsafe.Pointer) {
 	if !ok {
 		panic(InvalidRequestError)
 	}
+	pointers := getPointersForRequest(request)
 	defer func() {
 		maybeCloseContext(fc)
-		request.Context().Value(handleKey).(*handleList).FreeAll()
+		finalizeRequest(request)
 	}()
 
 	if err := updateServerContext(request, true, 0); err != nil {
 		panic(err)
 	}
 
-	// scriptFilename is freed in frankenphp_execute_script()
-	fc.exitStatus = C.frankenphp_execute_script(C.CString(fc.scriptFilename))
+	fc.exitStatus = C.frankenphp_execute_script(pointers.WithString(fc.scriptFilename))
 	if fc.exitStatus < 0 {
 		panic(ScriptExecutionError)
 	}
@@ -544,10 +553,12 @@ func go_ub_write(rh C.uintptr_t, cBuf *C.char, length C.int) (C.size_t, C.bool) 
 func go_register_variables(rh C.uintptr_t, trackVarsArray *C.zval) {
 	r := cgo.Handle(rh).Value().(*http.Request)
 	fc := r.Context().Value(contextKey).(*FrankenPHPContext)
+	pointers := getPointersForRequest(r)
 
 	le := (len(fc.env) + len(r.Header)) * 2
 	dynamicVariablesArr := (**C.char)(C.malloc(C.size_t(le) * C.size_t(unsafe.Sizeof((*C.char)(nil)))))
 	dynamicVariables := unsafe.Slice(dynamicVariablesArr, le)
+	pointers.AddPointer(unsafe.Pointer(dynamicVariablesArr))
 
 	var i int
 	// Add all HTTP headers to env variables
@@ -557,18 +568,18 @@ func go_register_variables(rh C.uintptr_t, trackVarsArray *C.zval) {
 			continue
 		}
 
-		dynamicVariables[i] = C.CString(k)
+		dynamicVariables[i] = pointers.WithString(k)
 		i++
 
-		dynamicVariables[i] = C.CString(strings.Join(val, ", "))
+		dynamicVariables[i] = pointers.WithString(strings.Join(val, ", "))
 		i++
 	}
 
 	for k, v := range fc.env {
-		dynamicVariables[i] = C.CString(k)
+		dynamicVariables[i] = pointers.WithString(k)
 		i++
 
-		dynamicVariables[i] = C.CString(v)
+		dynamicVariables[i] = pointers.WithString(v)
 		i++
 	}
 
@@ -664,6 +675,7 @@ func go_read_post(rh C.uintptr_t, cBuf *C.char, countBytes C.size_t) (readBytes 
 //export go_read_cookies
 func go_read_cookies(rh C.uintptr_t) *C.char {
 	r := cgo.Handle(rh).Value().(*http.Request)
+	pointers := getPointersForRequest(r)
 
 	cookies := r.Cookies()
 	if len(cookies) == 0 {
@@ -676,7 +688,7 @@ func go_read_cookies(rh C.uintptr_t) *C.char {
 	}
 
 	// freed in frankenphp_request_shutdown()
-	return C.CString(strings.Join(cookieString, "; "))
+	return pointers.WithString(strings.Join(cookieString, "; "))
 }
 
 //export go_log
@@ -731,4 +743,9 @@ func freeArgs(argv []*C.char) {
 	for _, arg := range argv {
 		C.free(unsafe.Pointer(arg))
 	}
+}
+
+func finalizeRequest(r *http.Request) {
+	getPointersForRequest(r).FreeAll()
+	r.Context().Value(handleKey).(*handleList).FreeAll()
 }

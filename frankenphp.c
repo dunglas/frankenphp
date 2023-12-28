@@ -78,25 +78,12 @@ static uintptr_t frankenphp_clean_server_context() {
     return 0;
   }
 
-  free(SG(request_info).auth_password);
   SG(request_info).auth_password = NULL;
-
-  free(SG(request_info).auth_user);
   SG(request_info).auth_user = NULL;
-
-  free((char *)SG(request_info).request_method);
   SG(request_info).request_method = NULL;
-
-  free(SG(request_info).query_string);
   SG(request_info).query_string = NULL;
-
-  free((char *)SG(request_info).content_type);
   SG(request_info).content_type = NULL;
-
-  free(SG(request_info).path_translated);
   SG(request_info).path_translated = NULL;
-
-  free(SG(request_info).request_uri);
   SG(request_info).request_uri = NULL;
 
   return ctx->current_request;
@@ -352,7 +339,6 @@ static uintptr_t frankenphp_request_shutdown() {
 
   php_request_shutdown((void *)0);
 
-  free(ctx->cookie_data);
   ((frankenphp_server_context *)SG(server_context))->cookie_data = NULL;
   uintptr_t rh = frankenphp_clean_server_context();
 
@@ -508,11 +494,6 @@ static void frankenphp_register_known_variable(const char *key, char *value,
                                &new_val_len)) {
     php_register_variable_safe(key, value, new_val_len, track_vars_array);
   }
-
-  if (f) {
-    free(value);
-    value = NULL;
-  }
 }
 
 void frankenphp_register_bulk_variables(char *known_variables[27],
@@ -590,12 +571,7 @@ void frankenphp_register_bulk_variables(char *known_variables[27],
       php_register_variable_safe(dynamic_variables[i], dynamic_variables[i + 1],
                                  new_val_len, track_vars_array);
     }
-
-    free(dynamic_variables[i]);
-    free(dynamic_variables[i + 1]);
   }
-
-  free(dynamic_variables);
 }
 
 static void frankenphp_register_variables(zval *track_vars_array) {
@@ -729,8 +705,6 @@ int frankenphp_request_startup() {
 
 int frankenphp_execute_script(char *file_name) {
   if (frankenphp_request_startup() == FAILURE) {
-    free(file_name);
-
     return FAILURE;
   }
 
@@ -738,7 +712,6 @@ int frankenphp_execute_script(char *file_name) {
 
   zend_file_handle file_handle;
   zend_stream_init_filename(&file_handle, file_name);
-  free(file_name);
 
   file_handle.primary_script = 1;
 

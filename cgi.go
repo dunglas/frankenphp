@@ -33,15 +33,15 @@ const (
 	sslProtocol
 )
 
-func allocServerVariable(cArr *[27]*C.char, env map[string]string, serverKey serverKey, envKey string, val string) {
+func allocServerVariable(cArr *[27]*C.char, env map[string]string, serverKey serverKey, envKey string, val string, pointers *pointerList) {
 	if val, ok := env[envKey]; ok {
-		cArr[serverKey] = C.CString(val)
+		cArr[serverKey] = pointers.WithString(val)
 		delete(env, envKey)
 
 		return
 	}
 
-	cArr[serverKey] = C.CString(val)
+	cArr[serverKey] = pointers.WithString(val)
 }
 
 // computeKnownVariables returns a set of CGI environment variables for the request.
@@ -53,6 +53,7 @@ func computeKnownVariables(request *http.Request) (cArr [27]*C.char) {
 	if !fcOK {
 		panic("not a FrankenPHP request")
 	}
+	pointers := getPointersForRequest(request)
 
 	// Separate remote IP and port; more lenient than net.SplitHostPort
 	var ip, port string
@@ -69,30 +70,30 @@ func computeKnownVariables(request *http.Request) (cArr [27]*C.char) {
 
 	ra, raOK := fc.env["REMOTE_ADDR"]
 	if raOK {
-		cArr[remoteAddr] = C.CString(ra)
+		cArr[remoteAddr] = pointers.WithString(ra)
 		delete(fc.env, "REMOTE_ADDR")
 	} else {
-		cArr[remoteAddr] = C.CString(ip)
+		cArr[remoteAddr] = pointers.WithString(ip)
 	}
 
 	if rh, ok := fc.env["REMOTE_HOST"]; ok {
-		cArr[remoteHost] = C.CString(rh) // For speed, remote host lookups disabled
+		cArr[remoteHost] = pointers.WithString(rh) // For speed, remote host lookups disabled
 		delete(fc.env, "REMOTE_HOST")
 	} else {
 		if raOK {
-			cArr[remoteHost] = C.CString(ip)
+			cArr[remoteHost] = pointers.WithString(ip)
 		} else {
 			cArr[remoteHost] = cArr[remoteAddr]
 		}
 	}
 
-	allocServerVariable(&cArr, fc.env, remotePort, "REMOTE_PORT", port)
-	allocServerVariable(&cArr, fc.env, documentRoot, "DOCUMENT_ROOT", fc.documentRoot)
-	allocServerVariable(&cArr, fc.env, pathInfo, "PATH_INFO", fc.pathInfo)
-	allocServerVariable(&cArr, fc.env, phpSelf, "PHP_SELF", request.URL.Path)
-	allocServerVariable(&cArr, fc.env, documentUri, "DOCUMENT_URI", fc.docURI)
-	allocServerVariable(&cArr, fc.env, scriptFilename, "SCRIPT_FILENAME", fc.scriptFilename)
-	allocServerVariable(&cArr, fc.env, scriptName, "SCRIPT_NAME", fc.scriptName)
+	allocServerVariable(&cArr, fc.env, remotePort, "REMOTE_PORT", port, pointers)
+	allocServerVariable(&cArr, fc.env, documentRoot, "DOCUMENT_ROOT", fc.documentRoot, pointers)
+	allocServerVariable(&cArr, fc.env, pathInfo, "PATH_INFO", fc.pathInfo, pointers)
+	allocServerVariable(&cArr, fc.env, phpSelf, "PHP_SELF", request.URL.Path, pointers)
+	allocServerVariable(&cArr, fc.env, documentUri, "DOCUMENT_URI", fc.docURI, pointers)
+	allocServerVariable(&cArr, fc.env, scriptFilename, "SCRIPT_FILENAME", fc.scriptFilename, pointers)
+	allocServerVariable(&cArr, fc.env, scriptName, "SCRIPT_NAME", fc.scriptName, pointers)
 
 	var rs string
 	if request.TLS == nil {
@@ -101,24 +102,24 @@ func computeKnownVariables(request *http.Request) (cArr [27]*C.char) {
 		rs = "https"
 
 		if h, ok := fc.env["HTTPS"]; ok {
-			cArr[https] = C.CString(h)
+			cArr[https] = pointers.WithString(h)
 			delete(fc.env, "HTTPS")
 		} else {
-			cArr[https] = C.CString("on")
+			cArr[https] = pointers.WithString("on")
 		}
 
 		// and pass the protocol details in a manner compatible with apache's mod_ssl
 		// (which is why these have a SSL_ prefix and not TLS_).
 		if p, ok := fc.env["SSL_PROTOCOL"]; ok {
-			cArr[sslProtocol] = C.CString(p)
+			cArr[sslProtocol] = pointers.WithString(p)
 			delete(fc.env, "SSL_PROTOCOL")
 		} else {
 			if v, ok := tlsProtocolStrings[request.TLS.Version]; ok {
-				cArr[sslProtocol] = C.CString(v)
+				cArr[sslProtocol] = pointers.WithString(v)
 			}
 		}
 	}
-	allocServerVariable(&cArr, fc.env, requestScheme, "REQUEST_SCHEME", rs)
+	allocServerVariable(&cArr, fc.env, requestScheme, "REQUEST_SCHEME", rs, pointers)
 
 	reqHost, reqPort, _ := net.SplitHostPort(request.Host)
 
@@ -140,9 +141,9 @@ func computeKnownVariables(request *http.Request) (cArr [27]*C.char) {
 		}
 	}
 
-	allocServerVariable(&cArr, fc.env, serverName, "SERVER_NAME", reqHost)
+	allocServerVariable(&cArr, fc.env, serverName, "SERVER_NAME", reqHost, pointers)
 	if reqPort != "" {
-		allocServerVariable(&cArr, fc.env, serverPort, "SERVER_PORT", reqPort)
+		allocServerVariable(&cArr, fc.env, serverPort, "SERVER_PORT", reqPort, pointers)
 	}
 
 	// Variables defined in CGI 1.1 spec
@@ -150,12 +151,12 @@ func computeKnownVariables(request *http.Request) (cArr [27]*C.char) {
 	// the parent environment from interfering.
 
 	// These values can not be override
-	cArr[contentLength] = C.CString(request.Header.Get("Content-Length"))
+	cArr[contentLength] = pointers.WithString(request.Header.Get("Content-Length"))
 
-	allocServerVariable(&cArr, fc.env, gatewayInterface, "GATEWAY_INTERFACE", "CGI/1.1")
-	allocServerVariable(&cArr, fc.env, serverProtocol, "SERVER_PROTOCOL", request.Proto)
-	allocServerVariable(&cArr, fc.env, serverSoftware, "SERVER_SOFTWARE", "FrankenPHP")
-	allocServerVariable(&cArr, fc.env, httpHost, "HTTP_HOST", request.Host) // added here, since not always part of headers
+	allocServerVariable(&cArr, fc.env, gatewayInterface, "GATEWAY_INTERFACE", "CGI/1.1", pointers)
+	allocServerVariable(&cArr, fc.env, serverProtocol, "SERVER_PROTOCOL", request.Proto, pointers)
+	allocServerVariable(&cArr, fc.env, serverSoftware, "SERVER_SOFTWARE", "FrankenPHP", pointers)
+	allocServerVariable(&cArr, fc.env, httpHost, "HTTP_HOST", request.Host, pointers) // added here, since not always part of headers
 
 	return
 }

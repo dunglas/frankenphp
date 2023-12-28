@@ -34,9 +34,21 @@ func (p *pointerList) AddPointer(ptr unsafe.Pointer) {
 	p.Pointers = append(p.Pointers, ptr)
 }
 
+func (p *pointerList) AddString(str *C.char) {
+	p.AddPointer(unsafe.Pointer(str))
+	//getLogger().Warn("Adding string", zap.Int("i", len(p.Pointers)), zap.String("str", C.GoString(str)), zap.Stack("trace"))
+}
+
+func (p *pointerList) WithString(string string) *C.char {
+	str := C.CString(string)
+	p.AddString(str)
+	return str
+}
+
 // FreeAll frees all C pointers
 func (p *pointerList) FreeAll() {
 	for _, ptr := range p.Pointers {
+		//getLogger().Warn("About to delete", zap.Int("i", i))
 		C.free(ptr)
 	}
 	p.Pointers = nil // To avoid dangling pointers
