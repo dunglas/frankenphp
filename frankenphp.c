@@ -616,8 +616,7 @@ sapi_module_struct frankenphp_sapi_module = {
     NULL,                          /* Get request time */
     NULL,                          /* Child terminate */
 
-    STANDARD_SAPI_MODULE_PROPERTIES
-};
+    STANDARD_SAPI_MODULE_PROPERTIES};
 
 static void *manager_thread(void *arg) {
 #ifdef ZTS
