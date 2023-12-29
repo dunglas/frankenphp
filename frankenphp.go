@@ -556,9 +556,8 @@ func go_register_variables(rh C.uintptr_t, trackVarsArray *C.zval) {
 	pointers := getPointersForRequest(r)
 
 	le := (len(fc.env) + len(r.Header)) * 2
-	dynamicVariablesArr := (**C.char)(C.malloc(C.size_t(le) * C.size_t(unsafe.Sizeof((*C.char)(nil)))))
-	dynamicVariables := unsafe.Slice(dynamicVariablesArr, le)
-	pointers.AddPointer(unsafe.Pointer(dynamicVariablesArr))
+	//dynamicVariablesArr := (**C.char)(C.malloc(C.size_t(le) * C.size_t(unsafe.Sizeof((*C.char)(nil)))))
+	dynamicVariables := make([]*C.char, le)
 
 	var i int
 	// Add all HTTP headers to env variables
@@ -583,8 +582,13 @@ func go_register_variables(rh C.uintptr_t, trackVarsArray *C.zval) {
 		i++
 	}
 
+	var pointer **C.char = nil
+	if le > 0 {
+		pointer = &dynamicVariables[0]
+	}
+
 	knownVariables := computeKnownVariables(r)
-	C.frankenphp_register_bulk_variables(&knownVariables[0], dynamicVariablesArr, C.size_t(le), trackVarsArray)
+	C.frankenphp_register_bulk_variables(&knownVariables[0], pointer, C.size_t(le), trackVarsArray)
 
 	fc.env = nil
 }
