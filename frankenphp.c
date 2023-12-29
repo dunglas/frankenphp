@@ -594,8 +594,6 @@ void frankenphp_register_bulk_variables(char *known_variables[27],
     free(dynamic_variables[i]);
     free(dynamic_variables[i + 1]);
   }
-
-  free(dynamic_variables);
 }
 
 static void frankenphp_register_variables(zval *track_vars_array) {
