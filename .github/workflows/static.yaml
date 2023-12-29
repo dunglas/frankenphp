@@ -141,9 +141,8 @@ jobs:
         name: Copy binary
         if: ${{ !fromJson(needs.prepare.outputs.push) }}
         run: |
-          image=$(jq -r '."static-builder"."containerimage.config.digest"' <<< "${METADATA}")
-          container=$(docker create --platform=${{ matrix.platform }} --name static-builder "${image}")
-          docker cp "${container}:/go/src/app/dist/${BINARY}" "${BINARY}"
+          tag=$(jq -cr '.target."static-builder".tags | first' <<< "${METADATA}")
+          docker cp "$(docker create --platform=${{ matrix.platform }} --name static-builder "${tag}"):/go/src/app/dist/${BINARY}" "${BINARY}"" ; docker rm static-builder
         env:
           METADATA: ${{ needs.prepare.outputs.metadata }}
           BINARY: frankenphp-linux-${{ matrix.platform == 'linux/amd64' && 'x86_64' || 'aarch64' }}
