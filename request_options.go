@@ -56,7 +56,11 @@ func WithRequestSplitPath(splitPath []string) RequestOption {
 // Values set with WithEnv always have priority over automatically populated values.
 func WithRequestEnv(env map[string]string) RequestOption {
 	return func(o *FrankenPHPContext) error {
-		o.env = env
+		e := make(map[string]string, len(env))
+		for k, v := range env {
+			e[k] = v
+		}
+		o.env = e
 
 		return nil
 	}
