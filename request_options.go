@@ -70,3 +70,12 @@ func WithRequestLogger(logger *zap.Logger) RequestOption {
 		return nil
 	}
 }
+
+// WithHooks sets a hook on the request that FrankenPHP will call back
+func WithHooks(hooks *FrankenPHPHooks) RequestOption {
+	return func(o *FrankenPHPContext) error {
+		o.hooks = hooks
+
+		return nil
+	}
+}

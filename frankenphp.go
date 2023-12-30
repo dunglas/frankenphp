@@ -447,7 +447,7 @@ func updateServerContext(request *http.Request, create bool, mrh C.uintptr_t) er
 }
 
 // ServeHTTP executes a PHP script according to the given context.
-func ServeHTTP(responseWriter http.ResponseWriter, request *http.Request, hooks *FrankenPHPHooks) error {
+func ServeHTTP(responseWriter http.ResponseWriter, request *http.Request) error {
 	shutdownWG.Add(1)
 	defer shutdownWG.Done()
 
@@ -457,8 +457,6 @@ func ServeHTTP(responseWriter http.ResponseWriter, request *http.Request, hooks 
 	}
 
 	fc.responseWriter = responseWriter
-
-	fc.hooks = hooks
 
 	rc := requestChan
 	// Detect if a worker is available to handle this request

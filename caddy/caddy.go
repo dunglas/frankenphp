@@ -267,18 +267,7 @@ func (f FrankenPHPModule) ServeHTTP(w http.ResponseWriter, r *http.Request, next
 		env[k] = repl.ReplaceKnown(v, "")
 	}
 
-	fr, err := frankenphp.NewRequestWithContext(
-		r,
-		frankenphp.WithRequestDocumentRoot(documentRoot, f.ResolveRootSymlink),
-		frankenphp.WithRequestSplitPath(f.SplitPath),
-		frankenphp.WithRequestEnv(env),
-	)
-
-	if err != nil {
-		return err
-	}
-
-	hooks := frankenphp.FrankenPHPHooks{
+	hooks := &frankenphp.FrankenPHPHooks{
 		ResponseFilter: func(status int, header http.Header, r2 *http.Request) bool {
 			handleError := func(error error) bool {
 				var handlerError caddyhttp.HandlerError
@@ -338,7 +327,19 @@ func (f FrankenPHPModule) ServeHTTP(w http.ResponseWriter, r *http.Request, next
 		},
 	}
 
-	return frankenphp.ServeHTTP(w, fr, &hooks)
+	fr, err := frankenphp.NewRequestWithContext(
+		r,
+		frankenphp.WithRequestDocumentRoot(documentRoot, f.ResolveRootSymlink),
+		frankenphp.WithRequestSplitPath(f.SplitPath),
+		frankenphp.WithRequestEnv(env),
+		frankenphp.WithHooks(hooks),
+	)
+
+	if err != nil {
+		return err
+	}
+
+	return frankenphp.ServeHTTP(w, fr)
 }
 
 const matcherPrefix = "@"
