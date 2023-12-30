@@ -49,6 +49,12 @@ func startWorkers(fileName string, nbWorkers int, env map[string]string) error {
 		errs []error
 	)
 
+	if env == nil {
+		env = make(map[string]string)
+	}
+
+	env["FRANKENPHP_WORKER"] = "1"
+
 	l := getLogger()
 	for i := 0; i < nbWorkers; i++ {
 		go func() {
