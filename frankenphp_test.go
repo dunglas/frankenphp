@@ -65,7 +65,7 @@ func runTest(t *testing.T, test func(func(http.ResponseWriter, *http.Request), *
 		req, err := frankenphp.NewRequestWithContext(r, frankenphp.WithRequestDocumentRoot(testDataDir, false))
 		assert.NoError(t, err)
 
-		err = frankenphp.ServeHTTP(w, req, nil)
+		err = frankenphp.ServeHTTP(w, req)
 		assert.NoError(t, err)
 	}
 
@@ -185,7 +185,7 @@ func testPathInfo(t *testing.T, opts *testOptions) {
 			)
 			assert.NoError(t, err)
 
-			err = frankenphp.ServeHTTP(w, rewriteRequest, nil)
+			err = frankenphp.ServeHTTP(w, rewriteRequest)
 			assert.NoError(t, err)
 		}
 
@@ -585,7 +585,7 @@ func ExampleServeHTTP() {
 			panic(err)
 		}
 
-		if err := frankenphp.ServeHTTP(w, req, nil); err != nil {
+		if err := frankenphp.ServeHTTP(w, req); err != nil {
 			panic(err)
 		}
 	})
@@ -615,7 +615,7 @@ func BenchmarkHelloWorld(b *testing.B) {
 			panic(err)
 		}
 
-		if err := frankenphp.ServeHTTP(w, req, nil); err != nil {
+		if err := frankenphp.ServeHTTP(w, req); err != nil {
 			panic(err)
 		}
 	}
@@ -641,7 +641,7 @@ func BenchmarkEcho(b *testing.B) {
 		if err != nil {
 			panic(err)
 		}
-		if err := frankenphp.ServeHTTP(w, req, nil); err != nil {
+		if err := frankenphp.ServeHTTP(w, req); err != nil {
 			panic(err)
 		}
 	}
