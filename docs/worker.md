@@ -66,13 +66,13 @@ require __DIR__.'/vendor/autoload.php';
 $myApp = new \App\Kernel();
 $myApp->boot();
 
-$nbRequests = 0;
-do {
-    $handler = static function () use ($myApp) {
+// Handler outside the loop for better performance (doing less work)
+$handler = static function () use ($myApp) {
         // Called when a request is received,
         // superglobals, php://input and the like are reset
         echo $myApp->handle($_GET, $_POST, $_COOKIE, $_FILES, $_SERVER);
-    };
+};
+for($nbRequests = 0, $running = true; isset($_SERVER['MAX_REQUESTS']) && ($nbRequests < ((int)$_SERVER['MAX_REQUESTS'])) && $running; ++$nbRequests) {
     $running = \frankenphp_handle_request($handler);
 
     // Do something after sending the HTTP response
@@ -80,8 +80,7 @@ do {
 
     // Call the garbage collector to reduce the chances of it being triggered in the middle of a page generation
     gc_collect_cycles();
-} while ($running && isset($_SERVER['MAX_REQUESTS']) && (++$nbRequests <= $_SERVER['MAX_REQUESTS']));
-
+}
 // Cleanup
 $myApp->shutdown();
 ```
