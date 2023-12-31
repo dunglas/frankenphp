@@ -452,11 +452,10 @@ func ServeHTTP(responseWriter http.ResponseWriter, request *http.Request) error 
 
 	rc := requestChan
 	// Detect if a worker is available to handle this request
-	if nil == fc.responseWriter {
-		fc.env["FRANKENPHP_WORKER"] = "1"
-	} else if v, ok := workersRequestChans.Load(fc.scriptFilename); ok {
-		fc.env["FRANKENPHP_WORKER"] = "1"
-		rc = v.(chan *http.Request)
+	if nil != fc.responseWriter {
+		if v, ok := workersRequestChans.Load(fc.scriptFilename); ok {
+			rc = v.(chan *http.Request)
+		}
 	}
 
 	select {
