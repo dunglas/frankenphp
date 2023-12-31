@@ -80,7 +80,7 @@ do {
 
     // Call the garbage collector to reduce the chances of it being triggered in the middle of a page generation
     gc_collect_cycles();
-} while ($running && !(isset($_SERVER['MAX_REQUESTS']) && ++$nbRequests >= $_SERVER['MAX_REQUESTS']));
+} while ($running && !(isset($_SERVER['MAX_REQUESTS']) && ++$nbRequests <= $_SERVER['MAX_REQUESTS']));
 
 // Cleanup
 $myApp->shutdown();
