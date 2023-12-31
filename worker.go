@@ -50,7 +50,7 @@ func startWorkers(fileName string, nbWorkers int, env map[string]string) error {
 	)
 
 	if env == nil {
-		env = make(map[string]string, 0, 1)
+		env = make(map[string]string, 1)
 	}
 
 	env["FRANKENPHP_WORKER"] = "1"
