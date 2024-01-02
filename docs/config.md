@@ -39,6 +39,8 @@ localhost {
 }
 ```
 
+### Defining number of workers
+
 Optionally, the number of threads to create and [worker scripts](worker.md) to start with the server can be specified under the global option.
 
 ```caddyfile
@@ -67,6 +69,8 @@ Alternatively, you may use the one-line short form of the `worker` option:
 
 # ...
 ```
+
+### Defining worker entrypoints
 
 You can also define multiple workers if you serve multiple apps on the same server:
 
@@ -124,6 +128,77 @@ php_server [<matcher>] {
 	split_path <delim...> # Sets the substrings for splitting the URI into two parts. The first matching substring will be used to split the "path info" from the path. The first piece is suffixed with the matching substring and will be assumed as the actual resource (CGI script) name. The second piece will be set to PATH_INFO for the CGI script to use. Default: `.php`
 	resolve_root_symlink # Enables resolving the `root` directory to its actual value by evaluating a symbolic link, if one exists.
 	env <key> <value> # Sets an extra environment variable to the given value. Can be specified more than once for multiple environment variables.
+	@matcher_name header Header-Key value
+	handle_response @matcher_name { /* response matcher */ }
+}
+```
+
+### Full example
+
+A realistic full example which is also the Caddyfile shipped in the docker image:
+
+```caddyfile
+{
+	{$CADDY_GLOBAL_OPTIONS}
+
+	frankenphp {
+		#worker /path/to/your/worker.php
+		{$FRANKENPHP_CONFIG}
+	}
+
+	# https://caddyserver.com/docs/caddyfile/directives#sorting-algorithm
+	order mercure after encode
+	order vulcain after reverse_proxy
+	order php_server before file_server
+	order php before file_server
+}
+
+{$CADDY_EXTRA_CONFIG}
+
+{$SERVER_NAME:localhost} {
+	log {
+		# Redact the authorization query parameter that can be set by Mercure
+		format filter {
+			wrap console
+			fields {
+				uri query {
+					replace authorization REDACTED
+				}
+			}
+		}
+	}
+
+	root * public/
+	encode zstd gzip
+
+	# Uncomment the following lines to enable Mercure and Vulcain modules
+	#mercure {
+	#	# Transport to use (default to Bolt)
+	#	transport_url {$MERCURE_TRANSPORT_URL:bolt:///data/mercure.db}
+	#	# Publisher JWT key
+	#	publisher_jwt {env.MERCURE_PUBLISHER_JWT_KEY} {env.MERCURE_PUBLISHER_JWT_ALG}
+	#	# Subscriber JWT key
+	#	subscriber_jwt {env.MERCURE_SUBSCRIBER_JWT_KEY} {env.MERCURE_SUBSCRIBER_JWT_ALG}
+	#	# Allow anonymous subscribers (double-check that it's what you want)
+	#	anonymous
+	#	# Enable the subscription API (double-check that it's what you want)
+	#	subscriptions
+	#	# Extra directives
+	#	{$MERCURE_EXTRA_DIRECTIVES}
+	#}
+	#vulcain
+
+	{$CADDY_SERVER_EXTRA_DIRECTIVES}
+
+	php_server # {
+	  #	Uncomment the following lines to enable x-accel-redirect processing
+	  #	@accel header X-Accel-Redirect *
+	  #	handle_response @accel {
+	  #		root * / # requires the header to contain the full path
+	  #		rewrite {http.reverse_proxy.header.X-Accel-Redirect}
+	  #		file_server
+	  #	}
+	}
 }
 ```
 

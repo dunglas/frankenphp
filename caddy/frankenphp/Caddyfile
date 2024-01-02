@@ -50,5 +50,13 @@
 
 	{$CADDY_SERVER_EXTRA_DIRECTIVES}
 
-	php_server
+	php_server # {
+	  #	Uncomment the following lines to enable x-accel-redirect processing
+	  #	@accel header X-Accel-Redirect *
+	  #	handle_response @accel {
+	  #		root * / # requires the header to contain the full path
+	  #		rewrite {http.reverse_proxy.header.X-Accel-Redirect}
+	  #		file_server
+	  #	}
+	}
 }
