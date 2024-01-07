@@ -145,7 +145,7 @@ jobs:
           docker create --platform=${{ matrix.platform }} --name static-builder "${digest}"
           docker cp "static-builder:/go/src/app/dist/${BINARY}" "${BINARY}"
         env:
-          METADATA: ${{ needs.prepare.outputs.metadata }}
+          METADATA: ${{ steps.build.outputs.metadata }}
           BINARY: frankenphp-linux-${{ matrix.platform == 'linux/amd64' && 'x86_64' || 'aarch64' }}
       -
         name: Upload artifact
