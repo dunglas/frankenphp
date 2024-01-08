@@ -141,7 +141,7 @@ jobs:
         name: Copy binary
         if: ${{ !fromJson(needs.prepare.outputs.push) }}
         run: |
-          digest=$(jq -r '."static-builder"."containerimage.digest"' <<< "${METADATA}")
+          digest=$(jq -r '."static-builder"."containerimage.config.digest"' <<< "${METADATA}")
           docker create --platform=${{ matrix.platform }} --name static-builder "${digest}"
           docker cp "static-builder:/go/src/app/dist/${BINARY}" "${BINARY}"
         env:
