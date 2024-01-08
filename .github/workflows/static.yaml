@@ -141,11 +141,11 @@ jobs:
         name: Copy binary
         if: ${{ !fromJson(needs.prepare.outputs.push) }}
         run: |
-          image=$(jq -r '."static-builder"."containerimage.config.digest"' <<< "${METADATA}")
-          container=$(docker create --platform=${{ matrix.platform }} --name static-builder "${image}")
-          docker cp "${container}:/go/src/app/dist/${BINARY}" "${BINARY}"
+          digest=$(jq -r '."static-builder"."containerimage.config.digest"' <<< "${METADATA}")
+          docker create --platform=${{ matrix.platform }} --name static-builder "${digest}"
+          docker cp "static-builder:/go/src/app/dist/${BINARY}" "${BINARY}"
         env:
-          METADATA: ${{ needs.prepare.outputs.metadata }}
+          METADATA: ${{ steps.build.outputs.metadata }}
           BINARY: frankenphp-linux-${{ matrix.platform == 'linux/amd64' && 'x86_64' || 'aarch64' }}
       -
         name: Upload artifact

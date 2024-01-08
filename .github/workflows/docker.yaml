@@ -169,12 +169,10 @@ jobs:
         run: |
           mkdir -p /tmp/metadata/builder /tmp/metadata/runner
 
-          # shellcheck disable=SC2086
-          builderDigest=$(jq -r '."builder-${{ matrix.variant }}"."containerimage.digest"' <<< ${METADATA})
+          builderDigest=$(jq -r '."builder-${{ matrix.variant }}"."containerimage.digest"' <<< "${METADATA}")
           touch "/tmp/metadata/builder/${builderDigest#sha256:}"
 
-          # shellcheck disable=SC2086
-          runnerDigest=$(jq -r '."runner-${{ matrix.variant }}"."containerimage.digest"' <<< ${METADATA})
+          runnerDigest=$(jq -r '."runner-${{ matrix.variant }}"."containerimage.digest"' <<< "${METADATA}")
           touch "/tmp/metadata/runner/${runnerDigest#sha256:}"
         env:
           METADATA: ${{ steps.build.outputs.metadata }}
