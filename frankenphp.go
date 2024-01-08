@@ -672,14 +672,13 @@ func go_read_cookies(rh C.uintptr_t) *C.char {
 	if len(cookies) == 0 {
 		return nil
 	}
-
-	cookieString := make([]string, len(cookies))
-	for _, cookie := range r.Cookies() {
-		cookieString = append(cookieString, cookie.String())
+	cookieStrings := make([]string, len(cookies))
+	for i, cookie := range cookies {
+		cookieStrings[i] = cookie.String()
 	}
 
 	// freed in frankenphp_request_shutdown()
-	return C.CString(strings.Join(cookieString, "; "))
+	return C.CString(strings.Join(cookieStrings, "; "))
 }
 
 //export go_log
