@@ -94,13 +94,15 @@ ssh root@<droplet-ip>
 In most cases, you'll want to associate a domain name with your website.
 If you don't own a domain name yet, you'll have to buy one through a registrar.
 
-Then create a DNS record of type `A` for your domain name pointing to the IP address of your server.
-
-Example:
+Then create a DNS record of type `A` for your domain name pointing to the IP address of your server:
 
 ```dns
 your-domain-name.example.com.  IN  A     207.154.233.113
 ```
+
+Example with the DigitalOcean Domains service ("Networking" > "Domains"):
+
+![Configuring DNS on DigitalOcean](digitalocean-dns.png)
 
 > [!NOTE]  
 > Let's Encrypt, the service used by default by FrankenPHP to automatically generate a TLS certificate doesn't support using bare IP addresses. Using a domain name is mandatory to use Let's Encrypt.
