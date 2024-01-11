@@ -129,7 +129,7 @@ Your server is up and running, and a HTTPS certificate has been automatically ge
 Go to `https://your-domain-name.example.com` and enjoy!
 
 > [!CAUTION]
-> Docker can have a cache layer, make sure you have the right build for each deployment or rebuild your project with --no-cache option to avoid cache issue
+> Docker can have a cache layer, make sure you have the right build for each deployment or rebuild your project with --no-cache option to avoid cache issue.
 
 ## Deploying on Multiple Nodes
 
