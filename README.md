@@ -54,6 +54,7 @@ You can also run command-line scripts with:
 * [Real-time](https://frankenphp.dev/docs/mercure/)
 * [Configuration](https://frankenphp.dev/docs/config/)
 * [Docker images](https://frankenphp.dev/docs/docker/)
+* [Deploy in production](docs/production.md)
 * [Create **standalone**, self-executable PHP apps](https://frankenphp.dev/docs/embed/)
 * [Create static binaries](https://frankenphp.dev/docs/static/)
 * [Compile from sources](https://frankenphp.dev/docs/compile/)
