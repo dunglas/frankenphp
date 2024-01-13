@@ -122,7 +122,7 @@ git clone git@github.com:<username>/<project-name>.git
 Go into the directory containing your project (`<project-name>`), and start the app in production mode:
 
 ```console
-docker compose up -d --wait
+docker compose up --wait
 ```
 
 Your server is up and running, and a HTTPS certificate has been automatically generated for you.
