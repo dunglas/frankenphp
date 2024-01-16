@@ -114,7 +114,7 @@ services:
     ports:
       - "80:80" # HTTP
       - "443:443" # HTTPS
-      - "443:443/udp" # # HTTP/3
+      - "443:443/udp" # HTTP/3
     volumes:
       - ./:/app/public
       - caddy_data:/data
