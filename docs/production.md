@@ -43,7 +43,7 @@ services:
     ports:
       - "80:80" # HTTP
       - "443:443" # HTTPS
-      - "443:443/udp" # # HTTP/3
+      - "443:443/udp" # HTTP/3
     volumes:
       - caddy_data:/data
       - caddy_config:/config
