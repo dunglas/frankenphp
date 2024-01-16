@@ -68,6 +68,9 @@ $myApp->boot();
 
 // Handler outside the loop for better performance (doing less work)
 $handler = static function () use ($myApp) {
+        // set the default to a 404 instead of caddy's 200
+        http_response_code(404); // remove this line if your code doesn't explicitly set a 200 response
+
         // Called when a request is received,
         // superglobals, php://input and the like are reset
         echo $myApp->handle($_GET, $_POST, $_COOKIE, $_FILES, $_SERVER);
