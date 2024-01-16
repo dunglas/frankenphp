@@ -41,8 +41,8 @@ services:
     image: dunglas/frankenphp
     restart: always
     ports:
-      - "80:80/tcp" # HTTP
-      - "443:443/tcp" # HTTPS
+      - "80:80" # HTTP
+      - "443:443" # HTTPS
       - "443:443/udp" # # HTTP/3
     volumes:
       - caddy_data:/data

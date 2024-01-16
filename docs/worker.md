@@ -13,7 +13,7 @@ Set the value of the `FRANKENPHP_CONFIG` environment variable to `worker /path/t
 docker run \
     -e APP_RUNTIME=Runtime\\FrankenPhpSymfony\\Runtime \
     -v $PWD:/app \
-    -p 80:80 -p 443:443 \
+    -p 80:80 -p 443:443 -p 443:443/udp \
     dunglas/frankenphp
 ```
 
@@ -41,13 +41,13 @@ docker run \
     -e FRANKENPHP_CONFIG="worker ./public/index.php" \
     -e APP_RUNTIME=Runtime\\FrankenPhpSymfony\\Runtime \
     -v $PWD:/app \
-    -p 80:80 -p 443:443 \
+    -p 80:80 -p 443:443 -p 443:443/udp \
     dunglas/frankenphp
 ```
 
 ## Laravel Octane
 
-See [this Pull Request](https://github.com/laravel/octane/pull/764).
+See [the dedicated documentation](laravel.md#laravel-octane).
 
 ## Custom Apps
 
@@ -91,7 +91,7 @@ Then, start your app and use the `FRANKENPHP_CONFIG` environment variable to con
 docker run \
     -e FRANKENPHP_CONFIG="worker ./public/index.php" \
     -v $PWD:/app \
-    -p 80:80 -p 443:443 \
+    -p 80:80 -p 443:443 -p 443:443/udp \
     dunglas/frankenphp
 ```
 
@@ -102,7 +102,7 @@ You can also configure the number of workers to start:
 docker run \
     -e FRANKENPHP_CONFIG="worker ./public/index.php 42" \
     -v $PWD:/app \
-    -p 80:80 -p 443:443 \
+    -p 80:80 -p 443:443 -p 443:443/udp \
     dunglas/frankenphp
 ```
 

@@ -7,7 +7,7 @@ Serving a [Laravel](https://laravel.com) web application with FrankenPHP is as e
 Run this command from the main directory of your Laravel app:
 
 ```console
-docker run -p 443:443 -v $PWD:/app dunglas/frankenphp
+docker run -p 80:80 -p 443:443 -p 443:443/udp -v $PWD:/app dunglas/frankenphp
 ```
 
 And enjoy!
@@ -74,6 +74,5 @@ php artisan octane:start
 {--log-level= : Log messages at or above the specified log level}';
 ```
 
-## Docs
+Learn more about [Laravel Octane in its official documentation](https://laravel.com/docs/octane).
 
-* [Laravel Octane](https://laravel.com/docs/master/octane)
