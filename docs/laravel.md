@@ -75,4 +75,3 @@ php artisan octane:start
 ```
 
 Learn more about [Laravel Octane in its official documentation](https://laravel.com/docs/octane).
-
