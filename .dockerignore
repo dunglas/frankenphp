@@ -11,3 +11,4 @@
 !testdata/*.txt
 !build-static.sh
 !app.tar
+!custom-ini.php
