@@ -90,7 +90,7 @@ other.example.com {
 ...
 ```
 
-Using the `php_server` directive is generaly what you need,
+Using the `php_server` directive is generally what you need,
 but if you need full control, you can use the lower level `php` directive:
 
 Using the `php_server` directive is equivalent to this configuration:
@@ -131,13 +131,19 @@ php_server [<matcher>] {
 
 The following environment variables can be used to inject Caddy directives in the `Caddyfile` without modifying it:
 
-* `SERVER_NAME` change the server name
+* `SERVER_NAME`: change [the addresses on which to listen](https://caddyserver.com/docs/caddyfile/concepts#addresses), the provided hostnames will also be used for the generated TLS certificate
 * `CADDY_GLOBAL_OPTIONS`: inject [global options](https://caddyserver.com/docs/caddyfile/options)
 * `FRANKENPHP_CONFIG`: inject config under the `frankenphp` directive
 
 Unlike with FPM and CLI SAPIs, environment variables are **not** exposed by default in superglobals `$_SERVER` and `$_ENV`.
 
 To propagate environment variables to `$_SERVER` and `$_ENV`, set the `php.ini` `variables_order` directive to `EGPCS`.
+
+## PHP config
+
+To load [additional PHP configuration files](https://www.php.net/manual/en/configuration.file.php#configuration.file.scan),
+the `PHP_INI_SCAN_DIR` environment variable can be used.
+When set, PHP will load all the file with the `.ini` extension present in the given directories.
 
 ## Enable the Debug Mode
 
@@ -146,6 +152,6 @@ When using the Docker image, set the `CADDY_GLOBAL_OPTIONS` environment variable
 ```console
 docker run -v $PWD:/app/public \
     -e CADDY_GLOBAL_OPTIONS=debug \
-    -p 80:80 -p 443:443 \
+    -p 80:80 -p 443:443 -p 443:443/udp \
     dunglas/frankenphp
 ```

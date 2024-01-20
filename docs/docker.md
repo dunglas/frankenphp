@@ -92,8 +92,12 @@ ENV FRANKENPHP_CONFIG="worker ./public/index.php"
 To develop easily with FrankenPHP, mount the directory from your host containing the source code of the app as a volume in the Docker container:
 
 ```console
-docker run -v $PWD:/app/public -p 80:80 -p 443:443 my-php-app
+docker run -v $PWD:/app/public -p 80:80 -p 443:443 -p 443:443/udp --tty my-php-app
 ```
+
+> ![TIP]
+>
+> The `--tty` option allows to have nice human-readable logs instead of JSON logs.
 
 With Docker Compose:
 
@@ -108,8 +112,9 @@ services:
     # uncomment the following line if you want to run this in a production environment
     # restart: always
     ports:
-      - 80:80
-      - 443:443
+      - "80:80" # HTTP
+      - "443:443" # HTTPS
+      - "443:443/udp" # HTTP/3
     volumes:
       - ./:/app/public
       - caddy_data:/data

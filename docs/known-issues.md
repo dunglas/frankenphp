@@ -45,3 +45,55 @@ The [get_browser()](https://www.php.net/manual/en/function.get-browser.php) func
 ## Standalone Binary and Alpine-based Docker Images
 
 The standalone binary and Alpine-based docker images (`dunglas/frankenphp:*-alpine`) use [musl libc](https://musl.libc.org/) instead of [glibc and friends](https://www.etalabs.net/compare_libcs.html), to keep a smaller binary size. This may lead to some compatibility issues. In particular, the glob flag `GLOB_BRACE` is [not available](https://www.php.net/manual/en/function.glob.php)
+The [get_browser](https://www.php.net/manual/en/function.get-browser.php) function seems to have a bad performance after a while. A workaround is to cache (e.g. with APCU) the results per User Agent, as they are static anyway.
+
+## Using `https://127.0.0.1` with Docker
+
+By default, FrankenPHP generates a TLS certificate for `localhost`.
+It's the easiest and recommended option for local development.
+
+If you really want to use `127.0.0.1` as a host instead, it's possible to configure it to generate a certificate for it by setting the server name to `127.0.0.1`.
+
+Unfortunately, this is not enough when using Docker because of [its networking system](https://docs.docker.com/network/).
+You will get a TLS error similar to `curl: (35) LibreSSL/3.3.6: error:1404B438:SSL routines:ST_CONNECT:tlsv1 alert internal error`.
+
+If you're using Linux, a solution is to use [the host networking driver](https://docs.docker.com/network/network-tutorial-host/):
+
+```console
+docker run \
+    -e SERVER_NAME="127.0.0.1" \
+    -v $PWD:/app/public \
+    --network host \
+    dunglas/frankenphp
+```
+
+The host networking driver isn't supported on Mac and Windows. On these platforms, you will have to guess the IP address of the container, and include it in the server names.
+
+Run the `docker network inspect bridge` and look at the `Containers` key to identify the last currently assigned IP address under the `IPv4Address` key, and increment it by one. If no container is running, the first assigned IP address is usually `172.17.0.2`.
+
+Then, include this in the `SERVER_NAME` environment variable:
+
+```console
+docker run \
+    -e SERVER_NAME="127.0.0.1, 172.17.0.3" \
+    -v $PWD:/app/public \
+    -p 80:80 -p 443:443 -p 443:443/udp \
+    dunglas/frankenphp
+```
+
+> ![CAUTION]
+>
+> Be sure to replace `172.17.0.3` by the IP that will be assigned to your container.
+
+You should now be able to access to `https://127.0.0.1` from the host machine.
+
+If it's not the case, start FrankenPHP in debug mode to try to figure out the problem:
+
+```console
+docker run \
+    -e CADDY_GLOBAL_OPTIONS="debug"
+    -e SERVER_NAME="127.0.0.1" \
+    -v $PWD:/app/public \
+    -p 80:80 -p 443:443 -p 443:443/udp \
+    dunglas/frankenphp
+```
