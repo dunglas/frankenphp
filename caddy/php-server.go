@@ -2,8 +2,10 @@ package caddy
 
 import (
 	"encoding/json"
+	mercureModule "github.com/dunglas/mercure/caddy"
 	"log"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -47,6 +49,7 @@ For more advanced use cases, see https://github.com/dunglas/frankenphp/blob/main
 			cmd.Flags().StringArrayP("worker", "w", []string{}, "Worker script")
 			cmd.Flags().BoolP("access-log", "a", false, "Enable the access log")
 			cmd.Flags().BoolP("debug", "v", false, "Enable verbose debug logs")
+			cmd.Flags().BoolP("mercure", "m", false, "Enable the mercure module")
 			cmd.Flags().BoolP("no-compress", "", false, "Disable Zstandard and Gzip compression")
 			cmd.RunE = caddycmd.WrapCommandFuncForCobra(cmdPHPServer)
 		},
@@ -63,6 +66,7 @@ func cmdPHPServer(fs caddycmd.Flags) (int, error) {
 	accessLog := fs.Bool("access-log")
 	debug := fs.Bool("debug")
 	compress := !fs.Bool("no-compress")
+	mercure := fs.Bool("mercure")
 
 	workers, err := fs.GetStringArray("worker")
 	if err != nil {
@@ -192,6 +196,37 @@ func cmdPHPServer(fs caddycmd.Flags) (int, error) {
 		}
 
 		subroute.Routes = append(caddyhttp.RouteList{encodeRoute}, subroute.Routes...)
+	}
+
+	if mercure {
+		if _, exists := os.LookupEnv("MERCURE_PUBLISHER_JWT_KEY"); !exists {
+			panic("The \"MERCURE_PUBLISHER_JWT_KEY\" environment variable must be set to use mercure")
+		}
+
+		if _, exists := os.LookupEnv("MERCURE_SUBSCRIBER_JWT_KEY"); !exists {
+			panic("The \"MERCURE_SUBSCRIBER_JWT_KEY\" environment variable must be set to use mercure")
+		}
+
+		mercureRoute := caddyhttp.Route{
+			HandlersRaw: []json.RawMessage{caddyconfig.JSONModuleObject(
+				mercureModule.Mercure{
+					PublisherJWT: mercureModule.JWTConfig{
+						Alg: os.Getenv("MERCURE_PUBLISHER_JWT_ALG"),
+						Key: os.Getenv("MERCURE_PUBLISHER_JWT_KEY"),
+					},
+					SubscriberJWT: mercureModule.JWTConfig{
+						Alg: os.Getenv("MERCURE_SUBSCRIBER_JWT_ALG"),
+						Key: os.Getenv("MERCURE_SUBSCRIBER_JWT_KEY"),
+					},
+				},
+				"handler",
+				"mercure",
+				nil,
+			),
+			},
+		}
+
+		subroute.Routes = append(caddyhttp.RouteList{mercureRoute}, subroute.Routes...)
 	}
 
 	route := caddyhttp.Route{
