@@ -141,8 +141,9 @@ To propagate environment variables to `$_SERVER` and `$_ENV`, set the `php.ini` 
 
 ## PHP config
 
-To load [additional *.ini](https://www.php.net/manual/en/configuration.file.php#configuration.file.scan) files the
-environment variable `PHP_INI_SCAN_DIR` is used. PHP will search and include all *.ini files in the given folder.
+To load [additional PHP configuration files](https://www.php.net/manual/en/configuration.file.php#configuration.file.scan),
+the `PHP_INI_SCAN_DIR` environment variable can be used.
+When set, PHP will load all the file with the `.ini` extension present in the given directories.
 
 ## Enable the Debug Mode
 
