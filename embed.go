@@ -24,7 +24,7 @@ var EmbeddedAppPath string
 var embeddedApp []byte
 
 //go:embed app_checksum.txt
-var embeddedAppHash []byte
+var embeddedAppChecksum []byte
 
 func init() {
 	if len(embeddedApp) == 0 {
@@ -32,7 +32,7 @@ func init() {
 		return
 	}
 
-	appPath := filepath.Join(os.TempDir(), "frankenphp_"+strings.TrimSuffix(string(embeddedAppHash[:]), "\n"))
+	appPath := filepath.Join(os.TempDir(), "frankenphp_"+strings.TrimSuffix(string(embeddedAppChecksum[:]), "\n"))
 
 	if _, err := os.Stat(appPath); os.IsNotExist(err) {
 		mustUntar(appPath)
