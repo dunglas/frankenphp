@@ -122,6 +122,7 @@ cd ../..
 # Embed PHP app, if any
 if [ -n "${EMBED}" ] && [ -d "${EMBED}" ]; then
     tar -cf app.tar -C "${EMBED}" .
+    md5 -q app.tar > app_checksum.txt
 fi
 
 if [ "${os}" = "linux" ]; then
@@ -139,6 +140,7 @@ cd ../..
 
 if [ -d "${EMBED}" ]; then
     truncate -s 0 app.tar
+    truncate -s 0 app_checksum.txt
 fi
 
 "dist/${bin}" version

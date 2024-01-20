@@ -3,9 +3,7 @@ package frankenphp
 import (
 	"archive/tar"
 	"bytes"
-	"crypto/md5"
 	_ "embed"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -25,24 +23,42 @@ var EmbeddedAppPath string
 //go:embed app.tar
 var embeddedApp []byte
 
+//go:embed app_checksum.txt
+var embeddedAppHash []byte
+
 func init() {
 	if len(embeddedApp) == 0 {
 		// No embedded app
 		return
 	}
 
-	h := md5.Sum(embeddedApp)
-	appPath := filepath.Join(os.TempDir(), "frankenphp_"+hex.EncodeToString(h[:]))
+	appPath := filepath.Join(os.TempDir(), "frankenphp_"+strings.TrimSuffix(string(embeddedAppHash[:]), "\n"))
 
-	if err := os.RemoveAll(appPath); err != nil {
-		panic(err)
-	}
-	if err := untar(appPath); err != nil {
-		os.RemoveAll(appPath)
-		panic(err)
+	if _, err := os.Stat(appPath); os.IsNotExist(err) {
+		mustUntar(appPath)
+	} else {
+		f, err := os.Open(appPath)
+		if err != nil {
+			panic(err)
+		}
+		defer f.Close()
+
+		_, err = f.Readdir(1)
+		if err == io.EOF {
+			mustUntar(appPath)
+		}
 	}
 
 	EmbeddedAppPath = appPath
+}
+
+func mustUntar(dir string) {
+	err := untar(dir)
+
+	if err != nil {
+		os.RemoveAll(dir)
+		panic(err)
+	}
 }
 
 // untar reads the tar file from r and writes it into dir.
