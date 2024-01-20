@@ -40,10 +40,8 @@ The following extensions are known not to be compatible with FrankenPHP:
 
 ## get_browser
 
-The [get_browser](https://www.php.net/manual/en/function.get-browser.php) function seems to have a bad performance after a while. A workaround is to cache (e.g. with APCU) the results per User Agent, as they are static anyway.
+The [get_browser()](https://www.php.net/manual/en/function.get-browser.php) function seems to perform badly after a while. A workaround is to cache (e.g. with APCU) the results per User Agent, as they are static.
 
 ## Standalone Binary and Alpine-based Docker Images
 
-The standalone binary and Alpine-based docker images (`dunglas/frankenphp:*-alpine`) use [musl libc](https://musl.libc.org/) instead of [glibc and friends](https://www.etalabs.net/compare_libcs.html), in order to keep a smaller binary size. This may lead to some compatibility issues, such as:
-
-- The glob flag `GLOB_BRACE` is [not available](https://www.php.net/manual/en/function.glob.php)
+The standalone binary and Alpine-based docker images (`dunglas/frankenphp:*-alpine`) use [musl libc](https://musl.libc.org/) instead of [glibc and friends](https://www.etalabs.net/compare_libcs.html), to keep a smaller binary size. This may lead to some compatibility issues. In particular, the glob flag `GLOB_BRACE` is [not available](https://www.php.net/manual/en/function.glob.php)
