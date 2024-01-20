@@ -7,7 +7,7 @@ Serving a [Laravel](https://laravel.com) web application with FrankenPHP is as e
 Run this command from the main directory of your Laravel app:
 
 ```console
-docker run -p 443:443 -v $PWD:/app dunglas/frankenphp
+docker run -p 80:80 -p 443:443 -p 443:443/udp -v $PWD:/app dunglas/frankenphp
 ```
 
 And enjoy!
@@ -70,10 +70,9 @@ The `octane:start` command can take the following options:
 * `--max-requests`: The number of requests to process before reloading the server (default: `500`)
 * `--caddyfile`: The path to the FrankenPHP `Caddyfile` file
 * `--https`: Enable HTTPS, HTTP/2, and HTTP/3, and automatically generate and renew certificates
+* --http-redirect : Enable HTTP to HTTPS redirection (only enabled if --https is passed)
 * `--watch`: Automatically reload the server when the application is modified
 * `--poll`: Use file system polling while watching in order to watch files over a network
 * `--log-level`: Log messages at or above the specified log level
 
-## Docs
-
-* [Laravel Octane](https://laravel.com/docs/master/octane)
+Learn more about [Laravel Octane in its official documentation](https://laravel.com/docs/octane).
