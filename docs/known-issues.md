@@ -40,7 +40,11 @@ The following extensions are known not to be compatible with FrankenPHP:
 
 ## get_browser
 
-The [get_browser](https://www.php.net/manual/en/function.get-browser.php) function seems to have a bad performance after a while. A workaround is to cache (e.g. with APCU) the results per User Agent, as they are static anyway.
+The [get_browser()](https://www.php.net/manual/en/function.get-browser.php) function seems to perform badly after a while. A workaround is to cache (e.g. with APCU) the results per User Agent, as they are static.
+
+## Standalone Binary and Alpine-based Docker Images
+
+The standalone binary and Alpine-based docker images (`dunglas/frankenphp:*-alpine`) use [musl libc](https://musl.libc.org/) instead of [glibc and friends](https://www.etalabs.net/compare_libcs.html), to keep a smaller binary size. This may lead to some compatibility issues. In particular, the glob flag `GLOB_BRACE` is [not available](https://www.php.net/manual/en/function.glob.php)
 
 ## Using `https://127.0.0.1` with Docker
 
@@ -62,7 +66,7 @@ docker run \
     dunglas/frankenphp
 ```
 
-The host networking driver isn't supported on Mac and Windows. On these platforms, you will have to guess the IP address of the container, and include it in the server names.
+The host networking driver isn't supported on Mac and Windows. On these platforms, you will have to guess the IP address of the container and include it in the server names.
 
 Run the `docker network inspect bridge` and look at the `Containers` key to identify the last currently assigned IP address under the `IPv4Address` key, and increment it by one. If no container is running, the first assigned IP address is usually `172.17.0.2`.
 
@@ -78,11 +82,11 @@ docker run \
 
 > ![CAUTION]
 >
-> Be sure to replace `172.17.0.3` by the IP that will be assigned to your container.
+> Be sure to replace `172.17.0.3` with the IP that will be assigned to your container.
 
-You should now be able to access to `https://127.0.0.1` from the host machine.
+You should now be able to access `https://127.0.0.1` from the host machine.
 
-If it's not the case, start FrankenPHP in debug mode to try to figure out the problem:
+If that's not the case, start FrankenPHP in debug mode to try to figure out the problem:
 
 ```console
 docker run \
