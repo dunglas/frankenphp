@@ -90,7 +90,7 @@ other.example.com {
 ...
 ```
 
-Using the `php_server` directive is generaly what you need,
+Using the `php_server` directive is generally what you need,
 but if you need full control, you can use the lower level `php` directive:
 
 Using the `php_server` directive is equivalent to this configuration:
@@ -138,6 +138,12 @@ The following environment variables can be used to inject Caddy directives in th
 Unlike with FPM and CLI SAPIs, environment variables are **not** exposed by default in superglobals `$_SERVER` and `$_ENV`.
 
 To propagate environment variables to `$_SERVER` and `$_ENV`, set the `php.ini` `variables_order` directive to `EGPCS`.
+
+## PHP config
+
+To load [additional PHP configuration files](https://www.php.net/manual/en/configuration.file.php#configuration.file.scan),
+the `PHP_INI_SCAN_DIR` environment variable can be used.
+When set, PHP will load all the file with the `.ini` extension present in the given directories.
 
 ## Enable the Debug Mode
 
