@@ -35,30 +35,13 @@ func init() {
 	appPath := filepath.Join(os.TempDir(), "frankenphp_"+strings.TrimSuffix(string(embeddedAppChecksum[:]), "\n"))
 
 	if _, err := os.Stat(appPath); os.IsNotExist(err) {
-		mustUntar(appPath)
-	} else {
-		f, err := os.Open(appPath)
-		if err != nil {
+		if err := untar(appPath); err != nil {
+			os.RemoveAll(appPath)
 			panic(err)
-		}
-		defer f.Close()
-
-		_, err = f.Readdir(1)
-		if err == io.EOF {
-			mustUntar(appPath)
 		}
 	}
 
 	EmbeddedAppPath = appPath
-}
-
-func mustUntar(dir string) {
-	err := untar(dir)
-
-	if err != nil {
-		os.RemoveAll(dir)
-		panic(err)
-	}
 }
 
 // untar reads the tar file from r and writes it into dir.
