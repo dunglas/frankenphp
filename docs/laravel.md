@@ -59,19 +59,20 @@ The Octane server can be started via the `octane:start` Artisan command.
 
 ```console
 php artisan octane:start
-
-//Additional Parameter
-{--server=frankenphp : The server that should be used to serve the application}
-{--host=127.0.0.1 : The IP address the server should bind to}
-{--port= : The port the server should be available on [default: "8000"]}
-{--workers=auto : The number of workers that should be available to handle requests}
-{--task-workers=auto : The number of task workers that should be available to handle tasks}
-{--max-requests=500 : The number of requests to process before reloading the server}
-{--caddyfile= : The path to the FrankenPHP Caddyfile file}
-{--https : Enable HTTPS, HTTP/2, and HTTP/3, and automatically generate and renew certificates}
-{--watch : Automatically reload the server when the application is modified}
-{--poll : Use file system polling while watching in order to watch files over a network}
-{--log-level= : Log messages at or above the specified log level}';
 ```
+
+The `octane:start` command can take the following options:
+
+* `--host`: The IP address the server should bind to (default: `127.0.0.1`)
+* `--port`: The port the server should be available on (default: `8000`)
+* `--admin-port`: The port the admin server should be available on (default: `2019`)
+* `--workers`: The number of workers that should be available to handle requests (default: `auto`)
+* `--max-requests`: The number of requests to process before reloading the server (default: `500`)
+* `--caddyfile`: The path to the FrankenPHP `Caddyfile` file
+* `--https`: Enable HTTPS, HTTP/2, and HTTP/3, and automatically generate and renew certificates
+* --http-redirect : Enable HTTP to HTTPS redirection (only enabled if --https is passed)
+* `--watch`: Automatically reload the server when the application is modified
+* `--poll`: Use file system polling while watching in order to watch files over a network
+* `--log-level`: Log messages at or above the specified log level
 
 Learn more about [Laravel Octane in its official documentation](https://laravel.com/docs/octane).
