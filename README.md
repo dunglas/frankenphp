@@ -20,7 +20,7 @@ FrankenPHP can also be used as a standalone Go library to embed PHP in any app u
 
 ```console
 docker run -v $PWD:/app/public \
-    -p 80:80 -p 443:443 \
+    -p 80:80 -p 443:443 -p 443:443/udp \
     dunglas/frankenphp
 ```
 
@@ -28,7 +28,8 @@ Go to `https://localhost`, and enjoy!
 
 > [!TIP]
 >
-> Do not attempt to use `https://127.0.0.1`. Use `localhost` and accept the self-signed certificate. Caddy has an automatic TLS handling that auto-trusts some local-based hostnames like `localhost`, but it does not apply to IP addresses. More details [on Caddy's "automatic https" docs](https://caddyserver.com/docs/automatic-https#hostname-requirements).
+> Do not attempt to use `https://127.0.0.1`. Use `localhost` and accept the self-signed certificate.
+> Use the [`SERVER_NAME` environment variable](docs/config.md#environment-variables) to change the domain to use.
 
 ### Standalone Binary
 
