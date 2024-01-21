@@ -97,15 +97,11 @@ func cmdPHPServer(fs caddycmd.Flags) (int, error) {
 				return caddy.ExitCodeFailedStartup, err
 			}
 
-			err = caddy.Load(config, true)
-
-			if err != nil {
+			if err = caddy.Load(config, true); err != nil {
 				return caddy.ExitCodeFailedStartup, err
 			}
 
 			select {}
-
-			return caddy.ExitCodeSuccess, nil
 		}
 
 		if root == "" {
