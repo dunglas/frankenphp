@@ -49,7 +49,7 @@ For more advanced use cases, see https://github.com/dunglas/frankenphp/blob/main
 			cmd.Flags().StringArrayP("worker", "w", []string{}, "Worker script")
 			cmd.Flags().BoolP("access-log", "a", false, "Enable the access log")
 			cmd.Flags().BoolP("debug", "v", false, "Enable verbose debug logs")
-			cmd.Flags().BoolP("mercure", "m", false, "Enable the mercure module")
+			cmd.Flags().BoolP("mercure", "m", false, "Enable the built-in Mercure.rocks hub")
 			cmd.Flags().BoolP("no-compress", "", false, "Disable Zstandard and Gzip compression")
 			cmd.RunE = caddycmd.WrapCommandFuncForCobra(cmdPHPServer)
 		},
@@ -199,12 +199,15 @@ func cmdPHPServer(fs caddycmd.Flags) (int, error) {
 	}
 
 	if mercure {
-		if _, exists := os.LookupEnv("MERCURE_PUBLISHER_JWT_KEY"); !exists {
-			panic("The \"MERCURE_PUBLISHER_JWT_KEY\" environment variable must be set to use mercure")
+		mercurePublisherJwtKey := os.Getenv("MERCURE_PUBLISHER_JWT_KEY")
+		mercureSubscriberJwtKey := os.Getenv("MERCURE_SUBSCRIBER_JWT_KEY")
+
+		if mercurePublisherJwtKey == "" {
+			panic(`The "MERCURE_PUBLISHER_JWT_KEY" environment variable must be set to use the Mercure.rocks hub`)
 		}
 
-		if _, exists := os.LookupEnv("MERCURE_SUBSCRIBER_JWT_KEY"); !exists {
-			panic("The \"MERCURE_SUBSCRIBER_JWT_KEY\" environment variable must be set to use mercure")
+		if mercureSubscriberJwtKey == "" {
+			panic(`The "MERCURE_SUBSCRIBER_JWT_KEY" environment variable must be set to use the Mercure.rocks hub`)
 		}
 
 		mercureRoute := caddyhttp.Route{
@@ -212,11 +215,11 @@ func cmdPHPServer(fs caddycmd.Flags) (int, error) {
 				mercureModule.Mercure{
 					PublisherJWT: mercureModule.JWTConfig{
 						Alg: os.Getenv("MERCURE_PUBLISHER_JWT_ALG"),
-						Key: os.Getenv("MERCURE_PUBLISHER_JWT_KEY"),
+						Key: mercurePublisherJwtKey,
 					},
 					SubscriberJWT: mercureModule.JWTConfig{
 						Alg: os.Getenv("MERCURE_SUBSCRIBER_JWT_ALG"),
-						Key: os.Getenv("MERCURE_SUBSCRIBER_JWT_KEY"),
+						Key: mercureSubscriberJwtKey,
 					},
 				},
 				"handler",
