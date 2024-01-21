@@ -3,9 +3,7 @@ package frankenphp
 import (
 	"archive/tar"
 	"bytes"
-	"crypto/md5"
 	_ "embed"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -25,21 +23,22 @@ var EmbeddedAppPath string
 //go:embed app.tar
 var embeddedApp []byte
 
+//go:embed app_checksum.txt
+var embeddedAppChecksum []byte
+
 func init() {
 	if len(embeddedApp) == 0 {
 		// No embedded app
 		return
 	}
 
-	h := md5.Sum(embeddedApp)
-	appPath := filepath.Join(os.TempDir(), "frankenphp_"+hex.EncodeToString(h[:]))
+	appPath := filepath.Join(os.TempDir(), "frankenphp_"+strings.TrimSuffix(string(embeddedAppChecksum[:]), "\n"))
 
-	if err := os.RemoveAll(appPath); err != nil {
-		panic(err)
-	}
-	if err := untar(appPath); err != nil {
-		os.RemoveAll(appPath)
-		panic(err)
+	if _, err := os.Stat(appPath); os.IsNotExist(err) {
+		if err := untar(appPath); err != nil {
+			os.RemoveAll(appPath)
+			panic(err)
+		}
 	}
 
 	EmbeddedAppPath = appPath
