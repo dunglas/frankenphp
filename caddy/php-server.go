@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -88,6 +89,25 @@ func cmdPHPServer(fs caddycmd.Flags) (int, error) {
 	}
 
 	if frankenphp.EmbeddedAppPath != "" {
+
+		if _, err := os.Stat(filepath.Join(frankenphp.EmbeddedAppPath, "Caddyfile")); err == nil {
+			config, _, err := caddycmd.LoadConfig(filepath.Join(frankenphp.EmbeddedAppPath, "Caddyfile"), "")
+
+			if err != nil {
+				return caddy.ExitCodeFailedStartup, err
+			}
+
+			err = caddy.Load(config, true)
+
+			if err != nil {
+				return caddy.ExitCodeFailedStartup, err
+			}
+
+			select {}
+
+			return caddy.ExitCodeSuccess, nil
+		}
+
 		if root == "" {
 			root = filepath.Join(frankenphp.EmbeddedAppPath, defaultDocumentRoot)
 		} else if filepath.IsLocal(root) {
