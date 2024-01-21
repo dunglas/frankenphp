@@ -28,7 +28,7 @@ import (
 func init() {
 	caddycmd.RegisterCommand(caddycmd.Command{
 		Name:  "php-server",
-		Usage: "[--domain <example.com>] [--root <path>] [--listen <addr>] [--worker /path/to/worker.php<,nb-workers>] [--access-log] [--debug] [--no-compress]",
+		Usage: "[--domain <example.com>] [--root <path>] [--listen <addr>] [--worker /path/to/worker.php<,nb-workers>] [--access-log] [--debug] [--no-compress] [--mercure]",
 		Short: "Spins up a production-ready PHP server",
 		Long: `
 A simple but production-ready PHP server. Useful for quick deployments,
