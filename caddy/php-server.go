@@ -95,9 +95,14 @@ func cmdPHPServer(fs caddycmd.Flags) (int, error) {
 			root = filepath.Join(frankenphp.EmbeddedAppPath, root)
 		}
 
-		if err := os.Setenv("PHP_INI_SCAN_DIR", ":"+frankenphp.EmbeddedAppPath); err != nil {
-			return caddy.ExitCodeFailedStartup, err
+		if _, err := os.Stat(filepath.Join(frankenphp.EmbeddedAppPath, "php.ini")); err == nil {
+			iniScanDir := os.Getenv("PHP_INI_SCAN_DIR")
+
+			if err := os.Setenv("PHP_INI_SCAN_DIR", iniScanDir+":"+frankenphp.EmbeddedAppPath); err != nil {
+				return caddy.ExitCodeFailedStartup, err
+			}
 		}
+
 	}
 
 	const indexFile = "index.php"
