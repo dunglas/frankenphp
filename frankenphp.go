@@ -581,6 +581,27 @@ func go_register_variables(rh C.uintptr_t, trackVarsArray *C.zval) {
 	fc.env = nil
 }
 
+//export go_apache_request_headers
+func go_apache_request_headers(rh C.uintptr_t) (*C.go_string, C.size_t) {
+	r := cgo.Handle(rh).Value().(*http.Request)
+
+	rl := len(r.Header)
+	scs := unsafe.Sizeof(C.go_string{})
+
+	headers := (*C.go_string)(unsafe.Pointer(C.malloc(C.size_t(rl*2) * (C.size_t)(scs))))
+	header := headers
+	for field, val := range r.Header {
+		*header = C.go_string{C.size_t(len(field)), (*C.char)(unsafe.Pointer(unsafe.StringData(field)))}
+		header = (*C.go_string)(unsafe.Add(unsafe.Pointer(header), scs))
+
+		cv := strings.Join(val, ", ")
+		*header = C.go_string{C.size_t(len(cv)), (*C.char)(unsafe.Pointer(unsafe.StringData(cv)))}
+		header = (*C.go_string)(unsafe.Add(unsafe.Pointer(header), scs))
+	}
+
+	return headers, C.size_t(rl)
+}
+
 func addHeader(fc *FrankenPHPContext, cString *C.char, length C.int) {
 	parts := strings.SplitN(C.GoStringN(cString, length), ": ", 2)
 	if len(parts) != 2 {
