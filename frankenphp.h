@@ -11,6 +11,11 @@
 #define STRINGIFY(x) #x
 #define TOSTRING(x) STRINGIFY(x)
 
+typedef struct go_string {
+  size_t len;
+  const char *data;
+} go_string;
+
 typedef struct frankenphp_version {
   unsigned char major_version;
   unsigned char minor_version;

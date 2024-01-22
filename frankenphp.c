@@ -242,6 +242,29 @@ PHP_FUNCTION(frankenphp_finish_request) { /* {{{ */
   RETURN_TRUE;
 } /* }}} */
 
+/* {{{ Fetch all HTTP request headers */
+PHP_FUNCTION(apache_request_headers) {
+  if (zend_parse_parameters_none() == FAILURE) {
+    RETURN_THROWS();
+  }
+
+  frankenphp_server_context *ctx = SG(server_context);
+  struct go_apache_request_headers_return headers =
+      go_apache_request_headers(ctx->current_request);
+
+  array_init_size(return_value, headers.r1);
+
+  for (size_t i = 0; i < headers.r1; i++) {
+    go_string key = headers.r0[i * 2];
+    go_string val = headers.r0[i * 2 + 1];
+
+    add_assoc_stringl_ex(return_value, key.data, key.len, val.data, val.len);
+  }
+
+  free(headers.r0);
+}
+/* }}} */
+
 PHP_FUNCTION(frankenphp_handle_request) {
   zend_fcall_info fci;
   zend_fcall_info_cache fcc;

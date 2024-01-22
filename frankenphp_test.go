@@ -553,6 +553,27 @@ func testFiberNoCgo(t *testing.T, opts *testOptions) {
 	}, opts)
 }
 
+func TestApacheRequestHeaders_module(t *testing.T) { testApacheRequestHeaders(t, &testOptions{}) }
+func TestApacheRequestHeaders_worker(t *testing.T) {
+	testApacheRequestHeaders(t, &testOptions{workerScript: "apache-request-headers.php"})
+}
+func testApacheRequestHeaders(t *testing.T, opts *testOptions) {
+	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
+		req := httptest.NewRequest("GET", fmt.Sprintf("http://example.com/apache-request-headers.php?i=%d", i), nil)
+		req.Header.Add("Content-Type", "text/plain")
+		req.Header.Add("Frankenphp-I", strconv.Itoa(i))
+
+		w := httptest.NewRecorder()
+		handler(w, req)
+
+		resp := w.Result()
+		body, _ := io.ReadAll(resp.Body)
+
+		assert.Contains(t, string(body), "[Content-Type] => text/plain")
+		assert.Contains(t, string(body), fmt.Sprintf("[Frankenphp-I] => %d", i))
+	}, opts)
+}
+
 func TestExecuteScriptCLI(t *testing.T) {
 	if _, err := os.Stat("internal/testcli/testcli"); err != nil {
 		t.Skip("internal/testcli/testcli has not been compiled, run `cd internal/testcli/ && go build`")

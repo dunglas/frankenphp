@@ -12,3 +12,10 @@ function frankenphp_finish_request(): bool {}
  * @alias frankenphp_finish_request
  */
 function fastcgi_finish_request(): bool {}
+
+function apache_request_headers(): array {}
+
+/**
+ * @alias apache_request_headers
+*/
+function getallheaders(): array {}
