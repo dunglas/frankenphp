@@ -2,7 +2,6 @@ package caddy
 
 import (
 	"encoding/json"
-	mercureModule "github.com/dunglas/mercure/caddy"
 	"log"
 	"net/http"
 	"os"
@@ -10,6 +9,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	mercureModule "github.com/dunglas/mercure/caddy"
 
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig"
@@ -200,12 +201,11 @@ func cmdPHPServer(fs caddycmd.Flags) (int, error) {
 
 	if mercure {
 		mercurePublisherJwtKey := os.Getenv("MERCURE_PUBLISHER_JWT_KEY")
-		mercureSubscriberJwtKey := os.Getenv("MERCURE_SUBSCRIBER_JWT_KEY")
-
 		if mercurePublisherJwtKey == "" {
 			panic(`The "MERCURE_PUBLISHER_JWT_KEY" environment variable must be set to use the Mercure.rocks hub`)
 		}
 
+		mercureSubscriberJwtKey := os.Getenv("MERCURE_SUBSCRIBER_JWT_KEY")
 		if mercureSubscriberJwtKey == "" {
 			panic(`The "MERCURE_SUBSCRIBER_JWT_KEY" environment variable must be set to use the Mercure.rocks hub`)
 		}
