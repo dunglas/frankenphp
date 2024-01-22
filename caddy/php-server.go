@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -92,6 +93,10 @@ func cmdPHPServer(fs caddycmd.Flags) (int, error) {
 			root = filepath.Join(frankenphp.EmbeddedAppPath, defaultDocumentRoot)
 		} else if filepath.IsLocal(root) {
 			root = filepath.Join(frankenphp.EmbeddedAppPath, root)
+		}
+
+		if err := os.Setenv("PHP_INI_SCAN_DIR", ":"+frankenphp.EmbeddedAppPath); err != nil {
+			return caddy.ExitCodeFailedStartup, err
 		}
 	}
 
