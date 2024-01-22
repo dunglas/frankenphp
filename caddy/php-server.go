@@ -10,6 +10,8 @@ import (
 	"strings"
 	"time"
 
+	mercureModule "github.com/dunglas/mercure/caddy"
+
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig"
 	caddycmd "github.com/caddyserver/caddy/v2/cmd"
@@ -27,7 +29,7 @@ import (
 func init() {
 	caddycmd.RegisterCommand(caddycmd.Command{
 		Name:  "php-server",
-		Usage: "[--domain <example.com>] [--root <path>] [--listen <addr>] [--worker /path/to/worker.php<,nb-workers>] [--access-log] [--debug] [--no-compress]",
+		Usage: "[--domain <example.com>] [--root <path>] [--listen <addr>] [--worker /path/to/worker.php<,nb-workers>] [--access-log] [--debug] [--no-compress] [--mercure]",
 		Short: "Spins up a production-ready PHP server",
 		Long: `
 A simple but production-ready PHP server. Useful for quick deployments,
@@ -48,6 +50,7 @@ For more advanced use cases, see https://github.com/dunglas/frankenphp/blob/main
 			cmd.Flags().StringArrayP("worker", "w", []string{}, "Worker script")
 			cmd.Flags().BoolP("access-log", "a", false, "Enable the access log")
 			cmd.Flags().BoolP("debug", "v", false, "Enable verbose debug logs")
+			cmd.Flags().BoolP("mercure", "m", false, "Enable the built-in Mercure.rocks hub")
 			cmd.Flags().BoolP("no-compress", "", false, "Disable Zstandard and Gzip compression")
 			cmd.RunE = caddycmd.WrapCommandFuncForCobra(cmdPHPServer)
 		},
@@ -64,6 +67,7 @@ func cmdPHPServer(fs caddycmd.Flags) (int, error) {
 	accessLog := fs.Bool("access-log")
 	debug := fs.Bool("debug")
 	compress := !fs.Bool("no-compress")
+	mercure := fs.Bool("mercure")
 
 	workers, err := fs.GetStringArray("worker")
 	if err != nil {
@@ -206,6 +210,39 @@ func cmdPHPServer(fs caddycmd.Flags) (int, error) {
 		}
 
 		subroute.Routes = append(caddyhttp.RouteList{encodeRoute}, subroute.Routes...)
+	}
+
+	if mercure {
+		mercurePublisherJwtKey := os.Getenv("MERCURE_PUBLISHER_JWT_KEY")
+		if mercurePublisherJwtKey == "" {
+			panic(`The "MERCURE_PUBLISHER_JWT_KEY" environment variable must be set to use the Mercure.rocks hub`)
+		}
+
+		mercureSubscriberJwtKey := os.Getenv("MERCURE_SUBSCRIBER_JWT_KEY")
+		if mercureSubscriberJwtKey == "" {
+			panic(`The "MERCURE_SUBSCRIBER_JWT_KEY" environment variable must be set to use the Mercure.rocks hub`)
+		}
+
+		mercureRoute := caddyhttp.Route{
+			HandlersRaw: []json.RawMessage{caddyconfig.JSONModuleObject(
+				mercureModule.Mercure{
+					PublisherJWT: mercureModule.JWTConfig{
+						Alg: os.Getenv("MERCURE_PUBLISHER_JWT_ALG"),
+						Key: mercurePublisherJwtKey,
+					},
+					SubscriberJWT: mercureModule.JWTConfig{
+						Alg: os.Getenv("MERCURE_SUBSCRIBER_JWT_ALG"),
+						Key: mercureSubscriberJwtKey,
+					},
+				},
+				"handler",
+				"mercure",
+				nil,
+			),
+			},
+		}
+
+		subroute.Routes = append(caddyhttp.RouteList{mercureRoute}, subroute.Routes...)
 	}
 
 	route := caddyhttp.Route{
