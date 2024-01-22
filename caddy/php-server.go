@@ -89,10 +89,8 @@ func cmdPHPServer(fs caddycmd.Flags) (int, error) {
 	}
 
 	if frankenphp.EmbeddedAppPath != "" {
-
 		if _, err := os.Stat(filepath.Join(frankenphp.EmbeddedAppPath, "Caddyfile")); err == nil {
 			config, _, err := caddycmd.LoadConfig(filepath.Join(frankenphp.EmbeddedAppPath, "Caddyfile"), "")
-
 			if err != nil {
 				return caddy.ExitCodeFailedStartup, err
 			}
