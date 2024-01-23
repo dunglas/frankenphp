@@ -14,6 +14,8 @@ jobs:
       fail-fast: false
       matrix:
         php-versions: ['8.2', '8.3']
+    env:
+      GOEXPERIMENT: cgocheck2
     steps:
       -
         uses: actions/checkout@v4
@@ -39,9 +41,7 @@ jobs:
           echo "CGO_CFLAGS=$(php-config --includes)" >> "$GITHUB_ENV"
       -
         name: Build
-        run: go build
-        env:
-          GOEXPERIMENT: cgocheck2
+        run: go build          
       -
         name: Build testcli binary
         working-directory: internal/testcli/
