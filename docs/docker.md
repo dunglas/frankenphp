@@ -127,3 +127,24 @@ volumes:
   caddy_data:
   caddy_config:
 ```
+
+## Running FrankenPHP as non root user
+
+It is possible to run FrankenPHP as non root user in Docker. In your Dockerfile add:
+
+```dockerfile
+
+# add your user
+ARG USER=any-user
+
+RUN adduser -D ${USER}
+
+# Caddy requires root permissions to bind to port 80 and 443
+# This command allows caddy to bind to these ports
+RUN setcap CAP_NET_BIND_SERVICE=+eip /usr/local/bin/frankenphp
+
+# Caddy requires write permissions to /data/caddy and /config/caddy
+RUN chown -R ${USER}:${USER} /data/caddy && chown -R ${USER}:${USER} /config/caddy
+
+USER ${USER}
+```
