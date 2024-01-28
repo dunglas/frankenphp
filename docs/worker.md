@@ -11,7 +11,7 @@ Set the value of the `FRANKENPHP_CONFIG` environment variable to `worker /path/t
 
 ```console
 docker run \
-    -e APP_RUNTIME=Runtime\\FrankenPhpSymfony\\Runtime \
+    -e FRANKENPHP_CONFIG="worker /app/path/to/your/worker/script.php" \
     -v $PWD:/app \
     -p 80:80 -p 443:443 -p 443:443/udp \
     dunglas/frankenphp
