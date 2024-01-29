@@ -16,17 +16,17 @@
 {$CADDY_EXTRA_CONFIG}
 
 {$SERVER_NAME:localhost} {
-	log {
-		# Redact the authorization query parameter that can be set by Mercure
-		format filter {
-			wrap console
-			fields {
-				uri query {
-					replace authorization REDACTED
-				}
-			}
-		}
-	}
+	#log {
+	#	# Redact the authorization query parameter that can be set by Mercure
+	#	format filter {
+	#		wrap console
+	#		fields {
+	#			uri query {
+	#				replace authorization REDACTED
+	#			}
+	#		}
+	#	}
+	#}
 
 	root * public/
 	encode zstd gzip
