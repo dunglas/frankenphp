@@ -591,7 +591,7 @@ static void frankenphp_register_known_variable(const char *key, char *value,
 }
 
 void frankenphp_register_bulk_variables(char *known_variables[27],
-                                        char **dynamic_variables, size_t size,
+                                        php_variable *dynamic_variables, size_t size,
                                         zval *track_vars_array) {
   /* Not used, but must be present */
   frankenphp_register_known_variable("AUTH_TYPE", "", track_vars_array, false);
@@ -658,16 +658,13 @@ void frankenphp_register_bulk_variables(char *known_variables[27],
                                      track_vars_array, true);
 
   size_t new_val_len;
-  for (size_t i = 0; i < size; i = i + 2) {
+  for (size_t i = 0; i < size; i++) {
     if (sapi_module.input_filter(
-            PARSE_SERVER, dynamic_variables[i], &dynamic_variables[i + 1],
-            strlen(dynamic_variables[i + 1]), &new_val_len)) {
-      php_register_variable_safe(dynamic_variables[i], dynamic_variables[i + 1],
+            PARSE_SERVER, dynamic_variables[i].var, &dynamic_variables[i].data,
+            dynamic_variables[i].data_len, &new_val_len)) {
+      php_register_variable_safe(dynamic_variables[i].var, dynamic_variables[i].data,
                                  new_val_len, track_vars_array);
     }
-
-    free(dynamic_variables[i]);
-    free(dynamic_variables[i + 1]);
   }
 }
 

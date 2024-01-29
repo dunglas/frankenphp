@@ -18,7 +18,7 @@ func TestWorker(t *testing.T) {
 	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
 		formData := url.Values{"baz": {"bat"}}
 		req := httptest.NewRequest("POST", "http://example.com/worker.php?foo=bar", strings.NewReader(formData.Encode()))
-		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		req.Header.Set("Content-Type", strings.Clone("application/x-www-form-urlencoded"))
 		w := httptest.NewRecorder()
 		handler(w, req)
 
@@ -29,7 +29,7 @@ func TestWorker(t *testing.T) {
 
 		formData2 := url.Values{"baz2": {"bat2"}}
 		req2 := httptest.NewRequest("POST", "http://example.com/worker.php?foo2=bar2", strings.NewReader(formData2.Encode()))
-		req2.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		req2.Header.Set("Content-Type", strings.Clone("application/x-www-form-urlencoded"))
 
 		w2 := httptest.NewRecorder()
 		handler(w2, req2)
