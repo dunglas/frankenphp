@@ -25,49 +25,49 @@ LABEL org.opencontainers.image.licenses=MIT
 LABEL org.opencontainers.image.vendor="Kévin Dunglas"
 
 RUN apk update; \
-    apk add --no-cache \
-        autoconf \
-        automake \
-        bash \
-        binutils \
-        bison \
-        build-base \
-        cmake \
-        curl \
-        file \
-        flex \
-        g++ \
-        gcc \
-        git \
-        jq \
-        libgcc \
-        libstdc++ \
-        libtool \
-        linux-headers \
-        m4 \
-        make \
-        pkgconfig \
-        wget \
-        xz ; \
-    apk add --no-cache \
-    	--repository=https://dl-cdn.alpinelinux.org/alpine/edge/main \
-    	--repository=https://dl-cdn.alpinelinux.org/alpine/edge/community \
-        php83 \
-        php83-common \
-        php83-ctype \
-        php83-curl \
-        php83-dom \
-        php83-mbstring \
-        php83-openssl \
-        php83-pcntl \
-        php83-phar \
-        php83-posix \
-        php83-session \
-        php83-sodium \
-        php83-tokenizer \
-        php83-xml \
-        php83-xmlwriter; \
-    ln -sf /usr/bin/php83 /usr/bin/php
+	apk add --no-cache \
+		autoconf \
+		automake \
+		bash \
+		binutils \
+		bison \
+		build-base \
+		cmake \
+		curl \
+		file \
+		flex \
+		g++ \
+		gcc \
+		git \
+		jq \
+		libgcc \
+		libstdc++ \
+		libtool \
+		linux-headers \
+		m4 \
+		make \
+		pkgconfig \
+		wget \
+		xz ; \
+	apk add --no-cache \
+		--repository=https://dl-cdn.alpinelinux.org/alpine/edge/main \
+		--repository=https://dl-cdn.alpinelinux.org/alpine/edge/community \
+		php83 \
+		php83-common \
+		php83-ctype \
+		php83-curl \
+		php83-dom \
+		php83-mbstring \
+		php83-openssl \
+		php83-pcntl \
+		php83-phar \
+		php83-posix \
+		php83-session \
+		php83-sodium \
+		php83-tokenizer \
+		php83-xml \
+		php83-xmlwriter; \
+	ln -sf /usr/bin/php83 /usr/bin/php
 
 # https://getcomposer.org/doc/03-cli.md#composer-allow-superuser
 ENV COMPOSER_ALLOW_SUPERUSER=1

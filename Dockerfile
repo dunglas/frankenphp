@@ -4,12 +4,12 @@ FROM php-base AS common
 WORKDIR /app
 
 RUN apt-get update && \
-    apt-get -y --no-install-recommends install \
-        mailcap \
-        libcap2-bin \
-    && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+	apt-get -y --no-install-recommends install \
+		mailcap \
+		libcap2-bin \
+	&& \
+	apt-get clean && \
+	rm -rf /var/lib/apt/lists/*
 
 RUN set -eux; \
 	mkdir -p \
@@ -54,18 +54,18 @@ ENV PATH /usr/local/go/bin:$PATH
 
 # This is required to link the FrankenPHP binary to the PHP binary
 RUN apt-get update && \
-    apt-get -y --no-install-recommends install \
-    libargon2-dev \
-    libcurl4-openssl-dev \
-    libonig-dev \
-    libreadline-dev \
-    libsodium-dev \
-    libsqlite3-dev \
-    libssl-dev \
-    libxml2-dev \
-    zlib1g-dev \
-    && \
-    apt-get clean
+	apt-get -y --no-install-recommends install \
+	libargon2-dev \
+	libcurl4-openssl-dev \
+	libonig-dev \
+	libreadline-dev \
+	libsodium-dev \
+	libsqlite3-dev \
+	libssl-dev \
+	libxml2-dev \
+	zlib1g-dev \
+	&& \
+	apt-get clean
 
 WORKDIR /go/src/app
 
@@ -89,9 +89,9 @@ ENV CGO_LDFLAGS="-lssl -lcrypto -lreadline -largon2 -lcurl -lonig -lz $PHP_LDFLA
 
 WORKDIR /go/src/app/caddy/frankenphp
 RUN GOBIN=/usr/local/bin go install -ldflags "-w -s -X 'github.com/caddyserver/caddy/v2.CustomVersion=FrankenPHP $FRANKENPHP_VERSION PHP $PHP_VERSION Caddy'" && \
-    setcap cap_net_bind_service=+ep /usr/local/bin/frankenphp && \
-    cp Caddyfile /etc/caddy/Caddyfile && \
-    frankenphp version
+	setcap cap_net_bind_service=+ep /usr/local/bin/frankenphp && \
+	cp Caddyfile /etc/caddy/Caddyfile && \
+	frankenphp version
 
 WORKDIR /go/src/app
 
