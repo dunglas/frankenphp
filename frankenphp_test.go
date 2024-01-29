@@ -468,6 +468,23 @@ func testEarlyHints(t *testing.T, opts *testOptions) {
 	}, opts)
 }
 
+func TestFiberBasic_module(t *testing.T) { testFiberBasic(t, &testOptions{}) }
+func TestFiberBasic_worker(t *testing.T) {
+	testFiberBasic(t, &testOptions{workerScript: "fiber-basic.php"})
+}
+func testFiberBasic(t *testing.T, opts *testOptions) {
+	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
+		req := httptest.NewRequest("GET", fmt.Sprintf("http://example.com/fiber-basic.php?i=%d", i), nil)
+		w := httptest.NewRecorder()
+		handler(w, req)
+
+		resp := w.Result()
+		body, _ := io.ReadAll(resp.Body)
+
+		assert.Equal(t, string(body), fmt.Sprintf("Fiber %d", i))
+	}, opts)
+}
+
 type streamResponseRecorder struct {
 	*httptest.ResponseRecorder
 	writeCallback func(buf []byte)

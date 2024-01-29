@@ -64,17 +64,21 @@ RUN apt-get update && \
     libssl-dev \
     libxml2-dev \
     zlib1g-dev \
+    # Needed by gotip
+    git \
     && \
     apt-get clean
+
+RUN GOBIN=/usr/local/go/bin go install golang.org/dl/gotip@latest && gotip download
 
 WORKDIR /go/src/app
 
 COPY --link go.mod go.sum ./
-RUN go mod graph | awk '{if ($1 !~ "@") print $2}' | xargs go get
+RUN gotip mod graph | awk '{if ($1 !~ "@") print $2}' | xargs gotip get
 
 WORKDIR /go/src/app/caddy
 COPY --link caddy/go.mod caddy/go.sum ./
-RUN go mod graph | awk '{if ($1 !~ "@") print $2}' | xargs go get
+RUN gotip mod graph | awk '{if ($1 !~ "@") print $2}' | xargs gotip get
 
 WORKDIR /go/src/app
 COPY --link *.* ./
@@ -88,7 +92,7 @@ COPY --link testdata testdata
 ENV CGO_LDFLAGS="-lssl -lcrypto -lreadline -largon2 -lcurl -lonig -lz $PHP_LDFLAGS" CGO_CFLAGS="-DFRANKENPHP_VERSION=$FRANKENPHP_VERSION $PHP_CFLAGS" CGO_CPPFLAGS=$PHP_CPPFLAGS
 
 WORKDIR /go/src/app/caddy/frankenphp
-RUN GOBIN=/usr/local/bin go install -ldflags "-w -s -X 'github.com/caddyserver/caddy/v2.CustomVersion=FrankenPHP $FRANKENPHP_VERSION PHP $PHP_VERSION Caddy'" && \
+RUN GOBIN=/usr/local/bin gotip install -ldflags "-w -s -X 'github.com/caddyserver/caddy/v2.CustomVersion=FrankenPHP $FRANKENPHP_VERSION PHP $PHP_VERSION Caddy'" && \
     setcap cap_net_bind_service=+ep /usr/local/bin/frankenphp && \
     cp Caddyfile /etc/caddy/Caddyfile && \
     frankenphp version

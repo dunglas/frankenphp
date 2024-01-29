@@ -201,7 +201,7 @@ jobs:
         run: |
           docker run --platform=${{ matrix.platform }} --rm \
             "$(jq -r '."builder-${{ matrix.variant }}"."containerimage.config.digest"' <<< "${METADATA}")" \
-            sh -c 'go test ${{ matrix.race }} -v ./... && cd caddy && go test ${{ matrix.race }} -v ./...'
+            sh -c 'gotip test ${{ matrix.race }} -v ./... && cd caddy && gotip test ${{ matrix.race }} -v ./...'
         env:
           METADATA: ${{ steps.build.outputs.metadata }}
   # Adapted from https://docs.docker.com/build/ci/github-actions/multi-platform/

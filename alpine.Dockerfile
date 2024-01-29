@@ -62,16 +62,21 @@ RUN apk add --no-cache --virtual .build-deps \
 	oniguruma-dev \
 	openssl-dev \
 	readline-dev \
-	sqlite-dev
+	sqlite-dev \
+	# Needed by gotip
+	git \
+	bash
+
+RUN GOBIN=/usr/local/go/bin go install golang.org/dl/gotip@latest && gotip download
 
 WORKDIR /go/src/app
 
 COPY --link go.mod go.sum ./
-RUN go mod graph | awk '{if ($1 !~ "@") print $2}' | xargs go get
+RUN gotip mod graph | awk '{if ($1 !~ "@") print $2}' | xargs gotip get
 
 WORKDIR /go/src/app/caddy
 COPY caddy/go.mod caddy/go.sum ./
-RUN go mod graph | awk '{if ($1 !~ "@") print $2}' | xargs go get
+RUN gotip mod graph | awk '{if ($1 !~ "@") print $2}' | xargs gotip get
 
 WORKDIR /go/src/app
 COPY --link *.* ./
