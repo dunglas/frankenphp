@@ -23,7 +23,7 @@ if [ -z "${PHP_EXTENSIONS}" ]; then
 fi
 
 if [ -z "${PHP_EXTENSION_LIBS}" ]; then
-    export PHP_EXTENSION_LIBS="brotli,bzip2,freetype,libavif,libjpeg,liblz4,libwebp,libzip"
+    export PHP_EXTENSION_LIBS="bzip2,freetype,libavif,libjpeg,liblz4,libwebp,libzip"
 fi
 
 if [ -z "${PHP_VERSION}" ]; then
@@ -97,11 +97,12 @@ else
 
     ./bin/spc doctor
     ./bin/spc fetch --with-php="${PHP_VERSION}" --for-extensions="${PHP_EXTENSIONS}"
+    # the Brotli library must always be built as it is required by http://github.com/dunglas/caddy-cbrotli
     # shellcheck disable=SC2086
-    ./bin/spc build --enable-zts --build-embed ${extraOpts} "${PHP_EXTENSIONS}" --with-libs="${PHP_EXTENSION_LIBS}"
+    ./bin/spc build --enable-zts --build-embed ${extraOpts} "${PHP_EXTENSIONS}" --with-libs="brotli,${PHP_EXTENSION_LIBS}"
 fi
 
-CGO_CFLAGS="-DFRANKENPHP_VERSION=${FRANKENPHP_VERSION} $(./buildroot/bin/php-config --includes | sed s#-I/#-I"${PWD}"/buildroot/#g)"
+CGO_CFLAGS="-DFRANKENPHP_VERSION=${FRANKENPHP_VERSION} -I${PWD}/buildroot/include/ $(./buildroot/bin/php-config --includes | sed s#-I/#-I"${PWD}"/buildroot/#g)"
 if [ -n "${DEBUG_SYMBOLS}" ]; then
     CGO_CFLAGS="-g ${CGO_CFLAGS}"
 fi
