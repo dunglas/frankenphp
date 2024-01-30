@@ -226,6 +226,27 @@ func testHeaders(t *testing.T, opts *testOptions) {
 	}, opts)
 }
 
+func TestResponseHeaders_module(t *testing.T) { testResponseHeaders(t, nil) }
+func TestResponseHeaders_worker(t *testing.T) {
+	testResponseHeaders(t, &testOptions{workerScript: "response-headers.php"})
+}
+func testResponseHeaders(t *testing.T, opts *testOptions) {
+	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
+		req := httptest.NewRequest("GET", fmt.Sprintf("http://example.com/response-headers.php?i=%d", i), nil)
+		w := httptest.NewRecorder()
+		handler(w, req)
+
+		resp := w.Result()
+		body, _ := io.ReadAll(resp.Body)
+
+		assert.Contains(t, string(body), "'X-Powered-By' => 'PH")
+		assert.Contains(t, string(body), "'Foo' => 'bar',")
+		assert.Contains(t, string(body), "'Foo2' => 'bar2',")
+		assert.Contains(t, string(body), fmt.Sprintf("'I' => '%d',", i))
+		assert.NotContains(t, string(body), "Invalid")
+	}, opts)
+}
+
 func TestInput_module(t *testing.T) { testInput(t, nil) }
 func TestInput_worker(t *testing.T) { testInput(t, &testOptions{workerScript: "input.php"}) }
 func testInput(t *testing.T, opts *testOptions) {
@@ -553,13 +574,13 @@ func testFiberNoCgo(t *testing.T, opts *testOptions) {
 	}, opts)
 }
 
-func TestApacheRequestHeaders_module(t *testing.T) { testApacheRequestHeaders(t, &testOptions{}) }
-func TestApacheRequestHeaders_worker(t *testing.T) {
-	testApacheRequestHeaders(t, &testOptions{workerScript: "apache-request-headers.php"})
+func TestRequestHeaders_module(t *testing.T) { testRequestHeaders(t, &testOptions{}) }
+func TestRequestHeaders_worker(t *testing.T) {
+	testRequestHeaders(t, &testOptions{workerScript: "request-headers.php"})
 }
-func testApacheRequestHeaders(t *testing.T, opts *testOptions) {
+func testRequestHeaders(t *testing.T, opts *testOptions) {
 	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
-		req := httptest.NewRequest("GET", fmt.Sprintf("http://example.com/apache-request-headers.php?i=%d", i), nil)
+		req := httptest.NewRequest("GET", fmt.Sprintf("http://example.com/request-headers.php?i=%d", i), nil)
 		req.Header.Add("Content-Type", "text/plain")
 		req.Header.Add("Frankenphp-I", strconv.Itoa(i))
 
