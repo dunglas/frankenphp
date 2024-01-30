@@ -112,7 +112,7 @@ if [ "${os}" = "mac" ]; then
     export CGO_LDFLAGS="-framework CoreFoundation -framework SystemConfiguration"
 fi
 
-CGO_LDFLAGS="${CGO_LDFLAGS} $(./buildroot/bin/php-config --ldflags) $(./buildroot/bin/php-config --libs)"
+CGO_LDFLAGS="${CGO_LDFLAGS} ${PWD}/buildroot/lib/libbrotlicommon.a ${PWD}/buildroot/lib/libbrotlienc.a ${PWD}/buildroot/lib/libbrotlidec.a $(./buildroot/bin/php-config --ldflags) $(./buildroot/bin/php-config --libs)"
 export CGO_LDFLAGS
 
 LIBPHP_VERSION="$(./buildroot/bin/php-config --version)"
