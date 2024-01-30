@@ -97,11 +97,12 @@ else
 
     ./bin/spc doctor
     ./bin/spc fetch --with-php="${PHP_VERSION}" --for-extensions="${PHP_EXTENSIONS}"
+    # the Brotli library must always be built as it is required by http://github.com/dunglas/caddy-cbrotli
     # shellcheck disable=SC2086
-    ./bin/spc build --enable-zts --build-embed ${extraOpts} "${PHP_EXTENSIONS}" --with-libs="${PHP_EXTENSION_LIBS}"
+    ./bin/spc build --enable-zts --build-embed ${extraOpts} "${PHP_EXTENSIONS}" --with-libs="brotli,${PHP_EXTENSION_LIBS}"
 fi
 
-CGO_CFLAGS="-DFRANKENPHP_VERSION=${FRANKENPHP_VERSION} $(./buildroot/bin/php-config --includes | sed s#-I/#-I"${PWD}"/buildroot/#g)"
+CGO_CFLAGS="-DFRANKENPHP_VERSION=${FRANKENPHP_VERSION} -I${PWD}/buildroot/include/ $(./buildroot/bin/php-config --includes | sed s#-I/#-I"${PWD}"/buildroot/#g)"
 if [ -n "${DEBUG_SYMBOLS}" ]; then
     CGO_CFLAGS="-g ${CGO_CFLAGS}"
 fi
@@ -111,7 +112,7 @@ if [ "${os}" = "mac" ]; then
     export CGO_LDFLAGS="-framework CoreFoundation -framework SystemConfiguration"
 fi
 
-CGO_LDFLAGS="${CGO_LDFLAGS} $(./buildroot/bin/php-config --ldflags) $(./buildroot/bin/php-config --libs)"
+CGO_LDFLAGS="${CGO_LDFLAGS} ${PWD}/buildroot/lib/libbrotlicommon.a ${PWD}/buildroot/lib/libbrotlienc.a ${PWD}/buildroot/lib/libbrotlidec.a $(./buildroot/bin/php-config --ldflags) $(./buildroot/bin/php-config --libs)"
 export CGO_LDFLAGS
 
 LIBPHP_VERSION="$(./buildroot/bin/php-config --version)"

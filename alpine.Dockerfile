@@ -53,6 +53,7 @@ ENV PATH /usr/local/go/bin:$PATH
 RUN apk add --no-cache --virtual .build-deps \
 	$PHPIZE_DEPS \
 	argon2-dev \
+	brotli-dev \
 	coreutils \
 	curl-dev \
 	gnu-libiconv-dev \

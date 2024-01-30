@@ -6,7 +6,7 @@ http:// {
 	route {
 		root * .
 
-		encode zstd gzip
+		encode zstd br gzip
 		php_server
 	}
 }

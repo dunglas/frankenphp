@@ -18,6 +18,7 @@ RUN apt-get update && \
 	apt-get -y --no-install-recommends install \
 	$PHPIZE_DEPS \
 	libargon2-dev \
+	libbrotli-dev \
 	libcurl4-openssl-dev \
 	libonig-dev \
 	libreadline-dev \

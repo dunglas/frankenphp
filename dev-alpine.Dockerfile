@@ -16,6 +16,7 @@ ENV PHPIZE_DEPS \
 RUN apk add --no-cache \
 	$PHPIZE_DEPS \
 	argon2-dev \
+	brotli-dev \
 	curl-dev \
 	oniguruma-dev \
 	readline-dev \

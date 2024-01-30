@@ -33,7 +33,7 @@ Minimal example:
 
 localhost {
 	# Enable compression (optional)
-	encode zstd gzip
+	encode zstd br gzip
 	# Execute PHP files in the current directory and serve assets
 	php_server
 }

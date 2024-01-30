@@ -23,10 +23,11 @@ http:// {
 		}
 		rewrite @indexFiles {http.matchers.file.relative}
 
+		encode zstd br gzip
+
 		# FrankenPHP!
 		@phpFiles path *.php
 		php @phpFiles
-		encode zstd gzip
 		file_server
 
 		respond 404
