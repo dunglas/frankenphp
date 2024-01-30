@@ -23,7 +23,7 @@ if [ -z "${PHP_EXTENSIONS}" ]; then
 fi
 
 if [ -z "${PHP_EXTENSION_LIBS}" ]; then
-    export PHP_EXTENSION_LIBS="bzip2,freetype,libavif,libjpeg,liblz4,libwebp,libzip"
+    export PHP_EXTENSION_LIBS="brotli,bzip2,freetype,libavif,libjpeg,liblz4,libwebp,libzip"
 fi
 
 if [ -z "${PHP_VERSION}" ]; then

@@ -51,7 +51,7 @@ For more advanced use cases, see https://github.com/dunglas/frankenphp/blob/main
 			cmd.Flags().BoolP("access-log", "a", false, "Enable the access log")
 			cmd.Flags().BoolP("debug", "v", false, "Enable verbose debug logs")
 			cmd.Flags().BoolP("mercure", "m", false, "Enable the built-in Mercure.rocks hub")
-			cmd.Flags().BoolP("no-compress", "", false, "Disable Zstandard and Gzip compression")
+			cmd.Flags().BoolP("no-compress", "", false, "Disable Zstandard, Brotli and Gzip compression")
 			cmd.RunE = caddycmd.WrapCommandFuncForCobra(cmdPHPServer)
 		},
 	})
@@ -201,6 +201,11 @@ func cmdPHPServer(fs caddycmd.Flags) (int, error) {
 			return caddy.ExitCodeFailedStartup, err
 		}
 
+		br, err := caddy.GetModule("http.encoders.br")
+		if err != nil {
+			return caddy.ExitCodeFailedStartup, err
+		}
+
 		zstd, err := caddy.GetModule("http.encoders.zstd")
 		if err != nil {
 			return caddy.ExitCodeFailedStartup, err
@@ -211,9 +216,10 @@ func cmdPHPServer(fs caddycmd.Flags) (int, error) {
 			HandlersRaw: []json.RawMessage{caddyconfig.JSONModuleObject(encode.Encode{
 				EncodingsRaw: caddy.ModuleMap{
 					"zstd": caddyconfig.JSON(zstd.New(), nil),
+					"br":   caddyconfig.JSON(br.New(), nil),
 					"gzip": caddyconfig.JSON(gzip.New(), nil),
 				},
-				Prefer: []string{"zstd", "gzip"},
+				Prefer: []string{"zstd", "br", "gzip"},
 			}, "handler", "encode", nil)},
 		}
 

@@ -56,6 +56,7 @@ ENV PATH /usr/local/go/bin:$PATH
 RUN apt-get update && \
 	apt-get -y --no-install-recommends install \
 	libargon2-dev \
+	libbrotli-dev \
 	libcurl4-openssl-dev \
 	libonig-dev \
 	libreadline-dev \
