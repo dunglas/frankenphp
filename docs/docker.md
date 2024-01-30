@@ -144,3 +144,18 @@ RUN adduser -D ${USER} \
 	# Caddy requires write access to /data/caddy and /config/caddy
 	RUN chown -R ${USER}:${USER} /data/caddy && chown -R ${USER}:${USER} /config/caddy
 ```
+
+## Updates
+
+The Docker images are built:
+
+* when a new release is tagged
+* daily at 4am UTC, if new versions of the official PHP images are available
+
+## Development Versions
+
+Development versions are available in the [`dunglas/frankenphp-dev`](https://hub.docker.com/repository/docker/dunglas/frankenphp-dev) Docker repository.
+A new build is triggered every time a commit is pushed to the main branch of the GitHub repository.
+
+The `latest*` tags point to the head of the `main` branch.
+Tags of the form `sha-<git-commit-hash>` are also available.
