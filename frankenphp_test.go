@@ -581,8 +581,8 @@ func TestRequestHeaders_worker(t *testing.T) {
 func testRequestHeaders(t *testing.T, opts *testOptions) {
 	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
 		req := httptest.NewRequest("GET", fmt.Sprintf("http://example.com/request-headers.php?i=%d", i), nil)
-		req.Header.Add("Content-Type", "text/plain")
-		req.Header.Add("Frankenphp-I", strconv.Itoa(i))
+		req.Header.Add(strings.Clone("Content-Type"), strings.Clone("text/plain"))
+		req.Header.Add(strings.Clone("Frankenphp-I"), strings.Clone(strconv.Itoa(i)))
 
 		w := httptest.NewRecorder()
 		handler(w, req)

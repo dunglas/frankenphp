@@ -582,8 +582,11 @@ func go_register_variables(rh C.uintptr_t, trackVarsArray *C.zval) {
 }
 
 //export go_apache_request_headers
-func go_apache_request_headers(rh C.uintptr_t) (*C.go_string, C.size_t) {
+func go_apache_request_headers(rh C.uintptr_t) (*C.go_string, C.size_t, C.uintptr_t) {
 	r := cgo.Handle(rh).Value().(*http.Request)
+
+	pinner := runtime.Pinner{}
+	pinnerHandle := C.uintptr_t(cgo.NewHandle(pinner))
 
 	rl := len(r.Header)
 	scs := unsafe.Sizeof(C.go_string{})
@@ -591,15 +594,29 @@ func go_apache_request_headers(rh C.uintptr_t) (*C.go_string, C.size_t) {
 	headers := (*C.go_string)(unsafe.Pointer(C.malloc(C.size_t(rl*2) * (C.size_t)(scs))))
 	header := headers
 	for field, val := range r.Header {
-		*header = C.go_string{C.size_t(len(field)), (*C.char)(unsafe.Pointer(unsafe.StringData(field)))}
+		fd := unsafe.StringData(field)
+		pinner.Pin(fd)
+
+		*header = C.go_string{C.size_t(len(field)), (*C.char)(unsafe.Pointer(fd))}
 		header = (*C.go_string)(unsafe.Add(unsafe.Pointer(header), scs))
 
 		cv := strings.Join(val, ", ")
-		*header = C.go_string{C.size_t(len(cv)), (*C.char)(unsafe.Pointer(unsafe.StringData(cv)))}
+		vd := unsafe.StringData(cv)
+		pinner.Pin(vd)
+
+		*header = C.go_string{C.size_t(len(cv)), (*C.char)(unsafe.Pointer(vd))}
 		header = (*C.go_string)(unsafe.Add(unsafe.Pointer(header), scs))
 	}
 
-	return headers, C.size_t(rl)
+	return headers, C.size_t(rl), pinnerHandle
+}
+
+//export go_apache_request_cleanup
+func go_apache_request_cleanup(rh C.uintptr_t) {
+	h := cgo.Handle(rh)
+	p := h.Value().(runtime.Pinner)
+	p.Unpin()
+	h.Delete()
 }
 
 func addHeader(fc *FrankenPHPContext, cString *C.char, length C.int) {

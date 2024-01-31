@@ -262,6 +262,7 @@ PHP_FUNCTION(frankenphp_request_headers) {
   }
 
   free(headers.r0);
+  go_apache_request_cleanup(headers.r2);
 }
 /* }}} */
 
