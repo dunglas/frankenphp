@@ -48,13 +48,13 @@ jobs:
             echo php82_version="${PHP_82_LATEST//./-}"
             echo php83_version="${PHP_83_LATEST//./-}"
           } >> "${GITHUB_OUTPUT}"
- 
+
           # Check if the Docker images must be rebuilt
           if [[ "${GITHUB_EVENT_NAME}" != "schedule"  ]]; then
               echo skip=false >> "${GITHUB_OUTPUT}"
               exit 0
           fi
- 
+
           FRANKENPHP_82_LATEST=$(skopeo inspect docker://docker.io/dunglas/frankenphp:latest-php8.2 --override-os linux --override-arch amd64 | jq -r '.Env[] | select(test("^PHP_VERSION=")) | sub("^PHP_VERSION="; "")')
           FRANKENPHP_83_LATEST=$(skopeo inspect docker://docker.io/dunglas/frankenphp:latest-php8.3 --override-os linux --override-arch amd64 | jq -r '.Env[] | select(test("^PHP_VERSION=")) | sub("^PHP_VERSION="; "")')
 
@@ -62,7 +62,7 @@ jobs:
               echo skip=true >> "${GITHUB_OUTPUT}"
               exit 0
           fi
- 
+
           {
             echo ref="$(gh release view --repo dunglas/frankenphp --json tagName --jq '.tagName')"
             echo skip=false
@@ -242,6 +242,7 @@ jobs:
         name: Create manifest list and push
         working-directory: /tmp/metadata
         run: |
+          set -x
           # shellcheck disable=SC2046,SC2086
           docker buildx imagetools create $(jq -cr '.target."${{ matrix.target }}-${{ matrix.variant }}".tags | map("-t " + .) | join(" ")' <<< ${METADATA}) \
             $(printf 'dunglas/frankenphp@sha256:%s ' *)
