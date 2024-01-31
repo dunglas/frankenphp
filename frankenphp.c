@@ -243,7 +243,7 @@ PHP_FUNCTION(frankenphp_finish_request) { /* {{{ */
 } /* }}} */
 
 /* {{{ Fetch all HTTP request headers */
-PHP_FUNCTION(apache_request_headers) {
+PHP_FUNCTION(frankenphp_request_headers) {
   if (zend_parse_parameters_none() == FAILURE) {
     RETURN_THROWS();
   }
@@ -262,6 +262,58 @@ PHP_FUNCTION(apache_request_headers) {
   }
 
   free(headers.r0);
+}
+/* }}} */
+
+// add_response_header and apache_response_headers are copied from
+// https://github.com/php/php-src/blob/master/sapi/cli/php_cli_server.c
+// Copyright (c) The PHP Group
+// Licensed under The PHP License
+// Original authors: Moriyoshi Koizumi <moriyoshi@php.net> and Xinchen Hui
+// <laruence@php.net>
+static void add_response_header(sapi_header_struct *h,
+                                zval *return_value) /* {{{ */
+{
+  if (h->header_len > 0) {
+    char *s;
+    size_t len = 0;
+    ALLOCA_FLAG(use_heap)
+
+    char *p = strchr(h->header, ':');
+    if (NULL != p) {
+      len = p - h->header;
+    }
+    if (len > 0) {
+      while (len != 0 &&
+             (h->header[len - 1] == ' ' || h->header[len - 1] == '\t')) {
+        len--;
+      }
+      if (len) {
+        s = do_alloca(len + 1, use_heap);
+        memcpy(s, h->header, len);
+        s[len] = 0;
+        do {
+          p++;
+        } while (*p == ' ' || *p == '\t');
+        add_assoc_stringl_ex(return_value, s, len, p,
+                             h->header_len - (p - h->header));
+        free_alloca(s, use_heap);
+      }
+    }
+  }
+}
+/* }}} */
+
+PHP_FUNCTION(frankenphp_response_headers) /* {{{ */
+{
+  if (zend_parse_parameters_none() == FAILURE) {
+    RETURN_THROWS();
+  }
+
+  array_init(return_value);
+  zend_llist_apply_with_argument(
+      &SG(sapi_headers).headers,
+      (llist_apply_with_arg_func_t)add_response_header, return_value);
 }
 /* }}} */
 
@@ -784,8 +836,12 @@ static char *cli_script;
 static int cli_argc;
 static char **cli_argv;
 
-// Adapted from https://github.com/php/php-src/sapi/cli/php_cli.c (The PHP
-// Group, The PHP License)
+// CLI code is adapted from
+// https://github.com/php/php-src/blob/master/sapi/cli/php_cli.c Copyright (c)
+// The PHP Group Licensed under The PHP License Original uthors: Edin Kadribasic
+// <edink@php.net>, Marcus Boerger <helly@php.net> and Johannes Schlueter
+// <johannes@php.net> Parts based on CGI SAPI Module by Rasmus Lerdorf, Stig
+// Bakken and Zeev Suraski
 static void cli_register_file_handles(bool no_close) /* {{{ */
 {
   php_stream *s_in, *s_out, *s_err;
