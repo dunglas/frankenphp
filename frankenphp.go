@@ -546,9 +546,10 @@ func go_register_variables(rh C.uintptr_t, trackVarsArray *C.zval) {
 
 	p := &runtime.Pinner{}
 
-	dynamicVariables := make([]C.php_variable, 0, len(fc.env)+len(r.Header))
+	dynamicVariables := make([]C.php_variable, len(fc.env)+len(r.Header))
 
 	// Add all HTTP headers to env variables
+	var i int
 	for field, val := range r.Header {
 		k := "HTTP_" + headerNameReplacer.Replace(strings.ToUpper(field)) + "\x00"
 		if _, ok := fc.env[k]; ok {
@@ -563,11 +564,12 @@ func go_register_variables(rh C.uintptr_t, trackVarsArray *C.zval) {
 		p.Pin(kData)
 		p.Pin(vData)
 
-		dynamicVariables = append(dynamicVariables, C.php_variable{
+		dynamicVariables[i] = C.php_variable{
 			(*C.char)(unsafe.Pointer(kData)),
 			C.size_t(len(v)),
 			(*C.char)(unsafe.Pointer(vData)),
-		})
+		}
+		i++
 	}
 
 	for k, v := range fc.env {
@@ -581,11 +583,12 @@ func go_register_variables(rh C.uintptr_t, trackVarsArray *C.zval) {
 		p.Pin(kData)
 		p.Pin(vData)
 
-		dynamicVariables = append(dynamicVariables, C.php_variable{
+		dynamicVariables[i] = C.php_variable{
 			(*C.char)(unsafe.Pointer(kData)),
 			C.size_t(len(v)),
 			(*C.char)(unsafe.Pointer(vData)),
-		})
+		}
+		i++
 	}
 
 	knownVariables := computeKnownVariables(r, p)
