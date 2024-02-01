@@ -115,7 +115,7 @@ func (l syslogLevel) String() string {
 type FrankenPHPContext struct {
 	documentRoot string
 	splitPath    []string
-	env          map[string]string
+	env          PreparedEnv
 	logger       *zap.Logger
 
 	docURI         string
@@ -544,14 +544,14 @@ func go_register_variables(rh C.uintptr_t, trackVarsArray *C.zval) {
 	r := cgo.Handle(rh).Value().(*http.Request)
 	fc := r.Context().Value(contextKey).(*FrankenPHPContext)
 
-	p := runtime.Pinner{}
+	p := &runtime.Pinner{}
 
 	dynamicVariables := make([]C.php_variable, 0, len(fc.env)+len(r.Header))
 
 	// Add all HTTP headers to env variables
 	for field, val := range r.Header {
 		k := "HTTP_" + headerNameReplacer.Replace(strings.ToUpper(field)) + "\x00"
-		if _, ok := fc.env[k[:len(k)-1]]; ok {
+		if _, ok := fc.env[k]; ok {
 			continue
 		}
 
@@ -571,9 +571,11 @@ func go_register_variables(rh C.uintptr_t, trackVarsArray *C.zval) {
 	}
 
 	for k, v := range fc.env {
-		ck := k + "\x00"
+		if _, ok := knownServerKeys[k]; ok {
+			continue
+		}
 
-		kData := unsafe.StringData(ck)
+		kData := unsafe.StringData(k)
 		vData := unsafe.Pointer(unsafe.StringData(v))
 
 		p.Pin(kData)
@@ -586,7 +588,7 @@ func go_register_variables(rh C.uintptr_t, trackVarsArray *C.zval) {
 		})
 	}
 
-	knownVariables := computeKnownVariables(r)
+	knownVariables := computeKnownVariables(r, p)
 
 	dynamicVariablesData := unsafe.SliceData(dynamicVariables)
 	p.Pin(dynamicVariablesData)

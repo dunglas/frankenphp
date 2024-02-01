@@ -175,13 +175,14 @@ func TestPathInfo_worker(t *testing.T) {
 	testPathInfo(t, &testOptions{workerScript: "server-variable.php"})
 }
 func testPathInfo(t *testing.T, opts *testOptions) {
+	cwd, _ := os.Getwd()
+	testDataDir := cwd + strings.Clone("/testdata/")
+	path := strings.Clone("/server-variable.php/pathinfo")
+
 	runTest(t, func(_ func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
 		handler := func(w http.ResponseWriter, r *http.Request) {
-			cwd, _ := os.Getwd()
-			testDataDir := cwd + "/testdata/"
-
 			requestURI := r.URL.RequestURI()
-			r.URL.Path = "/server-variable.php/pathinfo"
+			r.URL.Path = path
 
 			rewriteRequest, err := frankenphp.NewRequestWithContext(r,
 				frankenphp.WithRequestDocumentRoot(testDataDir, false),
@@ -770,27 +771,29 @@ func BenchmarkServerSuperGlobal(b *testing.B) {
 
 	// Env vars available in a typical Docker container
 	env := map[string]string{
-		strings.Clone("HOSTNAME"):        strings.Clone("a88e81aa22e4"),
-		strings.Clone("PHP_INI_DIR"):     strings.Clone("/usr/local/etc/php"),
-		strings.Clone("HOME"):            strings.Clone("/root"),
-		strings.Clone("GODEBUG"):         strings.Clone("cgocheck=0"),
-		strings.Clone("PHP_LDFLAGS"):     strings.Clone("-Wl,-O1 -pie"),
-		strings.Clone("PHP_CFLAGS"):      strings.Clone("-fstack-protector-strong -fpic -fpie -O2 -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64"),
-		strings.Clone("PHP_VERSION"):     strings.Clone("8.3.2"),
-		strings.Clone("GPG_KEYS"):        strings.Clone("1198C0117593497A5EC5C199286AF1F9897469DC C28D937575603EB4ABB725861C0779DC5C0A9DE4 AFD8691FDAEDF03BDF6E460563F15A9B715376CA"),
-		strings.Clone("PHP_CPPFLAGS"):    strings.Clone("-fstack-protector-strong -fpic -fpie -O2 -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64"),
-		strings.Clone("PHP_ASC_URL"):     strings.Clone("https://www.php.net/distributions/php-8.3.2.tar.xz.asc"),
-		strings.Clone("PHP_URL"):         strings.Clone("https://www.php.net/distributions/php-8.3.2.tar.xz"),
-		strings.Clone("PATH"):            strings.Clone("/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"),
-		strings.Clone("XDG_CONFIG_HOME"): strings.Clone("/config"),
-		strings.Clone("XDG_DATA_HOME"):   strings.Clone("/data"),
-		strings.Clone("PHPIZE_DEPS"):     strings.Clone("autoconf dpkg-dev file g++ gcc libc-dev make pkg-config re2c"),
-		strings.Clone("PWD"):             strings.Clone("/app"),
-		strings.Clone("PHP_SHA256"):      strings.Clone("4ffa3e44afc9c590e28dc0d2d31fc61f0139f8b335f11880a121b9f9b9f0634e"),
+		"HOSTNAME":        "a88e81aa22e4",
+		"PHP_INI_DIR":     "/usr/local/etc/php",
+		"HOME":            "/root",
+		"GODEBUG":         "cgocheck=0",
+		"PHP_LDFLAGS":     "-Wl,-O1 -pie",
+		"PHP_CFLAGS":      "-fstack-protector-strong -fpic -fpie -O2 -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64",
+		"PHP_VERSION":     "8.3.2",
+		"GPG_KEYS":        "1198C0117593497A5EC5C199286AF1F9897469DC C28D937575603EB4ABB725861C0779DC5C0A9DE4 AFD8691FDAEDF03BDF6E460563F15A9B715376CA",
+		"PHP_CPPFLAGS":    "-fstack-protector-strong -fpic -fpie -O2 -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64",
+		"PHP_ASC_URL":     "https://www.php.net/distributions/php-8.3.2.tar.xz.asc",
+		"PHP_URL":         "https://www.php.net/distributions/php-8.3.2.tar.xz",
+		"PATH":            "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+		"XDG_CONFIG_HOME": "/config",
+		"XDG_DATA_HOME":   "/data",
+		"PHPIZE_DEPS":     "autoconf dpkg-dev file g++ gcc libc-dev make pkg-config re2c",
+		"PWD":             "/app",
+		"PHP_SHA256":      "4ffa3e44afc9c590e28dc0d2d31fc61f0139f8b335f11880a121b9f9b9f0634e",
 	}
 
+	preparedEnv := frankenphp.PrepareEnv(env)
+
 	handler := func(w http.ResponseWriter, r *http.Request) {
-		req, err := frankenphp.NewRequestWithContext(r, frankenphp.WithRequestDocumentRoot(testDataDir, false), frankenphp.WithRequestEnv(env))
+		req, err := frankenphp.NewRequestWithContext(r, frankenphp.WithRequestDocumentRoot(testDataDir, false), frankenphp.WithRequestPreparedEnv(preparedEnv))
 		if err != nil {
 			panic(err)
 		}

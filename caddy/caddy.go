@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"path/filepath"
 	"strconv"
+	"strings"
 
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig"
@@ -205,7 +206,7 @@ type FrankenPHPModule struct {
 	// ResolveRootSymlink enables resolving the `root` directory to its actual value by evaluating a symbolic link, if one exists.
 	ResolveRootSymlink *bool `json:"resolve_root_symlink,omitempty"`
 	// Env sets an extra environment variable to the given value. Can be specified more than once for multiple environment variables.
-	Env    map[string]string `json:"env,omitempty"`
+	Env    frankenphp.PreparedEnv `json:"env,omitempty"`
 	logger *zap.Logger
 }
 
@@ -247,6 +248,8 @@ func (f *FrankenPHPModule) Provision(ctx caddy.Context) error {
 	return nil
 }
 
+var requestURIkey = strings.Clone("REQUEST_URI\x00")
+
 // ServeHTTP implements caddyhttp.MiddlewareHandler.
 // TODO: Expose TLS versions as env vars, as Apache's mod_ssl: https://github.com/caddyserver/caddy/blob/master/modules/caddyhttp/reverseproxy/fastcgi/fastcgi.go#L298
 func (f FrankenPHPModule) ServeHTTP(w http.ResponseWriter, r *http.Request, _ caddyhttp.Handler) error {
@@ -256,7 +259,7 @@ func (f FrankenPHPModule) ServeHTTP(w http.ResponseWriter, r *http.Request, _ ca
 	documentRoot := repl.ReplaceKnown(f.Root, "")
 
 	env := make(map[string]string, len(f.Env)+1)
-	env["REQUEST_URI"] = origReq.URL.RequestURI()
+	env[requestURIkey] = origReq.URL.RequestURI()
 	for k, v := range f.Env {
 		env[k] = repl.ReplaceKnown(v, "")
 	}
@@ -265,7 +268,7 @@ func (f FrankenPHPModule) ServeHTTP(w http.ResponseWriter, r *http.Request, _ ca
 		r,
 		frankenphp.WithRequestDocumentRoot(documentRoot, *f.ResolveRootSymlink),
 		frankenphp.WithRequestSplitPath(f.SplitPath),
-		frankenphp.WithRequestEnv(env),
+		frankenphp.WithRequestPreparedEnv(env),
 	)
 
 	if err != nil {
@@ -298,9 +301,9 @@ func (f *FrankenPHPModule) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 					return d.ArgErr()
 				}
 				if f.Env == nil {
-					f.Env = make(map[string]string)
+					f.Env = make(frankenphp.PreparedEnv)
 				}
-				f.Env[args[0]] = args[1]
+				f.Env[args[0]+"\x00"] = args[1]
 
 			case "resolve_root_symlink":
 				if d.NextArg() {

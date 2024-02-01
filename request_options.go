@@ -2,6 +2,7 @@ package frankenphp
 
 import (
 	"path/filepath"
+	"strings"
 
 	"go.uber.org/zap"
 )
@@ -52,9 +53,25 @@ func WithRequestSplitPath(splitPath []string) RequestOption {
 	}
 }
 
+type PreparedEnv = map[string]string
+
+// TODO: remove the calls to strings.Clone when upgrading to Go 1.22
+func PrepareEnv(env map[string]string) PreparedEnv {
+	preparedEnv := make(PreparedEnv, len(env))
+	for k, v := range env {
+		preparedEnv[strings.Clone(k+"\x00")] = strings.Clone(v)
+	}
+
+	return preparedEnv
+}
+
 // WithEnv set CGI-like environment variables that will be available in $_SERVER.
 // Values set with WithEnv always have priority over automatically populated values.
 func WithRequestEnv(env map[string]string) RequestOption {
+	return WithRequestPreparedEnv(PrepareEnv(env))
+}
+
+func WithRequestPreparedEnv(env PreparedEnv) RequestOption {
 	return func(o *FrankenPHPContext) error {
 		o.env = env
 
