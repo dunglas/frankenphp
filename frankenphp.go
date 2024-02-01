@@ -131,6 +131,22 @@ type FrankenPHPContext struct {
 
 	done                 chan interface{}
 	currentWorkerRequest cgo.Handle
+
+	hooks *FrankenPHPHooks
+}
+
+// ResponseFilter A callback that takes the current http status code, headers, and request. If it returns true, then
+// any further PHP output will be sent to stderr. This is called after all headers are sent and before a body is
+// written.
+type ResponseFilter func(status int, headers http.Header, r *http.Request) bool
+
+// FrankenPHPHooks You can pass this to FrankenPHP to "hook into" various processes and direct how FrankenPHP will
+// proceed. For example, hooking into responses and redirecting based on headers; detecting db credentials in output
+// and sending a white page instead; or, ensuring a custom error page is always shown even if it is a 500 error.
+type FrankenPHPHooks struct {
+	// ResponseFilter This filter is called after headers are written but before a response body is written. The filter
+	// is given an opportunity to cancel the body output of the PHP script and send headers/response bodies.
+	ResponseFilter ResponseFilter
 }
 
 func clientHasClosed(r *http.Request) bool {
@@ -645,6 +661,16 @@ func go_write_headers(rh C.uintptr_t, status C.int, headers *C.zend_llist) {
 
 		addHeader(fc, h.header, C.int(h.header_len))
 		current = current.next
+	}
+
+	handled := false
+	if fc.hooks != nil && fc.hooks.ResponseFilter != nil {
+		handled = fc.hooks.ResponseFilter(int(status), fc.responseWriter.Header(), r)
+	}
+
+	if handled {
+		fc.responseWriter = nil
+		return
 	}
 
 	fc.responseWriter.WriteHeader(int(status))

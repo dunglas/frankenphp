@@ -6,9 +6,11 @@ package caddy
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"path/filepath"
 	"strconv"
+	"strings"
 
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig"
@@ -205,8 +207,11 @@ type FrankenPHPModule struct {
 	// ResolveRootSymlink enables resolving the `root` directory to its actual value by evaluating a symbolic link, if one exists.
 	ResolveRootSymlink bool `json:"resolve_root_symlink,omitempty"`
 	// Env sets an extra environment variable to the given value. Can be specified more than once for multiple environment variables.
-	Env    map[string]string `json:"env,omitempty"`
-	logger *zap.Logger
+	Env                    map[string]string `json:"env,omitempty"`
+	logger                 *zap.Logger
+	responseMatchers       map[string]caddyhttp.ResponseMatcher
+	handleResponseSegments []*caddyfile.Dispenser
+	HandleResponse         []caddyhttp.ResponseHandler `json:"handle_response,omitempty"`
 }
 
 // CaddyModule returns the Caddy module information.
@@ -238,12 +243,19 @@ func (f *FrankenPHPModule) Provision(ctx caddy.Context) error {
 		f.SplitPath = []string{".php"}
 	}
 
+	for i, rh := range f.HandleResponse {
+		err := rh.Provision(ctx)
+		if err != nil {
+			return fmt.Errorf("provisioning response handler %d: %v", i, err)
+		}
+	}
+
 	return nil
 }
 
 // ServeHTTP implements caddyhttp.MiddlewareHandler.
 // TODO: Expose TLS versions as env vars, as Apache's mod_ssl: https://github.com/caddyserver/caddy/blob/master/modules/caddyhttp/reverseproxy/fastcgi/fastcgi.go#L298
-func (f FrankenPHPModule) ServeHTTP(w http.ResponseWriter, r *http.Request, _ caddyhttp.Handler) error {
+func (f FrankenPHPModule) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhttp.Handler) error {
 	origReq := r.Context().Value(caddyhttp.OriginalRequestCtxKey).(http.Request)
 	repl := r.Context().Value(caddy.ReplacerCtxKey).(*caddy.Replacer)
 
@@ -255,11 +267,72 @@ func (f FrankenPHPModule) ServeHTTP(w http.ResponseWriter, r *http.Request, _ ca
 		env[k] = repl.ReplaceKnown(v, "")
 	}
 
+	hooks := &frankenphp.FrankenPHPHooks{
+		ResponseFilter: func(status int, header http.Header, r2 *http.Request) bool {
+			handleError := func(error error) bool {
+				var handlerError caddyhttp.HandlerError
+				if errors.As(error, &handlerError) {
+					w.WriteHeader(handlerError.StatusCode)
+					return true
+				}
+
+				return false
+			}
+
+			for _, rh := range f.HandleResponse {
+				if rh.Match != nil && !rh.Match.Match(status, header) {
+					continue
+				}
+
+				// if we are only changing the status code, do just that
+				if statusCodeStr := rh.StatusCode.String(); statusCodeStr != "" {
+					statusCode, err := strconv.Atoi(repl.ReplaceAll(statusCodeStr, ""))
+					if err != nil {
+						f.logger.Warn("Unable to replace status code string")
+						return handleError(err)
+					}
+					if statusCode != 0 {
+						w.WriteHeader(statusCode)
+					}
+					break
+				}
+
+				// we are about to replace the response and close it. Frankenphp should handle this gracefully without
+				// killing the script or exploding.
+
+				// use the replacer to so the original it can be routed. We use the "reverse_proxy" strings so that
+				// configuration is backwards compatible.
+				for field, value := range header {
+					repl.Set("http.reverse_proxy.header."+field, strings.Join(value, ","))
+				}
+				repl.Set("http.reverse_proxy.status_code", status)
+				repl.Set("http.reverse_proxy.status_text", strconv.Itoa(status))
+
+				routeErr := rh.Routes.Compile(next).ServeHTTP(w, r2)
+
+				if routeErr != nil {
+					f.logger.Warn("Failure handling route while handling response", zap.Any("error", routeErr))
+
+					return handleError(routeErr)
+				}
+
+				f.logger.Debug("Matched response successfully!")
+
+				return true
+			}
+
+			f.logger.Debug("Did not match any response!")
+
+			return false
+		},
+	}
+
 	fr, err := frankenphp.NewRequestWithContext(
 		r,
 		frankenphp.WithRequestDocumentRoot(documentRoot, f.ResolveRootSymlink),
 		frankenphp.WithRequestSplitPath(f.SplitPath),
 		frankenphp.WithRequestEnv(env),
+		frankenphp.WithHooks(hooks),
 	)
 
 	if err != nil {
@@ -269,10 +342,23 @@ func (f FrankenPHPModule) ServeHTTP(w http.ResponseWriter, r *http.Request, _ ca
 	return frankenphp.ServeHTTP(w, fr)
 }
 
+const matcherPrefix = "@"
+
 // UnmarshalCaddyfile implements caddyfile.Unmarshaler.
 func (f *FrankenPHPModule) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
+
+	f.responseMatchers = make(map[string]caddyhttp.ResponseMatcher)
+
 	for d.Next() {
 		for d.NextBlock(0) {
+			if strings.HasPrefix(d.Val(), matcherPrefix) {
+				err := caddyhttp.ParseNamedResponseMatcher(d.NewFromNextSegment(), f.responseMatchers)
+				if err != nil {
+					return err
+				}
+				continue
+			}
+
 			switch d.Val() {
 			case "root":
 				if !d.NextArg() {
@@ -301,6 +387,11 @@ func (f *FrankenPHPModule) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 					return d.ArgErr()
 				}
 				f.ResolveRootSymlink = true
+
+			case "handle_response":
+				// delegate the parsing of handle_response to the caller,
+				// since we need the httpcaddyfile.Helper to parse subroutes.
+				f.handleResponseSegments = append(f.handleResponseSegments, d.NewFromNextSegment())
 			}
 		}
 	}
@@ -520,6 +611,45 @@ func parsePhpServer(h httpcaddyfile.Helper) ([]httpcaddyfile.ConfigValue, error)
 	err = phpsrv.UnmarshalCaddyfile(dispenser)
 	if err != nil {
 		return nil, err
+	}
+
+	for _, d := range phpsrv.handleResponseSegments {
+		d.Next()
+		args := d.RemainingArgs()
+		if len(args) != 1 {
+			return nil, d.Errf("must use a named response matcher, starting with '@'")
+		}
+
+		var matcher *caddyhttp.ResponseMatcher
+		if !strings.HasPrefix(args[0], matcherPrefix) {
+			return nil, d.Errf("must use a named response matcher, starting with '@'")
+		}
+
+		foundMatcher, ok := phpsrv.responseMatchers[args[0]]
+		if !ok {
+			return nil, d.Errf("no named response matcher defined with name '%s'", args[0][1:])
+		}
+		matcher = &foundMatcher
+
+		handler, err := httpcaddyfile.ParseSegmentAsSubroute(h.WithDispenser(d.NewFromNextSegment()))
+		if err != nil {
+			return nil, err
+		}
+
+		subroute, ok := handler.(*caddyhttp.Subroute)
+		if !ok {
+			return nil, d.Errf("Segment was not parsed as a subroute")
+		}
+
+		phpsrv.HandleResponse = append(phpsrv.HandleResponse, caddyhttp.ResponseHandler{
+			Match:  matcher,
+			Routes: subroute.Routes,
+		})
+
+		// clean up bits we needed just to parse the file
+		// todo: is there a better way??
+		phpsrv.responseMatchers = nil
+		phpsrv.handleResponseSegments = nil
 	}
 
 	// create the PHP route which is
