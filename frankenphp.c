@@ -586,8 +586,9 @@ static void frankenphp_register_known_variable(const char *key, go_string value,
   }
 }
 
-static void frankenphp_register_variable_from_request_info(
-    const char *key, char *value, zval *track_vars_array) {
+static void
+frankenphp_register_variable_from_request_info(const char *key, char *value,
+                                               zval *track_vars_array) {
   if (value == NULL) {
     return;
   }
