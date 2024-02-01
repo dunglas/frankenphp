@@ -544,12 +544,10 @@ func go_register_variables(rh C.uintptr_t, trackVarsArray *C.zval) {
 	r := cgo.Handle(rh).Value().(*http.Request)
 	fc := r.Context().Value(contextKey).(*FrankenPHPContext)
 
-	le := len(fc.env) + len(r.Header)
-	varSize := unsafe.Sizeof(C.php_variable{})
-	dynamicVariables := (*C.php_variable)(C.malloc(C.size_t(le) * C.size_t(varSize)))
-	dynamicVariable := dynamicVariables
-
 	p := runtime.Pinner{}
+
+	dynamicVariables := make([]C.php_variable, 0, len(fc.env)+len(r.Header))
+
 	// Add all HTTP headers to env variables
 	for field, val := range r.Header {
 		k := "HTTP_" + headerNameReplacer.Replace(strings.ToUpper(field)) + "\x00"
@@ -565,17 +563,15 @@ func go_register_variables(rh C.uintptr_t, trackVarsArray *C.zval) {
 		p.Pin(kData)
 		p.Pin(vData)
 
-		*dynamicVariable = C.php_variable{
+		dynamicVariables = append(dynamicVariables, C.php_variable{
 			(*C.char)(unsafe.Pointer(kData)),
 			C.size_t(len(v)),
 			(*C.char)(unsafe.Pointer(vData)),
-		}
-		dynamicVariable = (*C.php_variable)(unsafe.Add(unsafe.Pointer(dynamicVariable), varSize))
+		})
 	}
 
 	for k, v := range fc.env {
 		ck := k + "\x00"
-		v = strings.Clone(v)
 
 		kData := unsafe.StringData(ck)
 		vData := unsafe.Pointer(unsafe.StringData(v))
@@ -583,16 +579,19 @@ func go_register_variables(rh C.uintptr_t, trackVarsArray *C.zval) {
 		p.Pin(kData)
 		p.Pin(vData)
 
-		*dynamicVariable = C.php_variable{
+		dynamicVariables = append(dynamicVariables, C.php_variable{
 			(*C.char)(unsafe.Pointer(kData)),
 			C.size_t(len(v)),
 			(*C.char)(unsafe.Pointer(vData)),
-		}
-		dynamicVariable = (*C.php_variable)(unsafe.Add(unsafe.Pointer(dynamicVariable), varSize))
+		})
 	}
 
 	knownVariables := computeKnownVariables(r)
-	C.frankenphp_register_bulk_variables(&knownVariables[0], dynamicVariables, C.size_t(le), trackVarsArray)
+
+	dynamicVariablesData := unsafe.SliceData(dynamicVariables)
+	p.Pin(dynamicVariablesData)
+
+	C.frankenphp_register_bulk_variables(&knownVariables[0], dynamicVariablesData, C.size_t(len(dynamicVariables)), trackVarsArray)
 
 	p.Unpin()
 
