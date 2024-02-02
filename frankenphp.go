@@ -546,10 +546,12 @@ func go_register_variables(rh C.uintptr_t, trackVarsArray *C.zval) {
 
 	p := &runtime.Pinner{}
 
-	dynamicVariables := make([]C.php_variable, len(fc.env)+len(r.Header))
+	phpVariableSize := unsafe.Sizeof(C.php_variable{})
+	dynamicVariablesLen := C.size_t(len(fc.env) + len(r.Header))
+	dynamicVariables := (*C.php_variable)(C.malloc(dynamicVariablesLen * C.size_t(phpVariableSize)))
+	currentDynamicVariable := dynamicVariables
 
 	// Add all HTTP headers to env variables
-	var i int
 	for field, val := range r.Header {
 		k := "HTTP_" + headerNameReplacer.Replace(strings.ToUpper(field)) + "\x00"
 		if _, ok := fc.env[k]; ok {
@@ -564,11 +566,11 @@ func go_register_variables(rh C.uintptr_t, trackVarsArray *C.zval) {
 		p.Pin(kData)
 		p.Pin(vData)
 
-		dynamicVariables[i]._var = (*C.char)(unsafe.Pointer(kData))
-		dynamicVariables[i].data_len = C.size_t(len(v))
-		dynamicVariables[i].data = (*C.char)(unsafe.Pointer(vData))
+		currentDynamicVariable._var = (*C.char)(unsafe.Pointer(kData))
+		currentDynamicVariable.data_len = C.size_t(len(v))
+		currentDynamicVariable.data = (*C.char)(unsafe.Pointer(vData))
 
-		i++
+		currentDynamicVariable = (*C.php_variable)(unsafe.Add(unsafe.Pointer(currentDynamicVariable), phpVariableSize))
 	}
 
 	for k, v := range fc.env {
@@ -582,19 +584,15 @@ func go_register_variables(rh C.uintptr_t, trackVarsArray *C.zval) {
 		p.Pin(kData)
 		p.Pin(vData)
 
-		dynamicVariables[i]._var = (*C.char)(unsafe.Pointer(kData))
-		dynamicVariables[i].data_len = C.size_t(len(v))
-		dynamicVariables[i].data = (*C.char)(unsafe.Pointer(vData))
+		currentDynamicVariable._var = (*C.char)(unsafe.Pointer(kData))
+		currentDynamicVariable.data_len = C.size_t(len(v))
+		currentDynamicVariable.data = (*C.char)(unsafe.Pointer(vData))
 
-		i++
+		currentDynamicVariable = (*C.php_variable)(unsafe.Add(unsafe.Pointer(currentDynamicVariable), phpVariableSize))
 	}
 
 	knownVariables := computeKnownVariables(r, p)
-
-	dynamicVariablesData := unsafe.SliceData(dynamicVariables)
-	p.Pin(dynamicVariablesData)
-
-	C.frankenphp_register_bulk_variables(&knownVariables[0], dynamicVariablesData, C.size_t(len(dynamicVariables)), trackVarsArray)
+	C.frankenphp_register_bulk_variables(&knownVariables[0], dynamicVariables, dynamicVariablesLen, trackVarsArray)
 
 	p.Unpin()
 
