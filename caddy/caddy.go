@@ -203,7 +203,7 @@ type FrankenPHPModule struct {
 	// SplitPath sets the substrings for splitting the URI into two parts. The first matching substring will be used to split the "path info" from the path. The first piece is suffixed with the matching substring and will be assumed as the actual resource (CGI script) name. The second piece will be set to PATH_INFO for the CGI script to use. Default: `.php`.
 	SplitPath []string `json:"split_path,omitempty"`
 	// ResolveRootSymlink enables resolving the `root` directory to its actual value by evaluating a symbolic link, if one exists.
-	ResolveRootSymlink bool `json:"resolve_root_symlink,omitempty"`
+	ResolveRootSymlink *bool `json:"resolve_root_symlink,omitempty"`
 	// Env sets an extra environment variable to the given value. Can be specified more than once for multiple environment variables.
 	Env    map[string]string `json:"env,omitempty"`
 	logger *zap.Logger
@@ -225,8 +225,9 @@ func (f *FrankenPHPModule) Provision(ctx caddy.Context) error {
 		if frankenphp.EmbeddedAppPath == "" {
 			f.Root = "{http.vars.root}"
 		} else {
+			rrs := false
 			f.Root = filepath.Join(frankenphp.EmbeddedAppPath, defaultDocumentRoot)
-			f.ResolveRootSymlink = false
+			f.ResolveRootSymlink = &rrs
 		}
 	} else {
 		if frankenphp.EmbeddedAppPath != "" && filepath.IsLocal(f.Root) {
@@ -236,6 +237,11 @@ func (f *FrankenPHPModule) Provision(ctx caddy.Context) error {
 
 	if len(f.SplitPath) == 0 {
 		f.SplitPath = []string{".php"}
+	}
+
+	if f.ResolveRootSymlink == nil {
+		rrs := true
+		f.ResolveRootSymlink = &rrs
 	}
 
 	return nil
@@ -257,7 +263,7 @@ func (f FrankenPHPModule) ServeHTTP(w http.ResponseWriter, r *http.Request, _ ca
 
 	fr, err := frankenphp.NewRequestWithContext(
 		r,
-		frankenphp.WithRequestDocumentRoot(documentRoot, f.ResolveRootSymlink),
+		frankenphp.WithRequestDocumentRoot(documentRoot, *f.ResolveRootSymlink),
 		frankenphp.WithRequestSplitPath(f.SplitPath),
 		frankenphp.WithRequestEnv(env),
 	)
@@ -298,9 +304,18 @@ func (f *FrankenPHPModule) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 
 			case "resolve_root_symlink":
 				if d.NextArg() {
+					if v, err := strconv.ParseBool(d.Val()); err == nil {
+						f.ResolveRootSymlink = &v
+
+						if d.NextArg() {
+							return d.ArgErr()
+						}
+					}
+
 					return d.ArgErr()
 				}
-				f.ResolveRootSymlink = true
+				rrs := true
+				f.ResolveRootSymlink = &rrs
 			}
 		}
 	}
@@ -444,7 +459,8 @@ func parsePhpServer(h httpcaddyfile.Helper) ([]httpcaddyfile.ConfigValue, error)
 		if phpsrv.Root == "" {
 			phpsrv.Root = filepath.Join(frankenphp.EmbeddedAppPath, defaultDocumentRoot)
 			fsrv.Root = phpsrv.Root
-			phpsrv.ResolveRootSymlink = false
+			rrs := false
+			phpsrv.ResolveRootSymlink = &rrs
 		} else if filepath.IsLocal(fsrv.Root) {
 			phpsrv.Root = filepath.Join(frankenphp.EmbeddedAppPath, phpsrv.Root)
 			fsrv.Root = phpsrv.Root
