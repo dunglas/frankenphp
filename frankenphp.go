@@ -564,11 +564,10 @@ func go_register_variables(rh C.uintptr_t, trackVarsArray *C.zval) {
 		p.Pin(kData)
 		p.Pin(vData)
 
-		dynamicVariables[i] = C.php_variable{
-			(*C.char)(unsafe.Pointer(kData)),
-			C.size_t(len(v)),
-			(*C.char)(unsafe.Pointer(vData)),
-		}
+		dynamicVariables[i]._var = (*C.char)(unsafe.Pointer(kData))
+		dynamicVariables[i].data_len = C.size_t(len(v))
+		dynamicVariables[i].data = (*C.char)(unsafe.Pointer(vData))
+
 		i++
 	}
 
@@ -583,11 +582,10 @@ func go_register_variables(rh C.uintptr_t, trackVarsArray *C.zval) {
 		p.Pin(kData)
 		p.Pin(vData)
 
-		dynamicVariables[i] = C.php_variable{
-			(*C.char)(unsafe.Pointer(kData)),
-			C.size_t(len(v)),
-			(*C.char)(unsafe.Pointer(vData)),
-		}
+		dynamicVariables[i]._var = (*C.char)(unsafe.Pointer(kData))
+		dynamicVariables[i].data_len = C.size_t(len(v))
+		dynamicVariables[i].data = (*C.char)(unsafe.Pointer(vData))
+
 		i++
 	}
 

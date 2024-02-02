@@ -66,7 +66,8 @@ func setKnownServerVariable(p *runtime.Pinner, cArr *[27]C.go_string, serverKey 
 
 	valData := unsafe.StringData(val)
 	p.Pin(valData)
-	cArr[serverKey] = C.go_string{C.size_t(len(val)), (*C.char)(unsafe.Pointer(valData))}
+	cArr[serverKey].len = C.size_t(len(val))
+	cArr[serverKey].data = (*C.char)(unsafe.Pointer(valData))
 }
 
 // TODO: remove this when upgrading to Go 1.22
