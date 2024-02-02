@@ -114,7 +114,7 @@ jobs:
             *.cache-from=type=gha,scope=${{ needs.prepare.outputs.ref || github.ref }}-static-builder
             *.cache-from=type=gha,scope=refs/heads/main-static-builder
             *.cache-to=type=gha,scope=${{ needs.prepare.outputs.ref || github.ref }}-static-builder,ignore-error=true
-            ${{ fromJson(needs.prepare.outputs.push) && '*.output=type=image,name=dunglas/frankenphp,push-by-digest=true,name-canonical=true,push=true' || '' }}
+            ${{ fromJson(needs.prepare.outputs.push) && format('*.output=type=image,name={0},push-by-digest=true,name-canonical=true,push=true', env.IMAGE_NAME) || '' }}
         env:
           SHA: ${{ github.sha }}
           VERSION: ${{ (github.ref_type == 'tag' && github.ref_name) || needs.prepare.outputs.ref || github.sha}}
@@ -189,7 +189,7 @@ jobs:
         run: |
           # shellcheck disable=SC2046,SC2086
           docker buildx imagetools create $(jq -cr '.target."static-builder".tags | map("-t " + .) | join(" ")' <<< "${METADATA}") \
-            $(printf 'dunglas/frankenphp@sha256:%s ' *)
+            $(printf "${IMAGE_NAME}@sha256:%s " *)
         env:
           METADATA: ${{ needs.prepare.outputs.metadata }}
       -
