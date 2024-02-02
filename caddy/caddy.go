@@ -25,7 +25,7 @@ const defaultDocumentRoot = "public"
 
 func init() {
 	caddy.RegisterModule(FrankenPHPApp{})
-	caddy.RegisterModule(FrankenPHPModule{})
+	caddy.RegisterModule(FrankenPHPModule{ResolveRootSymlink: true})
 	httpcaddyfile.RegisterGlobalOption("frankenphp", parseGlobalOption)
 	httpcaddyfile.RegisterHandlerDirective("php", parseCaddyfile)
 	httpcaddyfile.RegisterDirective("php_server", parsePhpServer)
@@ -298,6 +298,14 @@ func (f *FrankenPHPModule) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 
 			case "resolve_root_symlink":
 				if d.NextArg() {
+					if v, err := strconv.ParseBool(d.Val()); err == nil {
+						f.ResolveRootSymlink = v
+
+						if d.NextArg() {
+							return d.ArgErr()
+						}
+					}
+
 					return d.ArgErr()
 				}
 				f.ResolveRootSymlink = true
