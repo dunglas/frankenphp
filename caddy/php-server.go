@@ -125,10 +125,11 @@ func cmdPHPServer(fs caddycmd.Flags) (int, error) {
 	extensions := []string{"php"}
 	tryFiles := []string{"{http.request.uri.path}", "{http.request.uri.path}/" + indexFile, indexFile}
 
+	rrs := true
 	phpHandler := FrankenPHPModule{
 		Root:               root,
 		SplitPath:          extensions,
-		ResolveRootSymlink: true,
+		ResolveRootSymlink: &rrs,
 	}
 
 	// route to redirect to canonical path if index PHP file
