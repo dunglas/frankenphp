@@ -58,7 +58,30 @@ const payload = 'foo\n'.repeat(1000)
 // about authoring k6 scripts.
 //
 export default function () {
-  const res = http.post('http://localhost/echo.php', payload)
+  const params = {
+    headers: {
+      Accept:
+        'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+      //'Accept-Encoding': 'br',
+      'Accept-Language': 'fr,fr-FR;q=0.8,en-US;q=0.5,en;q=0.3',
+      'Cache-Control': 'no-cache',
+      Connection: 'keep-alive',
+      Cookie:
+        'user_session=myrandomuuid; __Host-user_session_same_site=myotherrandomuuid; dotcom_user=dunglas; logged_in=yes; _foo=barbarbarbarbarbar; _device_id=anotherrandomuuid; color_mode=foobarfoobarfoobarfoobarfoobarfoobarfoobarfoobarfoobarfoobarfoobarfoobarfoobarfoobarfoobarfoobarfoobarfoobarfoobarfoobarfoobarfoobarfoobarfoobar; preferred_color_mode=light; tz=Europe%2FParis; has_recent_activity=1',
+      DNT: '1',
+      Host: 'example.com',
+      Pragma: 'no-cache',
+      'Sec-Fetch-Dest': 'document',
+      'Sec-Fetch-Mode': 'navigate',
+      'Sec-Fetch-Site': 'cross-site',
+      'Sec-GPC': '1',
+      'Upgrade-Insecure-Requests': '1',
+      'User-Agent':
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:122.0) Gecko/20100101 Firefox/122.0'
+    }
+  }
+
+  const res = http.post('http://localhost/echo.php', payload, params)
   check(res, {
     'is status 200': (r) => r.status === 200,
     'is echoed': (r) => r.body === payload
