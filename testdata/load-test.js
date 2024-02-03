@@ -62,7 +62,7 @@ export default function () {
     headers: {
       Accept:
         'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
-      //'Accept-Encoding': 'br',
+      // 'Accept-Encoding': 'br',
       'Accept-Language': 'fr,fr-FR;q=0.8,en-US;q=0.5,en;q=0.3',
       'Cache-Control': 'no-cache',
       Connection: 'keep-alive',
