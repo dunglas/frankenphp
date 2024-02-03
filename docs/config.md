@@ -6,15 +6,16 @@ In the Docker image, the `Caddyfile` is located at `/etc/caddy/Caddyfile`.
 
 You can also configure PHP using `php.ini` as usual.
 
-In the Docker image, the `php.ini` file is not present, you can create it or `COPY` manually.
-
-If you copy `php.ini` from `$PHP_INI_DIR/php.ini-production` or `$PHP_INI_DIR/php.ini-development`, you also must set the variable `variables_order = "EGPCS"`, because the default value for `variables_order` is `"EGPCS"`, but in `php.ini-production` and `php.ini-development` we have `"GPCS"`. And in this case, `worker` does not work properly.
+In the Docker image, the `php.ini` file is not present, you can create it or `COPY` manually:
 
 ```dockerfile
 FROM dunglas/frankenphp
 
-RUN cp $PHP_INI_DIR/php.ini-production $PHP_INI_DIR/php.ini; \
-    sed -i 's/variables_order = "GPCS"/variables_order = "EGPCS"/' $PHP_INI_DIR/php.ini;
+# Developement:
+RUN cp $PHP_INI_DIR/php.ini-development $PHP_INI_DIR/php.ini
+
+# Or production:
+RUN cp $PHP_INI_DIR/php.ini-production $PHP_INI_DIR/php.ini
 ```
 
 ## Caddyfile Config
