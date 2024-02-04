@@ -47,8 +47,3 @@ tags=$(git tag --list --sort=-version:refname 'v*')
 previous_tag=$(awk 'NR==2 {print;exit}' <<< "${tags}")
 
 gh release create --draft --generate-notes --latest --notes-start-tag "${previous_tag}" --verify-tag "v$1"
-
-if [[ "$(uname -s)" = "Darwin" ]]; then
-    rm -Rf dist/*
-    FRANKENPHP_VERSION=$1 RELEASE=1 ./build-static.sh
-fi
