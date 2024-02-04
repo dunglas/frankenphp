@@ -214,8 +214,12 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   build-mac:
-    name: Build macOS x86_64 binaries
-    runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: ['arm64', 'x86_64']
+    name: Build macOS ${{ matrix.platform }} binaries
+    runs-on: ${{ matrix.platform == 'arm64' && 'macos-14' || 'macos-13' }}
     needs: [ prepare ]
     env:
       HOMEBREW_NO_AUTO_UPDATE: 1
@@ -254,5 +258,5 @@ jobs:
         if: github.ref_type == 'branch'
         uses: actions/upload-artifact@v3
         with:
-          name: frankenphp-mac-x86_64
-          path: dist/frankenphp-mac-x86_64
+          name: frankenphp-mac-${{ matrix.platform }}
+          path: dist/frankenphp-mac-${{ matrix.platform }}
