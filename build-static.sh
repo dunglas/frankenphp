@@ -9,8 +9,10 @@ fi
 
 arch="$(uname -m)"
 os="$(uname -s | tr '[:upper:]' '[:lower:]')"
+md5binary="md5sum"
 if [ "${os}" = "darwin" ]; then
     os="mac"
+    md5binary="md5 -q"
 fi
 
 if [ -z "${PHP_EXTENSIONS}" ]; then
@@ -123,7 +125,7 @@ cd ../..
 # Embed PHP app, if any
 if [ -n "${EMBED}" ] && [ -d "${EMBED}" ]; then
     tar -cf app.tar -C "${EMBED}" .
-    md5 -q app.tar > app_checksum.txt
+    ${md5binary} app.tar > app_checksum.txt
 fi
 
 if [ "${os}" = "linux" ]; then
