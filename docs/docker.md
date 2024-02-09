@@ -136,21 +136,22 @@ Here is a sample `Dockerfile` doing this:
 FROM dunglas/frankenphp
 
 ARG USER=www-data
-USER ${USER}
 
-RUN adduser -D ${USER} \
-	# Caddy requires an additional capability to bind to port 80 and 443
-	setcap CAP_NET_BIND_SERVICE=+eip /usr/local/bin/frankenphp
-	# Caddy requires write access to /data/caddy and /config/caddy
-	RUN chown -R ${USER}:${USER} /data/caddy && chown -R ${USER}:${USER} /config/caddy
+RUN adduser -D ${USER}; # Use adduser -D ${USER} for alpine based distros \
+  # Add additional capability to bind to port 80 and 443
+  setcap CAP_NET_BIND_SERVICE=+eip /usr/local/bin/frankenphp; \
+  # Give write access to /data/caddy and /config/caddy
+  chown -R ${USER}:${USER} /data/caddy && chown -R ${USER}:${USER} /config/caddy;
+
+USER ${USER}
 ```
 
 ## Updates
 
 The Docker images are built:
 
-* when a new release is tagged
-* daily at 4am UTC, if new versions of the official PHP images are available
+- when a new release is tagged
+- daily at 4am UTC, if new versions of the official PHP images are available
 
 ## Development Versions
 
