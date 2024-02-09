@@ -137,7 +137,8 @@ FROM dunglas/frankenphp
 
 ARG USER=www-data
 
-RUN adduser -D ${USER}; # Use adduser -D ${USER} for alpine based distros \
+RUN useradd -D ${USER}; \
+  # Use "adduser -D ${USER}" for alpine based distros
   # Add additional capability to bind to port 80 and 443
   setcap CAP_NET_BIND_SERVICE=+eip /usr/local/bin/frankenphp; \
   # Give write access to /data/caddy and /config/caddy
