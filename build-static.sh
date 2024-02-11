@@ -80,7 +80,7 @@ else
             packages="${packages} gh"
         fi
 
-        if ${packages}; then
+        if [ -n "${packages}" ]; then
             # shellcheck disable=SC2086
             brew install --formula --quiet ${packages}
         fi
