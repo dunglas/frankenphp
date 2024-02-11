@@ -11,7 +11,7 @@ variable "PHP_VERSION" {
 }
 
 variable "GO_VERSION" {
-    default = "1.21"
+    default = "1.22"
 }
 
 variable "SHA" {}

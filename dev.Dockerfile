@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-FROM golang:1.21
+FROM golang:1.22
 
 ENV CFLAGS="-ggdb3"
 ENV PHPIZE_DEPS \
