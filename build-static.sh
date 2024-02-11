@@ -52,7 +52,11 @@ elif [ -d ".git/" ]; then
     fi
 fi
 
-bin="frankenphp-${os}-${arch}"
+if [ -z "${BIN_NAME}" ]; then
+  BIN_NAME="frankenphp-${os}-${arch}"
+fi
+
+bin="${BIN_NAME}"
 
 if [ -n "${CLEAN}" ]; then
     rm -Rf dist/
