@@ -136,13 +136,16 @@ Here is a sample `Dockerfile` doing this:
 FROM dunglas/frankenphp
 
 ARG USER=www-data
-USER ${USER}
 
-RUN adduser -D ${USER} \
-	# Caddy requires an additional capability to bind to port 80 and 443
-	setcap CAP_NET_BIND_SERVICE=+eip /usr/local/bin/frankenphp
-	# Caddy requires write access to /data/caddy and /config/caddy
-	RUN chown -R ${USER}:${USER} /data/caddy && chown -R ${USER}:${USER} /config/caddy
+RUN \
+	# Use "adduser -D ${USER}" for alpine based distros
+	useradd -D ${USER}; \
+	# Add additional capability to bind to port 80 and 443
+	setcap CAP_NET_BIND_SERVICE=+eip /usr/local/bin/frankenphp; \
+	# Give write access to /data/caddy and /config/caddy
+	chown -R ${USER}:${USER} /data/caddy && chown -R ${USER}:${USER} /config/caddy;
+
+USER ${USER}
 ```
 
 ## Updates
