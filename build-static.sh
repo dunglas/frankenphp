@@ -145,6 +145,10 @@ if [ -d "${EMBED}" ]; then
     truncate -s 0 app_checksum.txt
 fi
 
+if type "upx" > /dev/null; then
+    upx --best "dist/${bin}"
+fi 
+
 "dist/${bin}" version
 
 if [ -n "${RELEASE}" ]; then

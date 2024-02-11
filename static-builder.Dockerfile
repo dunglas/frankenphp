@@ -33,6 +33,7 @@ RUN apk update; \
 		bison \
 		build-base \
 		cmake \
+		composer \
 		curl \
 		file \
 		flex \
@@ -47,11 +48,6 @@ RUN apk update; \
 		m4 \
 		make \
 		pkgconfig \
-		wget \
-		xz ; \
-	apk add --no-cache \
-		--repository=https://dl-cdn.alpinelinux.org/alpine/edge/main \
-		--repository=https://dl-cdn.alpinelinux.org/alpine/edge/community \
 		php83 \
 		php83-common \
 		php83-ctype \
@@ -66,14 +62,14 @@ RUN apk update; \
 		php83-sodium \
 		php83-tokenizer \
 		php83-xml \
-		php83-xmlwriter; \
+		php83-xmlwriter \
+		upx \
+		wget \
+		xz ; \
 	ln -sf /usr/bin/php83 /usr/bin/php
 
 # https://getcomposer.org/doc/03-cli.md#composer-allow-superuser
 ENV COMPOSER_ALLOW_SUPERUSER=1
-ENV PATH="${PATH}:/root/.composer/vendor/bin"
-
-COPY --from=composer/composer:2-bin --link /composer /usr/bin/composer
 
 WORKDIR /go/src/app
 COPY go.mod go.sum ./
