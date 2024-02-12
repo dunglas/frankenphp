@@ -66,6 +66,6 @@ jobs:
         run: ./reload_test.sh
       -
         name: Lint Go code
-        uses: golangci/golangci-lint-action@v3
+        uses: golangci/golangci-lint-action@v4
         with:
           version: latest
