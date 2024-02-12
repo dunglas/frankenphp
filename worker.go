@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"path/filepath"
 	"runtime/cgo"
-	"strings"
 	"sync"
 
 	"go.uber.org/zap"
@@ -30,12 +29,6 @@ func initWorkers(opt []workerOpt) error {
 
 	return nil
 }
-
-// TODO: remove this when upgrading to Go 1.22
-var (
-	frankenphpWorkerKey   = strings.Clone("FRANKENPHP_WORKER\x00")
-	frankenphpWorkerValue = strings.Clone("1\x00")
-)
 
 func startWorkers(fileName string, nbWorkers int, env PreparedEnv) error {
 	absFileName, err := filepath.Abs(fileName)
@@ -60,7 +53,7 @@ func startWorkers(fileName string, nbWorkers int, env PreparedEnv) error {
 		env = make(PreparedEnv, 1)
 	}
 
-	env[frankenphpWorkerKey] = frankenphpWorkerValue
+	env["FRANKENPHP_WORKER\x00"] = "1\x00"
 
 	l := getLogger()
 	for i := 0; i < nbWorkers; i++ {

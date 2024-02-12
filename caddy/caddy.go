@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"path/filepath"
 	"strconv"
-	"strings"
 
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig"
@@ -248,8 +247,6 @@ func (f *FrankenPHPModule) Provision(ctx caddy.Context) error {
 	return nil
 }
 
-var requestURIkey = strings.Clone("REQUEST_URI\x00")
-
 // ServeHTTP implements caddyhttp.MiddlewareHandler.
 // TODO: Expose TLS versions as env vars, as Apache's mod_ssl: https://github.com/caddyserver/caddy/blob/master/modules/caddyhttp/reverseproxy/fastcgi/fastcgi.go#L298
 func (f FrankenPHPModule) ServeHTTP(w http.ResponseWriter, r *http.Request, _ caddyhttp.Handler) error {
@@ -259,7 +256,7 @@ func (f FrankenPHPModule) ServeHTTP(w http.ResponseWriter, r *http.Request, _ ca
 	documentRoot := repl.ReplaceKnown(f.Root, "")
 
 	env := make(map[string]string, len(f.Env)+1)
-	env[requestURIkey] = origReq.URL.RequestURI()
+	env["REQUEST_URI\x00"] = origReq.URL.RequestURI()
 	for k, v := range f.Env {
 		env[k] = repl.ReplaceKnown(v, "")
 	}

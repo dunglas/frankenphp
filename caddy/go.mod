@@ -1,8 +1,6 @@
 module github.com/dunglas/frankenphp/caddy
 
-go 1.21
-
-toolchain go1.22.0
+go 1.22
 
 replace github.com/dunglas/frankenphp => ../
 

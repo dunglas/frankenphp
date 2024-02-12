@@ -59,7 +59,6 @@ var knownServerKeys = map[string]struct{}{
 }
 
 func setKnownServerVariable(p *runtime.Pinner, cArr *[27]C.go_string, serverKey serverKey, val string) {
-	// TODO: remove this guard clause when upgrading to Go 1.22
 	if val == "" {
 		return
 	}
@@ -69,20 +68,6 @@ func setKnownServerVariable(p *runtime.Pinner, cArr *[27]C.go_string, serverKey 
 	cArr[serverKey].len = C.size_t(len(val))
 	cArr[serverKey].data = (*C.char)(unsafe.Pointer(valData))
 }
-
-// TODO: remove this when upgrading to Go 1.22
-var (
-	gatewayInterfaceValue = strings.Clone("CGI/1.1")
-	serverSoftwareValue   = strings.Clone("FrankenPHP")
-	httpValue             = strings.Clone("http")
-	httpsValue            = strings.Clone("https")
-	httpPortValue         = strings.Clone("80")
-	httpsPortValue        = strings.Clone("443")
-	onValue               = strings.Clone("on")
-	http10Value           = strings.Clone("HTTP/1.0")
-	http11Value           = strings.Clone("HTTP/1.1")
-	http2Value            = strings.Clone("HTTP/2")
-)
 
 // computeKnownVariables returns a set of CGI environment variables for the request.
 //
@@ -111,7 +96,7 @@ func computeKnownVariables(request *http.Request, p *runtime.Pinner) (cArr [27]C
 	if raOK {
 		setKnownServerVariable(p, &cArr, remoteAddr, ra)
 	} else {
-		setKnownServerVariable(p, &cArr, remoteAddr, strings.Clone(ip))
+		setKnownServerVariable(p, &cArr, remoteAddr, ip)
 	}
 
 	if rh, ok := fc.env["REMOTE_HOST\x00"]; ok {
@@ -124,7 +109,7 @@ func computeKnownVariables(request *http.Request, p *runtime.Pinner) (cArr [27]C
 		}
 	}
 
-	setKnownServerVariable(p, &cArr, remotePort, strings.Clone(port))
+	setKnownServerVariable(p, &cArr, remotePort, port)
 	setKnownServerVariable(p, &cArr, documentRoot, fc.documentRoot)
 	setKnownServerVariable(p, &cArr, pathInfo, fc.pathInfo)
 	setKnownServerVariable(p, &cArr, phpSelf, request.URL.Path)
@@ -134,14 +119,14 @@ func computeKnownVariables(request *http.Request, p *runtime.Pinner) (cArr [27]C
 
 	var rs string
 	if request.TLS == nil {
-		rs = httpValue
+		rs = "http"
 	} else {
-		rs = httpsValue
+		rs = "https"
 
 		if h, ok := fc.env["HTTPS\x00"]; ok {
 			setKnownServerVariable(p, &cArr, https, h)
 		} else {
-			setKnownServerVariable(p, &cArr, https, onValue)
+			setKnownServerVariable(p, &cArr, https, "on")
 		}
 
 		// and pass the protocol details in a manner compatible with apache's mod_ssl
@@ -170,9 +155,9 @@ func computeKnownVariables(request *http.Request, p *runtime.Pinner) (cArr [27]C
 		// https://tools.ietf.org/html/rfc3875#section-4.1.15
 		switch rs {
 		case "https":
-			reqPort = httpsPortValue
+			reqPort = "443"
 		case "http":
-			reqPort = httpPortValue
+			reqPort = "80"
 		}
 	}
 
@@ -186,19 +171,18 @@ func computeKnownVariables(request *http.Request, p *runtime.Pinner) (cArr [27]C
 	// the parent environment from interfering.
 
 	// These values can not be override
-	proto := http10Value
+	var proto string
 	switch request.Proto {
-	case http2Value:
-		proto = http2Value
-
-	case http11Value:
-		proto = http11Value
+	case "HTTP/1.1", "HTTP/2":
+		proto = request.Proto
+	default:
+		proto = "HTTP/1.0"
 	}
 
 	setKnownServerVariable(p, &cArr, contentLength, request.Header.Get("Content-Length"))
-	setKnownServerVariable(p, &cArr, gatewayInterface, gatewayInterfaceValue)
+	setKnownServerVariable(p, &cArr, gatewayInterface, "CGI/1.1")
 	setKnownServerVariable(p, &cArr, serverProtocol, proto)
-	setKnownServerVariable(p, &cArr, serverSoftware, serverSoftwareValue)
+	setKnownServerVariable(p, &cArr, serverSoftware, "FrankenPHP")
 	setKnownServerVariable(p, &cArr, httpHost, request.Host) // added here, since not always part of headers
 
 	return
