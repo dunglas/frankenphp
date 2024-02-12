@@ -665,6 +665,7 @@ func BenchmarkHelloWorld(b *testing.B) {
 	req := httptest.NewRequest("GET", "http://example.com/index.php", nil)
 	w := httptest.NewRecorder()
 
+	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		handler(w, req)
 	}
@@ -730,6 +731,7 @@ func BenchmarkEcho(b *testing.B) {
 	req := httptest.NewRequest("POST", "http://example.com/echo.php", r)
 	w := httptest.NewRecorder()
 
+	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		r.Reset(body)
 		handler(w, req)
@@ -798,6 +800,7 @@ func BenchmarkServerSuperGlobal(b *testing.B) {
 	req := httptest.NewRequest("GET", "http://example.com/server-variable.php", nil)
 	w := httptest.NewRecorder()
 
+	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		handler(w, req)
 	}
