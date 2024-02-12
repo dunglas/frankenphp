@@ -47,6 +47,7 @@ import (
 	"sync"
 	"unsafe"
 
+	"github.com/maypok86/otter"
 	"go.uber.org/zap"
 	// debug on Linux
 	//_ "github.com/ianlancetaylor/cgosymbolizer"
@@ -539,6 +540,10 @@ func go_ub_write(rh C.uintptr_t, cBuf *C.char, length C.int) (C.size_t, C.bool) 
 	return C.size_t(i), C.bool(clientHasClosed(r))
 }
 
+// There are aroung 60 common request headers according to https://en.wikipedia.org/wiki/List_of_HTTP_header_fields#Request_fields
+// Give some space for custom headers
+var headersKeyCache, _ = otter.MustBuilder[string, string](256).Build()
+
 //export go_register_variables
 func go_register_variables(rh C.uintptr_t, trackVarsArray *C.zval) {
 	r := cgo.Handle(rh).Value().(*http.Request)
@@ -553,7 +558,12 @@ func go_register_variables(rh C.uintptr_t, trackVarsArray *C.zval) {
 
 	// Add all HTTP headers to env variables
 	for field, val := range r.Header {
-		k := "HTTP_" + headerNameReplacer.Replace(strings.ToUpper(field)) + "\x00"
+		k, ok := headersKeyCache.Get(field)
+		if !ok {
+			k = "HTTP_" + headerNameReplacer.Replace(strings.ToUpper(field)) + "\x00"
+			headersKeyCache.SetIfAbsent(field, k)
+		}
+
 		if _, ok := fc.env[k]; ok {
 			continue
 		}
