@@ -581,8 +581,10 @@ static void frankenphp_register_known_variable(const char *key, go_string value,
   }
 
   size_t new_val_len;
-  if (sapi_module.input_filter(PARSE_SERVER, key, &value.data, value.len,
-                               &new_val_len)) {
+  // FIXME: data must not be modified, make a copy if the default filter isn't
+  // used
+  if (sapi_module.input_filter(PARSE_SERVER, key, (char **)&value.data,
+                               value.len, &new_val_len)) {
     php_register_variable_safe(key, value.data, new_val_len, track_vars_array);
   }
 }
@@ -595,8 +597,10 @@ frankenphp_register_variable_from_request_info(const char *key, char *value,
   }
 
   size_t new_val_len;
-  if (sapi_module.input_filter(PARSE_SERVER, key, &value, strlen(value),
-                               &new_val_len)) {
+  // FIXME: data must not be modified, make a copy if the default filter isn't
+  // used
+  if (sapi_module.input_filter(PARSE_SERVER, key, (char **)&value,
+                               strlen(value), &new_val_len)) {
     php_register_variable_safe(key, value, new_val_len, track_vars_array);
   }
 }
@@ -669,7 +673,7 @@ void frankenphp_register_bulk_variables(go_string known_variables[27],
     // FIXME: data must not be modified, make a copy if the default filter isn't
     // used
     if (sapi_module.input_filter(PARSE_SERVER, dynamic_variables[i].var,
-                                 &dynamic_variables[i].data,
+                                 (char **)&dynamic_variables[i].data,
                                  dynamic_variables[i].data_len, &new_val_len)) {
       php_register_variable_safe(dynamic_variables[i].var,
                                  dynamic_variables[i].data, new_val_len,
