@@ -540,9 +540,19 @@ func go_ub_write(rh C.uintptr_t, cBuf *C.char, length C.int) (C.size_t, C.bool) 
 	return C.size_t(i), C.bool(clientHasClosed(r))
 }
 
+func createHeaderKeyCache() otter.Cache[string, string] {
+	c, err := otter.MustBuilder[string, string](256).Build()
+	if err != nil {
+		panic(err)
+	}
+
+	return c
+}
+
+var headerKeyCache = createHeaderKeyCache()
+
 // There are aroung 60 common request headers according to https://en.wikipedia.org/wiki/List_of_HTTP_header_fields#Request_fields
 // Give some space for custom headers
-var headersKeyCache, _ = otter.MustBuilder[string, string](256).Build()
 
 //export go_register_variables
 func go_register_variables(rh C.uintptr_t, trackVarsArray *C.zval) {
@@ -558,10 +568,10 @@ func go_register_variables(rh C.uintptr_t, trackVarsArray *C.zval) {
 
 	// Add all HTTP headers to env variables
 	for field, val := range r.Header {
-		k, ok := headersKeyCache.Get(field)
+		k, ok := headerKeyCache.Get(field)
 		if !ok {
 			k = "HTTP_" + headerNameReplacer.Replace(strings.ToUpper(field)) + "\x00"
-			headersKeyCache.SetIfAbsent(field, k)
+			headerKeyCache.SetIfAbsent(field, k)
 		}
 
 		if _, ok := fc.env[k]; ok {
