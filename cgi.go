@@ -171,17 +171,9 @@ func computeKnownVariables(request *http.Request, p *runtime.Pinner) (cArr [27]C
 	// the parent environment from interfering.
 
 	// These values can not be override
-	var proto string
-	switch request.Proto {
-	case "HTTP/1.1", "HTTP/2":
-		proto = request.Proto
-	default:
-		proto = "HTTP/1.0"
-	}
-
 	setKnownServerVariable(p, &cArr, contentLength, request.Header.Get("Content-Length"))
 	setKnownServerVariable(p, &cArr, gatewayInterface, "CGI/1.1")
-	setKnownServerVariable(p, &cArr, serverProtocol, proto)
+	setKnownServerVariable(p, &cArr, serverProtocol, request.Proto)
 	setKnownServerVariable(p, &cArr, serverSoftware, "FrankenPHP")
 	setKnownServerVariable(p, &cArr, httpHost, request.Host) // added here, since not always part of headers
 

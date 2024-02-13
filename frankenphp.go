@@ -561,9 +561,8 @@ func go_register_variables(rh C.uintptr_t, trackVarsArray *C.zval) {
 
 	p := &runtime.Pinner{}
 
-	phpVariableSize := unsafe.Sizeof(C.php_variable{})
 	dynamicVariablesLen := C.size_t(len(fc.env) + len(r.Header))
-	dynamicVariables := (*C.php_variable)(C.malloc(dynamicVariablesLen * C.size_t(phpVariableSize)))
+	dynamicVariables := (*C.php_variable)(C.malloc(dynamicVariablesLen * C.sizeof_php_variable))
 	currentDynamicVariable := dynamicVariables
 
 	// Add all HTTP headers to env variables
@@ -590,7 +589,7 @@ func go_register_variables(rh C.uintptr_t, trackVarsArray *C.zval) {
 		currentDynamicVariable.data_len = C.size_t(len(v))
 		currentDynamicVariable.data = (*C.char)(unsafe.Pointer(vData))
 
-		currentDynamicVariable = (*C.php_variable)(unsafe.Add(unsafe.Pointer(currentDynamicVariable), phpVariableSize))
+		currentDynamicVariable = (*C.php_variable)(unsafe.Add(unsafe.Pointer(currentDynamicVariable), C.sizeof_php_variable))
 	}
 
 	for k, v := range fc.env {
@@ -608,7 +607,7 @@ func go_register_variables(rh C.uintptr_t, trackVarsArray *C.zval) {
 		currentDynamicVariable.data_len = C.size_t(len(v))
 		currentDynamicVariable.data = (*C.char)(unsafe.Pointer(vData))
 
-		currentDynamicVariable = (*C.php_variable)(unsafe.Add(unsafe.Pointer(currentDynamicVariable), phpVariableSize))
+		currentDynamicVariable = (*C.php_variable)(unsafe.Add(unsafe.Pointer(currentDynamicVariable), C.sizeof_php_variable))
 	}
 
 	knownVariables := computeKnownVariables(r, p)
