@@ -17,7 +17,7 @@ typedef struct go_string {
 } go_string;
 
 typedef struct php_variable {
-  const char *var;
+  char *var;
   size_t data_len;
   char *data;
 } php_variable;
