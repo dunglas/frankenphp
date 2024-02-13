@@ -433,6 +433,7 @@ static uintptr_t frankenphp_request_shutdown() {
 
   free(ctx);
   SG(server_context) = NULL;
+  ctx = NULL;
 
 #if defined(ZTS)
   ts_free_thread();
@@ -675,6 +676,7 @@ void frankenphp_register_bulk_variables(go_string known_variables[27],
   }
 
   free(dynamic_variables);
+  dynamic_variables = NULL;
 }
 
 static void frankenphp_register_variables(zval *track_vars_array) {
@@ -752,6 +754,7 @@ static void *manager_thread(void *arg) {
 
   threadpool thpool = thpool_init(*((int *)arg));
   free(arg);
+  arg = NULL;
 
   uintptr_t rh;
   while ((rh = go_fetch_request())) {
@@ -805,6 +808,7 @@ int frankenphp_request_startup() {
   frankenphp_server_context *ctx = SG(server_context);
   SG(server_context) = NULL;
   free(ctx);
+  ctx = NULL;
 
   php_request_shutdown((void *)0);
 
@@ -814,6 +818,7 @@ int frankenphp_request_startup() {
 int frankenphp_execute_script(char *file_name) {
   if (frankenphp_request_startup() == FAILURE) {
     free(file_name);
+    file_name = NULL;
 
     return FAILURE;
   }
@@ -823,6 +828,7 @@ int frankenphp_execute_script(char *file_name) {
   zend_file_handle file_handle;
   zend_stream_init_filename(&file_handle, file_name);
   free(file_name);
+  file_name = NULL;
 
   file_handle.primary_script = 1;
 
