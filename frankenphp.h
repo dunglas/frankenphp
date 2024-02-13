@@ -13,13 +13,13 @@
 
 typedef struct go_string {
   size_t len;
-  char *data;
+  const char *data;
 } go_string;
 
 typedef struct php_variable {
-  char *var;
+  const char *var;
   size_t data_len;
-  char *data;
+  const char *data;
 } php_variable;
 
 typedef struct frankenphp_version {
