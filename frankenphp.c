@@ -680,10 +680,6 @@ void frankenphp_register_bulk_variables(go_string known_variables[27],
                                  track_vars_array);
     }
   }
-
-  // Just a test
-  // free(dynamic_variables);
-  // dynamic_variables = NULL;
 }
 
 static void frankenphp_register_variables(zval *track_vars_array) {

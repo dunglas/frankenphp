@@ -561,9 +561,10 @@ func go_register_variables(rh C.uintptr_t, trackVarsArray *C.zval) {
 
 	p := &runtime.Pinner{}
 
-	dynamicVariablesLen := C.size_t(len(fc.env) + len(r.Header))
-	dynamicVariables := (*C.php_variable)(C.malloc(dynamicVariablesLen * C.sizeof_php_variable))
-	currentDynamicVariable := dynamicVariables
+	dynamicVariables := make([]C.php_variable, len(fc.env)+len(r.Header))
+	p.Pin(unsafe.SliceData(dynamicVariables))
+
+	var l int
 
 	// Add all HTTP headers to env variables
 	for field, val := range r.Header {
@@ -585,11 +586,11 @@ func go_register_variables(rh C.uintptr_t, trackVarsArray *C.zval) {
 		p.Pin(kData)
 		p.Pin(vData)
 
-		currentDynamicVariable._var = (*C.char)(unsafe.Pointer(kData))
-		currentDynamicVariable.data_len = C.size_t(len(v))
-		currentDynamicVariable.data = (*C.char)(unsafe.Pointer(vData))
+		dynamicVariables[l]._var = (*C.char)(unsafe.Pointer(kData))
+		dynamicVariables[l].data_len = C.size_t(len(v))
+		dynamicVariables[l].data = (*C.char)(unsafe.Pointer(vData))
 
-		currentDynamicVariable = (*C.php_variable)(unsafe.Add(unsafe.Pointer(currentDynamicVariable), C.sizeof_php_variable))
+		l++
 	}
 
 	for k, v := range fc.env {
@@ -603,15 +604,15 @@ func go_register_variables(rh C.uintptr_t, trackVarsArray *C.zval) {
 		p.Pin(kData)
 		p.Pin(vData)
 
-		currentDynamicVariable._var = (*C.char)(unsafe.Pointer(kData))
-		currentDynamicVariable.data_len = C.size_t(len(v))
-		currentDynamicVariable.data = (*C.char)(unsafe.Pointer(vData))
+		dynamicVariables[l]._var = (*C.char)(unsafe.Pointer(kData))
+		dynamicVariables[l].data_len = C.size_t(len(v))
+		dynamicVariables[l].data = (*C.char)(unsafe.Pointer(vData))
 
-		currentDynamicVariable = (*C.php_variable)(unsafe.Add(unsafe.Pointer(currentDynamicVariable), C.sizeof_php_variable))
+		l++
 	}
 
 	knownVariables := computeKnownVariables(r, p)
-	C.frankenphp_register_bulk_variables(&knownVariables[0], dynamicVariables, dynamicVariablesLen, trackVarsArray)
+	C.frankenphp_register_bulk_variables(&knownVariables[0], unsafe.SliceData(dynamicVariables), C.size_t(l), trackVarsArray)
 
 	p.Unpin()
 
