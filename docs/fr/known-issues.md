@@ -1,0 +1,99 @@
+# Problèmes Connus
+
+## Fibres
+
+L'appel de fonctions PHP et de constructions langagières qui elles-mêmes appellent [cgo](https://go.dev/blog/cgo) dans des[Fibres](https://www.php.net/manual/en/language.fibers.php) est connu pour provoquer des plantages.
+
+Ce problème est [en cours de traitement par le projet Go](https://github.com/golang/go/issues/62130).
+
+En attendant, une solution consiste à ne pas utiliser de constructions (comme `echo`) et de fonctions (comme `header()`) qui délèguent à Go depuis l'intérieur de Fibres.
+
+Ce code risque de planter car il utilise `echo` dans une Fibre :
+
+```php
+$fiber = new Fiber(function() {
+    echo 'In the Fiber'.PHP_EOL;
+    echo 'Still inside'.PHP_EOL;
+});
+$fiber->start();
+```
+
+A la place, retournez la valeur de la Fibre et utilisez-la à l'extérieur :
+
+```php
+$fiber = new Fiber(function() {
+    Fiber::suspend('In the Fiber'.PHP_EOL));
+    Fiber::suspend('Still inside'.PHP_EOL));
+});
+echo $fiber->start();
+echo $fiber->resume();
+$fiber->resume();
+```
+
+# Extensions PHP non prises en charge
+
+Les extensions suivantes sont connues pour ne pas être compatibles avec FrankenPHP :
+
+| Nom | Raison | Alternatives |
+| --- | --- | --- |
+| [imap](https://www.php.net/manual/fr/imap.installation.php) | Non sécurisé pour l'exécution en parallèle | [javanile/php-imap2](https://github.com/javanile/php-imap2), [webklex/php-imap](https://github.com/Webklex/php-imap) |
+
+## get_browser
+
+La fonction [get_browser()](https://www.php.net/manual/fr/function.get-browser.php) semble avoir de mauvaises performances après un certain temps. Une solution est de mettre en cache (par exemple, avec APCU) les résultats par User Agent, car ils sont statiques.
+
+## Binaire autonome et images Docker basées sur Alpine
+
+Le binaire autonome et les images docker basées sur Alpine (`dunglas/frankenphp:*-alpine`) utilisent [musl libc](https://musl.libc.org/) au lieu de [glibc et amis](https://www.etalabs.net/compare_libcs.html), pour garder une taille de binaire plus petite. Cela peut entraîner des problèmes de compatibilité. En particulier, le drapeau glob `GLOB_BRACE` n'est [pas disponible](https://www.php.net/manual/fr/function.glob.php).
+
+## Utilisation de `https://127.0.0.1` avec Docker
+
+Par défaut, FrankenPHP génère un certificat TLS pour `localhost`.
+C'est l'option la plus simple et recommandée pour le développement local.
+
+Si vous voulez vraiment utiliser `127.0.0.1` comme hôte à la place, il est possible de le configurer pour générer un certificat pour cela en définissant le nom du serveur sur `127.0.0.1`.
+
+Malheureusement, cela ne suffit pas lors de l'utilisation de Docker à cause de [son système de mise en réseau](https://docs.docker.com/network/).
+Vous obtiendrez une erreur TLS similaire à `curl: (35) LibreSSL/3.3.6: error:1404B438:SSL routines:ST_CONNECT:tlsv1 alert internal error`.
+
+Si vous utilisez Linux, une solution est d'utiliser [le pilote de réseau hôte](https://docs.docker.com/network/network-tutorial-host/) :
+
+```console
+docker run \
+    -e SERVER_NAME="127.0.0.1" \
+    -v $PWD:/app/public \
+    --network host \
+    dunglas/frankenphp
+```
+
+Le pilote de réseau hôte n'est pas pris en charge sur Mac et Windows. Sur ces plateformes, vous devrez deviner l'adresse IP du conteneur et l'inclure dans les noms de serveur.
+
+Exécutez la commande `docker network inspect bridge` et regardez la clé `Containers` pour identifier la dernière adresse IP attribuée sous la clé `IPv4Address`, puis incrémentez-la de un. Si aucun conteneur n'est en cours d'exécution, la première adresse IP attribuée est généralement `172.17.0.2`.
+
+Ensuite, incluez ceci dans la variable d'environnement `SERVER_NAME` :
+
+
+```console
+docker run \
+    -e SERVER_NAME="127.0.0.1, 172.17.0.3" \
+    -v $PWD:/app/public \
+    -p 80:80 -p 443:443 -p 443:443/udp \
+    dunglas/frankenphp
+```
+
+> ![CAUTION]
+>
+> Assurez-vous de remplacer `172.17.0.3` par l'IP qui sera attribuée à votre conteneur.
+
+Vous devriez maintenant pouvoir accéder à `https://127.0.0.1` depuis la machine hôte.
+
+Si ce n'est pas le cas, lancez FrankenPHP en mode debug pour essayer de comprendre le problème :
+
+```console
+docker run \
+    -e CADDY_GLOBAL_OPTIONS="debug"
+    -e SERVER_NAME="127.0.0.1" \
+    -v $PWD:/app/public \
+    -p 80:80 -p 443:443 -p 443:443/udp \
+    dunglas/frankenphp
+```
