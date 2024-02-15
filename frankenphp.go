@@ -551,7 +551,7 @@ func createHeaderKeyCache() otter.Cache[string, string] {
 
 var headerKeyCache = createHeaderKeyCache()
 
-// There are aroung 60 common request headers according to https://en.wikipedia.org/wiki/List_of_HTTP_header_fields#Request_fields
+// There are around 60 common request headers according to https://en.wikipedia.org/wiki/List_of_HTTP_header_fields#Request_fields
 // Give some space for custom headers
 
 //export go_register_variables
