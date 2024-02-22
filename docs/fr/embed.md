@@ -119,7 +119,7 @@ Vous pouvez également exécuter les scripts CLI PHP incorporés dans votre bina
 
 ## Distribuer le Binaire
 
-Le binaire créé n'est pas compressé. 
+Le binaire créé n'est pas compressé.
 Pour réduire la taille du fichier avant de l'envoyer, vous pouvez le compresser.
 
 Nous recommandons `xz`.

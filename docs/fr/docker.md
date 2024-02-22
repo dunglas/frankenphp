@@ -5,6 +5,7 @@ Les images Docker de [FrankenPHP](https://hub.docker.com/r/dunglas/frankenphp) s
 ## Comment utiliser les images
 
 Créez un `Dockerfile` dans votre projet :
+
 ```dockerfile
 FROM dunglas/frankenphp
 
@@ -28,11 +29,11 @@ FROM dunglas/frankenphp
 
 # ajoutez des extensions supplémentaires ici :
 RUN install-php-extensions \
-	pdo_mysql \
-	gd \
-	intl \
-	zip \
-	opcache
+ pdo_mysql \
+ gd \
+ intl \
+ zip \
+ opcache
 ```
 
 ## Comment installer plus de modules Caddy
@@ -50,9 +51,9 @@ COPY --from=caddy:builder /usr/bin/xcaddy /usr/bin/xcaddy
 # CGO doit être activé pour construire FrankenPHP
 ENV CGO_ENABLED=1 XCADDY_SETCAP=1 XCADDY_GO_BUILD_FLAGS="-ldflags '-w -s'"
 RUN xcaddy build \
-	--output /usr/local/bin/frankenphp \
-	--with github.com/dunglas/frankenphp=./ \
-	--with github.com/dunglas/frankenphp/caddy=./caddy/ \
+ --output /usr/local/bin/frankenphp \
+ --with github.com/dunglas/frankenphp=./ \
+ --with github.com/dunglas/frankenphp/caddy=./caddy/ \
 # Mercure et Vulcain sont inclus dans la construction officielle, mais n'hésitez pas à les retirer
     --with github.com/dunglas/mercure/caddy \
     --with github.com/dunglas/vulcain/caddy
@@ -138,12 +139,12 @@ FROM dunglas/frankenphp
 ARG USER=www-data
 
 RUN \
-	# Utilisez "adduser -D ${USER}" pour les distributions basées sur Alpine
-	useradd -D ${USER}; \
-	# Ajouter la capacité supplémentaire de se lier aux ports 80 et 443
-	setcap CAP_NET_BIND_SERVICE=+eip /usr/local/bin/frankenphp; \
-	# Donner l'accès en écriture à /data/caddy et /config/caddy
-	chown -R ${USER}:${USER} /data/caddy && chown -R ${USER}:${USER} /config/caddy;
+ # Utilisez "adduser -D ${USER}" pour les distributions basées sur Alpine
+ useradd -D ${USER}; \
+ # Ajouter la capacité supplémentaire de se lier aux ports 80 et 443
+ setcap CAP_NET_BIND_SERVICE=+eip /usr/local/bin/frankenphp; \
+ # Donner l'accès en écriture à /data/caddy et /config/caddy
+ chown -R ${USER}:${USER} /data/caddy && chown -R ${USER}:${USER} /config/caddy;
 
 USER ${USER}
 ```
@@ -155,7 +156,7 @@ Les images Docker sont construites :
 * lorsqu'une nouvelle version est taguée
 * tous les jours à 4h UTC, si de nouvelles versions des images officielles PHP sont disponibles
 
-# Versions de Développement
+## Versions de Développement
 
 Les versions de développement sont disponibles dans le dépôt Docker [`dunglas/frankenphp-dev`](https://hub.docker.com/repository/docker/dunglas/frankenphp-dev). Un nouveau build est déclenché chaque fois qu'un commit est poussé sur la branche principale du dépôt GitHub.
 

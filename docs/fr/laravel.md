@@ -19,20 +19,20 @@ Vous pouvez également exécuter vos projets Laravel avec FrankenPHP depuis votr
 1. [Téléchargez le binaire correspondant à votre système](https://github.com/dunglas/frankenphp/releases)
 2. Ajoutez la configuration suivante à un fichier nommé `Caddyfile` dans le répertoire racine de votre projet Laravel :
 
-    ```caddyfile
+ 	```caddyfile
     {
-    	frankenphp
-    	order php_server before file_server
+     frankenphp
+     order php_server before file_server
     }
 
     # Le nom de domaine de votre serveur
     localhost {
-		# Définir le répertoire racine sur le dossier public/
-    	root * public/
-    	# Autoriser la compression (optionnel)
-    	encode zstd br gzip
-    	# Exécuter les fichiers PHP dans le répertoire courant et servir les ressources
-    	php_server
+     # Définir le répertoire racine sur le dossier public/
+     root * public/
+     # Autoriser la compression (optionnel)
+     encode zstd br gzip
+     # Exécuter les fichiers PHP dans le répertoire courant et servir les ressources
+     php_server
     }
     ```
 

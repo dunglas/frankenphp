@@ -8,7 +8,6 @@ Vous pouvez également configurer PHP en utilisant `php.ini` comme d'habitude.
 
 Dans l'image Docker, le fichier `php.ini` n'est pas présent, vous pouvez le créer ou le `COPY` manuellement :
 
-
 ```dockerfile
 FROM dunglas/frankenphp
 
@@ -27,17 +26,17 @@ Exemple minimal :
 
 ```caddyfile
 {
-	# Autoriser FrankenPHP
-	frankenphp
-	# Configurer l'ordre d'exécution de la directive
-	order php_server before file_server
+ # Autoriser FrankenPHP
+ frankenphp
+ # Configurer l'ordre d'exécution de la directive
+ order php_server before file_server
 }
 
 localhost {
-	# Autoriser la compression (optionnel)
-	encode zstd br gzip
-	# Exécuter les fichiers PHP dans le répertoire courant et servir les ressources
-	php_server
+ # Autoriser la compression (optionnel)
+ encode zstd br gzip
+ # Exécuter les fichiers PHP dans le répertoire courant et servir les ressources
+ php_server
 }
 ```
 
@@ -45,14 +44,14 @@ En option, le nombre de threads à créer et les  [scripts de travail](worker.md
 
 ```caddyfile
 {
-	frankenphp {
-		num_threads <num_threads> # Définit le nombre de threads PHP à démarrer. Par défaut : 2x le nombre de CPUs disponibles.
-		worker {
-			file <path> # Définit le chemin vers le script de travail.
-			num <num> # Définit le nombre de threads PHP à démarrer, par défaut 2x le nombre de CPUs disponibles.
-			env <key> <value> # Définit une variable d'environnement supplémentaire à la valeur donnée. Peut être spécifié plusieurs fois pour plusieurs variables d'environnement.
-		}
-	}
+ frankenphp {
+  num_threads <num_threads> # Définit le nombre de threads PHP à démarrer. Par défaut : 2x le nombre de CPUs disponibles.
+  worker {
+   file <path> # Définit le chemin vers le script de travail.
+   num <num> # Définit le nombre de threads PHP à démarrer, par défaut 2x le nombre de CPUs disponibles.
+   env <key> <value> # Définit une variable d'environnement supplémentaire à la valeur donnée. Peut être spécifié plusieurs fois pour plusieurs variables d'environnement.
+  }
+ }
 }
 
 # ...
@@ -62,9 +61,9 @@ Vous pouvez également utiliser la forme courte de l'option worker en une seule 
 
 ```caddyfile
 {
-	frankenphp {
-		worker <file> <num>
-	}
+ frankenphp {
+  worker <file> <num>
+ }
 }
 
 # ...
@@ -74,20 +73,20 @@ Vous pouvez aussi définir plusieurs workers si vous servez plusieurs applicatio
 
 ```caddyfile
 {
-	frankenphp {
-		worker /path/to/app/public/index.php <num>
-		worker /path/to/other/public/index.php <num>
-	}
+ frankenphp {
+  worker /path/to/app/public/index.php <num>
+  worker /path/to/other/public/index.php <num>
+ }
 }
 
 app.example.com {
-	root * /path/to/app/public
-	php_server
+ root * /path/to/app/public
+ php_server
 }
 
 other.example.com {
-	root * /path/to/other/public
-	php_server
+ root * /path/to/other/public
+ php_server
 }
 ...
 ```
@@ -99,22 +98,22 @@ Utiliser la directive php_server est équivalent à cette configuration :
 
 ```caddyfile
 route {
-	# Ajoute un slash final pour les requêtes de répertoire
-	@canonicalPath {
-		file {path}/index.php
-		not path */
-	}
-	redir @canonicalPath {path}/ 308
-	# Si le fichier demandé n'existe pas, essayer les fichiers index
-	@indexFiles file {
-		try_files {path} {path}/index.php index.php
-		split_path .php
-	}
-	rewrite @indexFiles {http.matchers.file.relative}
-	# FrankenPHP!
-	@phpFiles path *.php
-	php @phpFiles
-	file_server
+ # Ajoute un slash final pour les requêtes de répertoire
+ @canonicalPath {
+  file {path}/index.php
+  not path */
+ }
+ redir @canonicalPath {path}/ 308
+ # Si le fichier demandé n'existe pas, essayer les fichiers index
+ @indexFiles file {
+  try_files {path} {path}/index.php index.php
+  split_path .php
+ }
+ rewrite @indexFiles {http.matchers.file.relative}
+ # FrankenPHP!
+ @phpFiles path *.php
+ php @phpFiles
+ file_server
 }
 ```
 
@@ -122,13 +121,12 @@ Les directives php_server et php disposent des options suivantes :
 
 ```caddyfile
 php_server [<matcher>] {
-	root <directory> # Définit le dossier racine pour le site. Par défaut : directive `root`.
-	split_path <delim...> # Définit les sous-chaînes pour diviser l'URI en deux parties. La première sous-chaîne correspondante sera utilisée pour séparer le "path info" du chemin. La première partie est suffixée avec la sous-chaîne correspondante et sera considérée comme le nom réel de la ressource (script CGI). La seconde partie sera définie comme PATH_INFO pour que le script CGI l'utilise. Par défaut : `.php`
-	resolve_root_symlink false # Désactive la résolution du répertoire `root` vers sa valeur réelle en évaluant un lien symbolique, s'il existe (activé par défaut).
-	env <key> <value> # Définit une variable d'environnement supplémentaire à la valeur donnée. Peut être spécifié plusieurs fois pour plusieurs variables d'environnement.
+ root <directory> # Définit le dossier racine pour le site. Par défaut : directive `root`.
+ split_path <delim...> # Définit les sous-chaînes pour diviser l'URI en deux parties. La première sous-chaîne correspondante sera utilisée pour séparer le "path info" du chemin. La première partie est suffixée avec la sous-chaîne correspondante et sera considérée comme le nom réel de la ressource (script CGI). La seconde partie sera définie comme PATH_INFO pour que le script CGI l'utilise. Par défaut : `.php`
+ resolve_root_symlink false # Désactive la résolution du répertoire `root` vers sa valeur réelle en évaluant un lien symbolique, s'il existe (activé par défaut).
+ env <key> <value> # Définit une variable d'environnement supplémentaire à la valeur donnée. Peut être spécifié plusieurs fois pour plusieurs variables d'environnement.
 }
 ```
-
 
 ## Variables d'environnement
 

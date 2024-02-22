@@ -114,13 +114,11 @@ Les clés de déploiement sont également [prises en charge par GitLab](https://
 
 Exemple avec Git :
 
-
 ```console
 git clone git@github.com:<username>/<project-name>.git
 ```
 
 Accédez au répertoire contenant votre projet (`<project-name>`), et démarrez l'application en mode production :
-
 
 ```console
 docker compose up -d --wait
@@ -136,4 +134,3 @@ Rendez-vous sur `https://your-domain-name.example.com` et profitez-en !
 
 Si vous souhaitez déployer votre application sur un cluster de machines, vous pouvez utiliser [Docker Swarm](https://docs.docker.com/engine/swarm/stack-deploy/), qui est compatible avec les fichiers Compose fournis.
 Pour un déploiement sur Kubernetes, jetez un œil au [Helm chart fourni avec API Platform](https://api-platform.com/docs/deployment/kubernetes/), qui peut être facilement adapté pour une utilisation avec Symfony Docker.
-

@@ -30,7 +30,7 @@ echo $fiber->resume();
 $fiber->resume();
 ```
 
-# Extensions PHP non prises en charge
+## Extensions PHP non prises en charge
 
 Les extensions suivantes sont connues pour ne pas être compatibles avec FrankenPHP :
 
@@ -71,7 +71,6 @@ Le pilote de réseau hôte n'est pas pris en charge sur Mac et Windows. Sur ces 
 Exécutez la commande `docker network inspect bridge` et regardez la clé `Containers` pour identifier la dernière adresse IP attribuée sous la clé `IPv4Address`, puis incrémentez-la de un. Si aucun conteneur n'est en cours d'exécution, la première adresse IP attribuée est généralement `172.17.0.2`.
 
 Ensuite, incluez ceci dans la variable d'environnement `SERVER_NAME` :
-
 
 ```console
 docker run \

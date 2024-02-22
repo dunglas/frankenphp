@@ -113,4 +113,3 @@ Comme PHP n'a pas été initialement conçu pour des processus de longue durée,
 Une solution pour utiliser ce type de code en mode worker est de redémarrer le script worker après avoir traité un certain nombre de requêtes :
 
 L'extrait de worker précédent permet de configurer un nombre maximal de requêtes à traiter en définissant une variable d'environnement nommée `MAX_REQUESTS`.
-

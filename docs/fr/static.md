@@ -42,7 +42,7 @@ docker buildx bake \
   static-builder
 ```
 
-Voir aussi : [personnaliser la construction](#customizing-the-build)
+Voir aussi : [personnaliser la construction](#personnalisation-de-la-construction)
 
 ### Jeton GitHub
 

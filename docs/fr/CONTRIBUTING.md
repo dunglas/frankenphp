@@ -15,7 +15,6 @@ L'image contient les outils de développement habituels (Go, GDB, Valgrind, Neov
 
 Si la version de Docker est inférieure à 23.0, la construction échoue à cause d'un [problème de pattern](https://github.com/moby/moby/pull/42676) dans `.dockerignore`. Ajoutez les répertoires à `.dockerignore`.
 
-
 ```patch
  !testdata/*.php
  !testdata/*.txt
@@ -139,8 +138,8 @@ docker buildx bake -f docker-bake.hcl --pull --no-cache --push
 6. Activer `cgosymbolizer`
 
     ```patch
-    -	//_ "github.com/ianlancetaylor/cgosymbolizer"
-    +	_ "github.com/ianlancetaylor/cgosymbolizer"
+    - //_ "github.com/ianlancetaylor/cgosymbolizer"
+    + _ "github.com/ianlancetaylor/cgosymbolizer"
     ```
 
 7. Télécharger le module : `go get`
@@ -170,7 +169,7 @@ docker buildx bake -f docker-bake.hcl --pull --no-cache --push
 * [Définition du fichier Bake](https://docs.docker.com/build/customize/bake/file-definition/)
 * [docker buildx build](https://docs.docker.com/engine/reference/commandline/buildx_build/)
 
-## Commande utile 
+## Commande utile
 
 ```console
 apk add strace util-linux gdb
