@@ -82,7 +82,7 @@ curl -v http://127.0.0.1:8080/phpinfo.php
 
 ## Construction d'images Docker localement
 
-Imprimer le plan de construction :
+Afficher le plan de compilation :
 
 ```console
 docker buildx bake -f docker-bake.hcl --print

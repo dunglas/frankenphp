@@ -18,4 +18,4 @@ echo <<<'HTML'
 HTML;
 ```
 
-Les Early Hints sont pris en charge à la fois par les modes normal et [worker](worker.md).
+Les Early Hints sont pris en charge à la fois par les modes "standard" et [worker](worker.md).

@@ -1,16 +1,16 @@
-# FrankenPHP : Serveur d'applications moderne pour PHP
+# FrankenPHP : Le serveur d'applications PHP moderne, écrit en Go
 
-<h1 align="center"><a href="https://frankenphp.dev"><img src="frankenphp.png" alt="FrankenPHP" width="600"></a></h1>
+<h1 align="center"><a href="https://frankenphp.dev"><img src="../../frankenphp.png" alt="FrankenPHP" width="600"></a></h1>
 
 FrankenPHP est un serveur d'applications moderne pour PHP construit sur la base du serveur web [Caddy](https://caddyserver.com/).
 
-FrankenPHP confère des super pouvoirs à vos applications PHP grâce à ses fonctionnalités étonnantes : [*Early Hints*](https://frankenphp.dev/docs/early-hints/), [mode worker](https://frankenphp.dev/docs/worker/), [capacités en temps réel](https://frankenphp.dev/docs/mercure/), HTTPS automatique, prise en charge de HTTP/2 et HTTP/3...
+FrankenPHP apporte de la puissance à vos applications PHP grâce à des fonctionnalités de pointe : [*Early Hints*](https://frankenphp.dev/docs/early-hints/), [mode worker](https://frankenphp.dev/docs/worker/), [fonctionnalités en temps réel](https://frankenphp.dev/docs/mercure/), HTTPS automatique, prise en charge de HTTP/2 et HTTP/3...
 
 FrankenPHP fonctionne avec n'importe quelle application PHP et rend vos projets Symfony plus rapides que jamais grâce à l'intégration fournie avec le mode worker.
 
 FrankenPHP peut également être utilisé comme une bibliothèque Go autonome pour intégrer PHP dans n'importe quelle application en utilisant `net/http`.
 
-Vous pouvez découvrir plus en détails ce serveur d’application sur ce replay du Forum PHP 2022 :
+Découvrez plus de détails sur ce serveur d’application dans le replay de cette conférence donnée au Forum PHP 2022 :
 
 <a href="https://dunglas.dev/2022/10/frankenphp-the-modern-php-app-server-written-in-go/"><img src="https://dunglas.dev/wp-content/uploads/2022/10/frankenphp.png" alt="Diapositives" width="600"></a>
 
@@ -24,7 +24,7 @@ docker run -v $PWD:/app/public \
     dunglas/frankenphp
 ```
 
-Allez sur `https://localhost`, et profitez !
+Rendez-vous sur `https://localhost`, c'est parti !
 
 > [!TIP]
 >
@@ -36,7 +36,7 @@ Allez sur `https://localhost`, et profitez !
 Si vous préférez ne pas utiliser Docker, nous fournissons des binaires autonomes de FrankenPHP pour Linux et macOS
 contenant [PHP 8.3](https://www.php.net/releases/8.3/fr.php) et la plupart des extensions PHP populaires : [Télécharger FrankenPHP](https://github.com/dunglas/frankenphp/releases)
 
-Pour servir le contenu du répertoire courant, exécutez :
+Pour servir le contenu du répertoire, exécutez :
 
 ```console
 ./frankenphp php-server

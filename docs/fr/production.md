@@ -1,8 +1,8 @@
 # Déploiement en Production
 
-Dans ce tutoriel, nous allons apprendre à déployer une application PHP sur un serveur unique en utilisant Docker Compose.
+Dans ce tutoriel, nous apprendrons comment déployer une application PHP sur un serveur unique en utilisant Docker Compose.
 
-Si vous utilisez Symfony, préférez lire l'entrée de documentation "[Déployer en production](https://github.com/dunglas/symfony-docker/blob/main/docs/production.md)" du projet Symfony Docker (qui utilise FrankenPHP).
+Si vous utilisez Symfony, lisez plutôt la page de documentation "[Déployer en production](https://github.com/dunglas/symfony-docker/blob/main/docs/production.md)" du projet Symfony Docker (qui utilise FrankenPHP).
 
 Si vous utilisez API Platform (qui utilise également FrankenPHP), référez-vous à [la documentation de déploiement du framework](https://api-platform.com/docs/deployment/).
 
@@ -30,8 +30,7 @@ COPY . /app/public
 Consultez "[Construire une image Docker personnalisée](docker.md)" pour plus de détails et d'options,
 et pour apprendre à personnaliser la configuration, installer des extensions PHP et des modules Caddy.
 
-Si votre projet utilise Composer,
-assurez-vous de l'inclure dans l'image Docker et d'installer vos dépendances.
+Si votre projet utilise Composer, assurez-vous de l'inclure dans l'image Docker et d'installer vos dépendances.
 
 Ensuite, ajoutez un fichier `compose.yaml` :
 
@@ -62,7 +61,7 @@ volumes:
 > (qui utilise FrankenPHP) pour un exemple plus avancé utilisant des images multi-étapes,
 > Composer, des extensions PHP supplémentaires, etc.
 
-Finally, if you use Git, commit these files and push.
+Pour finir, si vous utilisez Git, commitez ces fichiers et poussez-les.
 
 ## Préparer un serveur
 
@@ -70,7 +69,7 @@ Pour déployer votre application en production, vous avez besoin d'un serveur.
 Dans ce tutoriel, nous utiliserons une machine virtuelle fournie par DigitalOcean, mais n'importe quel serveur Linux peut fonctionner.
 Si vous avez déjà un serveur Linux avec Docker installé, vous pouvez passer directement à [la section suivante](#configurer-un-nom-de-domaine).
 
-Sinon, utilisez [ce lien affilié](https://m.do.co/c/5d8aabe3ab80) pour obtenir 200 $ de crédit gratuit, créez un compte, puis cliquez sur "Créer un Droplet".
+Sinon, utilisez [ce lien affilié](https://m.do.co/c/5d8aabe3ab80) pour obtenir 200$ de crédit gratuit, créez un compte, puis cliquez sur "Créer un Droplet".
 Ensuite, cliquez sur l'onglet "Marketplace" sous la section "Choisir une image" et recherchez l'application nommée "Docker".
 Cela provisionnera un serveur Ubuntu avec les dernières versions de Docker et Docker Compose déjà installées !
 
@@ -135,7 +134,6 @@ Rendez-vous sur `https://your-domain-name.example.com` et profitez-en !
 
 ## Déploiement sur Plusieurs Nœuds
 
-Si vous souhaitez déployer votre application sur un cluster de machines, vous pouvez utiliser [Docker Swarm](https://docs.docker.com/engine/swarm/stack-deploy/),
-qui est compatible avec les fichiers Compose fournis.
+Si vous souhaitez déployer votre application sur un cluster de machines, vous pouvez utiliser [Docker Swarm](https://docs.docker.com/engine/swarm/stack-deploy/), qui est compatible avec les fichiers Compose fournis.
 Pour un déploiement sur Kubernetes, jetez un œil au [Helm chart fourni avec API Platform](https://api-platform.com/docs/deployment/kubernetes/), qui peut être facilement adapté pour une utilisation avec Symfony Docker.
 

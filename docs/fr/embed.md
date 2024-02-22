@@ -8,7 +8,7 @@ Pour en savoir plus sur cette fonctionnalité, consultez [la présentation faite
 
 ## Préparer Votre Application
 
-Avant de créer le binaire autonome, assurez-vous que votre application est prête pour l'incorporation.
+Avant de créer le binaire autonome, assurez-vous que votre application est prête à être intégrée.
 
 Par exemple, vous voudrez probablement :
 
@@ -83,7 +83,7 @@ EMBED=/path/to/your/app \
     ./build-static.sh
 ```
 
-Le binaire résultant est le fichier nommé `frankenphp-<os>-<arch>` dans le répertoire `dist/`.
+Le binaire obtenu est le fichier nommé `frankenphp-<os>-<arch>` dans le répertoire `dist/`.
 
 ## Utiliser le Binaire
 
@@ -95,7 +95,7 @@ Pour démarrer l'application web, exécutez :
 ./my-app php-server
 ```
 
-Si votre application contient un [script de travailleur](worker.md), démarrez le travailleur avec quelque chose comme :
+Si votre application contient un [script worker](worker.md), démarrez le worker avec quelque chose comme :
 
 ```console
 ./my-app php-server --worker public/index.php
@@ -113,9 +113,9 @@ Vous pouvez également exécuter les scripts CLI PHP incorporés dans votre bina
 ./my-app php-cli bin/console
 ```
 
-## Personnaliser la Construction
+## Personnaliser la compilation
 
-[Consultez la documentation sur la construction statique](static.md) pour voir comment personnaliser le binaire (extensions, version PHP...).
+[Consultez la documentation sur la compilation statique](static.md) pour voir comment personnaliser le binaire (extensions, version PHP...).
 
 ## Distribuer le Binaire
 

@@ -21,7 +21,7 @@ docker run -it --rm --name my-running-app my-php-app
 ## Comment installer plus d'extensions PHP
 
 Le script [`docker-php-extension-installer`](https://github.com/mlocati/docker-php-extension-installer) est fourni dans l'image de base.
-Ajouter des extensions PHP supplémentaires est simple :
+Il est facile d'ajouter des extensions PHP supplémentaires :
 
 ```dockerfile
 FROM dunglas/frankenphp
@@ -87,7 +87,7 @@ ENV FRANKENPHP_CONFIG="worker ./public/index.php"
 
 ## Utiliser un volume en développement
 
-Pour développer facilement avec FrankenPHP, montez le répertoire de votre hôte contenant le code source de l'application comme un volume dans le conteneur Docker :
+Pour développer facilement avec FrankenPHP, montez le répertoire de l'hôte contenant le code source de l'application comme un volume dans le conteneur Docker :
 
 ```console
 docker run -v $PWD:/app/public -p 80:80 -p 443:443 -p 443:443/udp --tty my-php-app
@@ -107,7 +107,7 @@ services:
     image: dunglas/frankenphp
     # décommentez la ligne suivante si vous souhaitez utiliser un Dockerfile personnalisé
     #build: .
-    # décommentez la ligne suivante si vous souhaitez exécuter cela dans un environnement de production
+    # décommentez la ligne suivante si vous souhaitez exécuter ceci dans un environnement de production
     # restart: always
     ports:
       - "80:80" # HTTP
@@ -130,7 +130,7 @@ volumes:
 
 FrankenPHP peut s'exécuter en tant qu'utilisateur non root dans Docker.
 
-Voici un exemple de `Dockerfile` qui le fait :
+Voici un exemple de `Dockerfile` le permettant :
 
 ```dockerfile
 FROM dunglas/frankenphp

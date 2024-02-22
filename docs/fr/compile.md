@@ -15,7 +15,7 @@ tar xf php-*
 cd php-*/
 ```
 
-Ensuite, configurez PHP pour votre plateforme :
+Ensuite, configurez PHP pour votre système d'exploitation :
 
 ### Linux
 
@@ -92,7 +92,7 @@ xcaddy build \
 
 > [!TIP]
 >
-> Si vous utilisez musl libc (le défaut sur Alpine Linux) et Symfony,
+> Si vous utilisez musl libc (la bibliothèque par défaut sur Alpine Linux) et Symfony,
 > vous pourriez avoir besoin d'augmenter la taille par défaut de la pile.
 > Sinon, vous pourriez rencontrer des erreurs telles que `PHP Fatal error: Maximum call stack size of 83360 bytes reached during compilation. Try splitting expression`
 >

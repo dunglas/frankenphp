@@ -66,7 +66,7 @@ require __DIR__.'/vendor/autoload.php';
 $myApp = new \App\Kernel();
 $myApp->boot();
 
-// Gestionnaire en dehors de la boucle pour de meilleures performances (réaliser moins de travail)
+// Gestionnaire en dehors de la boucle pour de meilleures performances (moins de travail effectué)
 $handler = static function () use ($myApp) {
         // Appelé lorsqu'une requête est reçue,
         // les superglobales, php://input, etc., sont réinitialisés

@@ -1,6 +1,6 @@
 # Temps Réel
 
-FrankenPHP est livré avec un hub Mercure intégré !
+FrankenPHP est livré avec un hub Mercure intégré.
 Mercure permet de pousser des événements en temps réel vers tous les appareils connectés : ils recevront un événement JavaScript instantanément.
 
 Aucune bibliothèque JS ou SDK requis !

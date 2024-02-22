@@ -2,7 +2,7 @@
 
 ## Docker
 
-Servir une application web [Laravel](https://laravel.com) avec FrankenPHP est aussi simple que de monter le projet dans le répertoire `/app` de l'image Docker officielle.
+Déployer une application web [Laravel](https://laravel.com) avec FrankenPHP est aussi facile que de monter le projet dans le répertoire `/app` de l'image Docker officielle.
 
 Exécutez cette commande depuis le répertoire principal de votre application Laravel :
 

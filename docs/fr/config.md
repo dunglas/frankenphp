@@ -21,7 +21,7 @@ RUN cp $PHP_INI_DIR/php.ini-production $PHP_INI_DIR/php.ini
 
 ## Configuration du Caddyfile
 
-Pour enregistrer l'exécuteur FrankenPHP, l'[option globale](https://caddyserver.com/docs/caddyfile/concepts#global-options) `frankenphp` doit être définie, puis les [directives HTTP](https://caddyserver.com/docs/caddyfile/concepts#directives) `php_server` ou `php` peuvent être utilisées dans les blocs du site pour servir votre application PHP.
+Pour enregistrer l'exécutable de FrankenPHP, l'[option globale](https://caddyserver.com/docs/caddyfile/concepts#global-options) `frankenphp` doit être définie, puis les [directives HTTP](https://caddyserver.com/docs/caddyfile/concepts#directives) `php_server` ou `php` peuvent être utilisées dans les blocs du site pour servir votre application PHP.
 
 Exemple minimal :
 
@@ -93,7 +93,7 @@ other.example.com {
 ```
 
 L'utilisation de la directive php_server est généralement suffisante,
-mais si vous avez besoin d'un contrôle total, vous pouvez utiliser la directive de niveau inférieur php :
+mais si vous avez besoin d'un contrôle total, vous pouvez utiliser la directive de niveau inférieur php.
 
 Utiliser la directive php_server est équivalent à cette configuration :
 
@@ -132,20 +132,19 @@ php_server [<matcher>] {
 
 ## Variables d'environnement
 
-Les variables d'environnement suivantes peuvent être utilisées pour injecter des directives Caddy dans le Caddyfile sans le modifier :
+Les variables d'environnement suivantes peuvent être utilisées pour insérer des directives Caddy dans le `Caddyfile` sans le modifier :
 
 * `SERVER_NAME` : change [les adresses sur lesquelles écouter](https://caddyserver.com/docs/caddyfile/concepts#addresses), les noms d'hôte fournis seront également utilisés pour le certificat TLS généré
 * `CADDY_GLOBAL_OPTIONS` : injecte [des options globales](https://caddyserver.com/docs/caddyfile/options)
-* `FRANKENPHP_CONFIG` : injecte la configuration sous la directive `frankenphp`
+* `FRANKENPHP_CONFIG` : insère la configuration sous la directive `frankenphp`
 
 Contrairement aux SAPI FPM et CLI, les variables d'environnement ne sont **pas** exposées par défaut dans les superglobales `$_SERVER` et `$_ENV`.
 
-Pour propager les variables d'environnement vers `$_SERVER` et `$_ENV`, définissez la directive `variables_order` de `php.ini` sur `EGPCS`.
+Pour propager les variables d'environnement vers `$_SERVER` et `$_ENV`, configurez la directive `variables_order` de `php.ini` sur `EGPCS`.
 
 ## Configuration PHP
 
-Pour charger [des fichiers de configuration PHP supplémentaires](https://www.php.net/manual/fr/configuration.file.php#configuration.file.scan),
-la variable d'environnement `PHP_INI_SCAN_DIR` peut être utilisée.
+Pour charger [des fichiers de configuration PHP supplémentaires](https://www.php.net/manual/fr/configuration.file.php#configuration.file.scan), la variable d'environnement `PHP_INI_SCAN_DIR` peut être utilisée.
 Lorsqu'elle est définie, PHP chargera tous les fichiers avec l'extension `.ini` présents dans les répertoires donnés.
 
 ## Activer le mode Debug

@@ -1,6 +1,6 @@
 # Créer un Build Statique
 
-Au lieu d'utiliser une installation locale de la bibliothèque PHP, il est possible de créer un build statique de FrankenPHP grâce au formidable projet [static-php-cli](https://github.com/crazywhalecc/static-php-cli) (malgré son nom, ce projet prend en charge tous les SAPIs, pas seulement CLI).
+Au lieu d'utiliser une installation locale de la bibliothèque PHP, il est possible de créer un build statique de FrankenPHP grâce à l'excellent projet [static-php-cli](https://github.com/crazywhalecc/static-php-cli) (malgré son nom, ce projet prend en charge tous les SAPIs, pas seulement CLI).
 
 Avec cette méthode, un binaire portable unique contiendra l'interpréteur PHP, le serveur web Caddy et FrankenPHP !
 
@@ -15,7 +15,7 @@ docker buildx bake --load static-builder
 docker cp $(docker create --name static-builder dunglas/frankenphp:static-builder):/go/src/app/dist/frankenphp-linux-$(uname -m) frankenphp ; docker rm static-builder
 ```
 
-Le binaire statique résultant est nommé frankenphp et est disponible dans le répertoire courant.
+Le binaire statique résultant est nommé frankenphp, et il est disponible dans le répertoire courant.
 
 Si vous souhaitez construire le binaire statique sans Docker, regardez les instructions pour macOS, qui fonctionnent également pour Linux.
 
