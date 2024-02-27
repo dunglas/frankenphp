@@ -582,7 +582,18 @@ func go_register_variables(rh C.uintptr_t, trackVarsArray *C.zval) {
 }
 
 //export go_apache_request_headers
-func go_apache_request_headers(rh C.uintptr_t) (*C.go_string, C.size_t, C.uintptr_t) {
+func go_apache_request_headers(rh, mrh C.uintptr_t) (*C.go_string, C.size_t, C.uintptr_t) {
+	if rh == 0 {
+		// worker mode, not handling a request
+		mr := cgo.Handle(mrh).Value().(*http.Request)
+		mfc := mr.Context().Value(contextKey).(*FrankenPHPContext)
+
+		if c := mfc.logger.Check(zap.DebugLevel, "apache_request_headers() called in non-HTTP context"); c != nil {
+			c.Write(zap.String("worker", mfc.scriptFilename))
+		}
+
+		return nil, 0, 0
+	}
 	r := cgo.Handle(rh).Value().(*http.Request)
 
 	pinner := &runtime.Pinner{}
@@ -613,6 +624,10 @@ func go_apache_request_headers(rh C.uintptr_t) (*C.go_string, C.size_t, C.uintpt
 
 //export go_apache_request_cleanup
 func go_apache_request_cleanup(rh C.uintptr_t) {
+	if rh == 0 {
+		return
+	}
+
 	h := cgo.Handle(rh)
 	p := h.Value().(*runtime.Pinner)
 	p.Unpin()

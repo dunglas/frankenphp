@@ -1,5 +1,7 @@
 <?php
 
+apache_request_headers();
+
 require_once __DIR__.'/_executor.php';
 
 return function() {
