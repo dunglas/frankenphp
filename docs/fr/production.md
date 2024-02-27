@@ -18,7 +18,7 @@ ENV SERVER_NAME=your-domain-name.example.com
 # Si vous souhaitez désactiver HTTPS, utilisez cette valeur à la place :
 #ENV SERVER_NAME=:80
 
-# Activer les paramètres de production PHP
+# Activer les paramètres de production de PHP
 RUN mv "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini"
 
 # Copiez les fichiers PHP de votre projet dans le répertoire public
@@ -74,12 +74,12 @@ Ensuite, cliquez sur l'onglet "Marketplace" sous la section "Choisir une image" 
 Cela provisionnera un serveur Ubuntu avec les dernières versions de Docker et Docker Compose déjà installées !
 
 Pour des fins de test, les plans les moins chers seront suffisants.
-Pour une utilisation en production réelle, vous voudrez probablement choisir un plan dans la section "usage général" pour répondre à vos besoins.
+Pour une utilisation en production réelle, vous voudrez probablement choisir un plan dans la section "General Usage" pour répondre à vos besoins.
 
 ![Déployer FrankenPHP sur DigitalOcean avec Docker](digitalocean-droplet.png)
 
 Vous pouvez conserver les paramètres par défaut pour les autres paramètres, ou les ajuster selon vos besoins.
-N'oubliez pas d'ajouter votre clé SSH ou de créer un mot de passe puis appuyez sur le bouton "Finaliser et créer".
+N'oubliez pas d'ajouter votre clé SSH ou de créer un mot de passe puis appuyez sur le bouton "Finalize and create".
 
 Ensuite, attendez quelques secondes pendant que votre Droplet est en cours de provisionnement.
 Lorsque votre Droplet est prêt, utilisez SSH pour vous connecter :
@@ -101,7 +101,7 @@ your-domain-name.example.com.  IN  A     207.154.233.113
 
 Exemple avec le service DigitalOcean Domains ("Networking" > "Domains") :
 
-![Configuring DNS on DigitalOcean](digitalocean-dns.png)
+![Configurer les DNS sur DigitalOcean](digitalocean-dns.png)
 
 > [!NOTE]  
 > Let's Encrypt, le service utilisé par défaut par FrankenPHP pour générer automatiquement un certificat TLS, ne prend pas en charge l'utilisation d'adresses IP nues. L'utilisation d'un nom de domaine est obligatoire pour utiliser Let's Encrypt.
@@ -109,7 +109,7 @@ Exemple avec le service DigitalOcean Domains ("Networking" > "Domains") :
 ## Déploiement
 
 Copiez votre projet sur le serveur en utilisant `git clone`, `scp`, ou tout autre outil qui pourrait répondre à votre besoin.
-Si vous utilisez GitHub, vous voudrez peut-être utiliser [une clé de déploiement](https://docs.github.com/en/free-pro-team@latest/developers/overview/managing-deploy-keys#deploy-keys).
+Si vous utilisez GitHub, vous voudrez peut-être utiliser [une clef de déploiement](https://docs.github.com/en/free-pro-team@latest/developers/overview/managing-deploy-keys#deploy-keys).
 Les clés de déploiement sont également [prises en charge par GitLab](https://docs.gitlab.com/ee/user/project/deploy_keys/).
 
 Exemple avec Git :
@@ -125,12 +125,12 @@ docker compose up -d --wait
 ```
 
 Votre serveur est opérationnel, et un certificat HTTPS a été automatiquement généré pour vous.
-Rendez-vous sur `https://your-domain-name.example.com` et profitez-en !
+Rendez-vous sur `https://your-domain-name.example.com` !
 
 > [!CAUTION]
-> Docker peut avoir une couche de cache, assurez-vous d'avoir la bonne version de build pour chaque déploiement ou reconstruisez votre projet avec l'option --no-cache pour éviter les problèmes de cache.
+> Docker peut avoir une couche de cache, assurez-vous d'avoir la bonne version de build pour chaque déploiement ou reconstruisez votre projet avec l'option `--no-cache` pour éviter les problèmes de cache.
 
 ## Déploiement sur Plusieurs Nœuds
 
 Si vous souhaitez déployer votre application sur un cluster de machines, vous pouvez utiliser [Docker Swarm](https://docs.docker.com/engine/swarm/stack-deploy/), qui est compatible avec les fichiers Compose fournis.
-Pour un déploiement sur Kubernetes, jetez un œil au [Helm chart fourni avec API Platform](https://api-platform.com/docs/deployment/kubernetes/), qui peut être facilement adapté pour une utilisation avec Symfony Docker.
+Pour un déploiement sur Kubernetes, jetez un œil au [Helm chart fourni avec API Platform](https://api-platform.com/docs/deployment/kubernetes/), qui utilise FrankenPHP.

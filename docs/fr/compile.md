@@ -67,7 +67,7 @@ sudo make install
 
 ## Compiler l'application Go
 
-Vous pouvez maintenant utiliser la bibliothèque Go et compiler notre build Caddy :
+Vous pouvez maintenant utiliser la bibliothèque Go et compiler notre build de Caddy :
 
 ```console
 curl -L https://github.com/dunglas/frankenphp/archive/refs/heads/main.tar.gz | tar x
@@ -77,7 +77,7 @@ CGO_CFLAGS=$(php-config --includes) CGO_LDFLAGS="$(php-config --ldflags) $(php-c
 
 ### Utiliser xcaddy
 
-Vous pouvez utiliser à la place [xcaddy](https://github.com/caddyserver/xcaddy) pour compiler FrankenPHP avec [des modules Caddy personnalisés](https://caddyserver.com/docs/modules/):
+Vous pouvez utiliser à la place [xcaddy](https://github.com/caddyserver/xcaddy) pour compiler FrankenPHP avec [des modules Caddy additionnels](https://caddyserver.com/docs/modules/):
 
 ```console
 CGO_ENABLED=1 \

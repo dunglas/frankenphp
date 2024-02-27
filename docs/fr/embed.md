@@ -1,21 +1,23 @@
-# Applications PHP en tant que Binaires Autonomes
+# Applications PHP en tant que binaires autonomes
 
-FrankenPHP a la capacité d'incorporer le code source et les ressources des applications PHP dans un binaire statique et autonome.
+FrankenPHP a la capacité d'incorporer le code source et les assets des applications PHP dans un binaire statique et autonome.
 
-Grâce à cette fonctionnalité, les applications PHP peuvent être distribuées en tant que binaires autonomes qui incluent l'application elle-même, l'interpréteur PHP et Caddy, un serveur web de niveau production.
+Grâce à cette fonctionnalité, les applications PHP peuvent être distribuées en tant que binaires autonomes qui incluent l'application elle-même, l'interpréteur PHP et Caddy, un serveur web de qualité production.
 
-Pour en savoir plus sur cette fonctionnalité, consultez [la présentation faite par Kévin à SymfonyCon](https://dunglas.dev/2023/12/php-and-symfony-apps-as-standalone-binaries/).
+Pour en savoir plus sur cette fonctionnalité, consultez [la présentation faite par Kévin à la SymfonyCon 2023](https://dunglas.dev/2023/12/php-and-symfony-apps-as-standalone-binaries/).
 
-## Préparer Votre Application
+## Préparer votre application
 
 Avant de créer le binaire autonome, assurez-vous que votre application est prête à être intégrée.
 
-Par exemple, vous voudrez probablement :
+Vous devrez probablement :
 
 * Installer les dépendances de production de l'application
 * Dumper l'autoloader
 * Activer le mode production de votre application (si disponible)
 * Supprimer les fichiers inutiles tels que `.git` ou les tests pour réduire la taille de votre binaire final
+
+Par exemple, pour une application Symfony, lancez les commandes suivantes :
 
 ```console
 # Exporter le projet pour se débarrasser de .git/, etc.
@@ -37,9 +39,9 @@ composer install --ignore-platform-reqs --no-dev -a
 composer dump-env prod
 ```
 
-## Créer un Binaire Linux
+## Créer un binaire Linux
 
-La manière la plus simple de créer un binaire Linux est d'utiliser le constructeur basé sur Docker que nous fournissons.
+La manière la plus simple de créer un binaire Linux est d'utiliser le builder basé sur Docker que nous fournissons.
 
 1. Créez un fichier nommé `static-build.Dockerfile` dans le répertoire de votre application préparée :
 
@@ -63,15 +65,15 @@ La manière la plus simple de créer un binaire Linux est d'utiliser le construc
     docker build -t static-app -f static-build.Dockerfile .
     ```
 
-3. Extrayez le binaire
+3. Extrayez le binaire :
 
     ```console
     docker cp $(docker create --name static-app-tmp static-app):/go/src/app/dist/frankenphp-linux-x86_64 my-app ; docker rm static-app-tmp
     ```
 
-Le binaire résultant est le fichier nommé `my-app` dans le répertoire courant.
+Le binaire généré sera nommé `my-app` dans le répertoire courant.
 
-## Créer un Binaire pour d'Autres Systèmes d'Exploitation
+## Créer un binaire pour d'autres systèmes d'exploitation
 
 Si vous ne souhaitez pas utiliser Docker, ou souhaitez construire un binaire macOS, utilisez le script shell que nous fournissons :
 
@@ -85,7 +87,7 @@ EMBED=/path/to/your/app \
 
 Le binaire obtenu est le fichier nommé `frankenphp-<os>-<arch>` dans le répertoire `dist/`.
 
-## Utiliser le Binaire
+## Utiliser le binaire
 
 C'est tout ! Le fichier `my-app` (ou `dist/frankenphp-<os>-<arch>` sur d'autres systèmes d'exploitation) contient votre application autonome !
 
@@ -117,9 +119,9 @@ Vous pouvez également exécuter les scripts CLI PHP incorporés dans votre bina
 
 [Consultez la documentation sur la compilation statique](static.md) pour voir comment personnaliser le binaire (extensions, version PHP...).
 
-## Distribuer le Binaire
+## Distribuer le binaire
 
-Le binaire créé n'est pas compressé.
-Pour réduire la taille du fichier avant de l'envoyer, vous pouvez le compresser.
+Sous Linux, le binaire est compressé par défaut à l'aide de [UPX](https://upx.github.io).
 
+Sous Mac, pour réduire la taille du fichier avant de l'envoyer, vous pouvez le compresser.
 Nous recommandons `xz`.

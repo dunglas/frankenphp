@@ -1,6 +1,8 @@
 # Création d'une image Docker personnalisée
 
-Les images Docker de [FrankenPHP](https://hub.docker.com/r/dunglas/frankenphp) sont basées sur les [images PHP officielles](https://hub.docker.com/_/php/). Des variantes Alpine Linux et Debian sont fournies pour les architectures populaires. Des variantes pour PHP 8.2 et PHP 8.3 sont disponibles. [Parcourir les tags](https://hub.docker.com/r/dunglas/frankenphp/tags).
+Les images Docker de [FrankenPHP](https://hub.docker.com/r/dunglas/frankenphp) sont basées sur les [images PHP officielles](https://hub.docker.com/_/php/). Des variantes Debian et Alpine Linux sont fournies pour les architectures populaires. Les variantes Debian sont recommandées.
+
+Des variantes pour PHP 8.2 et PHP 8.3 sont disponibles. [Parcourir les tags](https://hub.docker.com/r/dunglas/frankenphp/tags).
 
 ## Comment utiliser les images
 
@@ -12,7 +14,7 @@ FROM dunglas/frankenphp
 COPY . /app/public
 ```
 
-Ensuite, exécutez les commandes pour construire et exécuter l'image Docker :
+Ensuite, exécutez ces commandes pour construire et exécuter l'image Docker :
 
 ```console
 docker build -t my-php-app .
@@ -38,7 +40,7 @@ RUN install-php-extensions \
 
 ## Comment installer plus de modules Caddy
 
-FrankenPHP est construit sur Caddy, et tous les[modules Caddy](https://caddyserver.com/docs/modules/) peuvent être utilisés avec FrankenPHP.
+FrankenPHP est construit sur Caddy, et tous les [modules Caddy](https://caddyserver.com/docs/modules/) peuvent être utilisés avec FrankenPHP.
 
 La manière la plus simple d'installer des modules Caddy personnalisés est d'utiliser [xcaddy](https://github.com/caddyserver/xcaddy):
 
@@ -51,23 +53,22 @@ COPY --from=caddy:builder /usr/bin/xcaddy /usr/bin/xcaddy
 # CGO doit être activé pour construire FrankenPHP
 ENV CGO_ENABLED=1 XCADDY_SETCAP=1 XCADDY_GO_BUILD_FLAGS="-ldflags '-w -s'"
 RUN xcaddy build \
- --output /usr/local/bin/frankenphp \
- --with github.com/dunglas/frankenphp=./ \
- --with github.com/dunglas/frankenphp/caddy=./caddy/ \
-# Mercure et Vulcain sont inclus dans la construction officielle, mais n'hésitez pas à les retirer
-    --with github.com/dunglas/mercure/caddy \
-    --with github.com/dunglas/vulcain/caddy
-  # Ajoutez des modules Caddy supplémentaires ici
+	--output /usr/local/bin/frankenphp \
+	--with github.com/dunglas/frankenphp=./ \
+	--with github.com/dunglas/frankenphp/caddy=./caddy/ \
+	# Mercure et Vulcain sont inclus dans la construction officielle, mais n'hésitez pas à les retirer
+	--with github.com/dunglas/mercure/caddy \
+	--with github.com/dunglas/vulcain/caddy
+	# Ajoutez des modules Caddy supplémentaires ici
 
 FROM dunglas/frankenphp AS runner
 
 # Remplacer le binaire officiel par celui contenant vos modules personnalisés
 COPY --from=builder /usr/local/bin/frankenphp /usr/local/bin/frankenphp
-COPY --from=builder /usr/local/bin/frankenphp /usr/local/bin/frankenphp
 ```
 
-L'image builder fournie par FrankenPHP contient une version compilée de libphp.
-[Les images de constructeurs](https://hub.docker.com/r/dunglas/frankenphp/tags?name=builder) sont fournies pour toutes les versions de FrankenPHP et PHP, à la fois pour Alpine et Debian.
+L'image builder fournie par FrankenPHP contient une version compilée de `libphp`.
+[Les images builder](https://hub.docker.com/r/dunglas/frankenphp/tags?name=builder) sont fournies pour toutes les versions de FrankenPHP et PHP, à la fois pour Debian et Alpine.
 
 > [!TIP]
 >
@@ -76,7 +77,7 @@ L'image builder fournie par FrankenPHP contient une version compilée de libphp.
 
 ## Activer le mode Worker par défaut
 
-Définissez la variable d'environnement FRANKENPHP_CONFIG pour démarrer FrankenPHP avec un script worker :
+Définissez la variable d'environnement `FRANKENPHP_CONFIG` pour démarrer FrankenPHP avec un script worker :
 
 ```dockerfile
 FROM dunglas/frankenphp
@@ -98,7 +99,7 @@ docker run -v $PWD:/app/public -p 80:80 -p 443:443 -p 443:443/udp --tty my-php-a
 >
 > L'option --tty permet d'avoir des logs lisibles par un humain au lieu de logs JSON.
 
-Avec Docker Compose:
+Avec Docker Compose :
 
 ```yaml
 # compose.yaml
@@ -127,9 +128,9 @@ volumes:
   caddy_config:
 ```
 
-## Exécution en tant qu'utilisateur non root
+## Exécution en tant qu'utilisateur non-root
 
-FrankenPHP peut s'exécuter en tant qu'utilisateur non root dans Docker.
+FrankenPHP peut s'exécuter en tant qu'utilisateur non-root dans Docker.
 
 Voici un exemple de `Dockerfile` le permettant :
 
@@ -156,7 +157,7 @@ Les images Docker sont construites :
 * lorsqu'une nouvelle version est taguée
 * tous les jours à 4h UTC, si de nouvelles versions des images officielles PHP sont disponibles
 
-## Versions de Développement
+## Versions de développement
 
 Les versions de développement sont disponibles dans le dépôt Docker [`dunglas/frankenphp-dev`](https://hub.docker.com/repository/docker/dunglas/frankenphp-dev). Un nouveau build est déclenché chaque fois qu'un commit est poussé sur la branche principale du dépôt GitHub.
 

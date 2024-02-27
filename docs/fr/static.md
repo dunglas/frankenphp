@@ -1,21 +1,21 @@
-# Créer un Build Statique
+# Créer un binaire statique
 
 Au lieu d'utiliser une installation locale de la bibliothèque PHP, il est possible de créer un build statique de FrankenPHP grâce à l'excellent projet [static-php-cli](https://github.com/crazywhalecc/static-php-cli) (malgré son nom, ce projet prend en charge tous les SAPIs, pas seulement CLI).
 
 Avec cette méthode, un binaire portable unique contiendra l'interpréteur PHP, le serveur web Caddy et FrankenPHP !
 
-FrankenPHP prend également en charge [l'incorporation de l'application PHP dans le binaire statique](embed.md).
+FrankenPHP permet également [d'embarquer l'application PHP dans le binaire statique](embed.md).
 
 ## Linux
 
-Nous fournissons une image Docker pour créer un binaire statique Linux :
+Nous fournissons une image Docker pour créer un binaire statique pour Linux :
 
 ```console
 docker buildx bake --load static-builder
 docker cp $(docker create --name static-builder dunglas/frankenphp:static-builder):/go/src/app/dist/frankenphp-linux-$(uname -m) frankenphp ; docker rm static-builder
 ```
 
-Le binaire statique résultant est nommé frankenphp, et il est disponible dans le répertoire courant.
+Le binaire statique résultant est nommé `frankenphp`, et il est disponible dans le répertoire courant.
 
 Si vous souhaitez construire le binaire statique sans Docker, regardez les instructions pour macOS, qui fonctionnent également pour Linux.
 
@@ -42,7 +42,7 @@ docker buildx bake \
   static-builder
 ```
 
-Voir aussi : [personnaliser la construction](#personnalisation-de-la-construction)
+Voir aussi comment [personnaliser la construction](#personnalisation-de-la-construction)
 
 ### Jeton GitHub
 
@@ -55,7 +55,7 @@ GITHUB_TOKEN="xxx" docker --load buildx bake static-builder
 
 ## macOS
 
-Exécutez le script suivant pour créer un binaire statique pour macOS (vous devez avoir [Homebrew](https://brew.sh/) installé) :
+Exécutez le script suivant pour créer un binaire statique pour macOS (vous devez avoir [Homebrew](https://brew.sh/) d'installé) :
 
 ```console
 git clone https://github.com/dunglas/frankenphp
@@ -63,7 +63,7 @@ cd frankenphp
 ./build-static.sh
 ```
 
-Note : ce script fonctionne également sur Linux (et probablement sur d'autres Unix) et est utilisé en interne par le constructeur statique basé sur Docker que nous fournissons.
+Note : ce script fonctionne également sur Linux (et probablement sur d'autres Unix) et est utilisé en interne par le builder statique basé sur Docker que nous fournissons.
 
 ## Personnalisation de la construction
 
@@ -72,8 +72,8 @@ Les variables d'environnement suivantes peuvent être transmises à `docker buil
 * `FRANKENPHP_VERSION` : la version de FrankenPHP à utiliser
 * `PHP_VERSION` : la version de PHP à utiliser
 * `PHP_EXTENSIONS` : les extensions PHP à construire ([liste des extensions prises en charge](https://static-php.dev/en/guide/extensions.html))
-* `PHP_EXTENSION_LIBS` : bibliothèques supplémentaires à construire qui ajoutent des fonctionnalités supplémentaires aux extensions
+* `PHP_EXTENSION_LIBS` : bibliothèques supplémentaires à construire qui ajoutent des fonctionnalités aux extensions
 * `EMBED` : chemin de l'application PHP à intégrer dans le binaire
-* `CLEAN` : lorsqu'il est défini, libphp et toutes ses dépendances sont construites à partir de zéro (pas de cache)
-* `DEBUG_SYMBOLS` : lorsqu'il est défini, les symboles de débogage ne seront pas supprimés et seront ajoutés dans le binaire
-* `RELEASE` : (uniquement pour les mainteneurs) lorsqu'elle est définie, le binaire résultant sera téléchargé sur GitHub
+* `CLEAN` : lorsque défini, `libphp` et toutes ses dépendances sont construites à partir de zéro (pas de cache)
+* `DEBUG_SYMBOLS` : lorsque défini, les symboles de débogage ne seront pas supprimés et seront ajoutés dans le binaire
+* `RELEASE` : (uniquement pour les mainteneurs) lorsque défini, le binaire résultant sera uploadé sur GitHub

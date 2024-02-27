@@ -25,7 +25,7 @@ Si la version de Docker est inférieure à 23.0, la construction échoue à caus
 
 ### Sans Docker (Linux et macOS)
 
-[Suivez les instructions pour compiler à partir des sources](https://frankenphp.dev/docs/compile/) et passez l'indicateur de configuration `--debug`.
+[Suivez les instructions pour compiler à partir des sources](compile.md) et passez l'indicateur de configuration `--debug`.
 
 ## Exécution de la suite de tests
 
@@ -35,7 +35,7 @@ go test -race -v ./...
 
 ## Module Caddy
 
-Construire Caddy avec le module Caddy de FrankenPHP :
+Construire Caddy avec le module FrankenPHP :
 
 ```console
 cd caddy/frankenphp/
@@ -43,7 +43,7 @@ go build
 cd ../../
 ```
 
-Exécuter Caddy avec le module Caddy de FrankenPHP :
+Exécuter Caddy avec le module FrankenPHP :
 
 ```console
 cd testdata/
@@ -79,7 +79,7 @@ Le serveur est configuré pour écouter à l'adresse `127.0.0.1:8080`:
 curl -v http://127.0.0.1:8080/phpinfo.php
 ```
 
-## Construction d'images Docker localement
+## Construire localement les images Docker
 
 Afficher le plan de compilation :
 
@@ -105,10 +105,10 @@ Construire à partir de zéro les images FrankenPHP pour arm64 & amd64 et les po
 docker buildx bake -f docker-bake.hcl --pull --no-cache --push
 ```
 
-## Debug des fautes de segmentation dans GitHub Actions
+## Déboguer les erreurs de segmentation dans GitHub Actions
 
 1. Ouvrir `.github/workflows/tests.yml`
-2. Activer les symboles de débogage PHP
+2. Activer les symboles de débogage de la bibliothèque PHP
 
     ```patch
         - uses: shivammathur/setup-php@v2

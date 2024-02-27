@@ -2,11 +2,11 @@
 
 FrankenPHP, Caddy ainsi que les modules Mercure et Vulcain peuvent être configurés en utilisant [les formats pris en charge par Caddy](https://caddyserver.com/docs/getting-started#your-first-config).
 
-Dans l'image Docker, le `Caddyfile` se trouve dans `/etc/caddy/Caddyfile`.
+Dans l'image Docker, le chemin du `Caddyfile` est `/etc/caddy/Caddyfile`.
 
 Vous pouvez également configurer PHP en utilisant `php.ini` comme d'habitude.
 
-Dans l'image Docker, le fichier `php.ini` n'est pas présent, vous pouvez le créer ou le `COPY` manuellement :
+Dans l'image Docker, le fichier `php.ini` n'est pas présent, vous pouvez le créer manuellement ou copier un template officiel :
 
 ```dockerfile
 FROM dunglas/frankenphp
@@ -20,36 +20,36 @@ RUN cp $PHP_INI_DIR/php.ini-production $PHP_INI_DIR/php.ini
 
 ## Configuration du Caddyfile
 
-Pour enregistrer l'exécutable de FrankenPHP, l'[option globale](https://caddyserver.com/docs/caddyfile/concepts#global-options) `frankenphp` doit être définie, puis les [directives HTTP](https://caddyserver.com/docs/caddyfile/concepts#directives) `php_server` ou `php` peuvent être utilisées dans les blocs du site pour servir votre application PHP.
+Pour enregistrer l'exécutable de FrankenPHP, l'[option globale](https://caddyserver.com/docs/caddyfile/concepts#global-options) `frankenphp` doit être définie, puis les [directives HTTP](https://caddyserver.com/docs/caddyfile/concepts#directives) `php_server` ou `php` peuvent être utilisées dans les blocs de site pour servir votre application PHP.
 
 Exemple minimal :
 
 ```caddyfile
 {
- # Autoriser FrankenPHP
+ # Activer FrankenPHP
  frankenphp
  # Configurer l'ordre d'exécution de la directive
  order php_server before file_server
 }
 
 localhost {
- # Autoriser la compression (optionnel)
+ # Activer la compression (optionnel)
  encode zstd br gzip
- # Exécuter les fichiers PHP dans le répertoire courant et servir les ressources
+ # Exécuter les fichiers PHP dans le répertoire courant et servir les assets
  php_server
 }
 ```
 
-En option, le nombre de threads à créer et les  [scripts de travail](worker.md) à démarrer avec le serveur peuvent être spécifiés sous l'option globale.
+En option, le nombre de threads à créer et les [workers](worker.md) à démarrer avec le serveur peuvent être spécifiés sous l'option globale.
 
 ```caddyfile
 {
  frankenphp {
   num_threads <num_threads> # Définit le nombre de threads PHP à démarrer. Par défaut : 2x le nombre de CPUs disponibles.
   worker {
-   file <path> # Définit le chemin vers le script de travail.
+   file <path> # Définit le chemin vers le script worker.
    num <num> # Définit le nombre de threads PHP à démarrer, par défaut 2x le nombre de CPUs disponibles.
-   env <key> <value> # Définit une variable d'environnement supplémentaire à la valeur donnée. Peut être spécifié plusieurs fois pour plusieurs variables d'environnement.
+   env <key> <value> # Définit une variable d'environnement supplémentaire avec la valeur donnée. Peut être spécifié plusieurs fois pour régler plusieurs variables d'environnement.
   }
  }
 }
@@ -88,13 +88,14 @@ other.example.com {
  root * /path/to/other/public
  php_server
 }
-...
+
+# ...
 ```
 
-L'utilisation de la directive php_server est généralement suffisante,
-mais si vous avez besoin d'un contrôle total, vous pouvez utiliser la directive de niveau inférieur php.
+L'utilisation de la directive `php_server` est généralement suffisante,
+mais si vous avez besoin d'un contrôle total, vous pouvez utiliser la directive `php`, qui permet un plus grand niveau de finesse dans la configuration.
 
-Utiliser la directive php_server est équivalent à cette configuration :
+Utiliser la directive `php_server` est équivalent à cette configuration :
 
 ```caddyfile
 route {
@@ -117,14 +118,14 @@ route {
 }
 ```
 
-Les directives php_server et php disposent des options suivantes :
+Les directives `php_server` et `php` disposent des options suivantes :
 
 ```caddyfile
 php_server [<matcher>] {
- root <directory> # Définit le dossier racine pour le site. Par défaut : directive `root`.
- split_path <delim...> # Définit les sous-chaînes pour diviser l'URI en deux parties. La première sous-chaîne correspondante sera utilisée pour séparer le "path info" du chemin. La première partie est suffixée avec la sous-chaîne correspondante et sera considérée comme le nom réel de la ressource (script CGI). La seconde partie sera définie comme PATH_INFO pour que le script CGI l'utilise. Par défaut : `.php`
+ root <directory> # Définit le dossier racine du le site. Par défaut : valeur de la directive `root` parente.
+ split_path <delim...> # Définit les sous-chaînes pour diviser l'URI en deux parties. La première sous-chaîne correspondante sera utilisée pour séparer le "path info" du chemin. La première partie est suffixée avec la sous-chaîne correspondante et sera considérée comme le nom réel de la ressource (script CGI). La seconde partie sera définie comme PATH_INFO pour utilisation par le script. Par défaut : `.php`
  resolve_root_symlink false # Désactive la résolution du répertoire `root` vers sa valeur réelle en évaluant un lien symbolique, s'il existe (activé par défaut).
- env <key> <value> # Définit une variable d'environnement supplémentaire à la valeur donnée. Peut être spécifié plusieurs fois pour plusieurs variables d'environnement.
+ env <key> <value> # Définit une variable d'environnement supplémentaire avec la valeur donnée. Peut être spécifié plusieurs fois pour plusieurs variables d'environnement.
 }
 ```
 
@@ -136,16 +137,16 @@ Les variables d'environnement suivantes peuvent être utilisées pour insérer d
 * `CADDY_GLOBAL_OPTIONS` : injecte [des options globales](https://caddyserver.com/docs/caddyfile/options)
 * `FRANKENPHP_CONFIG` : insère la configuration sous la directive `frankenphp`
 
-Contrairement aux SAPI FPM et CLI, les variables d'environnement ne sont **pas** exposées par défaut dans les superglobales `$_SERVER` et `$_ENV`.
+Comme pour les SAPI FPM et CLI, les variables d'environnement ne sont exposées par défaut dans la superglobale `$_SERVER`.
 
-Pour propager les variables d'environnement vers `$_SERVER` et `$_ENV`, configurez la directive `variables_order` de `php.ini` sur `EGPCS`.
+La valeur `S` de [la directive `variables_order` de PHP](https://www.php.net/manual/fr/ini.core.php#ini.variables-order) est toujours équivalente à `ES`, que `E` soit défini ailleurs dans cette directive ou non.
 
 ## Configuration PHP
 
 Pour charger [des fichiers de configuration PHP supplémentaires](https://www.php.net/manual/fr/configuration.file.php#configuration.file.scan), la variable d'environnement `PHP_INI_SCAN_DIR` peut être utilisée.
 Lorsqu'elle est définie, PHP chargera tous les fichiers avec l'extension `.ini` présents dans les répertoires donnés.
 
-## Activer le mode Debug
+## Activer le mode debug
 
 Lors de l'utilisation de l'image Docker, définissez la variable d'environnement `CADDY_GLOBAL_OPTIONS` sur `debug` pour activer le mode debug :
 

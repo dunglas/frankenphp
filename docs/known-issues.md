@@ -40,7 +40,7 @@ The following extensions are known not to be compatible with FrankenPHP:
 
 ## get_browser
 
-The [get_browser()](https://www.php.net/manual/en/function.get-browser.php) function seems to perform badly after a while. A workaround is to cache (e.g. with APCU) the results per User Agent, as they are static.
+The [get_browser()](https://www.php.net/manual/en/function.get-browser.php) function seems to perform badly after a while. A workaround is to cache (e.g. with [APCu](https://www.php.net/manual/en/book.apcu.php)) the results per User Agent, as they are static.
 
 ## Standalone Binary and Alpine-based Docker Images
 

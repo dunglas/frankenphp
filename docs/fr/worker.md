@@ -1,13 +1,13 @@
 # Utilisation des workers FrankenPHP
 
 Démarrez votre application une fois et gardez-la en mémoire.
-FrankenPHP gérera les requêtes entrantes en quelques millisecondes.
+FrankenPHP traitera les requêtes entrantes en quelques millisecondes.
 
-## Démarrage des scripts de workers
+## Démarrage des scripts workers
 
 ### Docker
 
-Définissez la valeur de la variable d'environnement `FRANKENPHP_CONFIG` sur `worker /path/to/your/worker/script.php` :
+Définissez la valeur de la variable d'environnement `FRANKENPHP_CONFIG` à `worker /path/to/your/worker/script.php` :
 
 ```console
 docker run \
@@ -24,6 +24,9 @@ Utilisez l'option --worker de la commande php-server pour servir le contenu du r
 ```console
 ./frankenphp php-server --worker /path/to/your/worker/script.php
 ```
+
+Si votre application PHP est [intégrée dans le binaire](embed.md), vous pouvez également ajouter un `Caddyfile` personnalisé dans le répertoire racine de l'application.
+Il sera utilisé automatiquement.
 
 ## Runtime Symfony
 
@@ -66,24 +69,25 @@ require __DIR__.'/vendor/autoload.php';
 $myApp = new \App\Kernel();
 $myApp->boot();
 
-// Gestionnaire en dehors de la boucle pour de meilleures performances (moins de travail effectué)
+// En dehors de la boucle pour de meilleures performances (moins de travail effectué)
 $handler = static function () use ($myApp) {
         // Appelé lorsqu'une requête est reçue,
         // les superglobales, php://input, etc., sont réinitialisés
         echo $myApp->handle($_GET, $_POST, $_COOKIE, $_FILES, $_SERVER);
 };
+
 for($nbRequests = 0, $running = true; isset($_SERVER['MAX_REQUESTS']) && ($nbRequests < ((int)$_SERVER['MAX_REQUESTS'])) && $running; ++$nbRequests) {
     $running = \frankenphp_handle_request($handler);
 
     // Faire quelque chose après l'envoi de la réponse HTTP
     $myApp->terminate();
 
-    // Appeler le garbage collector pour réduire les chances qu'il soit déclenché au milieu de la génération d'une page
+    // Exécuter le ramasse-miettes pour réduire les chances qu'il soit déclenché au milieu de la génération d'une page
     gc_collect_cycles();
 }
+
 // Nettoyage
 $myApp->shutdown();
-
 ```
 
 Ensuite, démarrez votre application et utilisez la variable d'environnement `FRANKENPHP_CONFIG` pour configurer votre worker :
@@ -96,7 +100,7 @@ docker run \
     dunglas/frankenphp
 ```
 
-Par défaut, un worker par CPU est démarré.
+Par défaut, 2 workers par CPU sont démarrés.
 Vous pouvez également configurer le nombre de workers à démarrer :
 
 ```console
@@ -107,9 +111,9 @@ docker run \
     dunglas/frankenphp
 ```
 
-### Redémarrer le Worker Après un Certain Nombre de Requêtes
+### Redémarrer le worker après un certain nombre de requêtes
 
-Comme PHP n'a pas été initialement conçu pour des processus de longue durée, de nombreuses bibliothèques et codes hérités présentent encore des fuites de mémoire.
+Comme PHP n'a pas été initialement conçu pour des processus de longue durée, de nombreuses bibliothèques et codes anciens présentent encore des fuites de mémoire.
 Une solution pour utiliser ce type de code en mode worker est de redémarrer le script worker après avoir traité un certain nombre de requêtes :
 
-L'extrait de worker précédent permet de configurer un nombre maximal de requêtes à traiter en définissant une variable d'environnement nommée `MAX_REQUESTS`.
+Le code du worker précédent permet de configurer un nombre maximal de requêtes à traiter en définissant une variable d'environnement nommée `MAX_REQUESTS`.

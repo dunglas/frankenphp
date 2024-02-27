@@ -2,7 +2,8 @@
 
 ## Docker
 
-Déployer une application web [Laravel](https://laravel.com) avec FrankenPHP est aussi facile que de monter le projet dans le répertoire `/app` de l'image Docker officielle.
+Déployer une application web [Laravel](https://laravel.com) avec FrankenPHP est très facile.
+Il suffit de monter le projet dans le répertoire `/app` de l'image Docker officielle.
 
 Exécutez cette commande depuis le répertoire principal de votre application Laravel :
 
@@ -17,7 +18,7 @@ Et profitez !
 Vous pouvez également exécuter vos projets Laravel avec FrankenPHP depuis votre machine locale :
 
 1. [Téléchargez le binaire correspondant à votre système](https://github.com/dunglas/frankenphp/releases)
-2. Ajoutez la configuration suivante à un fichier nommé `Caddyfile` dans le répertoire racine de votre projet Laravel :
+2. Ajoutez la configuration suivante dans un fichier nommé `Caddyfile` placé dans le répertoire racine de votre projet Laravel :
 
  	```caddyfile
     {
@@ -31,7 +32,7 @@ Vous pouvez également exécuter vos projets Laravel avec FrankenPHP depuis votr
      root * public/
      # Autoriser la compression (optionnel)
      encode zstd br gzip
-     # Exécuter les fichiers PHP dans le répertoire courant et servir les ressources
+     # Exécuter les scripts PHP du dossier public/ et servir les assets
      php_server
     }
     ```
