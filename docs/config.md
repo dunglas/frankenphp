@@ -6,7 +6,7 @@ In the Docker image, the `Caddyfile` is located at `/etc/caddy/Caddyfile`.
 
 You can also configure PHP using `php.ini` as usual.
 
-In the Docker image, the `php.ini` file is not present, you can create it or `COPY` manually:
+In the Docker image, the `php.ini` file is not present, you can create it manually  or copy an official template:
 
 ```dockerfile
 FROM dunglas/frankenphp
@@ -88,7 +88,8 @@ other.example.com {
 	root * /path/to/other/public
 	php_server
 }
-...
+
+# ...
 ```
 
 Using the `php_server` directive is generally what you need,
@@ -122,7 +123,7 @@ The `php_server` and the `php` directives have the following options:
 ```caddyfile
 php_server [<matcher>] {
 	root <directory> # Sets the root folder to the site. Default: `root` directive.
-	split_path <delim...> # Sets the substrings for splitting the URI into two parts. The first matching substring will be used to split the "path info" from the path. The first piece is suffixed with the matching substring and will be assumed as the actual resource (CGI script) name. The second piece will be set to PATH_INFO for the CGI script to use. Default: `.php`
+	split_path <delim...> # Sets the substrings for splitting the URI into two parts. The first matching substring will be used to split the "path info" from the path. The first piece is suffixed with the matching substring and will be assumed as the actual resource (CGI script) name. The second piece will be set to PATH_INFO for the script to use. Default: `.php`
 	resolve_root_symlink false # Disables resolving the `root` directory to its actual value by evaluating a symbolic link, if one exists (enabled by default).
 	env <key> <value> # Sets an extra environment variable to the given value. Can be specified more than once for multiple environment variables.
 }
@@ -136,9 +137,9 @@ The following environment variables can be used to inject Caddy directives in th
 * `CADDY_GLOBAL_OPTIONS`: inject [global options](https://caddyserver.com/docs/caddyfile/options)
 * `FRANKENPHP_CONFIG`: inject config under the `frankenphp` directive
 
-Unlike with FPM and CLI SAPIs, environment variables are **not** exposed by default in superglobals `$_SERVER` and `$_ENV`.
+As for FPM and CLI SAPIs, environment variables are exposed by default in the `$_SERVER` superglobal.
 
-To propagate environment variables to `$_SERVER` and `$_ENV`, set the `php.ini` `variables_order` directive to `EGPCS`.
+The `S` value of [the `variables_order` PHP directive](https://www.php.net/manual/en/ini.core.php#ini.variables-order) is always equivalent to `ES` regardless of the placement of `E` elsewhere in this directive.
 
 ## PHP config
 

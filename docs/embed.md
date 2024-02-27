@@ -4,7 +4,7 @@ FrankenPHP has the ability to embed the source code and assets of PHP applicatio
 
 Thanks to this feature, PHP applications can be distributed as standalone binaries that include the application itself, the PHP interpreter and Caddy, a production-level web server.
 
-Learn more about this feature [in the presentation made by Kévin at SymfonyCon](https://dunglas.dev/2023/12/php-and-symfony-apps-as-standalone-binaries/).
+Learn more about this feature [in the presentation made by Kévin at SymfonyCon 2023](https://dunglas.dev/2023/12/php-and-symfony-apps-as-standalone-binaries/).
 
 ## Preparing Your App
 
@@ -65,7 +65,7 @@ The easiest way to create a Linux binary is to use the Docker-based builder we p
     docker build -t static-app -f static-build.Dockerfile .
     ```
 
-3. Extract the binary
+3. Extract the binary:
 
     ```console
     docker cp $(docker create --name static-app-tmp static-app):/go/src/app/dist/frankenphp-linux-x86_64 my-app ; docker rm static-app-tmp
@@ -121,7 +121,7 @@ You can also run the PHP CLI scripts embedded in your binary:
 
 ## Distributing The Binary
 
-The created binary isn't compressed.
-To reduce the size of the file before sending it, you can compress it.
+On Linux, the created binary is compressed using [UPX](https://upx.github.io).
 
+On Mac, to reduce the size of the file before sending it, you can compress it.
 We recommend `xz`.

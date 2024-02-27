@@ -12,15 +12,15 @@ In the repository settings, under secrets, add the following secrets:
 - `REGISTRY_PASSWORD`: The password to use to login to the registry (e.g. an access key).
 - `IMAGE_NAME`: The name of the image (e.g. `dunglas/frankenphp`).
 
-## Building and pushing the image
+## Building and Pushing the Image
 
-1. Create a pull request or push to your fork.
+1. Create a Pull Request or push to your fork.
 2. GitHub Actions will build the image and run any tests.
 3. If the build is successful, the image will be pushed to the registry using the `pr-x`, where `x` is the PR number, as the tag.
 
-## Deploying the image
+## Deploying the Image
 
-1. Once the pull request is merged, GitHub Actions will again run the tests and build a new image.
+1. Once the Pull Request is merged, GitHub Actions will again run the tests and build a new image.
 2. If the build is successful, the `main` tag will be updated in the Docker registry.
 
 ## Releases

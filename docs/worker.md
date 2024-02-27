@@ -25,6 +25,9 @@ Use the `--worker` option of the `php-server` command to serve the content of th
 ./frankenphp php-server --worker /path/to/your/worker/script.php
 ```
 
+If your PHP app is [embeded in the binary](embed.md), you can add a custom `Caddyfile` in the root directory of the app.
+It will be used automatically.
+
 ## Symfony Runtime
 
 The worker mode of FrankenPHP is supported by the [Symfony Runtime Component](https://symfony.com/doc/current/components/runtime.html).
@@ -72,6 +75,7 @@ $handler = static function () use ($myApp) {
         // superglobals, php://input and the like are reset
         echo $myApp->handle($_GET, $_POST, $_COOKIE, $_FILES, $_SERVER);
 };
+
 for($nbRequests = 0, $running = true; isset($_SERVER['MAX_REQUESTS']) && ($nbRequests < ((int)$_SERVER['MAX_REQUESTS'])) && $running; ++$nbRequests) {
     $running = \frankenphp_handle_request($handler);
 
@@ -81,6 +85,7 @@ for($nbRequests = 0, $running = true; isset($_SERVER['MAX_REQUESTS']) && ($nbReq
     // Call the garbage collector to reduce the chances of it being triggered in the middle of a page generation
     gc_collect_cycles();
 }
+
 // Cleanup
 $myApp->shutdown();
 ```
@@ -95,7 +100,7 @@ docker run \
     dunglas/frankenphp
 ```
 
-By default, one worker per CPU is started.
+By default, 2 workers per CPU are started.
 You can also configure the number of workers to start:
 
 ```console

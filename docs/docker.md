@@ -1,6 +1,8 @@
 # Building Custom Docker Image
 
-[FrankenPHP Docker images](https://hub.docker.com/r/dunglas/frankenphp) are based on [official PHP images](https://hub.docker.com/_/php/). Alpine Linux and Debian variants are provided for popular architectures. Variants for PHP 8.2 and PHP 8.3 are provided. [Browse tags](https://hub.docker.com/r/dunglas/frankenphp/tags).
+[FrankenPHP Docker images](https://hub.docker.com/r/dunglas/frankenphp) are based on [official PHP images](https://hub.docker.com/_/php/). Debian and Alpine Linux avariants are provided for popular architectures. Debian variants are recommended.
+
+Variants for PHP 8.2 and PHP 8.3 are provided. [Browse tags](https://hub.docker.com/r/dunglas/frankenphp/tags).
 
 ## How to Use The Images
 
@@ -12,7 +14,7 @@ FROM dunglas/frankenphp
 COPY . /app/public
 ```
 
-Then, run the commands to build and run the Docker image:
+Then, run these commands to build and run the Docker image:
 
 ```console
 docker build -t my-php-app .
@@ -65,8 +67,8 @@ FROM dunglas/frankenphp AS runner
 COPY --from=builder /usr/local/bin/frankenphp /usr/local/bin/frankenphp
 ```
 
-The `builder` image provided by FrankenPHP contains a compiled version of libphp.
-[Builders images](https://hub.docker.com/r/dunglas/frankenphp/tags?name=builder) are provided for all versions of FrankenPHP and PHP, both for Alpine and Debian.
+The `builder` image provided by FrankenPHP contains a compiled version of `libphp`.
+[Builders images](https://hub.docker.com/r/dunglas/frankenphp/tags?name=builder) are provided for all versions of FrankenPHP and PHP, both for Debian and Alpine.
 
 > [!TIP]
 >
