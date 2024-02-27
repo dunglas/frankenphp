@@ -76,7 +76,7 @@ Cela provisionnera un serveur Ubuntu avec les dernières versions de Docker et D
 Pour des fins de test, les plans les moins chers seront suffisants.
 Pour une utilisation en production réelle, vous voudrez probablement choisir un plan dans la section "General Usage" pour répondre à vos besoins.
 
-![Déployer FrankenPHP sur DigitalOcean avec Docker](digitalocean-droplet.png)
+![Déployer FrankenPHP sur DigitalOcean avec Docker](../digitalocean-droplet.png)
 
 Vous pouvez conserver les paramètres par défaut pour les autres paramètres, ou les ajuster selon vos besoins.
 N'oubliez pas d'ajouter votre clé SSH ou de créer un mot de passe puis appuyez sur le bouton "Finalize and create".
@@ -101,7 +101,7 @@ your-domain-name.example.com.  IN  A     207.154.233.113
 
 Exemple avec le service DigitalOcean Domains ("Networking" > "Domains") :
 
-![Configurer les DNS sur DigitalOcean](digitalocean-dns.png)
+![Configurer les DNS sur DigitalOcean](../digitalocean-dns.png)
 
 > [!NOTE]  
 > Let's Encrypt, le service utilisé par défaut par FrankenPHP pour générer automatiquement un certificat TLS, ne prend pas en charge l'utilisation d'adresses IP nues. L'utilisation d'un nom de domaine est obligatoire pour utiliser Let's Encrypt.
