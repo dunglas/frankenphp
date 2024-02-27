@@ -53,7 +53,7 @@ if [ -z "$THE_ARCH_BIN" ]; then
    exit 1
 fi
 
-curl -kL --progress-bar https://github.com/$THIS_PROJECT_OWNER/$THIS_PROJECT_NAME/releases/latest/download/$THE_ARCH_BIN -o "$DEST"
+curl -kL --progress-bar "https://github.com/$THIS_PROJECT_OWNER/$THIS_PROJECT_NAME/releases/latest/download/$THE_ARCH_BIN" -o "$DEST"
 
 chmod +x "$DEST"
 
