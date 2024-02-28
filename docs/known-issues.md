@@ -96,3 +96,28 @@ docker run \
     -p 80:80 -p 443:443 -p 443:443/udp \
     dunglas/frankenphp
 ```
+
+## Composer unable to execute @php commands
+
+Composer scripts may want to execute a php binary for some tasks, e.g. in a laravel project to run `@php artisan package:discover --ansi`. This [currently fails]((https://github.com/dunglas/frankenphp/issues/483#issuecomment-1899890915)) for two reasons:
+
+- Composer does not know to call the frankenphp binary
+- Composer may add php settings using -d in the command, which frankenphp does not yet suppport.
+
+As a workaround, we can create a shell script in `/usr/local/bin/php` which strips the unsupported parameters and then calls frankenphp:
+
+```bash
+#!/bin/bash
+
+# iterate over $@. if the current argument is -d, remove the argument and the next one
+for i in "$@"
+do
+    if [ "$i" == "-d" ]; then
+        shift
+        shift
+    fi
+done
+
+/usr/local/bin/frankenphp php-cli "$@"
+```
+- 
