@@ -112,7 +112,7 @@ As a workaround, we can create a shell script in `/usr/local/bin/php` which stri
 # iterate over $@. if the current argument is -d, remove the argument and the next one
 for i in "$@"
 do
-    if [ "$i" == "-d" ]; then
+    if [ "$i" = "-d" ]; then
         shift
         shift
     fi
