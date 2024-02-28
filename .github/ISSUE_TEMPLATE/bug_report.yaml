@@ -7,6 +7,10 @@ body:
     attributes:
       value: |
         Thanks for taking the time to fill out this bug report!
+        Before submitting a bug, please double-check that your problem [is not
+        a known issue](https://frankenphp.dev/docs/known-issues/)
+        (especially if you use XDebug, Tideways or Datadog), and that is has not
+        [already been reported](https://github.com/dunglas/frankenphp/issues).
   - type: textarea
     id: what-happened
     attributes:
@@ -65,6 +69,13 @@ body:
         - aarch64
         - Other (tell us more in the description)
       default: 0
+  - type: textarea
+    id: php
+    attributes:
+      label: PHP configuration
+      description: |
+        Please copy and paste the output of the `phpinfo()` function.
+      render: shell
     validations:
       required: true
   - type: textarea
