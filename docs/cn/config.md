@@ -122,7 +122,7 @@ route {
 ```caddyfile
 php_server [<matcher>] {
 	root <directory> # 设置站点的根文件夹。默认值：`root` 指令。
-	split_path <delim...> # 设置用于将 URI 拆分为两部分的子字符串。第一个匹配的子字符串将用于从路径中拆分“路径信息”。第一个部分以匹配的子字符串为后缀，并将假定为实际资源(CGI 脚本)名称。第二部分将设置为PATH_INFO，供 CGI 脚本使用。默认值：`.php`
+	split_path <delim...> # 设置用于将 URI 拆分为两部分的子字符串。第一个匹配的子字符串将用于从路径中拆分“路径信息”。第一个部分以匹配的子字符串为后缀，并将假定为实际资源(CGI 脚本)名称。第二部分将设置为PATH_INFO，供 脚本使用。默认值：`.php`
 	resolve_root_symlink # 允许通过计算符号链接(如果存在)将 `根` 目录解析为其实际值。
 	env <key> <value> # 将额外的环境变量设置为给定值。可以为多个环境变量多次指定。
 }
@@ -135,10 +135,6 @@ php_server [<matcher>] {
 * `SERVER_NAME`: 更改 [要监听的地址](https://caddyserver.com/docs/caddyfile/concepts#addresses)，提供的主机名也将用于生成的 TLS 证书
 * `CADDY_GLOBAL_OPTIONS`: 注入 [全局选项](https://caddyserver.com/docs/caddyfile/options)
 * `FRANKENPHP_CONFIG`: 在 `frankenphp` 指令下注入配置
-
-与 FPM 和 CLI SAPIs 不同，默认情况下，环境变量不会在超全局变量 `$_SERVER` 和 `$_ENV` 中公开。
-
-要将环境变量传播到 `$_SERVER` 和 `$_ENV`，请将 `php.ini` `variables_order` 指令设置为 `EGPCS`。
 
 ## PHP 配置
 
