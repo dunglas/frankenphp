@@ -38,6 +38,16 @@ The following extensions are known not to be compatible with FrankenPHP:
 | ----------------------------------------------------------- | --------------- | -------------------------------------------------------------------------------------------------------------------- |
 | [imap](https://www.php.net/manual/en/imap.installation.php) | Not thread-safe | [javanile/php-imap2](https://github.com/javanile/php-imap2), [webklex/php-imap](https://github.com/Webklex/php-imap) |
 
+## Buggy PHP Extensions
+
+The following extensions have known bugs and unexpected behaviors when used with FrankenPHP:
+
+| Name                                                                                                                     | Problem                                                                                                                                                                                                                        |
+|--------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [XDebug](https://xdebug.org/)                                                                                            | XDebug may crash, or hang. This problem is [being tracked by XDebug](https://github.com/dunglas/frankenphp/issues/563#issuecomment-1952226212).                                                                                |
+| [Datadog PHP Tracer](https://docs.datadoghq.com/fr/tracing/trace_collection/automatic_instrumentation/dd_libraries/php/) | The Datadog tracer [can cause crashes](https://github.com/dunglas/frankenphp/issues/458#issuecomment-1878487776). This has been reported to DataDog.                                                                           |
+| [Tideways](https://tideways.com/)                                                                                        | In worker mode, the Tideways extension [prevents worker scripts to finish properly](https://github.com/dunglas/frankenphp/issues/578#issuecomment-1966620351) or consumes 100% of the CPU. This has been reported to Tideways. |
+
 ## get_browser
 
 The [get_browser()](https://www.php.net/manual/en/function.get-browser.php) function seems to perform badly after a while. A workaround is to cache (e.g. with [APCu](https://www.php.net/manual/en/book.apcu.php)) the results per User Agent, as they are static.
