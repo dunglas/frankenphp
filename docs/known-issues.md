@@ -80,7 +80,7 @@ docker run \
     dunglas/frankenphp
 ```
 
-> ![CAUTION]
+> [!CAUTION]
 >
 > Be sure to replace `172.17.0.3` with the IP that will be assigned to your container.
 
@@ -97,14 +97,14 @@ docker run \
     dunglas/frankenphp
 ```
 
-## Composer unable to execute @php commands
+## Composer Scripts Referencing `@php`
 
-Composer scripts may want to execute a php binary for some tasks, e.g. in a laravel project to run `@php artisan package:discover --ansi`. This [currently fails]((https://github.com/dunglas/frankenphp/issues/483#issuecomment-1899890915)) for two reasons:
+[Composer scripts](https://getcomposer.org/doc/articles/scripts.md) may want to execute a PHP binary for some tasks, e.g. in [a Laravel project](laravel.md) to run `@php artisan package:discover --ansi`. This [currently fails]((https://github.com/dunglas/frankenphp/issues/483#issuecomment-1899890915)) for two reasons:
 
-- Composer does not know to call the frankenphp binary
-- Composer may add php settings using -d in the command, which frankenphp does not yet suppport.
+* Composer does not know how to call the FrankenPHP binary;
+* Composer may add PHP settings using the `-d` flag in the command, which FrankenPHP does not yet support.
 
-As a workaround, we can create a shell script in `/usr/local/bin/php` which strips the unsupported parameters and then calls frankenphp:
+As a workaround, we can create a shell script in `/usr/local/bin/php` which strips the unsupported parameters and then calls FrankenPHP:
 
 ```bash
 #!/bin/bash
@@ -120,4 +120,3 @@ done
 
 /usr/local/bin/frankenphp php-cli "$@"
 ```
-- 
