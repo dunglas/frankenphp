@@ -107,7 +107,7 @@ docker run \
 As a workaround, we can create a shell script in `/usr/local/bin/php` which strips the unsupported parameters and then calls FrankenPHP:
 
 ```bash
-#!/bin/bash
+#!/bin/sh
 
 # iterate over $@. if the current argument is -d, remove the argument and the next one
 for i in "$@"
