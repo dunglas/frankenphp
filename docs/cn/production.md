@@ -77,7 +77,7 @@ volumes:
 出于测试目的，最便宜的计划就足够了。
 对于实际的生产用途，您可能需要在“常规用途”部分中选择一个计划来满足您的需求。
 
-![使用 Docker 在 DigitalOcean 上部署 FrankenPHP](digitalocean-droplet.png)
+![使用 Docker 在 DigitalOcean 上部署 FrankenPHP](../digitalocean-droplet.png)
 
 您可以保留其他设置的默认值，也可以根据需要进行调整。
 不要忘记添加您的SSH密钥或创建密码，然后按“完成并创建”按钮。
@@ -102,7 +102,7 @@ your-domain-name.example.com.  IN  A     207.154.233.113
 
 DigitalOcean 域服务示例（“网络” > “域”）：
 
-![在 DigitalOcean 上配置 DNS](digitalocean-dns.png)
+![在 DigitalOcean 上配置 DNS](../digitalocean-dns.png)
 
 > [!注意]
 > Let's Encrypt 是 FrankenPHP 默认用于自动生成 TLS 证书的服务，不支持使用裸 IP 地址。使用域名是使用 Let's Encrypt 的必要条件。
