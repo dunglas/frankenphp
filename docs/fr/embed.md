@@ -59,9 +59,10 @@ La manière la plus simple de créer un binaire Linux est d'utiliser le builder 
         ./build-static.sh
     ```
 
-> [!CAUTION]
->
-> Certains fichiers .dockerignore (par exemple le [symfony-docker .dockerignore](https://github.com/dunglas/symfony-docker/blob/main/.dockerignore) par défaut)>vont ignorer le dossier vendor et les fichiers d'environnement. Assurez-vous d'ajuster ou de supprimer le fichier .dockerignore avant la construction.
+    > [!CAUTION]
+    >
+    > Certains fichiers .dockerignore (par exemple le [symfony-docker .dockerignore](https://github.com/dunglas/symfony-docker/blob/main/.dockerignore) par défaut)
+    > vont ignorer le dossier vendor et les fichiers d'environnement. Assurez-vous d'ajuster ou de supprimer le fichier .dockerignore avant la construction.
 
 2. Construisez:
 
