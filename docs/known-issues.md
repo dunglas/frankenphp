@@ -106,17 +106,26 @@ docker run \
 
 As a workaround, we can create a shell script in `/usr/local/bin/php` which strips the unsupported parameters and then calls FrankenPHP:
 
-```sh
-#!/bin/sh
-
-# iterate over $@. if the current argument is -d, remove the argument and the next one
+```bash
+#!/bin/bash
+args=("$@")
+index=0
 for i in "$@"
 do
-    if [ "$i" = "-d" ]; then
-        shift
-        shift
+    if [ "$i" == "-d" ]; then
+            echo "shift shift $index"
+        unset 'args[$index]'
+        unset 'args[$index+1]'
     fi
+    index=$((index+1))
 done
 
-/usr/local/bin/frankenphp php-cli "$@"
+/usr/local/bin/frankenphp php-cli ${args[@]}
+```
+
+Then set the environment variable `PHP_BINARY` to the path of our php script and composer should pass:
+
+```bash
+export PHP_BINARY=/usr/local/bin/php
+composer install
 ```
