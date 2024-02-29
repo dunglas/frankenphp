@@ -113,7 +113,6 @@ index=0
 for i in "$@"
 do
     if [ "$i" == "-d" ]; then
-            echo "shift shift $index"
         unset 'args[$index]'
         unset 'args[$index+1]'
     fi
