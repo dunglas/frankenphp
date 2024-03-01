@@ -2,9 +2,9 @@
 
 在本教程中，我们将学习如何使用 Docker Compose 在单个服务器上部署 PHP 应用程序。
 
-如果您使用的是 Symfony，请阅读 Symfony Docker 项目(使用 FrankenPHP)的“[在生产环境中部署](https://github.com/dunglas/symfony-docker/blob/main/docs/production.md)”文档条目。
+如果您使用的是 Symfony，请阅读 Symfony Docker 项目（使用 FrankenPHP）的 [在生产环境中部署](https://github.com/dunglas/symfony-docker/blob/main/docs/production.md) 文档条目。
 
-如果您使用的是 API Platform(也使用 FrankenPHP)，请参阅 [框架的部署文档](https://api-platform.com/docs/deployment/)。
+如果您使用的是 API Platform（同样使用 FrankenPHP），请参阅 [框架的部署文档](https://api-platform.com/docs/deployment/)。
 
 ## 准备应用
 
@@ -13,12 +13,12 @@
 ```dockerfile
 FROM dunglas/frankenphp
 
-# 请务必将 "your-domain-name.example.com" 替换为您的域名
+# 请将 "your-domain-name.example.com" 替换为您的域名
 ENV SERVER_NAME=your-domain-name.example.com
 # 如果要禁用 HTTPS，请改用以下值：
 #ENV SERVER_NAME=:80
 
-# 启用 PHP 生产设置
+# 启用 PHP 生产配置
 RUN mv "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini"
 
 # 将项目的 PHP 文件复制到 public 目录中
@@ -27,7 +27,7 @@ COPY . /app/public
 #COPY . /app
 ```
 
-有关更多详细信息和选项，请参阅“[构建自定义 Docker 镜像](docker.md)”，
+有关更多详细信息和选项，请参阅 [构建自定义 Docker 镜像](docker.md)。
 要了解如何自定义配置，请安装 PHP 扩展和 Caddy 模块。
 
 如果您的项目使用 Composer，
@@ -48,18 +48,18 @@ services:
       - caddy_data:/data
       - caddy_config:/config
 
-# Caddy 证书和配置所需的 volumes
+# Caddy 证书和配置所需的挂载目录
 volumes:
   caddy_data:
   caddy_config:
 ```
 
-> [!注意]
+> [!NOTE]
 > 前面的示例适用于生产用途。
-> 在开发中，您可能希望使用 volume，不同的 PHP 配置和不同的 `SERVER_NAME` 环境变量值。
+> 在开发中，你可能希望使用挂载目录，不同的 PHP 配置和不同的 `SERVER_NAME` 环境变量值。
 >
-> 看看 [Symfony Docker](https://github.com/dunglas/symfony-docker) 项目
-> (使用 FrankenPHP)作为使用多阶段镜像的更高级示例，
+> 见 [Symfony Docker](https://github.com/dunglas/symfony-docker) 项目
+> （使用 FrankenPHP）作为使用多阶段镜像的更高级示例，
 > Composer、额外的 PHP 扩展等。
 
 最后，如果您使用 Git，请提交这些文件并推送。
@@ -70,17 +70,17 @@ volumes:
 在本教程中，我们将使用 DigitalOcean 提供的虚拟机，但任何 Linux 服务器都可以工作。
 如果您已经有安装了 Docker 的 Linux 服务器，您可以直接跳到 [下一节](#配置域名)。
 
-否则，请使用 [此会员链接](https://m.do.co/c/5d8aabe3ab80) 获得 200 美元的免费信用额度，创建一个帐户，然后单击“创建 Droplet”。
-然后，单击“选择镜像”部分下的“市场”选项卡，然后搜索名为“Docker”的应用程序。
+否则，请使用 [此会员链接](https://m.do.co/c/5d8aabe3ab80) 获得 200 美元的免费信用额度，创建一个帐户，然后单击“Create a Droplet”。
+然后，单击“Choose an image”部分下的“Marketplace”选项卡，然后搜索名为“Docker”的应用程序。
 这将配置已安装最新版本的 Docker 和 Docker Compose 的 Ubuntu 服务器！
 
-出于测试目的，最便宜的计划就足够了。
-对于实际的生产用途，您可能需要在“常规用途”部分中选择一个计划来满足您的需求。
+出于测试目的，最便宜的就足够了。
+对于实际的生产用途，您可能需要在“general purpose”部分中选择一个计划来满足您的需求。
 
 ![使用 Docker 在 DigitalOcean 上部署 FrankenPHP](../digitalocean-droplet.png)
 
 您可以保留其他设置的默认值，也可以根据需要进行调整。
-不要忘记添加您的SSH密钥或创建密码，然后按“完成并创建”按钮。
+不要忘记添加您的 SSH 密钥或创建密码，然后点击“完成并创建”按钮。
 
 然后，在 Droplet 预配时等待几秒钟。
 Droplet 准备就绪后，使用 SSH 进行连接：
@@ -100,18 +100,18 @@ ssh root@<droplet-ip>
 your-domain-name.example.com.  IN  A     207.154.233.113
 ```
 
-DigitalOcean 域服务示例（“网络” > “域”）：
+DigitalOcean 域服务示例（“Networking” > “Domains”）：
 
 ![在 DigitalOcean 上配置 DNS](../digitalocean-dns.png)
 
-> [!注意]
+> [!NOTE]  
 > Let's Encrypt 是 FrankenPHP 默认用于自动生成 TLS 证书的服务，不支持使用裸 IP 地址。使用域名是使用 Let's Encrypt 的必要条件。
 
 ## 部署
 
 使用 `git clone`、`scp` 或任何其他可能适合您需要的工具在服务器上复制您的项目。
 如果使用 GitHub，则可能需要使用 [部署密钥](https://docs.github.com/en/free-pro-team@latest/developers/overview/managing-deploy-keys#deploy-keys)。
-部署密钥也[由 GitLab 支持](https://docs.gitlab.com/ee/user/project/deploy_keys/)。
+部署密钥也 [由 GitLab 支持](https://docs.gitlab.com/ee/user/project/deploy_keys/)。
 
 Git 示例：
 
@@ -128,11 +128,11 @@ docker compose up -d --wait
 您的服务器已启动并运行，并且已自动为您生成 HTTPS 证书。
 去 `https://your-domain-name.example.com` 享受吧！
 
-> [!谨慎]
+> [!CAUTION]
 > Docker 有一个缓存层，请确保每个部署都有正确的构建，或者使用 --no-cache 选项重新构建项目以避免缓存问题。
 
 ## 在多个节点上部署
 
 如果要在计算机集群上部署应用程序，可以使用 [Docker Swarm](https://docs.docker.com/engine/swarm/stack-deploy/)，
 它与提供的 Compose 文件兼容。
-要在 Kubernetes 上部署，请查看 [API 平台提供的 Helm 图表](https://api-platform.com/docs/deployment/kubernetes/)，它可以很容易地适应 Symfony Docker 的使用。
+要在 Kubernetes 上部署，请查看 [API 平台提供的 Helm 图表](https://api-platform.com/docs/deployment/kubernetes/)，同样也使用 FrankenPHP。

@@ -1,6 +1,7 @@
 # 构建自定义 Docker 镜像
 
-[FrankenPHP Docker 镜像](https://hub.docker.com/r/dunglas/frankenphp)基于[官方PHP镜像](https://hub.docker.com/_/php/)。Alpine Linux 和 Debian 变体适用于流行的架构。提供了 PHP 8.2 和 PHP 8.3 的变体。[浏览标签](https://hub.docker.com/r/dunglas/frankenphp/tags)。
+[FrankenPHP Docker 镜像](https://hub.docker.com/r/dunglas/frankenphp) 基于 [官方 PHP 镜像](https://hub.docker.com/_/php/)。
+Alpine Linux 和 Debian 衍生版适用于常见的处理器架构，且支持 PHP 8.2 和 PHP 8.3。[查看 Tags](https://hub.docker.com/r/dunglas/frankenphp/tags)。
 
 ## 如何使用镜像
 
@@ -12,17 +13,17 @@ FROM dunglas/frankenphp
 COPY . /app/public
 ```
 
-然后，运行以下命令以构建并运行 Docker 镜像：
+然后运行以下命令以构建并运行 Docker 镜像：
 
 ```console
 docker build -t my-php-app .
 docker run -it --rm --name my-running-app my-php-app
 ```
 
-## 如何安装更多PHP扩展
+## 如何安装更多 PHP 扩展
 
-[`docker-php-extension-installer`](https://github.com/mlocati/docker-php-extension-installer)脚本在基础镜像中提供。
-添加额外的PHP扩展很简单：
+[`docker-php-extension-installer`](https://github.com/mlocati/docker-php-extension-installer) 脚本在基础镜像中提供。
+添加额外的 PHP 扩展很简单：
 
 ```dockerfile
 FROM dunglas/frankenphp
@@ -54,7 +55,7 @@ RUN xcaddy build \
   --output /usr/local/bin/frankenphp \
   --with github.com/dunglas/frankenphp=./ \
   --with github.com/dunglas/frankenphp/caddy=./caddy/ \
-  # Mercure 和 Vulcain 包含在官方版本中，但请随意删除它们
+  # Mercure 和 Vulcain 包含在官方版本中，如果不需要你可以删除它们
   --with github.com/dunglas/mercure/caddy \
   --with github.com/dunglas/vulcain/caddy
   # 在此处添加额外的 Caddy 模块
@@ -66,11 +67,11 @@ COPY --from=builder /usr/local/bin/frankenphp /usr/local/bin/frankenphp
 ```
 
 FrankenPHP 提供的 `builder` 镜像包含 libphp 的编译版本。
-[构建器图像](https://hub.docker.com/r/dunglas/frankenphp/tags?name=builder) 适用于所有版本的 FrankenPHP 和 PHP，包括 Alpine 和 Debian。
+[用于构建的镜像](https://hub.docker.com/r/dunglas/frankenphp/tags?name=builder) 适用于所有版本的 FrankenPHP 和 PHP，包括 Alpine 和 Debian。
 
-> [!提示]
+> [!TIP]
 >
-> 如果您使用的是 Alpine Linux 和 Symfony，
+> 如果你的系统基于 musl libc（Alpine Linux 上默认使用）并搭配 Symfony 使用，
 > 您可能需要 [增加默认堆栈大小](compile.md#使用-xcaddy)。
 
 ## 默认启用 worker 模式
@@ -85,7 +86,7 @@ FROM dunglas/frankenphp
 ENV FRANKENPHP_CONFIG="worker ./public/index.php"
 ```
 
-## 在开发中使用 Volume
+## 开发挂载宿主机目录
 
 要使用 FrankenPHP 轻松开发，请从包含应用程序源代码的主机挂载目录作为 Docker 容器中的 volume：
 
@@ -93,7 +94,7 @@ ENV FRANKENPHP_CONFIG="worker ./public/index.php"
 docker run -v $PWD:/app/public -p 80:80 -p 443:443 -p 443:443/udp --tty my-php-app
 ```
 
-> [!提示]
+> [!TIP]
 >
 > `--tty` 选项允许使用清晰可读的日志，而不是 JSON 日志。
 
@@ -120,7 +121,7 @@ services:
     # 在生产环境中注释以下行，它允许在 dev 中使用清晰可读日志
     tty: true
 
-# Caddy 证书和配置所需的 volumes
+# Caddy 证书和配置所需的挂载目录
 volumes:
   caddy_data:
   caddy_config:
@@ -153,12 +154,11 @@ USER ${USER}
 Docker 镜像会按照以下条件更新：
 
 * 发布新的版本后
-* 每天的 4am UTC 检查如果有新的PHP镜像可用
+* 每日 4:00（UTC 时间）检查新的 PHP 镜像
 
 ## 开发版本
 
-可在此docker[`dunglas/frankenphp-dev`](https://hub.docker.com/repository/docker/dunglas/frankenphp-dev)仓库路径获取开发版本。
-每次在GitHub仓库的主分支有了新的commit都会触发一个新的build。
+可在此 [`dunglas/frankenphp-dev`](https://hub.docker.com/repository/docker/dunglas/frankenphp-dev) 仓库获取开发版本。
+每次在 GitHub 仓库的主分支有新的 commit 都会触发一次新的 build。
 
-'latest*' tag 指向最新的`main`分支。
-也支持 'sha-<git-commit-hash>' 的tag格式。
+`latest*` tag 指向最新的 `main` 分支，且同样支持 `sha-<git-commit-hash>` 的 tag。

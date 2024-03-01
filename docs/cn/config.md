@@ -6,7 +6,7 @@ FrankenPHP，Caddy 以及 Mercure 和 Vulcain 模块可以使用 [Caddy 支持�
 
 您也可以像往常一样使用 `php.ini` 配置 PHP。
 
-在 Docker 镜像中，`php.ini` 文件不存在，您可以手动创建它或 `复制`。
+在 Docker 镜像中，默认不存在 `php.ini`，您可以手动创建它或从官方模板中复制。
 
 ```dockerfile
 FROM dunglas/frankenphp
@@ -14,15 +14,15 @@ FROM dunglas/frankenphp
 # 开发:
 RUN cp $PHP_INI_DIR/php.ini-development $PHP_INI_DIR/php.ini
 
-# 还是生产:
+# 生产:
 RUN cp $PHP_INI_DIR/php.ini-production $PHP_INI_DIR/php.ini
 ```
 
 ## Caddyfile 配置
 
-要注册 FrankenPHP 执行器，必须设置 `frankenphp` [全局选项](https://caddyserver.com/docs/caddyfile/concepts#global-options)，然后可以在站点块中使用 `php_server` 或 `php` [HTTP 指令](https://caddyserver.com/docs/caddyfile/concepts#directives)来为您的 PHP 应用程序提供服务。
+要注册 FrankenPHP 执行器，必须设置 `frankenphp` [全局选项](https://caddyserver.com/docs/caddyfile/concepts#global-options)，然后可以在站点块中使用 `php_server` 或 `php` [HTTP 指令](https://caddyserver.com/docs/caddyfile/concepts#directives) 来为您的 PHP 应用程序提供服务。
 
-极小示例：
+最小示例：
 
 ```caddyfile
 {
@@ -33,14 +33,14 @@ RUN cp $PHP_INI_DIR/php.ini-production $PHP_INI_DIR/php.ini
 }
 
 localhost {
-	# 启用压缩(可选)
+	# 启用压缩（可选）
 	encode zstd br gzip
 	# 执行当前目录中的 PHP 文件并提供资产
 	php_server
 }
 ```
 
-或者，可以在全局选项下指定要创建的线程数和要从服务器启动的 [worker scripts](worker.md)。
+或者，可以在全局选项下指定要创建的线程数和要从服务器启动的 [worker 脚本](worker.md)。
 
 ```caddyfile
 {
@@ -69,7 +69,7 @@ localhost {
 # ...
 ```
 
-如果在同一服务器上提供多个应用，还可以定义多个 worker：
+如果在同一服务器上运行多个应用，还可以定义多个 worker：
 
 ```caddyfile
 {
@@ -88,11 +88,11 @@ other.example.com {
 	root * /path/to/other/public
 	php_server
 }
-...
+# ...
 ```
 
-使用 `php_server` 指令通常是您需要的，
-但是，如果您需要完全控制，则可以使用较低级别的 `php` 指令：
+通常你只需要 `php_server` 指令，
+但如果要完全控制，则可以使用较低级别的 `php` 指令：
 
 使用 `php_server` 指令等效于以下配置：
 
@@ -104,7 +104,7 @@ route {
 		not path */
 	}
 	redir @canonicalPath {path}/ 308
-	# 如果请求的文件不存在，请尝试 index 文件
+	# 如果请求的文件不存在，则尝试 index 文件
 	@indexFiles file {
 		try_files {path} {path}/index.php index.php
 		split_path .php
@@ -121,10 +121,10 @@ route {
 
 ```caddyfile
 php_server [<matcher>] {
-	root <directory> # 设置站点的根文件夹。默认值：`root` 指令。
-	split_path <delim...> # 设置用于将 URI 拆分为两部分的子字符串。第一个匹配的子字符串将用于从路径中拆分“路径信息”。第一个部分以匹配的子字符串为后缀，并将假定为实际资源(CGI 脚本)名称。第二部分将设置为PATH_INFO，供 脚本使用。默认值：`.php`
-	resolve_root_symlink # 允许通过计算符号链接(如果存在)将 `根` 目录解析为其实际值。
-	env <key> <value> # 将额外的环境变量设置为给定值。可以为多个环境变量多次指定。
+	root <directory> # 设置站点的根目录。默认值：`root` 指令。
+	split_path <delim...> # 设置用于将 URI 拆分为两部分的子字符串。第一个匹配的子字符串将用于从路径中拆分“路径信息”。第一个部分以匹配的子字符串为后缀，并将假定为实际资源(CGI 脚本)名称。第二部分将设置为PATH_INFO，供脚本使用。默认值：`.php`
+	resolve_root_symlink false # 禁用将 `root` 目录在符号链接时将其解析为实际值（默认启用）。
+	env <key> <value> # 设置额外的环境变量，可以设置多个环境变量。
 }
 ```
 
@@ -138,7 +138,7 @@ php_server [<matcher>] {
 
 ## PHP 配置
 
-要加载[其他PHP配置文件](https://www.php.net/manual/en/configuration.file.php#configuration.file.scan)，
+要加载 [其他 PHP INI 配置文件](https://www.php.net/manual/en/configuration.file.php#configuration.file.scan)，
 可以使用 `PHP_INI_SCAN_DIR` 环境变量。
 设置后，PHP 将加载给定目录中存在 `.ini` 扩展名的所有文件。
 

@@ -3,13 +3,13 @@
 本文档解释了如何创建一个 FrankenPHP 构建，它将 PHP 加载为一个动态库。
 这是推荐的方法。
 
-或者，[创建静态构建](static.md)也是可能的。
+或者，你也可以 [编译静态版本](static.md)。
 
 ## 安装 PHP
 
-FrankenPHP 与 PHP 8.2 及更高版本兼容。
+FrankenPHP 支持 PHP 8.2 及更高版本。
 
-首先，[获取PHP的源代码](https://www.php.net/downloads.php)并提取它们：
+首先，[获取 PHP 源代码](https://www.php.net/downloads.php) 并提取它们：
 
 ```console
 tar xf php-*
@@ -37,15 +37,14 @@ sudo make install
 
 ### Mac
 
-使用 [Homebrew](https://brew.sh/) 包管理器安装
-`libiconv`, `bison`, `re2c` 和 `pkg-config`：
+使用 [Homebrew](https://brew.sh/) 包管理器安装 `libiconv`、`bison`、`re2c` 和 `pkg-config`：
 
 ```console
 brew install libiconv bison re2c pkg-config
 echo 'export PATH="/opt/homebrew/opt/bison/bin:$PATH"' >> ~/.zshrc
 ```
 
-然后运行配置脚本：
+然后运行 `./configure` 脚本：
 
 ```console
 ./configure \
@@ -58,8 +57,7 @@ echo 'export PATH="/opt/homebrew/opt/bison/bin:$PATH"' >> ~/.zshrc
     --with-iconv=/opt/homebrew/opt/libiconv/
 ```
 
-这些标志是必需的，但您可以添加其他标志(例如额外的扩展)
-如果需要。
+这些参数是必需的，但你也可以添加其他编译参数（例如额外的扩展）。
 
 最后，编译并安装 PHP：
 
@@ -80,7 +78,7 @@ CGO_CFLAGS=$(php-config --includes) CGO_LDFLAGS="$(php-config --ldflags) $(php-c
 
 ### 使用 xcaddy
 
-或者，使用 [xcaddy](https://github.com/caddyserver/xcaddy) 用 [自定义 Caddy 模块](https://caddyserver.com/docs/modules/) 编译 FrankenPHP：
+你可以使用 [xcaddy](https://github.com/caddyserver/xcaddy) 来编译 [自定义 Caddy 模块](https://caddyserver.com/docs/modules/) 的 FrankenPHP：
 
 ```console
 CGO_ENABLED=1 \
@@ -93,12 +91,12 @@ xcaddy build \
     # Add extra Caddy modules here
 ```
 
-> [!提示]
+> [!TIP]
 >
-> 如果您使用的是 musl libc(Alpine Linux 上的默认值)和 Symfony，
+> 如果你的系统基于 musl libc（Alpine Linux 上默认使用）并搭配 Symfony 使用，
 > 您可能需要增加默认堆栈大小。
 > 否则，您可能会收到如下错误 `PHP Fatal error: Maximum call stack size of 83360 bytes reached during compilation. Try splitting expression`
 >
-> 为此，请将 `XCADDY_GO_BUILD_FLAGS` 环境变量更改为类似
+> 请将 `XCADDY_GO_BUILD_FLAGS` 环境变量更改为如下类似的值
 > `XCADDY_GO_BUILD_FLAGS=$'-ldflags "-w -s -extldflags \'-Wl,-z,stack-size=0x80000\'"'`
-> (根据您的应用需求更改堆栈大小的值)。
+> （根据您的应用需求更改堆栈大小）。

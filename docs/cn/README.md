@@ -26,7 +26,7 @@ docker run -v $PWD:/app/public \
 
 访问 `https://localhost`, 并享受吧!
 
-> [!提示]
+> [!TIP]
 >
 > 不要尝试使用 `https://127.0.0.1`。使用 `localhost` 并接受自签名证书。
 > 使用 [`SERVER_NAME` 环境变量](config.md#环境变量) 更改要使用的域。
@@ -34,7 +34,7 @@ docker run -v $PWD:/app/public \
 ### 独立二进制
 
 如果您不想使用 Docker，我们为 Linux 和 macOS 提供独立的 FrankenPHP 二进制文件
-包含 [PHP 8.3](https://www.php.net/releases/8.3/en.php) 和最流行的 PHP 扩展：[下载 FrankenPHP](https://github.com/dunglas/frankenphp/releases)
+，其中包含 [PHP 8.3](https://www.php.net/releases/8.3/en.php) 和最流行的 PHP 扩展：[下载 FrankenPHP](https://github.com/dunglas/frankenphp/releases)。
 
 若要启动当前目录的内容，请运行：
 
@@ -61,7 +61,7 @@ docker run -v $PWD:/app/public \
 * [从源代码编译](compile.md)
 * [Laravel 集成](laravel.md)
 * [已知问题](known-issues.md)
-* [演示应用程序 (Symfony) 和基准测试](https://github.com/dunglas/frankenphp-demo)
+* [演示应用程序 (Symfony) 和性能测试](https://github.com/dunglas/frankenphp-demo)
 * [Go 库文档](https://pkg.go.dev/github.com/dunglas/frankenphp)
 * [贡献和调试](https://frankenphp.dev/docs/contributing/)
 
