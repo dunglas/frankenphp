@@ -28,7 +28,7 @@ docker run \
 ## Symfony Runtime
 
 FrankenPHP 的 worker 模式由 [Symfony Runtime 组件](https://symfony.com/doc/current/components/runtime.html) 支持。
-要在 worker 中启动任何 Symfony 应用程序，请安装[PHP Runtime](https://github.com/php-runtime/runtime)的 FrankenPHP 软件包：
+要在 worker 中启动任何 Symfony 应用程序，请安装 [PHP Runtime](https://github.com/php-runtime/runtime) 的 FrankenPHP 软件包：
 
 ```console
 composer require runtime/frankenphp-symfony
@@ -47,7 +47,7 @@ docker run \
 
 ## Laravel Octane
 
-请参阅 [专用文档](laravel.md#laravel-octane)。
+请参阅 [文档](laravel.md#laravel-octane)。
 
 ## 自定义应用程序
 
@@ -66,10 +66,10 @@ require __DIR__.'/vendor/autoload.php';
 $myApp = new \App\Kernel();
 $myApp->boot();
 
-// 循环外的处理程序以获得更好的性能(减少工作量)
+// 循环外的处理程序以获得更好的性能（减少工作量）
 $handler = static function () use ($myApp) {
-        // 收到请求时调用,
-        // 超全局变量, php://input
+        // 收到请求时调用
+        // 超全局变量 php://input
         echo $myApp->handle($_GET, $_POST, $_COOKIE, $_FILES, $_SERVER);
 };
 for($nbRequests = 0, $running = true; isset($_SERVER['MAX_REQUESTS']) && ($nbRequests < ((int)$_SERVER['MAX_REQUESTS'])) && $running; ++$nbRequests) {
@@ -81,7 +81,7 @@ for($nbRequests = 0, $running = true; isset($_SERVER['MAX_REQUESTS']) && ($nbReq
     // 调用垃圾回收器以减少在页面生成过程中触发垃圾回收器的几率
     gc_collect_cycles();
 }
-// 清理
+// 结束清理
 $myApp->shutdown();
 ```
 
@@ -95,8 +95,8 @@ docker run \
     dunglas/frankenphp
 ```
 
-默认情况下，每个 CPU 启动一个 worker 线程。
-您还可以配置要启动的 worker 线程数：
+默认情况下，每个 CPU 启动一个 worker。
+您还可以配置要启动的 worker 数：
 
 ```console
 docker run \
@@ -106,9 +106,9 @@ docker run \
     dunglas/frankenphp
 ```
 
-### 在一定数量的请求后重新启动 Worker 线程
+### 在一定数量的请求后重新启动 Worker
 
-由于 PHP 最初不是为长时间运行的进程而设计的，因此仍然有许多库和遗留代码会泄漏内存。
+由于 PHP 最初不是为长时间运行的进程而设计的，因此仍然有许多库和遗留代码会发生内存泄露。
 在 worker 模式下使用此类代码的解决方法是在处理一定数量的请求后重新启动 worker 程序脚本：
 
-前面的 worker 线程代码段允许通过设置名为 `MAX_REQUESTS` 的环境变量来配置要处理的最大请求数。
+前面的 worker 代码段允许通过设置名为 `MAX_REQUESTS` 的环境变量来配置要处理的最大请求数。

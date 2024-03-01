@@ -1,6 +1,6 @@
 # 早期提示
 
-FrankenPHP 原生支持 [103 Early Hints 状态代码](https://developer.chrome.com/blog/early-hints/)。
+FrankenPHP 原生支持 [103 Early Hints 状态码](https://developer.chrome.com/blog/early-hints/)。
 使用早期提示可以将网页的加载时间缩短 30%。
 
 ```php
