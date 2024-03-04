@@ -57,6 +57,7 @@ RUN xcaddy build \
 	--with github.com/dunglas/frankenphp=./ \
 	--with github.com/dunglas/frankenphp/caddy=./caddy/ \
 	# Mercure and Vulcain are included in the official build, but feel free to remove them
+  --with github.com/dunglas/caddy-cbrotli \
 	--with github.com/dunglas/mercure/caddy \
 	--with github.com/dunglas/vulcain/caddy
 	# Add extra Caddy modules here
@@ -154,8 +155,8 @@ USER ${USER}
 
 The Docker images are built:
 
-* when a new release is tagged
-* daily at 4am UTC, if new versions of the official PHP images are available
+- when a new release is tagged
+- daily at 4am UTC, if new versions of the official PHP images are available
 
 ## Development Versions
 
