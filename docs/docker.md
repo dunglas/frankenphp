@@ -57,7 +57,7 @@ RUN xcaddy build \
 	--with github.com/dunglas/frankenphp=./ \
 	--with github.com/dunglas/frankenphp/caddy=./caddy/ \
 	# Mercure and Vulcain are included in the official build, but feel free to remove them
-  --with github.com/dunglas/caddy-cbrotli \
+	--with github.com/dunglas/caddy-cbrotli \
 	--with github.com/dunglas/mercure/caddy \
 	--with github.com/dunglas/vulcain/caddy
 	# Add extra Caddy modules here
