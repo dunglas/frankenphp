@@ -61,8 +61,8 @@ The easiest way to create a Linux binary is to use the Docker-based builder we p
 
     > [!CAUTION]
     >
-    > Some `.dockerignore` files (e.g. default [symfony-docker .dockerignore](https://github.com/dunglas/symfony-docker/blob/main/.dockerignore))
-    > will ignore the vendor folder and environment files. Be sure to adjust or remove the `.dockerignore` file before the build.
+    > Some `.dockerignore` files (e.g. default [Symfony Docker `.dockerignore`](https://github.com/dunglas/symfony-docker/blob/main/.dockerignore))
+    > will ignore the `vendor/` directory and `.env` files. Be sure to adjust or remove the `.dockerignore` file before the build.
 
 2. Build:
 
