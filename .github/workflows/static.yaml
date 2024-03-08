@@ -69,11 +69,17 @@ jobs:
       matrix:
         platform: ${{ fromJson(needs.prepare.outputs.platforms) }}
         include:
-          - race: ""
+          -
             qemu: true
-          - platform: linux/amd64
+            debug: false
+          -
+            platform: linux/amd64
             qemu: false
-    name: Build ${{ matrix.platform }} static binary
+          -
+            platform: linux/amd64
+            qemu: false
+            debug: true
+    name: Build ${{ matrix.platform }} static binary${{ matrix.debug && ' (debug)' || '' }}
     runs-on: ubuntu-latest
     needs: [ prepare ]
     steps:
@@ -109,6 +115,7 @@ jobs:
           load: ${{ !fromJson(needs.prepare.outputs.push) }}
           targets: static-builder
           set: |
+            ${{ matrix.debug && 'static-builder.args.DEBUG_SYMBOLS=1' || '' }}
             *.tags=
             *.platform=${{ matrix.platform }}
             *.cache-from=type=gha,scope=${{ needs.prepare.outputs.ref || github.ref }}-static-builder
@@ -117,12 +124,12 @@ jobs:
             ${{ fromJson(needs.prepare.outputs.push) && format('*.output=type=image,name={0},push-by-digest=true,name-canonical=true,push=true', env.IMAGE_NAME) || '' }}
         env:
           SHA: ${{ github.sha }}
-          VERSION: ${{ (github.ref_type == 'tag' && github.ref_name) || needs.prepare.outputs.ref || github.sha}}
+          VERSION: ${{ (github.ref_type == 'tag' && github.ref_name) || needs.prepare.outputs.ref || github.sha }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       -
         # Workaround for https://github.com/actions/runner/pull/2477#issuecomment-1501003600
         name: Export metadata
-        if: fromJson(needs.prepare.outputs.push)
+        if: fromJson(needs.prepare.outputs.push) && !matrix.debug
         run: |
           mkdir -p /tmp/metadata
 
@@ -133,7 +140,7 @@ jobs:
           METADATA: ${{ steps.build.outputs.metadata }}
       -
         name: Upload metadata
-        if: fromJson(needs.prepare.outputs.push)
+        if: fromJson(needs.prepare.outputs.push) && !matrix.debug
         uses: actions/upload-artifact@v3
         with:
           name: metadata-static-builder
@@ -142,11 +149,11 @@ jobs:
           retention-days: 1
       -
         name: Copy binary
-        if: ${{ !fromJson(needs.prepare.outputs.push) }}
+        if: ${{ !fromJson(needs.prepare.outputs.push)  || matrix.debug }}
         run: |
           digest=$(jq -r '."static-builder"."containerimage.config.digest"' <<< "${METADATA}")
           docker create --platform=${{ matrix.platform }} --name static-builder "${digest}"
-          docker cp "static-builder:/go/src/app/dist/${BINARY}" "${BINARY}"
+          docker cp "static-builder:/go/src/app/dist/${BINARY}" "${BINARY}${{ matrix.debug && '-debug' || '' }}"
         env:
           METADATA: ${{ steps.build.outputs.metadata }}
           BINARY: frankenphp-linux-${{ matrix.platform == 'linux/amd64' && 'x86_64' || 'aarch64' }}
@@ -155,8 +162,8 @@ jobs:
         if: ${{ !fromJson(needs.prepare.outputs.push) }}
         uses: actions/upload-artifact@v3
         with:
-          name: frankenphp-linux-${{ matrix.platform == 'linux/amd64' && 'x86_64' || 'aarch64' }}
-          path: frankenphp-linux-${{ matrix.platform == 'linux/amd64' && 'x86_64' || 'aarch64' }}
+          name: frankenphp-linux-${{ matrix.platform == 'linux/amd64' && 'x86_64' || 'aarch64' }}${{ matrix.debug && '-debug' || '' }}
+          path: frankenphp-linux-${{ matrix.platform == 'linux/amd64' && 'x86_64' || 'aarch64' }}${{ matrix.debug && '-debug' || '' }}
   # Adapted from https://docs.docker.com/build/ci/github-actions/multi-platform/
   push:
     runs-on: ubuntu-latest
