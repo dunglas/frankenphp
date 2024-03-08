@@ -105,6 +105,32 @@ Build FrankenPHP images from scratch for arm64 & amd64 and push to Docker Hub:
 docker buildx bake -f docker-bake.hcl --pull --no-cache --push
 ```
 
+## Debugging Segmentation Faults With Static Builds
+
+1. Download the debug version of the FrankenPHP binary from GitHub or create your custom static build inlcuidng debug symbols:
+
+    ```console
+    docker buildx bake \
+        --load \
+        --set static-builder.args.DEBUG_SYMBOLS=1 \
+        --set "static-builder.platform=linux/amd64" \
+        static-builder
+    docker cp $(docker create --name static-builder dunglas/frankenphp:static-builder):/go/src/app/dist/frankenphp-linux-$(uname -m) frankenphp
+    ```
+
+2. Replace your current version of `frankenphp` by the debug FrankenPHP executable
+3. Start FrankenPHP as usual (alternatively, you can directly start FrankenPHP with GDB: `gdb --args ./frankenphp run`)
+4. Attach to the process with GDB:
+
+    ```console
+    gdb -p `pidof frankenphp`
+    ```
+
+5. If necessary, type `continue` in the GDB shell
+6. Make FrankenPHP crash
+7. Type `bt` in the GDB shell
+8. Copy the output
+
 ## Debugging Segmentation Faults in GitHub Actions
 
 1. Open `.github/workflows/tests.yml`
