@@ -1,6 +1,6 @@
 # Compile From Sources
 
-This document explain how to create a FrankenPHP build that will load PHP as a dymanic library.
+This document explain how to create a FrankenPHP build that will load PHP as a dynamic library.
 This is the recommended method.
 
 Alternatively, [creating static builds](static.md) is also possible.
