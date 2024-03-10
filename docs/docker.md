@@ -1,6 +1,6 @@
 # Building Custom Docker Image
 
-[FrankenPHP Docker images](https://hub.docker.com/r/dunglas/frankenphp) are based on [official PHP images](https://hub.docker.com/_/php/). Debian and Alpine Linux avariants are provided for popular architectures. Debian variants are recommended.
+[FrankenPHP Docker images](https://hub.docker.com/r/dunglas/frankenphp) are based on [official PHP images](https://hub.docker.com/_/php/). Debian and Alpine Linux variants are provided for popular architectures. Debian variants are recommended.
 
 Variants for PHP 8.2 and PHP 8.3 are provided. [Browse tags](https://hub.docker.com/r/dunglas/frankenphp/tags).
 
@@ -57,6 +57,7 @@ RUN xcaddy build \
 	--with github.com/dunglas/frankenphp=./ \
 	--with github.com/dunglas/frankenphp/caddy=./caddy/ \
 	# Mercure and Vulcain are included in the official build, but feel free to remove them
+	--with github.com/dunglas/caddy-cbrotli \
 	--with github.com/dunglas/mercure/caddy \
 	--with github.com/dunglas/vulcain/caddy
 	# Add extra Caddy modules here
@@ -130,7 +131,7 @@ volumes:
 
 ## Running as a Non-Root User
 
-FrankenPHP can run as non root user in Docker.
+FrankenPHP can run as non-root user in Docker.
 
 Here is a sample `Dockerfile` doing this:
 
@@ -155,7 +156,7 @@ USER ${USER}
 The Docker images are built:
 
 * when a new release is tagged
-* daily at 4am UTC, if new versions of the official PHP images are available
+* daily at 4 am UTC, if new versions of the official PHP images are available
 
 ## Development Versions
 

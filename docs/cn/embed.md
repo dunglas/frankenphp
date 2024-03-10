@@ -59,6 +59,11 @@ composer dump-env prod
         ./build-static.sh
     ```
 
+    > [!CAUTION]
+    >
+    > 某些 .dockerignore 文件（例如默认的 [symfony-docker .dockerignore](https://github.com/dunglas/symfony-docker/blob/main/.dockerignore)）会忽略 vendor
+    > 文件夹和环境文件。在构建之前，请务必调整或删除 .dockerignore 文件。
+
 2. 构建:
 
     ```console

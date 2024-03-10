@@ -45,7 +45,6 @@ The following extensions have known bugs and unexpected behaviors when used with
 | Name                                                                                                                     | Problem                                                                                                                                                                                                                        |
 |--------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | [XDebug](https://xdebug.org/)                                                                                            | XDebug may crash, or hang. This problem is [being tracked by XDebug](https://github.com/dunglas/frankenphp/issues/563#issuecomment-1952226212).                                                                                |
-| [Datadog PHP Tracer](https://docs.datadoghq.com/fr/tracing/trace_collection/automatic_instrumentation/dd_libraries/php/) | The Datadog tracer [can cause crashes](https://github.com/dunglas/frankenphp/issues/458#issuecomment-1878487776). This has been reported to DataDog.                                                                           |
 | [Tideways](https://tideways.com/)                                                                                        | In worker mode, the Tideways extension [prevents worker scripts to finish properly](https://github.com/dunglas/frankenphp/issues/578#issuecomment-1966620351) or consumes 100% of the CPU. This has been reported to Tideways. |
 
 ## get_browser
@@ -109,24 +108,32 @@ docker run \
 
 ## Composer Scripts Referencing `@php`
 
-[Composer scripts](https://getcomposer.org/doc/articles/scripts.md) may want to execute a PHP binary for some tasks, e.g. in [a Laravel project](laravel.md) to run `@php artisan package:discover --ansi`. This [currently fails]((https://github.com/dunglas/frankenphp/issues/483#issuecomment-1899890915)) for two reasons:
+[Composer scripts](https://getcomposer.org/doc/articles/scripts.md) may want to execute a PHP binary for some tasks, e.g. in [a Laravel project](laravel.md) to run `@php artisan package:discover --ansi`. This [currently fails](https://github.com/dunglas/frankenphp/issues/483#issuecomment-1899890915) for two reasons:
 
 * Composer does not know how to call the FrankenPHP binary;
 * Composer may add PHP settings using the `-d` flag in the command, which FrankenPHP does not yet support.
 
 As a workaround, we can create a shell script in `/usr/local/bin/php` which strips the unsupported parameters and then calls FrankenPHP:
 
-```sh
-#!/bin/sh
-
-# iterate over $@. if the current argument is -d, remove the argument and the next one
+```bash
+#!/bin/bash
+args=("$@")
+index=0
 for i in "$@"
 do
-    if [ "$i" = "-d" ]; then
-        shift
-        shift
+    if [ "$i" == "-d" ]; then
+        unset 'args[$index]'
+        unset 'args[$index+1]'
     fi
+    index=$((index+1))
 done
 
-/usr/local/bin/frankenphp php-cli "$@"
+/usr/local/bin/frankenphp php-cli ${args[@]}
+```
+
+Then set the environment variable `PHP_BINARY` to the path of our php script and composer should pass:
+
+```bash
+export PHP_BINARY=/usr/local/bin/php
+composer install
 ```
