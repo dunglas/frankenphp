@@ -16,11 +16,16 @@ if [ "${os}" = "darwin" ]; then
 fi
 
 if [ -z "${PHP_EXTENSIONS}" ]; then
-    export PHP_EXTENSIONS="apcu,bcmath,bz2,calendar,ctype,curl,dba,dom,exif,fileinfo,filter,gd,iconv,igbinary,intl,ldap,mbregex,mbstring,mysqli,mysqlnd,opcache,openssl,pcntl,pdo,pdo_mysql,pdo_pgsql,pdo_sqlite,pgsql,phar,posix,readline,redis,session,simplexml,sockets,sodium,sqlite3,sysvsem,tokenizer,xml,xmlreader,xmlwriter,zip,zlib" 
+    export PHP_EXTENSIONS="apcu,bcmath,bz2,calendar,ctype,curl,dba,dom,exif,fileinfo,filter,gd,iconv,igbinary,intl,ldap,mbregex,mbstring,mysqli,mysqlnd,opcache,openssl,pcntl,pdo,pdo_mysql,pdo_pgsql,pdo_sqlite,pgsql,phar,posix,readline,redis,session,simplexml,sockets,sodium,sqlite3,sysvsem,tokenizer,xml,xmlreader,xmlwriter,zip,zlib"
 fi
 
 if [ -z "${PHP_EXTENSION_LIBS}" ]; then
     export PHP_EXTENSION_LIBS="bzip2,freetype,libavif,libjpeg,liblz4,libwebp,libzip"
+fi
+
+# the Brotli library must always be built as it is required by http://github.com/dunglas/caddy-cbrotli
+if ! echo "${PHP_EXTENSION_LIBS}" | grep -q "\bbrotli\b"; then
+    export PHP_EXTENSION_LIBS="${PHP_EXTENSION_LIBS},brotli"
 fi
 
 if [ -z "${PHP_VERSION}" ]; then
@@ -56,7 +61,7 @@ fi
 
 # Build libphp if necessary
 if [ -f "dist/static-php-cli/buildroot/lib/libphp.a" ]; then
-    cd dist/static-php-cli    
+    cd dist/static-php-cli
 else
     mkdir -p dist/
     cd dist/
@@ -96,11 +101,10 @@ else
         extraOpts="${extraOpts} --no-strip"
     fi
 
-    ./bin/spc doctor
-    ./bin/spc fetch --with-php="${PHP_VERSION}" --for-extensions="${PHP_EXTENSIONS}"
-    # the Brotli library must always be built as it is required by http://github.com/dunglas/caddy-cbrotli
+    ./bin/spc doctor --auto-fix
+    ./bin/spc download --with-php="${PHP_VERSION}" --for-extensions="${PHP_EXTENSIONS}" --for-libs="${PHP_EXTENSION_LIBS}" --ignore-cache-sources=php-src
     # shellcheck disable=SC2086
-    ./bin/spc build --enable-zts --build-embed ${extraOpts} "${PHP_EXTENSIONS}" --with-libs="brotli,${PHP_EXTENSION_LIBS}"
+    ./bin/spc build --enable-zts --build-embed ${extraOpts} "${PHP_EXTENSIONS}" --with-libs="${PHP_EXTENSION_LIBS}"
 fi
 
 CGO_CFLAGS="-DFRANKENPHP_VERSION=${FRANKENPHP_VERSION} -I${PWD}/buildroot/include/ $(./buildroot/bin/php-config --includes | sed s#-I/#-I"${PWD}"/buildroot/#g)"
