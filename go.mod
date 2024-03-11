@@ -9,7 +9,7 @@ retract v1.0.0-rc.1 // Human error
 require (
 	github.com/stretchr/testify v1.9.0
 	go.uber.org/zap v1.27.0
-	golang.org/x/net v0.21.0
+	golang.org/x/net v0.22.0
 )
 
 require (
