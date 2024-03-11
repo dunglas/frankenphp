@@ -101,7 +101,7 @@ jobs:
           version: latest
       -
         name: Login to DockerHub
-        if: ${{ fromJson(needs.prepare.outputs.push) }}
+        if: ${{ fromJson(needs.prepare.outputs.push) && !matrix.debug }}
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.REGISTRY_USERNAME }}
@@ -112,16 +112,16 @@ jobs:
         uses: docker/bake-action@v4
         with:
           pull: true
-          load: ${{ !fromJson(needs.prepare.outputs.push) }}
+          load: ${{ !fromJson(needs.prepare.outputs.push) || matrix.debug }}
           targets: static-builder
           set: |
             ${{ matrix.debug && 'static-builder.args.DEBUG_SYMBOLS=1' || '' }}
             *.tags=
             *.platform=${{ matrix.platform }}
-            *.cache-from=type=gha,scope=${{ needs.prepare.outputs.ref || github.ref }}-static-builder
-            *.cache-from=type=gha,scope=refs/heads/main-static-builder
-            *.cache-to=type=gha,scope=${{ needs.prepare.outputs.ref || github.ref }}-static-builder,ignore-error=true
-            ${{ fromJson(needs.prepare.outputs.push) && format('*.output=type=image,name={0},push-by-digest=true,name-canonical=true,push=true', env.IMAGE_NAME) || '' }}
+            *.cache-from=type=gha,scope=${{ needs.prepare.outputs.ref || github.ref }}-static-builder${{ matrix.debug && '-debug' && '' }}
+            *.cache-from=type=gha,scope=refs/heads/main-static-builder${{ matrix.debug && '-debug' && '' }}
+            *.cache-to=type=gha,scope=${{ needs.prepare.outputs.ref || github.ref }}-static-builder${{ matrix.debug && '-debug' && '' }},ignore-error=true
+            ${{ (fromJson(needs.prepare.outputs.push) && !matrix.debug) && format('*.output=type=image,name={0},push-by-digest=true,name-canonical=true,push=true', env.IMAGE_NAME) || '' }}
         env:
           SHA: ${{ github.sha }}
           VERSION: ${{ (github.ref_type == 'tag' && github.ref_name) || needs.prepare.outputs.ref || github.sha }}
@@ -149,7 +149,7 @@ jobs:
           retention-days: 1
       -
         name: Copy binary
-        if: ${{ !fromJson(needs.prepare.outputs.push)  || matrix.debug }}
+        if: ${{ !fromJson(needs.prepare.outputs.push) || matrix.debug }}
         run: |
           digest=$(jq -r '."static-builder"."containerimage.config.digest"' <<< "${METADATA}")
           docker create --platform=${{ matrix.platform }} --name static-builder "${digest}"
@@ -164,6 +164,13 @@ jobs:
         with:
           name: frankenphp-linux-${{ matrix.platform == 'linux/amd64' && 'x86_64' || 'aarch64' }}${{ matrix.debug && '-debug' || '' }}
           path: frankenphp-linux-${{ matrix.platform == 'linux/amd64' && 'x86_64' || 'aarch64' }}${{ matrix.debug && '-debug' || '' }}
+      -
+        name: Upload debug asset
+        if: fromJson(needs.prepare.outputs.push) && matrix.debug && (needs.prepare.outputs.ref || github.ref_type == 'tag')
+        run: gh release upload "${{ (github.ref_type == 'tag' && github.ref_name) || needs.prepare.outputs.ref }}" frankenphp-linux-x86_64-debug --repo dunglas/frankenphp --clobber
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   # Adapted from https://docs.docker.com/build/ci/github-actions/multi-platform/
   push:
     runs-on: ubuntu-latest
