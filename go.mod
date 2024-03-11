@@ -7,10 +7,10 @@ toolchain go1.22.0
 retract v1.0.0-rc.1 // Human error
 
 require (
-	github.com/maypok86/otter v1.1.1-0.20240305155805-5e2e63970f6f
+	github.com/maypok86/otter v1.1.1
 	github.com/stretchr/testify v1.9.0
 	go.uber.org/zap v1.27.0
-	golang.org/x/net v0.21.0
+	golang.org/x/net v0.22.0
 )
 
 require (
