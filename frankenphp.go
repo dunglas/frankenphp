@@ -540,19 +540,16 @@ func go_ub_write(rh C.uintptr_t, cBuf *C.char, length C.int) (C.size_t, C.bool) 
 	return C.size_t(i), C.bool(clientHasClosed(r))
 }
 
-func createHeaderKeyCache() otter.Cache[string, string] {
+// There are around 60 common request headers according to https://en.wikipedia.org/wiki/List_of_HTTP_header_fields#Request_fields
+// Give some space for custom headers
+var headerKeyCache = func() otter.Cache[string, string] {
 	c, err := otter.MustBuilder[string, string](256).Build()
 	if err != nil {
 		panic(err)
 	}
 
 	return c
-}
-
-var headerKeyCache = createHeaderKeyCache()
-
-// There are around 60 common request headers according to https://en.wikipedia.org/wiki/List_of_HTTP_header_fields#Request_fields
-// Give some space for custom headers
+}()
 
 //export go_register_variables
 func go_register_variables(rh C.uintptr_t, trackVarsArray *C.zval) {
@@ -562,7 +559,6 @@ func go_register_variables(rh C.uintptr_t, trackVarsArray *C.zval) {
 	p := &runtime.Pinner{}
 
 	dynamicVariables := make([]C.php_variable, len(fc.env)+len(r.Header))
-	p.Pin(unsafe.SliceData(dynamicVariables))
 
 	var l int
 
@@ -612,7 +608,11 @@ func go_register_variables(rh C.uintptr_t, trackVarsArray *C.zval) {
 	}
 
 	knownVariables := computeKnownVariables(r, p)
-	C.frankenphp_register_bulk_variables(&knownVariables[0], unsafe.SliceData(dynamicVariables), C.size_t(l), trackVarsArray)
+
+	dvsd := unsafe.SliceData(dynamicVariables)
+	p.Pin(dvsd)
+
+	C.frankenphp_register_bulk_variables(&knownVariables[0], dvsd, C.size_t(l), trackVarsArray)
 
 	p.Unpin()
 
