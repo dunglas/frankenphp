@@ -13,8 +13,14 @@
 
 typedef struct go_string {
   size_t len;
-  const char *data;
+  char *data;
 } go_string;
+
+typedef struct php_variable {
+  const char *var;
+  size_t data_len;
+  char *data;
+} php_variable;
 
 typedef struct frankenphp_version {
   unsigned char major_version;
@@ -44,9 +50,9 @@ int frankenphp_update_server_context(
     char *auth_user, char *auth_password, int proto_num);
 int frankenphp_request_startup();
 int frankenphp_execute_script(char *file_name);
-void frankenphp_register_bulk_variables(char *known_variables[27],
-                                        char **dynamic_variables, size_t size,
-                                        zval *track_vars_array);
+void frankenphp_register_bulk_variables(go_string known_variables[27],
+                                        php_variable *dynamic_variables,
+                                        size_t size, zval *track_vars_array);
 
 int frankenphp_execute_script_cli(char *script, int argc, char **argv);
 

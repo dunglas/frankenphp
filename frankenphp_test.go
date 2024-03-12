@@ -1,3 +1,7 @@
+// In all tests, headers added to requests are copied on the heap using strings.Clone.
+// This was originally a workaround for https://github.com/golang/go/issues/65286#issuecomment-1920087884 (fixed in Go 1.22),
+// but this allows to catch panics occuring in real life but not when the string is in the internal binary memory.
+
 package frankenphp_test
 
 import (
@@ -128,8 +132,8 @@ func TestServerVariable_worker(t *testing.T) {
 func testServerVariable(t *testing.T, opts *testOptions) {
 	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
 		req := httptest.NewRequest("POST", fmt.Sprintf("http://example.com/server-variable.php/baz/bat?foo=a&bar=b&i=%d#hash", i), strings.NewReader("foo"))
-		req.SetBasicAuth("kevin", "password")
-		req.Header.Add("Content-Type", "text/plain")
+		req.SetBasicAuth(strings.Clone("kevin"), strings.Clone("password"))
+		req.Header.Add(strings.Clone("Content-Type"), strings.Clone("text/plain"))
 		w := httptest.NewRecorder()
 		handler(w, req)
 
@@ -171,13 +175,14 @@ func TestPathInfo_worker(t *testing.T) {
 	testPathInfo(t, &testOptions{workerScript: "server-variable.php"})
 }
 func testPathInfo(t *testing.T, opts *testOptions) {
+	cwd, _ := os.Getwd()
+	testDataDir := cwd + strings.Clone("/testdata/")
+	path := strings.Clone("/server-variable.php/pathinfo")
+
 	runTest(t, func(_ func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
 		handler := func(w http.ResponseWriter, r *http.Request) {
-			cwd, _ := os.Getwd()
-			testDataDir := cwd + "/testdata/"
-
 			requestURI := r.URL.RequestURI()
-			r.URL.Path = "/server-variable.php/pathinfo"
+			r.URL.Path = path
 
 			rewriteRequest, err := frankenphp.NewRequestWithContext(r,
 				frankenphp.WithRequestDocumentRoot(testDataDir, false),
@@ -271,7 +276,7 @@ func testPostSuperGlobals(t *testing.T, opts *testOptions) {
 	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
 		formData := url.Values{"baz": {"bat"}, "i": {fmt.Sprintf("%d", i)}}
 		req := httptest.NewRequest("POST", fmt.Sprintf("http://example.com/super-globals.php?foo=bar&iG=%d", i), strings.NewReader(formData.Encode()))
-		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		req.Header.Set("Content-Type", strings.Clone("application/x-www-form-urlencoded"))
 		w := httptest.NewRecorder()
 		handler(w, req)
 
@@ -785,8 +790,10 @@ func BenchmarkServerSuperGlobal(b *testing.B) {
 		"PHP_SHA256":      "4ffa3e44afc9c590e28dc0d2d31fc61f0139f8b335f11880a121b9f9b9f0634e",
 	}
 
+	preparedEnv := frankenphp.PrepareEnv(env)
+
 	handler := func(w http.ResponseWriter, r *http.Request) {
-		req, err := frankenphp.NewRequestWithContext(r, frankenphp.WithRequestDocumentRoot(testDataDir, false), frankenphp.WithRequestEnv(env))
+		req, err := frankenphp.NewRequestWithContext(r, frankenphp.WithRequestDocumentRoot(testDataDir, false), frankenphp.WithRequestPreparedEnv(preparedEnv))
 		if err != nil {
 			panic(err)
 		}

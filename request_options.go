@@ -52,9 +52,24 @@ func WithRequestSplitPath(splitPath []string) RequestOption {
 	}
 }
 
+type PreparedEnv = map[string]string
+
+func PrepareEnv(env map[string]string) PreparedEnv {
+	preparedEnv := make(PreparedEnv, len(env))
+	for k, v := range env {
+		preparedEnv[k+"\x00"] = v
+	}
+
+	return preparedEnv
+}
+
 // WithEnv set CGI-like environment variables that will be available in $_SERVER.
 // Values set with WithEnv always have priority over automatically populated values.
 func WithRequestEnv(env map[string]string) RequestOption {
+	return WithRequestPreparedEnv(PrepareEnv(env))
+}
+
+func WithRequestPreparedEnv(env PreparedEnv) RequestOption {
 	return func(o *FrankenPHPContext) error {
 		o.env = env
 

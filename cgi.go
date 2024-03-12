@@ -1,12 +1,15 @@
 package frankenphp
 
+// #include "frankenphp.h"
 import "C"
 import (
 	"crypto/tls"
 	"net"
 	"net/http"
 	"path/filepath"
+	"runtime"
 	"strings"
+	"unsafe"
 )
 
 type serverKey int
@@ -33,22 +36,44 @@ const (
 	sslProtocol
 )
 
-func allocServerVariable(cArr *[27]*C.char, env map[string]string, serverKey serverKey, envKey string, val string) {
-	if val, ok := env[envKey]; ok {
-		cArr[serverKey] = C.CString(val)
-		delete(env, envKey)
+var knownServerKeys = map[string]struct{}{
+	"CONTENT_LENGTH\x00":    {},
+	"DOCUMENT_ROOT\x00":     {},
+	"DOCUMENT_URI\x00":      {},
+	"GATEWAY_INTERFACE\x00": {},
+	"HTTP_HOST\x00":         {},
+	"HTTPS\x00":             {},
+	"PATH_INFO\x00":         {},
+	"PHP_SELF\x00":          {},
+	"REMOTE_ADDR\x00":       {},
+	"REMOTE_HOST\x00":       {},
+	"REMOTE_PORT\x00":       {},
+	"REQUEST_SCHEME\x00":    {},
+	"SCRIPT_FILENAME\x00":   {},
+	"SCRIPT_NAME\x00":       {},
+	"SERVER_NAME\x00":       {},
+	"SERVER_PORT\x00":       {},
+	"SERVER_PROTOCOL\x00":   {},
+	"SERVER_SOFTWARE\x00":   {},
+	"SSL_PROTOCOL\x00":      {},
+}
 
+func setKnownServerVariable(p *runtime.Pinner, cArr *[27]C.go_string, serverKey serverKey, val string) {
+	if val == "" {
 		return
 	}
 
-	cArr[serverKey] = C.CString(val)
+	valData := unsafe.StringData(val)
+	p.Pin(valData)
+	cArr[serverKey].len = C.size_t(len(val))
+	cArr[serverKey].data = (*C.char)(unsafe.Pointer(valData))
 }
 
 // computeKnownVariables returns a set of CGI environment variables for the request.
 //
 // TODO: handle this case https://github.com/caddyserver/caddy/issues/3718
 // Inspired by https://github.com/caddyserver/caddy/blob/master/modules/caddyhttp/reverseproxy/fastcgi/fastcgi.go
-func computeKnownVariables(request *http.Request) (cArr [27]*C.char) {
+func computeKnownVariables(request *http.Request, p *runtime.Pinner) (cArr [27]C.go_string) {
 	fc, fcOK := FromContext(request.Context())
 	if !fcOK {
 		panic("not a FrankenPHP request")
@@ -67,32 +92,30 @@ func computeKnownVariables(request *http.Request) (cArr [27]*C.char) {
 	ip = strings.Replace(ip, "[", "", 1)
 	ip = strings.Replace(ip, "]", "", 1)
 
-	ra, raOK := fc.env["REMOTE_ADDR"]
+	ra, raOK := fc.env["REMOTE_ADDR\x00"]
 	if raOK {
-		cArr[remoteAddr] = C.CString(ra)
-		delete(fc.env, "REMOTE_ADDR")
+		setKnownServerVariable(p, &cArr, remoteAddr, ra)
 	} else {
-		cArr[remoteAddr] = C.CString(ip)
+		setKnownServerVariable(p, &cArr, remoteAddr, ip)
 	}
 
-	if rh, ok := fc.env["REMOTE_HOST"]; ok {
-		cArr[remoteHost] = C.CString(rh) // For speed, remote host lookups disabled
-		delete(fc.env, "REMOTE_HOST")
+	if rh, ok := fc.env["REMOTE_HOST\x00"]; ok {
+		setKnownServerVariable(p, &cArr, remoteHost, rh) // For speed, remote host lookups disabled
 	} else {
 		if raOK {
-			cArr[remoteHost] = C.CString(ip)
+			setKnownServerVariable(p, &cArr, remoteHost, ip)
 		} else {
 			cArr[remoteHost] = cArr[remoteAddr]
 		}
 	}
 
-	allocServerVariable(&cArr, fc.env, remotePort, "REMOTE_PORT", port)
-	allocServerVariable(&cArr, fc.env, documentRoot, "DOCUMENT_ROOT", fc.documentRoot)
-	allocServerVariable(&cArr, fc.env, pathInfo, "PATH_INFO", fc.pathInfo)
-	allocServerVariable(&cArr, fc.env, phpSelf, "PHP_SELF", request.URL.Path)
-	allocServerVariable(&cArr, fc.env, documentUri, "DOCUMENT_URI", fc.docURI)
-	allocServerVariable(&cArr, fc.env, scriptFilename, "SCRIPT_FILENAME", fc.scriptFilename)
-	allocServerVariable(&cArr, fc.env, scriptName, "SCRIPT_NAME", fc.scriptName)
+	setKnownServerVariable(p, &cArr, remotePort, port)
+	setKnownServerVariable(p, &cArr, documentRoot, fc.documentRoot)
+	setKnownServerVariable(p, &cArr, pathInfo, fc.pathInfo)
+	setKnownServerVariable(p, &cArr, phpSelf, request.URL.Path)
+	setKnownServerVariable(p, &cArr, documentUri, fc.docURI)
+	setKnownServerVariable(p, &cArr, scriptFilename, fc.scriptFilename)
+	setKnownServerVariable(p, &cArr, scriptName, fc.scriptName)
 
 	var rs string
 	if request.TLS == nil {
@@ -100,26 +123,24 @@ func computeKnownVariables(request *http.Request) (cArr [27]*C.char) {
 	} else {
 		rs = "https"
 
-		if h, ok := fc.env["HTTPS"]; ok {
-			cArr[https] = C.CString(h)
-			delete(fc.env, "HTTPS")
+		if h, ok := fc.env["HTTPS\x00"]; ok {
+			setKnownServerVariable(p, &cArr, https, h)
 		} else {
-			cArr[https] = C.CString("on")
+			setKnownServerVariable(p, &cArr, https, "on")
 		}
 
 		// and pass the protocol details in a manner compatible with apache's mod_ssl
 		// (which is why these have a SSL_ prefix and not TLS_).
-		if p, ok := fc.env["SSL_PROTOCOL"]; ok {
-			cArr[sslProtocol] = C.CString(p)
-			delete(fc.env, "SSL_PROTOCOL")
+		if pr, ok := fc.env["SSL_PROTOCOL\x00"]; ok {
+			setKnownServerVariable(p, &cArr, sslProtocol, pr)
 		} else {
 			if v, ok := tlsProtocolStrings[request.TLS.Version]; ok {
-				cArr[sslProtocol] = C.CString(v)
+				setKnownServerVariable(p, &cArr, sslProtocol, v)
 			}
 		}
 	}
-	allocServerVariable(&cArr, fc.env, requestScheme, "REQUEST_SCHEME", rs)
 
+	setKnownServerVariable(p, &cArr, requestScheme, rs)
 	reqHost, reqPort, _ := net.SplitHostPort(request.Host)
 
 	if reqHost == "" {
@@ -140,9 +161,9 @@ func computeKnownVariables(request *http.Request) (cArr [27]*C.char) {
 		}
 	}
 
-	allocServerVariable(&cArr, fc.env, serverName, "SERVER_NAME", reqHost)
+	setKnownServerVariable(p, &cArr, serverName, reqHost)
 	if reqPort != "" {
-		allocServerVariable(&cArr, fc.env, serverPort, "SERVER_PORT", reqPort)
+		setKnownServerVariable(p, &cArr, serverPort, reqPort)
 	}
 
 	// Variables defined in CGI 1.1 spec
@@ -150,12 +171,11 @@ func computeKnownVariables(request *http.Request) (cArr [27]*C.char) {
 	// the parent environment from interfering.
 
 	// These values can not be override
-	cArr[contentLength] = C.CString(request.Header.Get("Content-Length"))
-
-	allocServerVariable(&cArr, fc.env, gatewayInterface, "GATEWAY_INTERFACE", "CGI/1.1")
-	allocServerVariable(&cArr, fc.env, serverProtocol, "SERVER_PROTOCOL", request.Proto)
-	allocServerVariable(&cArr, fc.env, serverSoftware, "SERVER_SOFTWARE", "FrankenPHP")
-	allocServerVariable(&cArr, fc.env, httpHost, "HTTP_HOST", request.Host) // added here, since not always part of headers
+	setKnownServerVariable(p, &cArr, contentLength, request.Header.Get("Content-Length"))
+	setKnownServerVariable(p, &cArr, gatewayInterface, "CGI/1.1")
+	setKnownServerVariable(p, &cArr, serverProtocol, request.Proto)
+	setKnownServerVariable(p, &cArr, serverSoftware, "FrankenPHP")
+	setKnownServerVariable(p, &cArr, httpHost, request.Host) // added here, since not always part of headers
 
 	return
 }

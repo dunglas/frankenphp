@@ -47,6 +47,7 @@ import (
 	"sync"
 	"unsafe"
 
+	"github.com/maypok86/otter"
 	"go.uber.org/zap"
 	// debug on Linux
 	//_ "github.com/ianlancetaylor/cgosymbolizer"
@@ -115,7 +116,7 @@ func (l syslogLevel) String() string {
 type FrankenPHPContext struct {
 	documentRoot string
 	splitPath    []string
-	env          map[string]string
+	env          PreparedEnv
 	logger       *zap.Logger
 
 	docURI         string
@@ -539,44 +540,81 @@ func go_ub_write(rh C.uintptr_t, cBuf *C.char, length C.int) (C.size_t, C.bool) 
 	return C.size_t(i), C.bool(clientHasClosed(r))
 }
 
+func createHeaderKeyCache() otter.Cache[string, string] {
+	c, err := otter.MustBuilder[string, string](256).Build()
+	if err != nil {
+		panic(err)
+	}
+
+	return c
+}
+
+var headerKeyCache = createHeaderKeyCache()
+
+// There are around 60 common request headers according to https://en.wikipedia.org/wiki/List_of_HTTP_header_fields#Request_fields
+// Give some space for custom headers
+
 //export go_register_variables
 func go_register_variables(rh C.uintptr_t, trackVarsArray *C.zval) {
 	r := cgo.Handle(rh).Value().(*http.Request)
 	fc := r.Context().Value(contextKey).(*FrankenPHPContext)
 
-	le := (len(fc.env) + len(r.Header)) * 2
-	dynamicVariables := make([]*C.char, le)
+	p := &runtime.Pinner{}
 
-	var i int
+	dynamicVariables := make([]C.php_variable, len(fc.env)+len(r.Header))
+	p.Pin(unsafe.SliceData(dynamicVariables))
+
+	var l int
+
 	// Add all HTTP headers to env variables
 	for field, val := range r.Header {
-		k := "HTTP_" + headerNameReplacer.Replace(strings.ToUpper(field))
+		k, ok := headerKeyCache.Get(field)
+		if !ok {
+			k = "HTTP_" + headerNameReplacer.Replace(strings.ToUpper(field)) + "\x00"
+			headerKeyCache.SetIfAbsent(field, k)
+		}
+
 		if _, ok := fc.env[k]; ok {
 			continue
 		}
 
-		dynamicVariables[i] = C.CString(k)
-		i++
+		v := strings.Join(val, ", ")
 
-		dynamicVariables[i] = C.CString(strings.Join(val, ", "))
-		i++
+		kData := unsafe.StringData(k)
+		vData := unsafe.StringData(v)
+
+		p.Pin(kData)
+		p.Pin(vData)
+
+		dynamicVariables[l]._var = (*C.char)(unsafe.Pointer(kData))
+		dynamicVariables[l].data_len = C.size_t(len(v))
+		dynamicVariables[l].data = (*C.char)(unsafe.Pointer(vData))
+
+		l++
 	}
 
 	for k, v := range fc.env {
-		dynamicVariables[i] = C.CString(k)
-		i++
+		if _, ok := knownServerKeys[k]; ok {
+			continue
+		}
 
-		dynamicVariables[i] = C.CString(v)
-		i++
+		kData := unsafe.StringData(k)
+		vData := unsafe.Pointer(unsafe.StringData(v))
+
+		p.Pin(kData)
+		p.Pin(vData)
+
+		dynamicVariables[l]._var = (*C.char)(unsafe.Pointer(kData))
+		dynamicVariables[l].data_len = C.size_t(len(v))
+		dynamicVariables[l].data = (*C.char)(unsafe.Pointer(vData))
+
+		l++
 	}
 
-	var dynamicVariablesPtr **C.char = nil
-	if le > 0 {
-		dynamicVariablesPtr = &dynamicVariables[0]
-	}
+	knownVariables := computeKnownVariables(r, p)
+	C.frankenphp_register_bulk_variables(&knownVariables[0], unsafe.SliceData(dynamicVariables), C.size_t(l), trackVarsArray)
 
-	knownVariables := computeKnownVariables(r)
-	C.frankenphp_register_bulk_variables(&knownVariables[0], dynamicVariablesPtr, C.size_t(le), trackVarsArray)
+	p.Unpin()
 
 	fc.env = nil
 }

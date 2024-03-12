@@ -205,7 +205,7 @@ type FrankenPHPModule struct {
 	// ResolveRootSymlink enables resolving the `root` directory to its actual value by evaluating a symbolic link, if one exists.
 	ResolveRootSymlink *bool `json:"resolve_root_symlink,omitempty"`
 	// Env sets an extra environment variable to the given value. Can be specified more than once for multiple environment variables.
-	Env    map[string]string `json:"env,omitempty"`
+	Env    frankenphp.PreparedEnv `json:"env,omitempty"`
 	logger *zap.Logger
 }
 
@@ -256,7 +256,7 @@ func (f FrankenPHPModule) ServeHTTP(w http.ResponseWriter, r *http.Request, _ ca
 	documentRoot := repl.ReplaceKnown(f.Root, "")
 
 	env := make(map[string]string, len(f.Env)+1)
-	env["REQUEST_URI"] = origReq.URL.RequestURI()
+	env["REQUEST_URI\x00"] = origReq.URL.RequestURI()
 	for k, v := range f.Env {
 		env[k] = repl.ReplaceKnown(v, "")
 	}
@@ -265,7 +265,7 @@ func (f FrankenPHPModule) ServeHTTP(w http.ResponseWriter, r *http.Request, _ ca
 		r,
 		frankenphp.WithRequestDocumentRoot(documentRoot, *f.ResolveRootSymlink),
 		frankenphp.WithRequestSplitPath(f.SplitPath),
-		frankenphp.WithRequestEnv(env),
+		frankenphp.WithRequestPreparedEnv(env),
 	)
 
 	if err != nil {
@@ -298,9 +298,9 @@ func (f *FrankenPHPModule) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 					return d.ArgErr()
 				}
 				if f.Env == nil {
-					f.Env = make(map[string]string)
+					f.Env = make(frankenphp.PreparedEnv)
 				}
-				f.Env[args[0]] = args[1]
+				f.Env[args[0]+"\x00"] = args[1]
 
 			case "resolve_root_symlink":
 				if d.NextArg() {

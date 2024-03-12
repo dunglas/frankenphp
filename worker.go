@@ -30,7 +30,7 @@ func initWorkers(opt []workerOpt) error {
 	return nil
 }
 
-func startWorkers(fileName string, nbWorkers int, env map[string]string) error {
+func startWorkers(fileName string, nbWorkers int, env PreparedEnv) error {
 	absFileName, err := filepath.Abs(fileName)
 	if err != nil {
 		return fmt.Errorf("workers %q: %w", fileName, err)
@@ -50,10 +50,10 @@ func startWorkers(fileName string, nbWorkers int, env map[string]string) error {
 	)
 
 	if env == nil {
-		env = make(map[string]string, 1)
+		env = make(PreparedEnv, 1)
 	}
 
-	env["FRANKENPHP_WORKER"] = "1"
+	env["FRANKENPHP_WORKER\x00"] = "1\x00"
 
 	l := getLogger()
 	for i := 0; i < nbWorkers; i++ {
@@ -68,7 +68,7 @@ func startWorkers(fileName string, nbWorkers int, env map[string]string) error {
 				r, err = NewRequestWithContext(
 					r,
 					WithRequestDocumentRoot(filepath.Dir(absFileName), false),
-					WithRequestEnv(env),
+					WithRequestPreparedEnv(env),
 				)
 				if err != nil {
 					panic(err)
