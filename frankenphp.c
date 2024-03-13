@@ -12,6 +12,7 @@
 #include <php_output.h>
 #include <php_variables.h>
 #include <sapi/embed/php_embed.h>
+#include <signal.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -726,6 +727,17 @@ sapi_module_struct frankenphp_sapi_module = {
     STANDARD_SAPI_MODULE_PROPERTIES};
 
 static void *manager_thread(void *arg) {
+  // SIGPIPE must be masked in non-Go threads:
+  // https://pkg.go.dev/os/signal#hdr-Go_programs_that_use_cgo_or_SWIG
+  sigset_t set;
+  sigemptyset(&set);
+  sigaddset(&set, SIGPIPE);
+
+  if (pthread_sigmask(SIG_BLOCK, &set, NULL) != 0) {
+    perror("failed to block SIGPIPE");
+    exit(EXIT_FAILURE);
+  }
+
 #ifdef ZTS
   // TODO: use tsrm_startup() directly as we know the number of expected threads
   php_tsrm_startup();
