@@ -54,7 +54,8 @@ volumes:
   caddy_config:
 ```
 
-> [!NOTE]  
+> [!NOTE]
+>
 > The previous examples are intended for production usage.
 > In development, you may want to use a volume, a different PHP configuration and a different value for the `SERVER_NAME` environment variable.
 >
@@ -104,7 +105,8 @@ Example with the DigitalOcean Domains service ("Networking" > "Domains"):
 
 ![Configuring DNS on DigitalOcean](digitalocean-dns.png)
 
-> [!NOTE]  
+> [!NOTE]
+>
 > Let's Encrypt, the service used by default by FrankenPHP to automatically generate a TLS certificate doesn't support using bare IP addresses. Using a domain name is mandatory to use Let's Encrypt.
 
 ## Deploying
@@ -129,6 +131,7 @@ Your server is up and running, and a HTTPS certificate has been automatically ge
 Go to `https://your-domain-name.example.com` and enjoy!
 
 > [!CAUTION]
+>
 > Docker can have a cache layer, make sure you have the right build for each deployment or rebuild your project with `--no-cache` option to avoid cache issue.
 
 ## Deploying on Multiple Nodes

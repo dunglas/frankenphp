@@ -71,7 +71,7 @@ COPY --from=builder /usr/local/bin/frankenphp /usr/local/bin/frankenphp
 FrankenPHP tarafından sağlanan `builder` imajı `libphp`'nin derlenmiş bir sürümünü içerir.
 [Derleyici imajları](https://hub.docker.com/r/dunglas/frankenphp/tags?name=builder) hem Debian hem de Alpine için FrankenPHP ve PHP'nin tüm sürümleri için sağlanmıştır.
 
-> [!İPUCU]
+> [!TIP]
 >
 > Eğer Alpine Linux ve Symfony kullanıyorsanız,
 > [varsayılan yığın boyutunu artırmanız](compile.md#using-xcaddy) gerekebilir.

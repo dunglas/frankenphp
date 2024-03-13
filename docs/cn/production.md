@@ -55,6 +55,7 @@ volumes:
 ```
 
 > [!NOTE]
+>
 > 前面的示例适用于生产用途。
 > 在开发中，你可能希望使用挂载目录，不同的 PHP 配置和不同的 `SERVER_NAME` 环境变量值。
 >
@@ -104,7 +105,8 @@ DigitalOcean 域服务示例（“Networking” > “Domains”）：
 
 ![在 DigitalOcean 上配置 DNS](../digitalocean-dns.png)
 
-> [!NOTE]  
+> [!NOTE]
+>
 > Let's Encrypt 是 FrankenPHP 默认用于自动生成 TLS 证书的服务，不支持使用裸 IP 地址。使用域名是使用 Let's Encrypt 的必要条件。
 
 ## 部署
@@ -129,6 +131,7 @@ docker compose up -d --wait
 去 `https://your-domain-name.example.com` 享受吧！
 
 > [!CAUTION]
+>
 > Docker 有一个缓存层，请确保每个部署都有正确的构建，或者使用 --no-cache 选项重新构建项目以避免缓存问题。
 
 ## 在多个节点上部署

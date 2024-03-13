@@ -93,7 +93,7 @@ xcaddy build \
     # Add extra Caddy modules here
 ```
 
-> [!İPUCU]
+> [!TIP]
 >
 > Eğer musl libc (Alpine Linux'ta varsayılan) ve Symfony kullanıyorsanız,
 > varsayılan yığın boyutunu artırmanız gerekebilir.

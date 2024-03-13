@@ -89,7 +89,7 @@ docker run \
     dunglas/frankenphp
 ```
 
-> [!DİKKAT]
+> [!CAUTION]
 >
 > 172.17.0.3`ü konteynerinize atanacak IP ile değiştirdiğinizden emin olun.
 

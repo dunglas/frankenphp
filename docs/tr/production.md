@@ -54,7 +54,8 @@ volumes:
   caddy_config:
 ```
 
-> [!NOT]  
+> [!NOTE]
+>
 > Önceki örnekler production kullanımı için tasarlanmıştır.
 > Geliştirme aşamasında, bir yığın (volume), farklı bir PHP yapılandırması ve `SERVER_NAME` ortam değişkeni için farklı bir değer kullanmak isteyebilirsiniz.
 >
@@ -102,7 +103,8 @@ DigitalOcean Alan Adları hizmetiyle ilgili örnek ("Networking" > "Domains"):
 
 ![DigitalOcean'da DNS Yapılandırma](digitalocean-dns.png)
 
-> [!NOT]
+> [!NOTE]
+>
 > FrankenPHP tarafından varsayılan olarak otomatik olarak TLS sertifikası oluşturmak için kullanılan hizmet olan Let's Encrypt, direkt IP adreslerinin kullanılmasını desteklemez. Let's Encrypt'i kullanmak için alan adı kullanmak zorunludur.
 
 ## Dağıtım
@@ -126,7 +128,8 @@ docker compose up -d --wait
 Sunucunuz hazır ve çalışıyor. Sizin için otomatik olarak bir HTTPS sertifikası oluşturuldu.
 `https://your-domain-name.example.com` adresine gidin ve keyfini çıkarın!
 
-> [!DİKKAT]
+> [!CAUTION]
+>
 > Docker bir önbellek katmanına sahip olabilir, her dağıtım için doğru derlemeye sahip olduğunuzdan emin olun veya önbellek sorununu önlemek için projenizi `--no-cache` seçeneği ile yeniden oluşturun.
 
 ## Birden Fazla Düğümde Dağıtım

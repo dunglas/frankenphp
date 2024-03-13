@@ -59,7 +59,7 @@ Bir Linux binary çıktısı almanın en kolay yolu, sağladığımız Docker ta
         ./build-static.sh
     ```
 
-   > [!DİKKAT]
+   > [!CAUTION]
    >
    > Bazı `.dockerignore` dosyaları (örneğin varsayılan [Symfony Docker `.dockerignore`](https://github.com/dunglas/symfony-docker/blob/main/.dockerignore))
    > `vendor/` dizinini ve `.env` dosyalarını yok sayacaktır. Derlemeden önce `.dockerignore` dosyasını ayarladığınızdan veya kaldırdığınızdan emin olun.
