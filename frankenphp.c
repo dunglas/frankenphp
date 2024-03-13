@@ -743,7 +743,11 @@ static void *manager_thread(void *arg) {
   arg = NULL;
 
 #ifdef ZTS
+#if (PHP_VERSION_ID >= 80300)
   php_tsrm_startup_ex(num_threads);
+#else
+  php_tsrm_startup();
+#endif
   /*tsrm_error_set(TSRM_ERROR_LEVEL_INFO, NULL);*/
 #ifdef PHP_WIN32
   ZEND_TSRMLS_CACHE_UPDATE();
