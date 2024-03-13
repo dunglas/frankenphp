@@ -28,7 +28,7 @@ docker run -v $PWD:/app/public \
 
 > [!TIP]
 >
-> 不要尝试使用 `https://127.0.0.1`。使用 `localhost` 并接受自签名证书。
+> 不要尝试使用 `https://127.0.0.1`。使用 `https://localhost` 并接受自签名证书。
 > 使用 [`SERVER_NAME` 环境变量](config.md#环境变量) 更改要使用的域。
 
 ### 独立二进制

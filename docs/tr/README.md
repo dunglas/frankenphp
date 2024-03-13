@@ -28,7 +28,7 @@ docker run -v $PWD:/app/public \
 
 > [!TIP]
 >
-> `https://127.0.0.1` kullanmaya çalışmayın. localhost` kullanın ve kendinden imzalı sertifikayı kabul edin.
+> `https://127.0.0.1` kullanmaya çalışmayın. `https://localhost` kullanın ve kendinden imzalı sertifikayı kabul edin.
 > Kullanılacak alan adını değiştirmek için [`SERVER_NAME` ortam değişkenini](docs/config.md#environment-variables) kullanın.
 
 ### Binary Çıktısı
