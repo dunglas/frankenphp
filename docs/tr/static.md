@@ -43,12 +43,12 @@ docker buildx bake \
   static-builder
 ```
 
-Derlemeyi nasıl [özelleştireceğinize](#customizing-the-build) de bakın.
+Derlemeyi nasıl [özelleştireceğinize](#yapıyı-özelleştirme) de bakın.
 
 ### GitHub Token
 
 GitHub API kullanım limitine ulaşırsanız, `GITHUB_TOKEN` adlı bir ortam değişkeninde bir GitHub Personal Access Token ayarlayın:
-    
+
 ```console
 GITHUB_TOKEN="xxx" docker --load buildx bake static-builder
 # ...

@@ -66,7 +66,7 @@ Son olarak, eğer Git kullanıyorsanız, bu dosyaları commit edin ve push edin.
 
 Uygulamanızı production ortamına dağıtmak için bir sunucuya ihtiyacınız vardır.
 Bu dokümanda, DigitalOcean tarafından sağlanan bir sanal makine kullanacağız, ancak herhangi bir Linux sunucusu çalışabilir.
-Docker yüklü bir Linux sunucunuz varsa, doğrudan [bir sonraki bölüme](#configuring-a-domain-name) geçebilirsiniz.
+Docker yüklü bir Linux sunucunuz varsa, doğrudan [bir sonraki bölüme](#alan-adı-yapılandırma) geçebilirsiniz.
 
 Aksi takdirde, 200 $ ücretsiz kredi almak için [bu ortaklık bağlantısını](https://m.do.co/c/5d8aabe3ab80) kullanın, bir hesap oluşturun ve ardından "Create a Droplet" seçeneğine tıklayın.
 Ardından, "Bir imaj seçin" bölümünün altındaki "Marketplace" sekmesine tıklayın ve "Docker" adlı uygulamayı bulun.
@@ -124,7 +124,7 @@ docker compose up -d --wait
 ```
 
 Sunucunuz hazır ve çalışıyor. Sizin için otomatik olarak bir HTTPS sertifikası oluşturuldu.
-https://your-domain-name.example.com` adresine gidin ve keyfini çıkarın!
+`https://your-domain-name.example.com` adresine gidin ve keyfini çıkarın!
 
 > [!DİKKAT]
 > Docker bir önbellek katmanına sahip olabilir, her dağıtım için doğru derlemeye sahip olduğunuzdan emin olun veya önbellek sorununu önlemek için projenizi `--no-cache` seçeneği ile yeniden oluşturun.

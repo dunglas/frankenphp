@@ -45,7 +45,7 @@ Aşağıdaki eklentiler FrankenPHP ile kullanıldığında bilinen hatalara ve b
 | Adı                               | Problem                                                                                                                                                                                                                                                    |
 |-----------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | [XDebug](https://xdebug.org/)     | XDebug çökebilir veya askıda kalabilir. Bu sorun [XDebug tarafından takip ediliyor](https://github.com/dunglas/frankenphp/issues/563#issuecomment-1952226212).                                                                                             |
-| [Tideways](https://tideways.com/) | Worker modunda, Tideways eklentisi [worker komut dosyalarının düzgün şekilde sonlandırılmasını engelliyor] (https://github.com/dunglas/frankenphp/issues/578#issuecomment-1966620351) veya CPU'nun %100'ünü tüketiyor. Bu durum Tideways'e bildirilmiştir. |
+| [Tideways](https://tideways.com/) | Worker modunda, Tideways eklentisi [worker komut dosyalarının düzgün şekilde sonlandırılmasını engelliyor](https://github.com/dunglas/frankenphp/issues/578#issuecomment-1966620351) veya CPU'nun %100'ünü tüketiyor. Bu durum Tideways'e bildirilmiştir. |
 
 ## get_browser
 
