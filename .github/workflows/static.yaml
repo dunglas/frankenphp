@@ -75,6 +75,7 @@ jobs:
           -
             platform: linux/amd64
             qemu: false
+            debug: false
           -
             platform: linux/amd64
             qemu: false
