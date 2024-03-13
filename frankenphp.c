@@ -730,15 +730,11 @@ static void *manager_thread(void *arg) {
   // SIGPIPE must be masked in non-Go threads:
   // https://pkg.go.dev/os/signal#hdr-Go_programs_that_use_cgo_or_SWIG
   sigset_t set;
-  if (pthread_sigmask(SIG_SETMASK, NULL, &set) != 0) {
-    perror("failed to get sigmask");
-    exit(EXIT_FAILURE);
-  }
-
+  sigemptyset(&set);
   sigaddset(&set, SIGPIPE);
 
   if (pthread_sigmask(SIG_BLOCK, &set, NULL) != 0) {
-    perror("failed to set sigmask");
+    perror("failed to block SIGPIPE");
     exit(EXIT_FAILURE);
   }
 
