@@ -28,7 +28,7 @@ Rendez-vous sur `https://localhost`, c'est parti !
 
 > [!TIP]
 >
-> Ne tentez pas d'utiliser `https://127.0.0.1`. Utilisez localhost et acceptez le certificat auto-signé.
+> Ne tentez pas d'utiliser `https://127.0.0.1`. Utilisez `https://localhost` et acceptez le certificat auto-signé.
 > Utilisez [la variable d'environnement `SERVER_NAME`](config.md#environment-variables) pour changer le domaine à utiliser.
 
 ### Binaire autonome

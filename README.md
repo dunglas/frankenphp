@@ -28,7 +28,7 @@ Go to `https://localhost`, and enjoy!
 
 > [!TIP]
 >
-> Do not attempt to use `https://127.0.0.1`. Use `localhost` and accept the self-signed certificate.
+> Do not attempt to use `https://127.0.0.1`. Use `https://localhost` and accept the self-signed certificate.
 > Use the [`SERVER_NAME` environment variable](docs/config.md#environment-variables) to change the domain to use.
 
 ### Standalone Binary
