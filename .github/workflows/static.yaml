@@ -68,10 +68,10 @@ jobs:
       fail-fast: false
       matrix:
         platform: ${{ fromJson(needs.prepare.outputs.platforms) }}
+        debug: [false]
         include:
           -
             qemu: true
-            debug: false
           -
             platform: linux/amd64
             qemu: false
