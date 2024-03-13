@@ -201,3 +201,17 @@ docker buildx bake -f docker-bake.hcl --pull --no-cache --push
 apk add strace util-linux gdb
 strace -e 'trace=!futex,epoll_ctl,epoll_pwait,tgkill,rt_sigreturn' -p 1
 ```
+
+## Translating the Documentation
+
+To translate the documentation and the site in a new language,
+follow these steps:
+
+1. Create a new directory named with the language's 2-character ISO code in this repository's `docs/` directory
+2. Copy all the `.md` files in the root of the `docs/` directory into the new directory (always use the English version as source for translation, as it's always up to date)
+3. Copy the `README.md` and `CONTRIBUTING.md` files from the root directory to the new directory
+4. Translate the content of the files, but don't change the filenames, also don't translates strings starting with `> [!` (it's special markup for GitHub)
+5. Create a Pull Request with the translations
+6. In the [site repository](https://github.com/dunglas/frankenphp-website/tree/main/i18n), copy `i18n/en.yaml` to `i18n/<country-code>.yaml`
+7. Translate the values in the created YAML file
+8. Open a Pull Request on the site repository
