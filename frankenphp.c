@@ -738,9 +738,12 @@ static void *manager_thread(void *arg) {
     exit(EXIT_FAILURE);
   }
 
+  int num_threads = *((int *)arg);
+  free(arg);
+  arg = NULL;
+
 #ifdef ZTS
-  // TODO: use tsrm_startup() directly as we know the number of expected threads
-  php_tsrm_startup();
+  php_tsrm_startup_ex(num_threads);
   /*tsrm_error_set(TSRM_ERROR_LEVEL_INFO, NULL);*/
 #ifdef PHP_WIN32
   ZEND_TSRMLS_CACHE_UPDATE();
@@ -761,9 +764,7 @@ static void *manager_thread(void *arg) {
 
   frankenphp_sapi_module.startup(&frankenphp_sapi_module);
 
-  threadpool thpool = thpool_init(*((int *)arg));
-  free(arg);
-  arg = NULL;
+  threadpool thpool = thpool_init(num_threads);
 
   uintptr_t rh;
   while ((rh = go_fetch_request())) {
