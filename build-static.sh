@@ -160,7 +160,7 @@ if [ "${os}" = "linux" ]; then
                 -DMI_BUILD_SHARED=OFF \
                 -DMI_BUILD_OBJECT=OFF \
                 -DMI_BUILD_TESTS=OFF \
-                ../      
+                ../
         else
             cmake \
                 -DCMAKE_BUILD_TYPE=Release \
@@ -174,6 +174,12 @@ if [ "${os}" = "linux" ]; then
         cd ../../
     fi
 
+    if [ -n "${DEBUG_SYMBOLS}" ]; then
+        libmimalloc_path=mimalloc/out/libmimalloc-debug.a
+    else
+        libmimalloc_path=mimalloc/out/libmimalloc.a
+    fi
+
     # Patch musl library to use mimalloc
     for libc_path in "/usr/local/musl/lib/libc.a" "/usr/local/musl/$(uname -m)-linux-musl/lib/libc.a" "/usr/lib/libc.a"
     do
@@ -185,7 +191,7 @@ if [ "${os}" = "linux" ]; then
             echo "CREATE libc.a"
             echo "ADDLIB ${libc_path}"
             echo "DELETE aligned_alloc.lo calloc.lo donate.lo free.lo libc_calloc.lo lite_malloc.lo malloc.lo malloc_usable_size.lo memalign.lo posix_memalign.lo realloc.lo reallocarray.lo valloc.lo"
-            echo "ADDLIB mimalloc/out/libmimalloc.a"
+            echo "ADDLIB ${libmimalloc_path}"
             echo "SAVE"
         } | ar -M
         mv "${libc_path}" "${libc_path}.unpatched"
