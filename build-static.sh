@@ -132,33 +132,68 @@ export LIBPHP_VERSION
 cd ../
 
 if [ "${os}" = "linux" ]; then
-    # Replace mallocng by mimalloc
+    # Replace musl's mallocng by mimalloc
     # The default musl allocator is slow, especially when used by multi-threaded apps,
     # and triggers weird bugs
-    if [ ! -f "mimalloc/out/release/libmimalloc.a" ]; then
-        if [ -d "static-php-cli/" ]; then
+    # Adapted from https://www.tweag.io/blog/2023-08-10-rust-static-link-with-mimalloc/
+    if [ ! -f "mimalloc/out/libmimalloc.a" ]; then
+        if [ -d "mimalloc" ]; then
             cd mimalloc/
-            git pull
+            git reset --hard
+            git clean -xdf
+            git fetch --tags
         else
             git clone https://github.com/microsoft/mimalloc.git
             cd mimalloc/
         fi
 
         git checkout "$(git describe --tags "$(git rev-list --tags --max-count=1 || true)" || true)"
-        mkdir -p out/release/
-        cd out/release/
+
+        curl -f -L --retry 5 https://raw.githubusercontent.com/tweag/rust-alpine-mimalloc/b26002b49d466a295ea8b50828cb7520a71a872a/mimalloc.diff -o mimalloc.diff
+        patch -p1 < mimalloc.diff
+
+        mkdir -p out/
+        cd out/
         if [ -n "${DEBUG_SYMBOLS}" ]; then
-            cmake -DCMAKE_BUILD_TYPE=Debug ../..
+            cmake \
+                -DCMAKE_BUILD_TYPE=Debug \
+                -DMI_BUILD_SHARED=OFF \
+                -DMI_BUILD_OBJECT=OFF \
+                -DMI_BUILD_TESTS=OFF \
+                ../      
         else
-            cmake ../..
+            cmake \
+                -DCMAKE_BUILD_TYPE=Release \
+                -DMI_BUILD_SHARED=OFF \
+                -DMI_BUILD_OBJECT=OFF \
+                -DMI_BUILD_TESTS=OFF \
+                ../
         fi
         make -j"$(nproc || true)"
 
-        cd ../../../
+        cd ../../
     fi
 
-    # Also increase the default stack size to prevents issues with code including many files such as Symfony containers
-    extraExtldflags="-Wl,--push-state,--whole-archive,${PWD}/mimalloc/out/release/libmimalloc.a,--pop-state,-z,stack-size=0x80000"
+    # Patch musl library to use mimalloc
+    for libc_path in "/usr/local/musl/lib/libc.a" "/usr/local/musl/$(uname -m)-linux-musl/lib/libc.a" "/usr/lib/libc.a"
+    do
+        if [ ! -f "${libc_path}" ] || [ -f "${libc_path}.unpatched" ]; then
+            continue
+        fi
+
+        {
+            echo "CREATE libc.a"
+            echo "ADDLIB ${libc_path}"
+            echo "DELETE aligned_alloc.lo calloc.lo donate.lo free.lo libc_calloc.lo lite_malloc.lo malloc.lo malloc_usable_size.lo memalign.lo posix_memalign.lo realloc.lo reallocarray.lo valloc.lo"
+            echo "ADDLIB mimalloc/out/libmimalloc.a"
+            echo "SAVE"
+        } | ar -M
+        mv "${libc_path}" "${libc_path}.unpatched"
+        mv libc.a "${libc_path}"
+    done
+
+    # Increase the default stack size to prevents issues with code including many files such as Symfony containers
+    extraExtldflags="-Wl,-z,stack-size=0x80000"
 fi
 
 if [ -z "${DEBUG_SYMBOLS}" ]; then
