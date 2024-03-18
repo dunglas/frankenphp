@@ -212,6 +212,6 @@ follow these steps:
 3. Copy the `README.md` and `CONTRIBUTING.md` files from the root directory to the new directory
 4. Translate the content of the files, but don't change the filenames, also don't translates strings starting with `> [!` (it's special markup for GitHub)
 5. Create a Pull Request with the translations
-6. In the [site repository](https://github.com/dunglas/frankenphp-website/tree/main/i18n), copy `i18n/en.yaml` to `i18n/<country-code>.yaml`
+6. In the [site repository](https://github.com/dunglas/frankenphp-website/tree/main), copy and translate the translation files in the `content/`, `data/` and `i18n/` directories
 7. Translate the values in the created YAML file
 8. Open a Pull Request on the site repository
