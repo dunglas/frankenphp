@@ -39,7 +39,7 @@ RUN apk add --no-cache \
 	echo 'set auto-load safe-path /' > /root/.gdbinit
 
 WORKDIR /usr/local/src/php
-RUN git clone --branch=PHP-8.3 https://github.com/php/php-src.git . && \
+RUN git clone --branch=PHP-8.3 --depth=1 https://github.com/php/php-src.git . && \
 	# --enable-embed is only necessary to generate libphp.so, we don't use this SAPI directly
 	./buildconf --force && \
 	./configure \
