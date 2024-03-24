@@ -540,7 +540,7 @@ func testLargeRequest(t *testing.T, opts *testOptions) {
 		req := httptest.NewRequest(
 			"POST",
 			fmt.Sprintf("http://example.com/large-request.php?i=%d", i),
-			strings.NewReader(strings.Repeat("f", 1_048_576)),
+			strings.NewReader(strings.Repeat("f", 6_048_576)),
 		)
 		w := httptest.NewRecorder()
 		handler(w, req)
@@ -548,7 +548,7 @@ func testLargeRequest(t *testing.T, opts *testOptions) {
 		resp := w.Result()
 		body, _ := io.ReadAll(resp.Body)
 
-		assert.Contains(t, string(body), fmt.Sprintf("Request body size: 1048576 (%d)", i))
+		assert.Contains(t, string(body), fmt.Sprintf("Request body size: 6048576 (%d)", i))
 	}, opts)
 }
 
