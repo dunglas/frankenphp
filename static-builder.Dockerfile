@@ -20,6 +20,7 @@ LABEL org.opencontainers.image.vendor="Kévin Dunglas"
 
 RUN apk update; \
 	apk add --no-cache \
+		alpine-sdk \
 		autoconf \
 		automake \
 		bash \
