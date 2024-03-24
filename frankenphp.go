@@ -746,12 +746,6 @@ func go_read_post(rh C.uintptr_t, cBuf *C.char, countBytes C.size_t) (readBytes 
 		readBytes += C.size_t(n)
 	}
 
-	if err != nil && err != io.EOF {
-		// invalid Read on closed Body may happen because of https://github.com/golang/go/issues/15527
-		fc, _ := FromContext(r.Context())
-		fc.logger.Error("error while reading the request body", zap.Error(err))
-	}
-
 	return
 }
 
