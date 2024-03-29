@@ -118,7 +118,7 @@ docker run \
 As a workaround, we can create a shell script in `/usr/local/bin/php` which strips the unsupported parameters and then calls FrankenPHP:
 
 ```bash
-#!/bin/bash
+#!/usr/bin/env bash
 args=("$@")
 index=0
 for i in "$@"
