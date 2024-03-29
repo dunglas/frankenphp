@@ -75,3 +75,5 @@ You can also run command-line scripts with:
 * [Drupal](https://github.com/dunglas/frankenphp-drupal)
 * [Joomla](https://github.com/alexandreelise/frankenphp-joomla)
 * [TYPO3](https://github.com/ochorocho/franken-typo3)
+
+![Alt](https://repobeats.axiom.co/api/embed/4af8e2d7b77ad0908cc326f75af8ca6fef242336.svg "Repobeats analytics image")
