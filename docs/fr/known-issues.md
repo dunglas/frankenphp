@@ -101,7 +101,7 @@ Si ce n'est pas le cas, lancez FrankenPHP en mode debug pour essayer de comprend
 
 ```console
 docker run \
-    -e CADDY_GLOBAL_OPTIONS="debug"
+    -e CADDY_GLOBAL_OPTIONS="debug" \
     -e SERVER_NAME="127.0.0.1" \
     -v $PWD:/app/public \
     -p 80:80 -p 443:443 -p 443:443/udp \
