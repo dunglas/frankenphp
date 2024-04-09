@@ -129,7 +129,7 @@ php_server [<matcher>] {
 }
 ```
 
-### Full Duplex (h1)
+### Full Duplex (HTTP/1)
 
 When using http 1.x, it may be desirable to enable full-duplex mode to allow writing a response before the entire body
 has been read. (for example: websockets, SSE, etc.)
