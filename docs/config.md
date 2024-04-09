@@ -149,12 +149,11 @@ This is an opt-in configuration that needs to be added to the global options in 
 > Enabling this option may cause old HTTP/1.x clients that don't support full-duplex to deadlock.
 This can also be configured using the `CADDY_GLOBAL_OPTIONS` environment config:
 
-```
+```sh
 CADDY_GLOBAL_OPTIONS="servers { enable_full_duplex }"
 ```
 
-You can find more information about this setting in Caddy documentation: 
-https://caddyserver.com/docs/caddyfile/options#enable-full-duplex
+You can find more information about this setting in the [Caddy documentation](https://caddyserver.com/docs/caddyfile/options#enable-full-duplex).
 
 ## Environment Variables
 
