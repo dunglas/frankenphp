@@ -63,7 +63,7 @@ func PrepareEnv(env map[string]string) PreparedEnv {
 	return preparedEnv
 }
 
-// WithEnv set CGI-like environment variables that will be available in $_SERVER.
+// WithRequestEnv set CGI-like environment variables that will be available in $_SERVER.
 // Values set with WithEnv always have priority over automatically populated values.
 func WithRequestEnv(env map[string]string) RequestOption {
 	return WithRequestPreparedEnv(PrepareEnv(env))
@@ -77,7 +77,7 @@ func WithRequestPreparedEnv(env PreparedEnv) RequestOption {
 	}
 }
 
-// WithLogger sets the logger associated with the current request
+// WithRequestLogger sets the logger associated with the current request
 func WithRequestLogger(logger *zap.Logger) RequestOption {
 	return func(o *FrankenPHPContext) error {
 		o.logger = logger
