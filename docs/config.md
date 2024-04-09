@@ -132,7 +132,7 @@ php_server [<matcher>] {
 ### Full Duplex (HTTP/1)
 
 When using HTTP/1.x, it may be desirable to enable full-duplex mode to allow writing a response before the entire body
-has been read. (for example: websockets, SSE, etc.)
+has been read. (for example: WebSocket, Server-Sent Events, etc.)
 
 This is an opt-in configuration that needs to be added to the global options in the caddyfile:
 
