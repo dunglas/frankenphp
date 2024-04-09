@@ -134,7 +134,7 @@ php_server [<matcher>] {
 When using HTTP/1.x, it may be desirable to enable full-duplex mode to allow writing a response before the entire body
 has been read. (for example: WebSocket, Server-Sent Events, etc.)
 
-This is an opt-in configuration that needs to be added to the global options in the caddyfile:
+This is an opt-in configuration that needs to be added to the global options in the `Caddyfile`:
 
 ```caddyfile
 {
