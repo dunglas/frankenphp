@@ -144,6 +144,9 @@ This is an opt-in configuration that needs to be added to the global options in 
 }
 ```
 
+> ![CAUTION]
+>
+> Enabling this option may cause old HTTP/1.x clients that don't support full-duplex to deadlock.
 This can also be configured using the `CADDY_GLOBAL_OPTIONS` environment config:
 
 ```
