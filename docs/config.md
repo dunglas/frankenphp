@@ -150,7 +150,7 @@ This is an opt-in configuration that needs to be added to the global options in 
 This can also be configured using the `CADDY_GLOBAL_OPTIONS` environment config:
 
 ```
-ENV CADDY_GLOBAL_OPTIONS="servers { enable_full_duplex }"
+CADDY_GLOBAL_OPTIONS="servers { enable_full_duplex }"
 ```
 
 You can find more information about this setting in Caddy documentation: 
