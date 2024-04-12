@@ -54,9 +54,7 @@ The easiest way to create a Linux binary is to use the Docker-based builder we p
 
     # Build the static binary, be sure to select only the PHP extensions you want
     WORKDIR /go/src/app/
-    RUN EMBED=dist/app/ \
-        PHP_EXTENSIONS=ctype,iconv,pdo_sqlite \
-        ./build-static.sh
+    RUN EMBED=dist/app/ ./build-static.sh
     ```
 
     > [!CAUTION]
@@ -85,9 +83,7 @@ If you don't want to use Docker, or want to build a macOS binary, use the shell 
 ```console
 git clone https://github.com/dunglas/frankenphp
 cd frankenphp
-EMBED=/path/to/your/app \
-    PHP_EXTENSIONS=ctype,iconv,pdo_sqlite \
-    ./build-static.sh
+EMBED=/path/to/your/app ./build-static.sh
 ```
 
 The resulting binary is the file named `frankenphp-<os>-<arch>` in the `dist/` directory.
@@ -119,6 +115,13 @@ You can also run the PHP CLI scripts embedded in your binary:
 ```console
 ./my-app php-cli bin/console
 ```
+
+## PHP Extensions
+
+By default, the script will build extensions required by the `composer.json` file of your project, if any.
+If the `composer.json` file doesn't exist, the default extensions are built, as documented in [the static builds entry](static.md).
+
+To customize the extensions, use the `PHP_EXTENSIONS` environment variable.
 
 ## Customizing The Build
 
