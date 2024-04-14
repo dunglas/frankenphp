@@ -107,7 +107,7 @@ docker buildx bake -f docker-bake.hcl --pull --no-cache --push
 
 ## Debugging Segmentation Faults With Static Builds
 
-1. Download the debug version of the FrankenPHP binary from GitHub or create your custom static build inlcuidng debug symbols:
+1. Download the debug version of the FrankenPHP binary from GitHub or create your custom static build including debug symbols:
 
     ```console
     docker buildx bake \
