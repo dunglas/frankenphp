@@ -149,7 +149,7 @@ if [ -d "${EMBED}" ]; then
     truncate -s 0 app_checksum.txt
 fi
 
-if type "upx" > /dev/null && [ -z "${DEBUG_SYMBOLS}" ]; then
+if type "upx" > /dev/null && [ -z "${DEBUG_SYMBOLS}" ] && [ -z "${NO_COMPRESS}" ]; then
     upx --best "dist/${bin}"
 fi
 

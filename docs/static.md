@@ -77,5 +77,6 @@ script to customize the static build:
 * `PHP_EXTENSION_LIBS`: extra libraries to build that add features to the extensions
 * `EMBED`: path of the PHP application to embed in the binary
 * `CLEAN`: when set, libphp and all its dependencies are built from scratch (no cache)
+* `NO_COMPRESS`: don't compress the resulting binary using UPX
 * `DEBUG_SYMBOLS`: when set, debug-symbols will not be stripped and will be added within the binary
 * `RELEASE`: (maintainers only) when set, the resulting binary will be uploaded on GitHub
