@@ -34,18 +34,16 @@ $fiber->resume();
 
 Les extensions suivantes sont connues pour ne pas être compatibles avec FrankenPHP :
 
-| Nom                                                           | Problème                                                                                                                                                                                                                                                                                                                                      |
-|---------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| [XDebug](https://xdebug.org)                                  | XDebug peut planter, ou se bloquer quand utilisé avec PHP 8.3. Une solution consiste à dwongrader vers PHP 8.2. Ce problème est [suivi par XDebug](https://github.com/dunglas/frankenphp/issues/563#issuecomment-1952226212).                                                                                                                 |
-| [Tideways](https://tideways.com/)                             | En mode worker, l'extension Tideways [empêche les scripts workers de se terminer correctement ou consomme 100% du CPU](https://github.com/dunglas/frankenphp/issues/578#issuecomment-1966620351). Ce problème a été signalé à Tideways.                                                                                                       |
-| [ext-openssl](https://www.php.net/manual/fr/book.openssl.php) | Lors de l'utilisation d'une version statique de FrankenPHP (construite avec la libc musl), l'extension OpenSSL peut planter sous de fortes charges. Une solution consiste à utiliser une version liée dynamiquement (comme celle utilisée dans les images Docker). Ce bogue est [suivi par PHP](https://github.com/php/php-src/issues/13648). |
+| Nom                                                                                                       | Raison          | Alternatives                                                                                                         |
+| ---------------------------------------------------------------------------------------------------------- | --------------- | -------------------------------------------------------------------------------------------------------------------- |
+| [imap](https://www.php.net/manual/en/imap.installation.php)                                                | Non thread-safe | [javanile/php-imap2](https://github.com/javanile/php-imap2), [webklex/php-imap](https://github.com/Webklex/php-imap) |
+| [newrelic](https://docs.newrelic.com/docs/apm/agents/php-agent/getting-started/introduction-new-relic-php/)| Non thread-safe | -                                                                                                                    |
 
 ## Extensions PHP boguées
 
 Les extensions suivantes ont des bugs connus ou des comportements inattendus lorsqu'elles sont utilisées avec FrankenPHP :
 
 Nom | Problème
-[XDebug](https://xdebug.org/) | XDebug peut planter, ou se bloquer quand utilisé avec PHP 8.3. Une solution consiste à dwongrader vers PHP 8.2. Ce problème est [suivi par XDebug](https://github.com/dunglas/frankenphp/issues/563#issuecomment-1952226212).
 [Tideways](https://tideways.com/) | En mode worker, l'extension Tideways [empêche les scripts workers de se terminer correctement ou consomme 100% du CPU](https://github.com/dunglas/frankenphp/issues/578#issuecomment-1966620351). Ce problème a été signalé à Tideways.
 [ext-openssl](https://www.php.net/manual/fr/book.openssl.php) | Lors de l'utilisation d'une version statique de FrankenPHP (construite avec la libc musl), l'extension OpenSSL peut planter sous de fortes charges. Une solution consiste à utiliser une version liée dynamiquement (comme celle utilisée dans les images Docker). Ce bogue est [suivi par PHP](https://github.com/php/php-src/issues/13648).
 
