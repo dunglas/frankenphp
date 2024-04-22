@@ -10,10 +10,10 @@ THE_ARCH_BIN=""
 THIS_PROJECT_OWNER="dunglas"
 DEST=$BIN_DIR/frankenphp
 
-THISOS=$(uname -s)
+OS=$(uname -s)
 ARCH=$(uname -m)
 
-case $THISOS in
+case $OS in
    Linux*)
       case $ARCH in
         arm64)
@@ -49,7 +49,7 @@ case $THISOS in
 esac
 
 if [ -z "$THE_ARCH_BIN" ]; then
-   echo "This script is not supported on $THISOS and $ARCH"
+   echo "This script is not supported on $OS and $ARCH"
    exit 1
 fi
 
