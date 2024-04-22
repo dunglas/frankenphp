@@ -33,7 +33,7 @@ Go to `https://localhost`, and enjoy!
 
 ### Standalone Binary
 
-If you prefer not to use Docker, we provide standalone FrankenPHP binaries for `Linux` and macOS
+If you prefer not to use Docker, we provide standalone FrankenPHP binaries for Linux and macOS
 containing [PHP 8.3](https://www.php.net/releases/8.3/en.php) and most popular PHP extensions.
 
 [Download FrankenPHP](https://github.com/dunglas/frankenphp/releases) or copy this line into your
