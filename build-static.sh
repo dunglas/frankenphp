@@ -132,7 +132,7 @@ export LIBPHP_VERSION
 cd ../
 
 if [ "${os}" = "linux" ]; then
-    if  [ -n "${USE_MIMALLOC}" ]; then
+    if  [ -n "${MIMALLOC}" ]; then
         # Replace musl's mallocng by mimalloc
         # The default musl allocator is slow, especially when used by multi-threaded apps,
         # and triggers weird bugs

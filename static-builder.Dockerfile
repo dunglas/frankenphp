@@ -12,6 +12,7 @@ ARG PHP_EXTENSION_LIBS=''
 ARG CLEAN=''
 ARG EMBED=''
 ARG DEBUG_SYMBOLS=''
+ARG MIMALLOC=''
 
 SHELL ["/bin/ash", "-eo", "pipefail", "-c"]
 

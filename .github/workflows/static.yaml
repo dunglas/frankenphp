@@ -84,7 +84,11 @@ jobs:
             platform: linux/amd64
             qemu: false
             debug: true
-    name: Build ${{ matrix.platform }} static binary${{ matrix.debug && ' (debug)' || '' }}
+          -
+            platform: linux/amd64
+            qemu: false
+            mimalloc: true
+    name: Build ${{ matrix.platform }} static binary${{ matrix.debug && ' (debug)' || '' }}${{ matrix.mimalloc && ' (mimalloc)' || '' }}
     runs-on: ubuntu-latest
     needs: [ prepare ]
     steps:
@@ -121,12 +125,13 @@ jobs:
           targets: static-builder
           set: |
             ${{ matrix.debug && 'static-builder.args.DEBUG_SYMBOLS=1' || '' }}
+            ${{ matrix.mimalloc && 'static-builder.args.MIMALLOC=1' || '' }}
             *.tags=
             *.platform=${{ matrix.platform }}
-            *.cache-from=type=gha,scope=${{ needs.prepare.outputs.ref || github.ref }}-static-builder${{ matrix.debug && '-debug' && '' }}
-            *.cache-from=type=gha,scope=refs/heads/main-static-builder${{ matrix.debug && '-debug' && '' }}
-            *.cache-to=type=gha,scope=${{ needs.prepare.outputs.ref || github.ref }}-static-builder${{ matrix.debug && '-debug' && '' }},ignore-error=true
-            ${{ (fromJson(needs.prepare.outputs.push) && !matrix.debug) && format('*.output=type=image,name={0},push-by-digest=true,name-canonical=true,push=true', env.IMAGE_NAME) || '' }}
+            *.cache-from=type=gha,scope=${{ needs.prepare.outputs.ref || github.ref }}-static-builder${{ matrix.debug && '-debug' && '' }}${{ matrix.mimalloc && '-mimalloc' && '' }}
+            *.cache-from=type=gha,scope=refs/heads/main-static-builder${{ matrix.debug && '-debug' && '' }}${{ matrix.mimalloc && '-mimalloc' && '' }}
+            *.cache-to=type=gha,scope=${{ needs.prepare.outputs.ref || github.ref }}-static-builder${{ matrix.debug && '-debug' && '' }}${{ matrix.mimalloc && '-mimalloc' && '' }},ignore-error=true
+            ${{ (fromJson(needs.prepare.outputs.push) && !matrix.debug && !matrix.mimalloc) && format('*.output=type=image,name={0},push-by-digest=true,name-canonical=true,push=true', env.IMAGE_NAME) || '' }}
         env:
           SHA: ${{ github.sha }}
           VERSION: ${{ (github.ref_type == 'tag' && github.ref_name) || needs.prepare.outputs.ref || github.sha }}
@@ -145,7 +150,7 @@ jobs:
           METADATA: ${{ steps.build.outputs.metadata }}
       -
         name: Upload metadata
-        if: fromJson(needs.prepare.outputs.push) && !matrix.debug
+        if: fromJson(needs.prepare.outputs.push) && !matrix.debug && !matrix.mimalloc
         uses: actions/upload-artifact@v3
         with:
           name: metadata-static-builder
@@ -154,11 +159,11 @@ jobs:
           retention-days: 1
       -
         name: Copy binary
-        if: ${{ !fromJson(needs.prepare.outputs.push) || matrix.debug }}
+        if: ${{ !fromJson(needs.prepare.outputs.push) || matrix.debug || matrix.mimalloc }}
         run: |
           digest=$(jq -r '."static-builder"."containerimage.config.digest"' <<< "${METADATA}")
           docker create --platform=${{ matrix.platform }} --name static-builder "${digest}"
-          docker cp "static-builder:/go/src/app/dist/${BINARY}" "${BINARY}${{ matrix.debug && '-debug' || '' }}"
+          docker cp "static-builder:/go/src/app/dist/${BINARY}" "${BINARY}${{ matrix.debug && '-debug' || '' }}${{ matrix.mimalloc && '-mimalloc' || '' }}"
         env:
           METADATA: ${{ steps.build.outputs.metadata }}
           BINARY: frankenphp-linux-${{ matrix.platform == 'linux/amd64' && 'x86_64' || 'aarch64' }}
@@ -167,12 +172,12 @@ jobs:
         if: ${{ !fromJson(needs.prepare.outputs.push) }}
         uses: actions/upload-artifact@v3
         with:
-          name: frankenphp-linux-${{ matrix.platform == 'linux/amd64' && 'x86_64' || 'aarch64' }}${{ matrix.debug && '-debug' || '' }}
-          path: frankenphp-linux-${{ matrix.platform == 'linux/amd64' && 'x86_64' || 'aarch64' }}${{ matrix.debug && '-debug' || '' }}
+          name: frankenphp-linux-${{ matrix.platform == 'linux/amd64' && 'x86_64' || 'aarch64' }}${{ matrix.debug && '-debug' || '' }}${{ matrix.mimalloc && '-mimalloc' || '' }}
+          path: frankenphp-linux-${{ matrix.platform == 'linux/amd64' && 'x86_64' || 'aarch64' }}${{ matrix.debug && '-debug' || '' }}${{ matrix.mimalloc && '-mimalloc' || '' }}
       -
-        name: Upload debug asset
-        if: fromJson(needs.prepare.outputs.push) && matrix.debug && (needs.prepare.outputs.ref || github.ref_type == 'tag')
-        run: gh release upload "${{ (github.ref_type == 'tag' && github.ref_name) || needs.prepare.outputs.ref }}" frankenphp-linux-x86_64-debug --repo dunglas/frankenphp --clobber
+        name: Upload special assets
+        if: fromJson(needs.prepare.outputs.push) && (matrix.debug || matrix.mimalloc) && (needs.prepare.outputs.ref || github.ref_type == 'tag')
+        run: gh release upload "${{ (github.ref_type == 'tag' && github.ref_name) || needs.prepare.outputs.ref }}" frankenphp-linux-x86_64${{ matrix.debug && '-debug' || '' }}${{ matrix.mimalloc && '-mimalloc' || '' }} --repo dunglas/frankenphp --clobber
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
