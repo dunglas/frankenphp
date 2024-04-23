@@ -110,7 +110,7 @@ jobs:
           version: latest
       -
         name: Login to DockerHub
-        if: ${{ fromJson(needs.prepare.outputs.push) && !matrix.debug }}
+        if: ${{ fromJson(needs.prepare.outputs.push) && !matrix.debug && !matrix.mimalloc }}
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.REGISTRY_USERNAME }}
@@ -139,7 +139,7 @@ jobs:
       -
         # Workaround for https://github.com/actions/runner/pull/2477#issuecomment-1501003600
         name: Export metadata
-        if: fromJson(needs.prepare.outputs.push) && !matrix.debug
+        if: fromJson(needs.prepare.outputs.push) && !matrix.debug && !matrix.mimalloc
         run: |
           mkdir -p /tmp/metadata
 
