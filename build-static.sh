@@ -1,6 +1,7 @@
 #!/bin/sh
 
 set -o errexit
+set -x
 
 if ! type "git" > /dev/null; then
     echo "The \"git\" command must be installed."
@@ -15,6 +16,11 @@ if [ "${os}" = "darwin" ]; then
     md5binary="md5 -q"
 fi
 
+if [ "${os}" = "linux" ] && ! type "cmake" > /dev/null; then
+    echo "The \"cmake\" command must be installed."
+    exit 1
+fi
+
 if [ -z "${PHP_EXTENSIONS}" ]; then
     export PHP_EXTENSIONS="apcu,bcmath,bz2,calendar,ctype,curl,dba,dom,exif,fileinfo,filter,gd,iconv,igbinary,intl,ldap,mbregex,mbstring,mysqli,mysqlnd,opcache,openssl,pcntl,pdo,pdo_mysql,pdo_pgsql,pdo_sqlite,pgsql,phar,posix,readline,redis,session,simplexml,sockets,sodium,sqlite3,sysvsem,tokenizer,xml,xmlreader,xmlwriter,zip,zlib"
 fi
@@ -23,7 +29,7 @@ if [ -z "${PHP_EXTENSION_LIBS}" ]; then
     export PHP_EXTENSION_LIBS="bzip2,freetype,libavif,libjpeg,liblz4,libwebp,libzip"
 fi
 
-# the Brotli library must always be built as it is required by http://github.com/dunglas/caddy-cbrotli
+# The Brotli library must always be built as it is required by http://github.com/dunglas/caddy-cbrotli
 if ! echo "${PHP_EXTENSION_LIBS}" | grep -q "\bbrotli\b"; then
     export PHP_EXTENSION_LIBS="${PHP_EXTENSION_LIBS},brotli"
 fi
@@ -117,26 +123,101 @@ if [ "${os}" = "mac" ]; then
     export CGO_LDFLAGS="-framework CoreFoundation -framework SystemConfiguration"
 fi
 
-CGO_LDFLAGS="${CGO_LDFLAGS} ${PWD}/buildroot/lib/libbrotlicommon.a ${PWD}/buildroot/lib/libbrotlienc.a ${PWD}/buildroot/lib/libbrotlidec.a $(./buildroot/bin/php-config --ldflags) $(./buildroot/bin/php-config --libs)"
+CGO_LDFLAGS="${CGO_LDFLAGS} ${PWD}/buildroot/lib/libbrotlicommon.a ${PWD}/buildroot/lib/libbrotlienc.a ${PWD}/buildroot/lib/libbrotlidec.a $(./buildroot/bin/php-config --ldflags || true) $(./buildroot/bin/php-config --libs || true)"
 export CGO_LDFLAGS
 
 LIBPHP_VERSION="$(./buildroot/bin/php-config --version)"
 export LIBPHP_VERSION
 
-cd ../..
-
-# Embed PHP app, if any
-if [ -n "${EMBED}" ] && [ -d "${EMBED}" ]; then
-    tar -cf app.tar -C "${EMBED}" .
-    ${md5binary} app.tar > app_checksum.txt
-fi
+cd ../
 
 if [ "${os}" = "linux" ]; then
+    if  [ -n "${MIMALLOC}" ]; then
+        # Replace musl's mallocng by mimalloc
+        # The default musl allocator is slow, especially when used by multi-threaded apps,
+        # and triggers weird bugs
+        # Adapted from https://www.tweag.io/blog/2023-08-10-rust-static-link-with-mimalloc/
+
+        echo 'The USE_MIMALLOC environment variable is EXPERIMENTAL.'
+        echo 'This option can be removed or its behavior modified at any time.'
+
+        if [ ! -f "mimalloc/out/libmimalloc.a" ]; then
+            if [ -d "mimalloc" ]; then
+                cd mimalloc/
+                git reset --hard
+                git clean -xdf
+                git fetch --tags
+            else
+                git clone https://github.com/microsoft/mimalloc.git
+                cd mimalloc/
+            fi
+
+            git checkout "$(git describe --tags "$(git rev-list --tags --max-count=1 || true)" || true)"
+
+            curl -f -L --retry 5 https://raw.githubusercontent.com/tweag/rust-alpine-mimalloc/b26002b49d466a295ea8b50828cb7520a71a872a/mimalloc.diff -o mimalloc.diff
+            patch -p1 < mimalloc.diff
+
+            mkdir -p out/
+            cd out/
+            if [ -n "${DEBUG_SYMBOLS}" ]; then
+                cmake \
+                    -DCMAKE_BUILD_TYPE=Debug \
+                    -DMI_BUILD_SHARED=OFF \
+                    -DMI_BUILD_OBJECT=OFF \
+                    -DMI_BUILD_TESTS=OFF \
+                    ../
+            else
+                cmake \
+                    -DCMAKE_BUILD_TYPE=Release \
+                    -DMI_BUILD_SHARED=OFF \
+                    -DMI_BUILD_OBJECT=OFF \
+                    -DMI_BUILD_TESTS=OFF \
+                    ../
+            fi
+            make -j"$(nproc || true)"
+
+            cd ../../
+        fi
+
+        if [ -n "${DEBUG_SYMBOLS}" ]; then
+            libmimalloc_path=mimalloc/out/libmimalloc-debug.a
+        else
+            libmimalloc_path=mimalloc/out/libmimalloc.a
+        fi
+
+        # Patch musl library to use mimalloc
+        for libc_path in "/usr/local/musl/lib/libc.a" "/usr/local/musl/$(uname -m)-linux-musl/lib/libc.a" "/usr/lib/libc.a"
+        do
+            if [ ! -f "${libc_path}" ] || [ -f "${libc_path}.unpatched" ]; then
+                continue
+            fi
+
+            {
+                echo "CREATE libc.a"
+                echo "ADDLIB ${libc_path}"
+                echo "DELETE aligned_alloc.lo calloc.lo donate.lo free.lo libc_calloc.lo lite_malloc.lo malloc.lo malloc_usable_size.lo memalign.lo posix_memalign.lo realloc.lo reallocarray.lo valloc.lo"
+                echo "ADDLIB ${libmimalloc_path}"
+                echo "SAVE"
+            } | ar -M
+            mv "${libc_path}" "${libc_path}.unpatched"
+            mv libc.a "${libc_path}"
+        done
+    fi
+
+    # Increase the default stack size to prevents issues with code including many files such as Symfony containers
     extraExtldflags="-Wl,-z,stack-size=0x80000"
 fi
 
 if [ -z "${DEBUG_SYMBOLS}" ]; then
     extraLdflags="-w -s"
+fi
+
+cd ../
+
+# Embed PHP app, if any
+if [ -n "${EMBED}" ] && [ -d "${EMBED}" ]; then
+    tar -cf app.tar -C "${EMBED}" .
+    ${md5binary} app.tar > app_checksum.txt
 fi
 
 cd caddy/frankenphp/

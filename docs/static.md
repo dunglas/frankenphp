@@ -79,4 +79,5 @@ script to customize the static build:
 * `CLEAN`: when set, libphp and all its dependencies are built from scratch (no cache)
 * `NO_COMPRESS`: don't compress the resulting binary using UPX
 * `DEBUG_SYMBOLS`: when set, debug-symbols will not be stripped and will be added within the binary
+* `MIMALLOC`: (experimental, Linux-only) replace musl's mallocng by [mimalloc](https://github.com/microsoft/mimalloc) for improved performance
 * `RELEASE`: (maintainers only) when set, the resulting binary will be uploaded on GitHub

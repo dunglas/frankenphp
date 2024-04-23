@@ -12,6 +12,7 @@ ARG PHP_EXTENSION_LIBS=''
 ARG CLEAN=''
 ARG EMBED=''
 ARG DEBUG_SYMBOLS=''
+ARG MIMALLOC=''
 
 SHELL ["/bin/ash", "-eo", "pipefail", "-c"]
 
@@ -24,6 +25,7 @@ LABEL org.opencontainers.image.vendor="Kévin Dunglas"
 
 RUN apk update; \
 	apk add --no-cache \
+		alpine-sdk \
 		autoconf \
 		automake \
 		bash \
