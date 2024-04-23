@@ -22,7 +22,15 @@ if [ "${os}" = "linux" ] && ! type "cmake" > /dev/null; then
 fi
 
 if [ -z "${PHP_EXTENSIONS}" ]; then
-    export PHP_EXTENSIONS="apcu,bcmath,bz2,calendar,ctype,curl,dba,dom,exif,fileinfo,filter,gd,iconv,igbinary,intl,ldap,mbregex,mbstring,mysqli,mysqlnd,opcache,openssl,pcntl,pdo,pdo_mysql,pdo_pgsql,pdo_sqlite,pgsql,phar,posix,readline,redis,session,simplexml,sockets,sodium,sqlite3,sysvsem,tokenizer,xml,xmlreader,xmlwriter,zip,zlib"
+    if [ -n "${EMBED}" ] && [ -f "${EMBED}/composer.json" ]; then
+        cd "${EMBED}"
+        # Replace "libxml" by "xml" for compatibility with Static PHP CLI extension name
+        PHP_EXTENSIONS="$(composer check-platform-reqs --no-dev 2>/dev/null | grep ^ext | sed -e 's/^ext-//' -e 's/ .*//' -e 's/^libxml$/xml/' | xargs | tr ' ' ',')"
+        export PHP_EXTENSIONS
+        cd -
+    else
+        export PHP_EXTENSIONS="apcu,bcmath,bz2,calendar,ctype,curl,dba,dom,exif,fileinfo,filter,gd,iconv,igbinary,intl,ldap,mbregex,mbstring,mysqli,mysqlnd,opcache,openssl,pcntl,pdo,pdo_mysql,pdo_pgsql,pdo_sqlite,pgsql,phar,posix,readline,redis,session,simplexml,sockets,sodium,sqlite3,sysvsem,tokenizer,xml,xmlreader,xmlwriter,zip,zlib"
+    fi
 fi
 
 if [ -z "${PHP_EXTENSION_LIBS}" ]; then
