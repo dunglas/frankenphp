@@ -45,7 +45,6 @@ The following extensions have known bugs and unexpected behaviors when used with
 
 | Name                                                          | Problem                                                                                                                                                                                                                                                                                         |
 |---------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| [Tideways](https://tideways.com/)                             | In worker mode, the Tideways extension [prevents worker scripts from finishing properly](https://github.com/dunglas/frankenphp/issues/578#issuecomment-1966620351) or consumes 100% of the CPU. This has been reported to Tideways.                                                             |
 | [ext-openssl](https://www.php.net/manual/en/book.openssl.php) | When using a static build of FrankenPHP (built with the musl libc), the OpenSSL extension may crash under heavy loads. A workaround is to use a dynamically linked build (like the one used in Docker images). This bug is [being tracked by PHP](https://github.com/php/php-src/issues/13648). |
 
 ## get_browser

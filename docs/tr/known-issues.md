@@ -44,7 +44,6 @@ Aşağıdaki eklentiler FrankenPHP ile kullanıldığında bilinen hatalara ve b
 
 | Adı                               | Problem                                                                                                                                                                                                                                                    |
 |-----------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| [Tideways](https://tideways.com/) | Worker modunda, Tideways eklentisi [worker komut dosyalarının düzgün şekilde sonlandırılmasını engelliyor](https://github.com/dunglas/frankenphp/issues/578#issuecomment-1966620351) veya CPU'nun %100'ünü tüketiyor. Bu durum Tideways'e bildirilmiştir. |
 
 ## get_browser
 
