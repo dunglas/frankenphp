@@ -121,7 +121,7 @@ jobs:
         uses: docker/bake-action@v4
         with:
           pull: true
-          load: ${{ !fromJson(needs.prepare.outputs.push) || matrix.debug || matrix.mimalloc }}
+          load: ${{ (!fromJson(needs.prepare.outputs.push) || matrix.debug || matrix.mimalloc) && true || false }}
           targets: static-builder
           set: |
             ${{ matrix.debug && 'static-builder.args.DEBUG_SYMBOLS=1' || '' }}
