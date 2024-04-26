@@ -33,7 +33,6 @@ RUN apk update; \
 		bison \
 		build-base \
 		cmake \
-		composer \
 		curl \
 		file \
 		flex \
@@ -70,6 +69,7 @@ RUN apk update; \
 
 # https://getcomposer.org/doc/03-cli.md#composer-allow-superuser
 ENV COMPOSER_ALLOW_SUPERUSER=1
+COPY --from=composer/composer:2-bin /composer /usr/bin/composer
 
 WORKDIR /go/src/app
 COPY go.mod go.sum ./
