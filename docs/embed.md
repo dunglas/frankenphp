@@ -6,6 +6,8 @@ Thanks to this feature, PHP applications can be distributed as standalone binari
 
 Learn more about this feature [in the presentation made by Kévin at SymfonyCon 2023](https://dunglas.dev/2023/12/php-and-symfony-apps-as-standalone-binaries/).
 
+For embedding Laravel applications, [read this specific documentation entry](laravel.md#laravel-apps-as-standalone-binaries).
+
 ## Preparing Your App
 
 Before creating the self-contained binary be sure that your app is ready for embedding.
@@ -29,7 +31,8 @@ cd $TMPDIR/my-prepared-app
 echo APP_ENV=prod > .env.local
 echo APP_DEBUG=0 >> .env.local
 
-# Remove the tests
+# Remove the tests and other unneeded files to save space
+# Alternatively, add these files with the export-ignore attribute in your .gitattributes file
 rm -Rf tests/
 
 # Install the dependencies
@@ -43,7 +46,7 @@ composer dump-env prod
 
 The easiest way to create a Linux binary is to use the Docker-based builder we provide.
 
-1. Create a file named `static-build.Dockerfile` in the repository of your prepared app:
+1. Create a file named `static-build.Dockerfile` in the repository of your app:
 
     ```dockerfile
     FROM --platform=linux/amd64 dunglas/frankenphp:static-builder
@@ -52,7 +55,7 @@ The easiest way to create a Linux binary is to use the Docker-based builder we p
     WORKDIR /go/src/app/dist/app
     COPY . .
 
-    # Build the static binary, be sure to select only the PHP extensions you want
+    # Build the static binary
     WORKDIR /go/src/app/
     RUN EMBED=dist/app/ ./build-static.sh
     ```
@@ -62,6 +65,7 @@ The easiest way to create a Linux binary is to use the Docker-based builder we p
     > Some `.dockerignore` files (e.g. default [Symfony Docker `.dockerignore`](https://github.com/dunglas/symfony-docker/blob/main/.dockerignore))
     > will ignore the `vendor/` directory and `.env` files. Be sure to adjust or remove the `.dockerignore` file before the build.
 
+2. Follow the steps to prepare your app for embedding
 2. Build:
 
     ```console

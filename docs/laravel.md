@@ -73,3 +73,84 @@ The `octane:start` command can take the following options:
 * `--log-level`: Log messages at or above the specified log level
 
 Learn more about [Laravel Octane in its official documentation](https://laravel.com/docs/octane).
+
+## Laravel Apps As Standalone Binaries
+
+Using [FrankenPHP's application embedding feature](embed.md), it's possible to distribute Laravel
+apps as standalone binaries.
+
+Follow these steps to package your Laravel app as a standalone binary for Linux:
+
+1. Create a file named `static-build.Dockerfile` in the repository of your app:
+
+    ```dockerfile
+    FROM --platform=linux/amd64 dunglas/frankenphp:static-builder
+
+    # Copy your app
+    WORKDIR /go/src/app/dist/app
+    COPY . .
+
+    # Remove the tests and other unneeded files to save space
+    # Alternatively, add these files to a .dockerignore file
+    RUN rm -Rf tests/
+
+    # Copy .env file
+    RUN cp .env.example .env
+    # Change APP_ENV and APP_DEBUG to be production ready
+    RUN sed -i'' -e 's/^APP_ENV=.*/APP_ENV=production/' -e 's/^APP_DEBUG=.*/APP_DEBUG=false/' .env
+
+    # Make other changes to your .env file if needed
+
+    # Install the dependencies
+    RUN composer install --ignore-platform-reqs --no-dev -a
+
+    # Build the static binary
+    WORKDIR /go/src/app/
+    RUN EMBED=dist/app/ ./build-static.sh
+    ```
+
+    > [!CAUTION]
+    >
+    > Some `.dockerignore` files 
+    > will ignore the `vendor/` directory and `.env` files. Be sure to adjust or remove the `.dockerignore` file before the build.
+
+2. Build:
+
+    ```console
+    docker build -t static-laravel-app -f static-build.Dockerfile .
+    ```
+
+3. Extract the binary:
+
+    ```console
+    docker cp $(docker create --name static-laravel-app-tmp static-laravel-app):/go/src/app/dist/frankenphp-linux-x86_64 my-laravel-app ; docker rm static-laravel-app-tmp
+    ```
+
+4. Populate caches:
+
+	```console
+	./my-laravel-app php-cli artisan optimize
+	```
+
+5. Run database migrations (if any):
+
+	```console
+	./my-laravel-app php-cli artisan migrate
+	````
+
+6. Generate app's secret key
+
+	```console
+	./my-laravel-app php-cli artisan key:generate
+	```
+
+5. Start the server:
+
+	```console
+	./app/my-laravel-app php-server
+	```
+
+Your app is now ready!
+
+Learn more about the options available and how to build binaries for other OSes in the [applications embedding](embed.md)
+documentation.
