@@ -225,7 +225,7 @@ cd ../
 # Embed PHP app, if any
 if [ -n "${EMBED}" ] && [ -d "${EMBED}" ]; then
     tar -cf app.tar -C "${EMBED}" .
-    ${md5binary} app.tar > app_checksum.txt
+    ${md5binary} app.tar | awk '{printf $1}' > app_checksum.txt
 fi
 
 cd caddy/frankenphp/
