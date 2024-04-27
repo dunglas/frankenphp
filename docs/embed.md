@@ -65,7 +65,6 @@ The easiest way to create a Linux binary is to use the Docker-based builder we p
     > Some `.dockerignore` files (e.g. default [Symfony Docker `.dockerignore`](https://github.com/dunglas/symfony-docker/blob/main/.dockerignore))
     > will ignore the `vendor/` directory and `.env` files. Be sure to adjust or remove the `.dockerignore` file before the build.
 
-2. Follow the steps to prepare your app for embedding
 2. Build:
 
     ```console
