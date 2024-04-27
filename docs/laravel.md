@@ -164,8 +164,8 @@ To do so, [install Octane properly](#laravel-octane) and follow the steps descri
 Then, to start FrankenPHP in worker mode through Octane, run:
 
 ```console
-PATH="$PWD:$PATH" ./frankenphp php-cli artisan octane:frankephp
+PATH="$PWD:$PATH" ./frankenphp php-cli artisan octane:frankenphp
 ```
 
-> ![WARNING]
+> ![CAUTION]
 > For the command to work, the standalone binary **must** be named `frankenphp`.
