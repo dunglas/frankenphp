@@ -123,31 +123,31 @@ Follow these steps to package your Laravel app as a standalone binary for Linux:
 3. Extract the binary:
 
     ```console
-    docker cp $(docker create --name static-laravel-app-tmp static-laravel-app):/go/src/app/dist/frankenphp-linux-x86_64 my-laravel-app ; docker rm static-laravel-app-tmp
+    docker cp $(docker create --name static-laravel-app-tmp static-laravel-app):/go/src/app/dist/frankenphp-linux-x86_64 frankenphp ; docker rm static-laravel-app-tmp
     ```
 
 4. Populate caches:
 
 	```console
-	./my-laravel-app php-cli artisan optimize
+	./frankenphp php-cli artisan optimize
 	```
 
 5. Run database migrations (if any):
 
 	```console
-	./my-laravel-app php-cli artisan migrate
+	./frankenphp php-cli artisan migrate
 	````
 
 6. Generate app's secret key
 
 	```console
-	./my-laravel-app php-cli artisan key:generate
+	./frankenphp php-cli artisan key:generate
 	```
 
 5. Start the server:
 
 	```console
-	./app/my-laravel-app php-server
+	./frankenphp php-server
 	```
 
 Your app is now ready!
