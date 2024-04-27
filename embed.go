@@ -32,7 +32,7 @@ func init() {
 		return
 	}
 
-	appPath := filepath.Join(os.TempDir(), "frankenphp_"+strings.TrimSuffix(string(embeddedAppChecksum[:]), "\n"))
+	appPath := filepath.Join(os.TempDir(), "frankenphp_"+string(embeddedAppChecksum))
 
 	if _, err := os.Stat(appPath); os.IsNotExist(err) {
 		if err := untar(appPath); err != nil {
