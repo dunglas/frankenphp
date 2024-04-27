@@ -154,3 +154,18 @@ Your app is now ready!
 
 Learn more about the options available and how to build binaries for other OSes in the [applications embedding](embed.md)
 documentation.
+
+### Running Octane With Standalone Binaries
+
+It's even possible to package Laravel Octane apps as standalone binaries!
+
+To do so, [install Octane properly](#laravel-octane) and follow the steps described in [the previous section](#laravel-apps-as-standalone-binaries).
+
+Then, to start FrankenPHP in worker mode through Octane, run:
+
+```console
+PATH="$PWD:$PATH" ./frankenphp php-cli artisan octane:frankephp
+```
+
+> ![WARNING]
+> For the command to work, the standalone binary **must** be named `frankenphp`.
