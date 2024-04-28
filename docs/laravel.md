@@ -111,7 +111,7 @@ Follow these steps to package your Laravel app as a standalone binary for Linux:
 
     > [!CAUTION]
     >
-    > Some `.dockerignore` files 
+    > Some `.dockerignore` files
     > will ignore the `vendor/` directory and `.env` files. Be sure to adjust or remove the `.dockerignore` file before the build.
 
 2. Build:
@@ -128,27 +128,27 @@ Follow these steps to package your Laravel app as a standalone binary for Linux:
 
 4. Populate caches:
 
-	```console
-	./frankenphp php-cli artisan optimize
-	```
+    ```console
+    ./frankenphp php-cli artisan optimize
+    ```
 
 5. Run database migrations (if any):
 
-	```console
-	./frankenphp php-cli artisan migrate
-	````
+    ```console
+    ./frankenphp php-cli artisan migrate
+    ````
 
-6. Generate app's secret key
+6. Generate app's secret key:
 
-	```console
-	./frankenphp php-cli artisan key:generate
-	```
+    ```console
+    ./frankenphp php-cli artisan key:generate
+    ```
 
 5. Start the server:
 
-	```console
-	./frankenphp php-server
-	```
+    ```console
+    ./frankenphp php-server
+    ```
 
 Your app is now ready!
 
