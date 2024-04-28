@@ -168,4 +168,5 @@ PATH="$PWD:$PATH" ./frankenphp php-cli artisan octane:frankenphp
 ```
 
 > ![CAUTION]
+>
 > For the command to work, the standalone binary **must** be named `frankenphp`.
