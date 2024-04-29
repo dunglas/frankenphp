@@ -144,7 +144,7 @@ Follow these steps to package your Laravel app as a standalone binary for Linux:
     ./frankenphp php-cli artisan key:generate
     ```
 
-5. Start the server:
+7. Start the server:
 
     ```console
     ./frankenphp php-server
