@@ -155,6 +155,13 @@ Your app is now ready!
 Learn more about the options available and how to build binaries for other OSes in the [applications embedding](embed.md)
 documentation.
 
+### Changing The Storage Path
+
+By default, Laravel stores uploaded files, caches, logs, etc. in the application's `storage/` directory.
+This is not suitable for embedded applications, as each new version will be extracted into a different temporary directory.
+
+Set the `LARAVEL_STORAGE_PATH` environment variable (for example, in your `.env` file) or call the `Illuminate\Foundation\Application::useStoragePath()` method to use a directory outside the temporary directory.
+
 ### Running Octane With Standalone Binaries
 
 It's even possible to package Laravel Octane apps as standalone binaries!
