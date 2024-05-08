@@ -21,7 +21,7 @@ function frankenphp_request_headers(): array {}
 function apache_request_headers(): array {}
 
 /**
- * @alias frankenphp_response_headers
+ * @alias frankenphp_request_headers
 */
 function getallheaders(): array {}
 
