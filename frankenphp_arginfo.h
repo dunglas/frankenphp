@@ -1,5 +1,5 @@
 /* This is a generated file, edit the .stub.php file instead.
- * Stub hash: 467f1406e17d3b8ca67bba5ea367194e60d8dd27 */
+ * Stub hash: 05ebde17137c559e891362fba6524fad1e0a2dfe */
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_frankenphp_handle_request, 0, 1,
                                         _IS_BOOL, 0)
@@ -47,7 +47,7 @@ static const zend_function_entry ext_functions[] = {
                     ZEND_FALIAS(apache_request_headers,
                                 frankenphp_request_headers,
                                 arginfo_apache_request_headers)
-                        ZEND_FALIAS(getallheaders, frankenphp_response_headers,
+                        ZEND_FALIAS(getallheaders, frankenphp_request_headers,
                                     arginfo_getallheaders)
                             ZEND_FE(frankenphp_response_headers,
                                     arginfo_frankenphp_response_headers)
