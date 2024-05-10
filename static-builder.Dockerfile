@@ -13,6 +13,7 @@ ARG CLEAN=''
 ARG EMBED=''
 ARG DEBUG_SYMBOLS=''
 ARG MIMALLOC=''
+ARG NO_COMPRESS=''
 
 SHELL ["/bin/ash", "-eo", "pipefail", "-c"]
 
