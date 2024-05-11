@@ -127,6 +127,7 @@ jobs:
           set: |
             ${{ matrix.debug && 'static-builder.args.DEBUG_SYMBOLS=1' || '' }}
             ${{ matrix.mimalloc && 'static-builder.args.MIMALLOC=1' || '' }}
+            ${{ matrix.platform == 'linux/arm64' && 'static-builder.args.NO_COMPRESS=1' || '' }}
             *.tags=
             *.platform=${{ matrix.platform }}
             *.cache-from=type=gha,scope=${{ needs.prepare.outputs.ref || github.ref }}-static-builder${{ matrix.debug && '-debug' || '' }}${{ matrix.mimalloc && '-mimalloc' || '' }}

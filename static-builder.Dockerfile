@@ -13,6 +13,7 @@ ARG CLEAN=''
 ARG EMBED=''
 ARG DEBUG_SYMBOLS=''
 ARG MIMALLOC=''
+ARG NO_COMPRESS=''
 
 SHELL ["/bin/ash", "-eo", "pipefail", "-c"]
 
@@ -84,4 +85,5 @@ COPY *.* ./
 COPY caddy caddy
 COPY C-Thread-Pool C-Thread-Pool
 
-RUN --mount=type=secret,id=github-token GITHUB_TOKEN=$(cat /run/secrets/github-token) ./build-static.sh
+RUN --mount=type=secret,id=github-token GITHUB_TOKEN=$(cat /run/secrets/github-token) ./build-static.sh && \
+	rm -Rf dist/static-php-cli/source/*
