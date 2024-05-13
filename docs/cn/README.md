@@ -10,7 +10,7 @@ FrankenPHP 可与任何 PHP 应用程序一起使用，并且由于提供了与 
 
 FrankenPHP 也可以用作独立的 Go 库，将 PHP 嵌入到任何使用 net/http 的应用程序中。
 
-[**了解更多** *frankenphp.dev*](https://frankenphp.dev/cn) 以及在以下地址中：
+[**了解更多** _frankenphp.dev_](https://frankenphp.dev/cn) 以及在以下地址中：
 
 <a href="https://dunglas.dev/2022/10/frankenphp-the-modern-php-app-server-written-in-go/"><img src="https://dunglas.dev/wp-content/uploads/2022/10/frankenphp.png" alt="Slides" width="600"></a>
 
@@ -50,28 +50,28 @@ docker run -v $PWD:/app/public \
 
 ## 文档
 
-* [worker 模式](worker.md)
-* [早期提示支持(103 HTTP status code)](early-hints.md)
-* [实时功能](mercure.md)
-* [配置](config.md)
-* [Docker 镜像](docker.md)
-* [在生产环境中部署](production.md)
-* [创建独立、可自行执行的 PHP 应用程序](embed.md)
-* [创建静态二进制文件](static.md)
-* [从源代码编译](compile.md)
-* [Laravel 集成](laravel.md)
-* [已知问题](known-issues.md)
-* [演示应用程序 (Symfony) 和性能测试](https://github.com/dunglas/frankenphp-demo)
-* [Go 库文档](https://pkg.go.dev/github.com/dunglas/frankenphp)
-* [贡献和调试](https://frankenphp.dev/docs/contributing/)
+- [worker 模式](worker.md)
+- [早期提示支持(103 HTTP status code)](early-hints.md)
+- [实时功能](mercure.md)
+- [配置](config.md)
+- [Docker 镜像](docker.md)
+- [在生产环境中部署](production.md)
+- [创建独立、可自行执行的 PHP 应用程序](embed.md)
+- [创建静态二进制文件](static.md)
+- [从源代码编译](compile.md)
+- [Laravel 集成](laravel.md)
+- [已知问题](known-issues.md)
+- [演示应用程序 (Symfony) 和性能测试](https://github.com/dunglas/frankenphp-demo)
+- [Go 库文档](https://pkg.go.dev/github.com/dunglas/frankenphp)
+- [贡献和调试](https://frankenphp.dev/docs/contributing/)
 
 ## 示例和框架
 
-* [Symfony](https://github.com/dunglas/symfony-docker)
-* [API Platform](https://api-platform.com/docs/distribution/)
-* [Laravel](laravel.md)
-* [Sulu](https://sulu.io/blog/running-sulu-with-frankenphp)
-* [WordPress](https://github.com/dunglas/frankenphp-wordpress)
-* [Drupal](https://github.com/dunglas/frankenphp-drupal)
-* [Joomla](https://github.com/alexandreelise/frankenphp-joomla)
-* [TYPO3](https://github.com/ochorocho/franken-typo3)
+- [Symfony](https://github.com/dunglas/symfony-docker)
+- [API Platform](https://api-platform.com/docs/distribution/)
+- [Laravel](laravel.md)
+- [Sulu](https://sulu.io/blog/running-sulu-with-frankenphp)
+- [WordPress](https://github.com/StephenMiracle/frankenwp)
+- [Drupal](https://github.com/dunglas/frankenphp-drupal)
+- [Joomla](https://github.com/alexandreelise/frankenphp-joomla)
+- [TYPO3](https://github.com/ochorocho/franken-typo3)
