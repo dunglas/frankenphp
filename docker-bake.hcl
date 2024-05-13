@@ -103,7 +103,7 @@ target "default" {
     tags = distinct(flatten(
         [for pv in php_version(php-version) : flatten([
             LATEST ? tag("latest", os, pv, tgt) : [],
-            tag(SHA == "" ? "" : "sha-${substr(SHA, 0, 7)}", os, pv, tgt),
+            tag(SHA == "" || SHA == VERSION ? "" : "sha-${substr(SHA, 0, 7)}", os, pv, tgt),
             [for v in semver(VERSION) : tag(v, os, pv, tgt)]
         ])
     ]))
@@ -129,7 +129,7 @@ target "static-builder" {
     ]
     tags = distinct(flatten([
         LATEST ? "${IMAGE_NAME}:static-builder" : "",
-        SHA == "" ? "" : "${IMAGE_NAME}:static-builder-sha-${substr(SHA, 0, 7)}",
+        SHA == "" || SHA == VERSION ? "" : "${IMAGE_NAME}:static-builder-sha-${substr(SHA, 0, 7)}",
         [for v in semver(VERSION) : v == "latest" ? "${IMAGE_NAME}:static-builder": "${IMAGE_NAME}:static-builder-${v}"]
     ]))
     labels = {
