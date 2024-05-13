@@ -145,10 +145,36 @@ RUN \
  # Ajouter la capacité supplémentaire de se lier aux ports 80 et 443
  setcap CAP_NET_BIND_SERVICE=+eip /usr/local/bin/frankenphp; \
  # Donner l'accès en écriture à /data/caddy et /config/caddy
- chown -R ${USER}:${USER} /data/caddy && chown -R ${USER}:${USER} /config/caddy;
+ chown -R ${USER}:${USER} /data/caddy && chown -R ${USER}:${USER} /config/caddy
 
 USER ${USER}
 ```
+
+### Exécution sans capacité
+
+Même lorsqu'il s'exécute en tant qu'utilisateur autre que root, FrankenPHP a besoin de la capacité `CAP_NET_BIND_SERVICE`
+pour que son serveur utilise les ports privilégiés (80 et 442).
+
+Si vous exposez FrankenPHP sur un port non privilégié (à partir de 1024), il est possible de faire fonctionner le serveur web avec un utilisateur qui n'est pas root, et sans avoir besoin d'aucune capacité.
+
+```dockerfile
+FROM dunglas/frankenphp
+
+ARG USER=www-data
+
+RUN
+	# Utiliser "adduser -D ${USER}" pour les distros basées sur Alpine
+	useradd -D ${USER};
+	# Supprimer la capacité par défaut
+	setcap -r /usr/local/bin/frankenphp; \
+	# Donner un accès en écriture à /data/caddy et /config/caddy
+	chown -R ${USER}:${USER} /data/caddy && chown -R ${USER}:${USER} /config/caddy
+
+USER ${USER}
+```
+
+Ensuite, définissez la variable d'environnement `SERVER_NAME` pour utiliser un port non privilégié.
+Exemple `:8000`
 
 ## Mises à jour
 

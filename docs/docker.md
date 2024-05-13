@@ -146,10 +146,37 @@ RUN \
 	# Add additional capability to bind to port 80 and 443
 	setcap CAP_NET_BIND_SERVICE=+eip /usr/local/bin/frankenphp; \
 	# Give write access to /data/caddy and /config/caddy
-	chown -R ${USER}:${USER} /data/caddy && chown -R ${USER}:${USER} /config/caddy;
+	chown -R ${USER}:${USER} /data/caddy && chown -R ${USER}:${USER} /config/caddy
 
 USER ${USER}
 ```
+
+### Running With No Capabilities
+
+Even when running rootless, FrankenPHP needs the `CAP_NET_BIND_SERVICE` capability to bind the
+web server on privileged ports (80 and 443).
+
+If you expose FrankenPHP on a non-privileged port (1024 and above), it's possible to run
+the webserver as a non-root user, and without the need for any capability:
+
+```dockerfile
+FROM dunglas/frankenphp
+
+ARG USER=www-data
+
+RUN \
+	# Use "adduser -D ${USER}" for alpine based distros
+	useradd -D ${USER}; \
+	# Remove default capability
+	setcap -r /usr/local/bin/frankenphp; \
+	# Give write access to /data/caddy and /config/caddy
+	chown -R ${USER}:${USER} /data/caddy && chown -R ${USER}:${USER} /config/caddy
+
+USER ${USER}
+```
+
+Next, set the `SERVER_NAME` environment variable to use an unpriviliegied port.
+Example: `:8000`
 
 ## Updates
 
