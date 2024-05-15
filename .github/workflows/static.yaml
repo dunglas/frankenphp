@@ -67,7 +67,7 @@ jobs:
           } >> "${GITHUB_OUTPUT}"
         env:
           SHA: ${{ github.sha }}
-          VERSION: ${{ steps.check.outputs.ref || github.sha }}
+          VERSION: ${{ steps.check.outputs.ref || 'dev' }}
   build-linux:
     strategy:
       fail-fast: false
@@ -136,7 +136,7 @@ jobs:
             ${{ (fromJson(needs.prepare.outputs.push) && !matrix.debug && !matrix.mimalloc) && format('*.output=type=image,name={0},push-by-digest=true,name-canonical=true,push=true', env.IMAGE_NAME) || '' }}
         env:
           SHA: ${{ github.sha }}
-          VERSION: ${{ (github.ref_type == 'tag' && github.ref_name) || needs.prepare.outputs.ref || github.sha }}
+          VERSION: ${{ (github.ref_type == 'tag' && github.ref_name) || needs.prepare.outputs.ref || 'dev' }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       -
         # Workaround for https://github.com/actions/runner/pull/2477#issuecomment-1501003600

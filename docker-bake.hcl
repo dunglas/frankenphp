@@ -31,11 +31,10 @@ variable DEFAULT_PHP_VERSION {
 function "tag" {
     params = [version, os, php-version, tgt]
     result = [
-        version != "" ? format("%s:%s%s-php%s-%s", IMAGE_NAME, version, tgt == "builder" ? "-builder" : "", php-version, os) : "",
-        php-version == DEFAULT_PHP_VERSION && os == "bookworm"  && version != "" ? format("%s:%s%s", IMAGE_NAME, version, tgt == "builder" ? "-builder" : "") : "",
-        php-version == DEFAULT_PHP_VERSION && version != "" ? format("%s:%s%s-%s", IMAGE_NAME, version, tgt == "builder" ? "-builder" : "", os) : "",
-        php-version == DEFAULT_PHP_VERSION && version == "latest" ? format("%s:%s%s", IMAGE_NAME, os, tgt == "builder" ? "-builder" : "") : "",
-        os == "bookworm" && version != "" ? format("%s:%s%s-php%s", IMAGE_NAME, version, tgt == "builder" ? "-builder" : "", php-version) : "",
+        version == "" ? "" : "${IMAGE_NAME}:${trimprefix("${version}${tgt == "builder" ? "-builder" : ""}-php${php-version}-${os}", "latest-")}",
+        php-version == DEFAULT_PHP_VERSION && os == "bookworm" && version != "" ? "${IMAGE_NAME}:${trimprefix("${version}${tgt == "builder" ? "-builder" : ""}", "latest-")}" : "",
+        php-version == DEFAULT_PHP_VERSION && version != "" ? "${IMAGE_NAME}:${trimprefix("${version}${tgt == "builder" ? "-builder" : ""}-${os}", "latest-")}" : "",
+        os == "bookworm" && version != "" ? "${IMAGE_NAME}:${trimprefix("${version}${tgt == "builder" ? "-builder" : ""}-php${php-version}", "latest-")}" : "",
     ]
 }
 
@@ -60,7 +59,7 @@ function "_semver" {
 
 function "__semver" {
     params = [v]
-    result = v == {} ? [clean_tag(VERSION)] : v.prerelease == null ? ["latest", v.major, "${v.major}.${v.minor}", "${v.major}.${v.minor}.${v.patch}"] : ["${v.major}.${v.minor}.${v.patch}-${v.prerelease}"]
+    result = v == {} ? [clean_tag(VERSION)] : v.prerelease == null ? [v.major, "${v.major}.${v.minor}", "${v.major}.${v.minor}.${v.patch}"] : ["${v.major}.${v.minor}.${v.patch}-${v.prerelease}"]
 }
 
 function "php_version" {
@@ -103,8 +102,8 @@ target "default" {
     tags = distinct(flatten(
         [for pv in php_version(php-version) : flatten([
             LATEST ? tag("latest", os, pv, tgt) : [],
-            tag(SHA == "" || SHA == VERSION ? "" : "sha-${substr(SHA, 0, 7)}", os, pv, tgt),
-            [for v in semver(VERSION) : tag(v, os, pv, tgt)]
+            tag(SHA == "" || VERSION != "dev" ? "" : "sha-${substr(SHA, 0, 7)}", os, pv, tgt),
+            VERSION == "dev" ? [] : [for v in semver(VERSION) : tag(v, os, pv, tgt)]
         ])
     ]))
     labels = {
@@ -129,8 +128,8 @@ target "static-builder" {
     ]
     tags = distinct(flatten([
         LATEST ? "${IMAGE_NAME}:static-builder" : "",
-        SHA == "" || SHA == VERSION ? "" : "${IMAGE_NAME}:static-builder-sha-${substr(SHA, 0, 7)}",
-        [for v in semver(VERSION) : v == "latest" ? "${IMAGE_NAME}:static-builder": "${IMAGE_NAME}:static-builder-${v}"]
+        SHA == "" || VERSION != "dev" ? "" : "${IMAGE_NAME}:static-builder-sha-${substr(SHA, 0, 7)}",
+        VERSION == "dev" ? [] : [for v in semver(VERSION) : "${IMAGE_NAME}:static-builder-${v}"]
     ]))
     labels = {
         "org.opencontainers.image.created" = "${timestamp()}"
