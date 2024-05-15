@@ -5,7 +5,7 @@ Mercure permet de pousser des événements en temps réel vers tous les appareil
 
 Aucune bibliothèque JS ou SDK requis !
 
-![Mercure](https://mercure.rocks/static/main.png)
+![Mercure](../mercure-hub.png)
 
 Pour activer le hub Mercure, mettez à jour le `Caddyfile` comme décrit [sur le site de Mercure](https://mercure.rocks/docs/hub/config).
 

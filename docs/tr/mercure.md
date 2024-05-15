@@ -5,7 +5,7 @@ Mercure, olayları tüm bağlı cihazlara gerçek zamanlı olarak göndermeye ol
 
 JS kütüphanesi veya SDK gerekmez!
 
-![Mercure](https://mercure.rocks/static/main.png)
+![Mercure](../mercure-hub.png)
 
 Mercure hub'ını etkinleştirmek için [Mercure'ün sitesinde](https://mercure.rocks/docs/hub/config) açıklandığı gibi `Caddyfile`'ı güncelleyin.
 

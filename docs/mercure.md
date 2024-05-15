@@ -5,7 +5,7 @@ Mercure allows to push events in real-time to all the connected devices: they wi
 
 No JS library or SDK required!
 
-![Mercure](https://mercure.rocks/static/main.png)
+![Mercure](mercure-hub.png)
 
 To enable the Mercure hub, update the `Caddyfile` as described [on Mercure's site](https://mercure.rocks/docs/hub/config).
 
