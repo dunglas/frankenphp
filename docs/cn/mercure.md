@@ -5,7 +5,7 @@ Mercure 允许将事件实时推送到所有连接的设备：它们将立即收
 
 无需 JS 库或 SDK！
 
-![Mercure](https://mercure.rocks/static/main.png)
+![Mercure](../mercure-hub.png)
 
 要启用 Mercure Hub，请按照 [Mercure 网站](https://mercure.rocks/docs/hub/config) 中的说明更新 `Caddyfile`。
 
