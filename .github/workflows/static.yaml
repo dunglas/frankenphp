@@ -24,7 +24,6 @@ on:
     - cron:  '0 0 * * *'
 env:
   IMAGE_NAME: ${{ (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.version) || startsWith(github.ref, 'refs/tags/')) && 'dunglas/frankenphp' || 'dunglas/frankenphp-dev' }}    
-  LATEST: ${{ (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.version) || startsWith(github.ref, 'refs/tags/')) && '0' || '1' }}
 jobs:
   prepare:
     runs-on: ubuntu-latest
@@ -54,8 +53,6 @@ jobs:
       -
         name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-        with:
-          version: latest
       -
         name: Create platforms matrix
         id: matrix
@@ -108,7 +105,6 @@ jobs:
         uses: docker/setup-buildx-action@v3
         with:
           platforms: ${{ matrix.platform }}
-          version: latest
       -
         name: Login to DockerHub
         if: ${{ fromJson(needs.prepare.outputs.push) && !matrix.debug && !matrix.mimalloc }}
@@ -190,7 +186,6 @@ jobs:
       - prepare
       - build-linux
     if: fromJson(needs.prepare.outputs.push)
-    #if: fromJson(needs.prepare.outputs.push) && (needs.prepare.outputs.ref || github.ref_type == 'tag')
     steps:
       -
         name: Download metadata
@@ -201,8 +196,6 @@ jobs:
       -
         name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-        with:
-          version: latest
       -
         name: Login to DockerHub
         uses: docker/login-action@v3

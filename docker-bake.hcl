@@ -17,7 +17,7 @@ variable "GO_VERSION" {
 variable "SHA" {}
 
 variable "LATEST" {
-    default = false
+    default = true
 }
 
 variable "CACHE" {
