@@ -88,6 +88,15 @@ func TestWorkerEnv(t *testing.T) {
 	}, &testOptions{workerScript: "env.php", nbWorkers: 1, env: map[string]string{"FOO": "bar"}, nbParrallelRequests: 10})
 }
 
+func TestWorkerGetOpt(t *testing.T) {
+	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
+		req := httptest.NewRequest("GET", "http://example.com/worker-getopt.php", nil)
+		w := httptest.NewRecorder()
+
+		handler(w, req)
+	}, &testOptions{workerScript: "worker-getopt.php", nbWorkers: 1, nbParrallelRequests: 1})
+}
+
 func ExampleServeHTTP_workers() {
 	if err := frankenphp.Init(
 		frankenphp.WithWorkers("worker1.php", 4, map[string]string{"ENV1": "foo"}),
