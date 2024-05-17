@@ -69,6 +69,7 @@ typedef struct frankenphp_server_context {
   uintptr_t current_request;
   uintptr_t main_request;
   bool worker_ready;
+  zval **worker_http_globals;
   char *cookie_data;
   bool finished;
 } frankenphp_server_context;
@@ -105,13 +106,23 @@ static uintptr_t frankenphp_clean_server_context() {
 
 static void frankenphp_request_reset() {
   zend_try {
-    int i;
+    frankenphp_server_context *ctx = SG(server_context);
 
-    for (i = 0; i < NUM_TRACK_VARS; i++) {
-      zval_ptr_dtor(&PG(http_globals)[i]);
+    if (ctx->worker_ready) {
+      int i;
+      for (i = 0; i < NUM_TRACK_VARS; i++) {
+        zval_ptr_dtor(&PG(http_globals)[i]);
+      }
+
+      // Restore worker script super globals
+      memcpy(&PG(http_globals), ctx->worker_http_globals,
+             sizeof(zval) * NUM_TRACK_VARS);
+      php_hash_environment();
+    } else {
+      ctx->worker_http_globals = (zval **)malloc(sizeof(zval) * NUM_TRACK_VARS);
+      memcpy(ctx->worker_http_globals, &PG(http_globals),
+             sizeof(zval) * NUM_TRACK_VARS);
     }
-
-    memset(&PG(http_globals), 0, sizeof(zval) * NUM_TRACK_VARS);
   }
   zend_end_try();
 }
@@ -431,6 +442,7 @@ static uintptr_t frankenphp_request_shutdown() {
   free(ctx->cookie_data);
   ((frankenphp_server_context *)SG(server_context))->cookie_data = NULL;
   uintptr_t rh = frankenphp_clean_server_context();
+  free(ctx->worker_http_globals);
 
   free(ctx);
   SG(server_context) = NULL;
@@ -467,6 +479,7 @@ int frankenphp_update_server_context(
       return FAILURE;
     }
 
+    ctx->worker_http_globals = NULL;
     ctx->cookie_data = NULL;
     ctx->finished = false;
 

@@ -91,6 +91,7 @@ func TestWorkerEnv(t *testing.T) {
 func TestWorkerGetOpt(t *testing.T) {
 	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
 		req := httptest.NewRequest("GET", "http://example.com/worker-getopt.php", nil)
+		req.Header.Add("Foo", "bar")
 		w := httptest.NewRecorder()
 
 		handler(w, req)
