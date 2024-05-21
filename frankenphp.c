@@ -119,7 +119,7 @@ static void frankenphp_request_reset() {
              sizeof(zval) * NUM_TRACK_VARS);
       php_hash_environment();
     } else {
-      ctx->worker_http_globals = (zval **)malloc(sizeof(zval) * NUM_TRACK_VARS);
+      ctx->worker_http_globals = malloc(sizeof(zval) * NUM_TRACK_VARS);
       memcpy(ctx->worker_http_globals, PG(http_globals),
              sizeof(zval) * NUM_TRACK_VARS);
     }
