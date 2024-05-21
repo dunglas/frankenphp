@@ -53,7 +53,7 @@ func startWorkers(fileName string, nbWorkers int, env PreparedEnv) error {
 		env = make(PreparedEnv, 1)
 	}
 
-	env["FRANKENPHP_WORKER\x00"] = "1\x00"
+	env["FRANKENPHP_WORKER\x00"] = "1"
 
 	l := getLogger()
 	for i := 0; i < nbWorkers; i++ {
