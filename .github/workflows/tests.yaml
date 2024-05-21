@@ -39,6 +39,7 @@ jobs:
           tools: none
         env:
           phpts: ts
+          debug: true
       -
         name: Set CGO flags
         run: |
@@ -71,5 +72,6 @@ jobs:
       -
         name: Lint Go code
         uses: golangci/golangci-lint-action@v6
+        if: matrix.php-versions == '8.3'
         with:
           version: latest
