@@ -702,9 +702,14 @@ static void frankenphp_register_variables(zval *track_vars_array) {
    */
   php_import_environment_variables(track_vars_array);
 
-  go_register_variables(ctx->current_request ? ctx->current_request
-                                             : ctx->main_request,
-                        track_vars_array);
+  if (ctx->current_request) {
+    go_register_variables(ctx->current_request, ctx->main_request,
+                          track_vars_array);
+
+    return;
+  }
+
+  go_register_variables(ctx->main_request, 0, track_vars_array);
 }
 
 static void frankenphp_log_message(const char *message, int syslog_type_int) {

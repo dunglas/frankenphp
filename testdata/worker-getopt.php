@@ -1,17 +1,21 @@
 <?php
 
-file_put_contents(__DIR__ . '/log', 'before: '.print_r($_SERVER, true), FILE_APPEND);
-
-$i = 0;
 do {
-    $ok = frankenphp_handle_request(function () use ($i): void {
-        echo sprintf("Requests handled: %d\n", $i);
-        file_put_contents(__DIR__ . '/log', 'inside: '.print_r($_SERVER, true), FILE_APPEND);
+    $ok = frankenphp_handle_request(function (): void {
+        print_r($_SERVER);
     });
 
-    $i++;
+    if (isset($_SERVER['HTTP_REQUEST'])) {
+        exit(1);
+    }
+
+    if (!isset($_SERVER['FRANKENPHP_WORKER'])) {
+        exit(2);
+    }
+
+    if (!isset($_SERVER['FOO'])) {
+        exit(3);
+    }
 
     getopt('abc');
-    if ($ok)
-        file_put_contents(__DIR__ . '/log', 'after: '.print_r($_SERVER, true), FILE_APPEND);
 } while ($ok);

@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -91,11 +92,18 @@ func TestWorkerEnv(t *testing.T) {
 func TestWorkerGetOpt(t *testing.T) {
 	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
 		req := httptest.NewRequest("GET", "http://example.com/worker-getopt.php", nil)
-		req.Header.Add("Foo", "bar")
+		req.Header.Add("Request", strconv.Itoa(i))
 		w := httptest.NewRecorder()
 
 		handler(w, req)
-	}, &testOptions{workerScript: "worker-getopt.php", nbWorkers: 1, nbParrallelRequests: 1})
+
+		resp := w.Result()
+		body, _ := io.ReadAll(resp.Body)
+
+		assert.Contains(t, string(body), fmt.Sprintf("[HTTP_REQUEST] => %d", i))
+		assert.Contains(t, string(body), "[FRANKENPHP_WORKER] => 1")
+		assert.Contains(t, string(body), "[FOO] => bar")
+	}, &testOptions{workerScript: "worker-getopt.php", nbWorkers: 1, env: map[string]string{"FOO": "bar"}, nbParrallelRequests: 1})
 }
 
 func ExampleServeHTTP_workers() {
