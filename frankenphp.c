@@ -69,7 +69,7 @@ typedef struct frankenphp_server_context {
   uintptr_t current_request;
   uintptr_t main_request;
   bool worker_ready;
-  zval **worker_http_globals;
+  zval *worker_http_globals;
   char *cookie_data;
   bool finished;
 } frankenphp_server_context;
