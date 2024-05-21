@@ -51,8 +51,10 @@ jobs:
         working-directory: internal/testcli/
         run: go build
       -
-        name: Run library tests
+        name: Run library tests (race)
         run: go test -race -v ./...
+      - name: Run library tests (ASAN)
+        run: CGO_FLAGS="$CGO_CFLAGS -fsanitize=address" go test -asan -v ./...
       -
         name: Run Caddy module tests
         working-directory: caddy/
