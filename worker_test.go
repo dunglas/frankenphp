@@ -85,6 +85,7 @@ func TestWorkerEnv(t *testing.T) {
 		resp := w.Result()
 		body, _ := io.ReadAll(resp.Body)
 
+		t.Log(string(body))
 		assert.Equal(t, fmt.Sprintf("bar%d", i), string(body))
 	}, &testOptions{workerScript: "env.php", nbWorkers: 1, env: map[string]string{"FOO": "bar"}, nbParrallelRequests: 10})
 }
@@ -101,9 +102,7 @@ func TestWorkerGetOpt(t *testing.T) {
 		body, _ := io.ReadAll(resp.Body)
 
 		assert.Contains(t, string(body), fmt.Sprintf("[HTTP_REQUEST] => %d", i))
-		assert.Contains(t, string(body), "[FRANKENPHP_WORKER] => 1")
-		assert.Contains(t, string(body), "[FOO] => bar")
-	}, &testOptions{workerScript: "worker-getopt.php", nbWorkers: 1, env: map[string]string{"FOO": "bar"}, nbParrallelRequests: 1})
+	}, &testOptions{workerScript: "worker-getopt.php", env: map[string]string{"FOO": "bar"}})
 }
 
 func ExampleServeHTTP_workers() {

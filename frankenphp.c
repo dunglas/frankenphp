@@ -444,8 +444,10 @@ static uintptr_t frankenphp_request_shutdown() {
   ((frankenphp_server_context *)SG(server_context))->cookie_data = NULL;
   uintptr_t rh = frankenphp_clean_server_context();
 
-  for (int i = 0; i < NUM_TRACK_VARS; i++) {
-    zval_dtor(&ctx->worker_http_globals[i]);
+  if (ctx->main_request) {
+    for (int i = 0; i < NUM_TRACK_VARS; i++) {
+      zval_dtor(&ctx->worker_http_globals[i]);
+    }
   }
 
   free(ctx);
@@ -702,14 +704,9 @@ static void frankenphp_register_variables(zval *track_vars_array) {
    */
   php_import_environment_variables(track_vars_array);
 
-  if (ctx->current_request) {
-    go_register_variables(ctx->current_request, ctx->main_request,
-                          track_vars_array);
-
-    return;
-  }
-
-  go_register_variables(ctx->main_request, 0, track_vars_array);
+  go_register_variables(ctx->current_request ? ctx->current_request
+                                             : ctx->main_request,
+                        track_vars_array);
 }
 
 static void frankenphp_log_message(const char *message, int syslog_type_int) {

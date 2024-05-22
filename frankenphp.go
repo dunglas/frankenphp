@@ -38,7 +38,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"maps"
 	"net/http"
 	"os"
 	"runtime"
@@ -553,16 +552,9 @@ var headerKeyCache = func() otter.Cache[string, string] {
 }()
 
 //export go_register_variables
-func go_register_variables(rh C.uintptr_t, mrh C.uintptr_t, trackVarsArray *C.zval) {
+func go_register_variables(rh C.uintptr_t, trackVarsArray *C.zval) {
 	r := cgo.Handle(rh).Value().(*http.Request)
 	fc := r.Context().Value(contextKey).(*FrankenPHPContext)
-
-	if mrh != 0 {
-		mr := cgo.Handle(mrh).Value().(*http.Request)
-		mfc := mr.Context().Value(contextKey).(*FrankenPHPContext)
-
-		maps.Copy(fc.env, mfc.env)
-	}
 
 	p := &runtime.Pinner{}
 
@@ -624,9 +616,7 @@ func go_register_variables(rh C.uintptr_t, mrh C.uintptr_t, trackVarsArray *C.zv
 
 	p.Unpin()
 
-	if fc.responseWriter != nil {
-		fc.env = nil
-	}
+	fc.env = nil
 }
 
 //export go_apache_request_headers
