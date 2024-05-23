@@ -137,3 +137,7 @@ Then set the environment variable `PHP_BINARY` to the path of our php script and
 export PHP_BINARY=/usr/local/bin/php
 composer install
 ```
+> [!CAUTION]
+>
+> When the PHP binary is actually available at `/usr/local/bin/php`, there is no need to add this workaround. It might even resolve into issues.
+
