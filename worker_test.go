@@ -102,7 +102,7 @@ func TestWorkerGetOpt(t *testing.T) {
 		body, _ := io.ReadAll(resp.Body)
 
 		assert.Contains(t, string(body), fmt.Sprintf("[HTTP_REQUEST] => %d", i))
-	}, &testOptions{workerScript: "worker-getopt.php", env: map[string]string{"FOO": "bar"}, nbWorkers: 1, nbParrallelRequests: 1})
+	}, &testOptions{workerScript: "worker-getopt.php", env: map[string]string{"FOO": "bar"}})
 }
 
 func ExampleServeHTTP_workers() {
