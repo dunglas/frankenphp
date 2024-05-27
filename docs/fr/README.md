@@ -71,7 +71,7 @@ Vous pouvez également exécuter des scripts en ligne de commande avec :
 * [API Platform](https://api-platform.com/docs/distribution/)
 * [Laravel](laravel.md)
 * [Sulu](https://sulu.io/blog/running-sulu-with-frankenphp)
-* [WordPress](https://github.com/dunglas/frankenphp-wordpress)
+* [WordPress](https://github.com/StephenMiracle/frankenwp)
 * [Drupal](https://github.com/dunglas/frankenphp-drupal)
 * [Joomla](https://github.com/alexandreelise/frankenphp-joomla)
 * [TYPO3](https://github.com/ochorocho/franken-typo3)
