@@ -17,5 +17,9 @@ do {
         exit(3);
     }
 
+    if (str_contains("?i=", $_SERVER['REQUEST_URI'])) {
+        exit(4);
+    }
+
     getopt('abc');
 } while ($ok);

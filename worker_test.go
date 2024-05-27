@@ -92,7 +92,7 @@ func TestWorkerEnv(t *testing.T) {
 
 func TestWorkerGetOpt(t *testing.T) {
 	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
-		req := httptest.NewRequest("GET", "http://example.com/worker-getopt.php", nil)
+		req := httptest.NewRequest("GET", fmt.Sprintf("http://example.com/worker-getopt.php?i=%d", i), nil)
 		req.Header.Add("Request", strconv.Itoa(i))
 		w := httptest.NewRecorder()
 
@@ -102,6 +102,7 @@ func TestWorkerGetOpt(t *testing.T) {
 		body, _ := io.ReadAll(resp.Body)
 
 		assert.Contains(t, string(body), fmt.Sprintf("[HTTP_REQUEST] => %d", i))
+		assert.Contains(t, string(body), fmt.Sprintf("[REQUEST_URI] => /worker-getopt.php?i=%d", i))
 	}, &testOptions{workerScript: "worker-getopt.php", env: map[string]string{"FOO": "bar"}})
 }
 
