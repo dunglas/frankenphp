@@ -325,7 +325,7 @@ func Init(options ...Option) error {
 		return err
 	}
 
-	logger.Info("FrankenPHP started 🐘", zap.String("php_version", Version().Version))
+	logger.Info("FrankenPHP started 🐘", zap.String("php_version", Version().Version), zap.Int("num_threads", opt.numThreads))
 	if EmbeddedAppPath != "" {
 		logger.Info("embedded PHP app 📦", zap.String("path", EmbeddedAppPath))
 	}
