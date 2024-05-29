@@ -24,8 +24,7 @@ fi
 if [ -z "${PHP_EXTENSIONS}" ]; then
     if [ -n "${EMBED}" ] && [ -f "${EMBED}/composer.json" ]; then
         cd "${EMBED}"
-        # Replace "libxml" by "xml" for compatibility with Static PHP CLI extension name
-        PHP_EXTENSIONS="$(composer check-platform-reqs --no-dev 2>/dev/null | grep ^ext | sed -e 's/^ext-//' -e 's/ .*//' -e 's/^libxml$/xml/' | xargs | tr ' ' ',')"
+        PHP_EXTENSIONS="$(composer check-platform-reqs --no-dev 2>/dev/null | grep ^ext | sed -e 's/^ext-//' -e 's/ .*//' | xargs | tr ' ' ',')"
         export PHP_EXTENSIONS
         cd -
     else
