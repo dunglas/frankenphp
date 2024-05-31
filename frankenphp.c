@@ -430,10 +430,8 @@ static zend_module_entry frankenphp_module = {
 static uintptr_t frankenphp_request_shutdown() {
   frankenphp_server_context *ctx = SG(server_context);
 
-  if (ctx->main_request) {
-    if (ctx->current_request) {
-      frankenphp_request_reset();
-    }
+  if (ctx->main_request && ctx->current_request) {
+    frankenphp_request_reset();
   }
 
   php_request_shutdown((void *)0);
