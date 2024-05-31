@@ -129,6 +129,32 @@ php_server [<matcher>] {
 }
 ```
 
+### Full Duplex (HTTP/1)
+
+When using HTTP/1.x, it may be desirable to enable full-duplex mode to allow writing a response before the entire body
+has been read. (for example: WebSocket, Server-Sent Events, etc.)
+
+This is an opt-in configuration that needs to be added to the global options in the `Caddyfile`:
+
+```caddyfile
+{
+  servers {
+    enable_full_duplex
+  }
+}
+```
+
+> ![CAUTION]
+>
+> Enabling this option may cause old HTTP/1.x clients that don't support full-duplex to deadlock.
+This can also be configured using the `CADDY_GLOBAL_OPTIONS` environment config:
+
+```sh
+CADDY_GLOBAL_OPTIONS="servers { enable_full_duplex }"
+```
+
+You can find more information about this setting in the [Caddy documentation](https://caddyserver.com/docs/caddyfile/options#enable-full-duplex).
+
 ## Environment Variables
 
 The following environment variables can be used to inject Caddy directives in the `Caddyfile` without modifying it:
