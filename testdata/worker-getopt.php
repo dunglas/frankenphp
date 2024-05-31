@@ -5,21 +5,5 @@ do {
         print_r($_SERVER);
     });
 
-    if (isset($_SERVER['HTTP_REQUEST'])) {
-        exit(1);
-    }
-
-    if (!isset($_SERVER['FRANKENPHP_WORKER'])) {
-        exit(2);
-    }
-
-    if (!isset($_SERVER['FOO'])) {
-        exit(3);
-    }
-
-    if (str_contains("?i=", $_SERVER['REQUEST_URI'])) {
-        exit(4);
-    }
-
     getopt('abc');
 } while ($ok);

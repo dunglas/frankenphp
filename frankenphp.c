@@ -69,7 +69,6 @@ typedef struct frankenphp_server_context {
   uintptr_t current_request;
   uintptr_t main_request;
   bool worker_ready;
-  zval worker_http_globals[6];
   char *cookie_data;
   bool finished;
 } frankenphp_server_context;
@@ -106,23 +105,13 @@ static uintptr_t frankenphp_clean_server_context() {
 
 static void frankenphp_request_reset() {
   zend_try {
-    frankenphp_server_context *ctx = SG(server_context);
-
     int i;
-    if (ctx->worker_ready) {
-      // Restore worker script super globals
-      for (i = 0; i < NUM_TRACK_VARS; i++) {
-        zval_ptr_dtor(&PG(http_globals)[i]);
-      }
-      memcpy(&PG(http_globals), &ctx->worker_http_globals,
-             sizeof(zval) * NUM_TRACK_VARS);
 
-      php_hash_environment();
-    } else {
-      for (i = 0; i < NUM_TRACK_VARS; i++) {
-        ZVAL_COPY(&ctx->worker_http_globals[i], &PG(http_globals)[i]);
-      }
+    for (i = 0; i < NUM_TRACK_VARS; i++) {
+      zval_ptr_dtor(&PG(http_globals)[i]);
     }
+
+    memset(&PG(http_globals), 0, sizeof(zval) * NUM_TRACK_VARS);
   }
   zend_end_try();
 }
@@ -157,6 +146,10 @@ static void frankenphp_worker_request_shutdown() {
   zend_end_try();
 
   zend_set_memory_limit(PG(memory_limit));
+
+  for (int i = 0; i < NUM_TRACK_VARS; i++) {
+    array_init(&PG(http_globals)[i]);
+  }
 }
 
 /* Adapted from php_request_startup() */
@@ -164,6 +157,10 @@ static int frankenphp_worker_request_startup() {
   int retval = SUCCESS;
 
   zend_try {
+    for (int i = 0; i < NUM_TRACK_VARS; i++) {
+      zval_ptr_dtor_nogc(&PG(http_globals)[i]);
+    }
+
     php_output_activate();
 
     /* initialize global variables */
@@ -436,11 +433,6 @@ static uintptr_t frankenphp_request_shutdown() {
   if (ctx->main_request) {
     if (ctx->current_request) {
       frankenphp_request_reset();
-    }
-
-    for (int i = 0; i < NUM_TRACK_VARS; i++) {
-      zval_ptr_dtor(&ctx->worker_http_globals[i]);
-      zval_ptr_dtor(&ctx->worker_http_globals[i]);
     }
   }
 
