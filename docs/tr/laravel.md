@@ -22,7 +22,6 @@ Alternatif olarak, Laravel projelerinizi FrankenPHP ile yerel makinenizden çal�
     ```caddyfile
     {
     	frankenphp
-    	order php_server before file_server
     }
 
     # Sunucunuzun alan adı

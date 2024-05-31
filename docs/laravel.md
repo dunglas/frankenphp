@@ -22,7 +22,6 @@ Alternatively, you can run your Laravel projects with FrankenPHP from your local
     ```caddyfile
     {
     	frankenphp
-    	order php_server before file_server
     }
 
     # The domain name of your server
