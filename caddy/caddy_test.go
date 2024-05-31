@@ -150,7 +150,6 @@ func TestPHPServerDirective(t *testing.T) {
 			https_port 9443
 
 			frankenphp
-			order php_server before reverse_proxy
 		}
 
 		localhost:9080 {

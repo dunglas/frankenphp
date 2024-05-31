@@ -28,8 +28,6 @@ Minimal example:
 {
 	# Enable FrankenPHP
 	frankenphp
-	# Configure when the directive must be executed
-	order php_server before file_server
 }
 
 localhost {

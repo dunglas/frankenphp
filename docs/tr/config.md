@@ -28,8 +28,6 @@ Minimal örnek:
 {
 	# FrankenPHP'yi aktif et
 	frankenphp
-	# Yönergenin ne zaman yürütülmesi gerektiğini yapılandırma
-	order php_server before file_server
 }
 
 localhost {

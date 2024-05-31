@@ -26,9 +26,14 @@ const defaultDocumentRoot = "public"
 func init() {
 	caddy.RegisterModule(FrankenPHPApp{})
 	caddy.RegisterModule(FrankenPHPModule{})
+
 	httpcaddyfile.RegisterGlobalOption("frankenphp", parseGlobalOption)
+
 	httpcaddyfile.RegisterHandlerDirective("php", parseCaddyfile)
+	httpcaddyfile.RegisterDirectiveOrder("php", "before", "file_server")
+
 	httpcaddyfile.RegisterDirective("php_server", parsePhpServer)
+	httpcaddyfile.RegisterDirectiveOrder("php_server", "before", "file_server")
 }
 
 type mainPHPinterpreterKeyType int

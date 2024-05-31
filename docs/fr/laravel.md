@@ -23,7 +23,6 @@ Vous pouvez également exécuter vos projets Laravel avec FrankenPHP depuis votr
  	```caddyfile
     {
      frankenphp
-     order php_server before file_server
     }
 
     # Le nom de domaine de votre serveur

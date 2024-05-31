@@ -5,12 +5,6 @@
 		#worker /path/to/your/worker.php
 		{$FRANKENPHP_CONFIG}
 	}
-
-	# https://caddyserver.com/docs/caddyfile/directives#sorting-algorithm
-	order mercure after encode
-	order vulcain after reverse_proxy
-	order php_server before file_server
-	order php before file_server
 }
 
 {$CADDY_EXTRA_CONFIG}
@@ -19,9 +13,8 @@
 	#log {
 	#	# Redact the authorization query parameter that can be set by Mercure
 	#	format filter {
-	#		wrap console
 	#		fields {
-	#			uri query {
+	#			request>uri query {
 	#				replace authorization REDACTED
 	#			}
 	#		}

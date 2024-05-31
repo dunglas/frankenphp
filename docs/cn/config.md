@@ -28,8 +28,6 @@ RUN cp $PHP_INI_DIR/php.ini-production $PHP_INI_DIR/php.ini
 {
 	# 启用 FrankenPHP
 	frankenphp
-	# 配置何时必须执行指令
-	order php_server before file_server
 }
 
 localhost {

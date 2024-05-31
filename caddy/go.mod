@@ -7,12 +7,12 @@ replace github.com/dunglas/frankenphp => ../
 retract v1.0.0-rc.1 // Human error
 
 require (
-	github.com/caddyserver/caddy/v2 v2.8.0
+	github.com/caddyserver/caddy/v2 v2.8.1
 	github.com/caddyserver/certmagic v0.21.2
 	github.com/dunglas/caddy-cbrotli v1.0.0
 	github.com/dunglas/frankenphp v1.1.5
-	github.com/dunglas/mercure/caddy v0.15.11
-	github.com/dunglas/vulcain/caddy v1.0.2
+	github.com/dunglas/mercure/caddy v0.16.1
+	github.com/dunglas/vulcain/caddy v1.0.4
 	github.com/spf13/cobra v1.8.0
 	go.uber.org/zap v1.27.0
 )
@@ -27,6 +27,8 @@ require (
 	github.com/Masterminds/semver/v3 v3.2.1 // indirect
 	github.com/Masterminds/sprig/v3 v3.2.3 // indirect
 	github.com/MauriceGit/skiplist v0.0.0-20211105230623-77f5c8d3e145 // indirect
+	github.com/MicahParks/jwkset v0.5.18 // indirect
+	github.com/MicahParks/keyfunc/v3 v3.3.3 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/RoaringBitmap/roaring v1.9.3 // indirect
 	github.com/alecthomas/chroma/v2 v2.14.0 // indirect
@@ -47,14 +49,14 @@ require (
 	github.com/dlclark/regexp2 v1.11.0 // indirect
 	github.com/dolthub/maphash v0.1.0 // indirect
 	github.com/dunglas/httpsfv v1.0.2 // indirect
-	github.com/dunglas/mercure v0.15.11 // indirect
-	github.com/dunglas/vulcain v1.0.2 // indirect
+	github.com/dunglas/mercure v0.16.1 // indirect
+	github.com/dunglas/vulcain v1.0.4 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
 	github.com/fxamacker/cbor/v2 v2.6.0 // indirect
 	github.com/gammazero/deque v0.2.1 // indirect
-	github.com/getkin/kin-openapi v0.123.0 // indirect
+	github.com/getkin/kin-openapi v0.124.0 // indirect
 	github.com/go-chi/chi/v5 v5.0.12 // indirect
 	github.com/go-jose/go-jose/v3 v3.0.3 // indirect
 	github.com/go-kit/kit v0.13.0 // indirect
@@ -86,7 +88,7 @@ require (
 	github.com/huandu/xstrings v1.4.0 // indirect
 	github.com/imdario/mergo v0.3.16 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
-	github.com/invopop/yaml v0.2.0 // indirect
+	github.com/invopop/yaml v0.3.1 // indirect
 	github.com/jackc/chunkreader/v2 v2.0.1 // indirect
 	github.com/jackc/pgconn v1.14.3 // indirect
 	github.com/jackc/pgio v1.0.0 // indirect
@@ -181,7 +183,7 @@ require (
 	go.uber.org/zap/exp v0.2.0 // indirect
 	golang.org/x/crypto v0.23.0 // indirect
 	golang.org/x/crypto/x509roots/fallback v0.0.0-20240529182030-349231f7e4e4 // indirect
-	golang.org/x/exp v0.0.0-20240529005216-23cca8864a10 // indirect
+	golang.org/x/exp v0.0.0-20240530194437-404ba88c7ed0 // indirect
 	golang.org/x/mod v0.17.0 // indirect
 	golang.org/x/net v0.25.0 // indirect
 	golang.org/x/sync v0.7.0 // indirect
