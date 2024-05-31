@@ -13,6 +13,8 @@ import (
 
 	"github.com/dunglas/frankenphp"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zaptest/observer"
 )
 
 func TestWorker(t *testing.T) {
@@ -85,12 +87,14 @@ func TestWorkerEnv(t *testing.T) {
 		resp := w.Result()
 		body, _ := io.ReadAll(resp.Body)
 
-		t.Log(string(body))
 		assert.Equal(t, fmt.Sprintf("bar%d", i), string(body))
 	}, &testOptions{workerScript: "env.php", nbWorkers: 1, env: map[string]string{"FOO": "bar"}, nbParrallelRequests: 10})
 }
 
 func TestWorkerGetOpt(t *testing.T) {
+	observer, logs := observer.New(zap.InfoLevel)
+	logger := zap.New(observer)
+
 	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
 		req := httptest.NewRequest("GET", fmt.Sprintf("http://example.com/worker-getopt.php?i=%d", i), nil)
 		req.Header.Add("Request", strconv.Itoa(i))
@@ -103,7 +107,11 @@ func TestWorkerGetOpt(t *testing.T) {
 
 		assert.Contains(t, string(body), fmt.Sprintf("[HTTP_REQUEST] => %d", i))
 		assert.Contains(t, string(body), fmt.Sprintf("[REQUEST_URI] => /worker-getopt.php?i=%d", i))
-	}, &testOptions{workerScript: "worker-getopt.php", env: map[string]string{"FOO": "bar"}})
+	}, &testOptions{logger: logger, workerScript: "worker-getopt.php", env: map[string]string{"FOO": "bar"}})
+
+	for _, log := range logs.FilterFieldKey("exit_status").All() {
+		assert.Failf(t, "unexpected exit status", "exit status: %d", log.ContextMap()["exit_status"])
+	}
 }
 
 func ExampleServeHTTP_workers() {
