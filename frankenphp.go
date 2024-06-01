@@ -510,14 +510,16 @@ var conReqs atomic.Int32
 func go_fetch_and_execute(rh unsafe.Pointer) {
 	//logger.Warn("Starting fetch and execute")
 
+	start := time.Now()
+
 	for {
 		select {
 		case <-done:
 			return
 		case r := <-requestChan:
 			conReqs.Add(1)
-			start := time.Now()
-			logger.Warn("Executing request", zap.Int("total", int(conReqs.Load())))
+			logger.Warn("Executing request", zap.Int("total", int(conReqs.Load())), zap.Duration("elapsed", time.Since(start)))
+			start = time.Now()
 			fc, ok := FromContext(r.Context())
 			handle := cgo.NewHandle(r)
 			r.Context().Value(handleKey).(*handleList).AddHandle(handle)
@@ -539,6 +541,7 @@ func go_fetch_and_execute(rh unsafe.Pointer) {
 			conReqs.Add(-1)
 
 			logger.Warn("finished execution", zap.Int("total", int(conReqs.Load())), zap.Duration("elapsed", time.Since(start)))
+			start = time.Now()
 		}
 	}
 }
