@@ -45,6 +45,8 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
+	"time"
 	"unsafe"
 
 	"github.com/maypok86/otter"
@@ -317,7 +319,7 @@ func Init(options ...Option) error {
 	done = make(chan struct{})
 	requestChan = make(chan *http.Request)
 
-	if C.frankenphp_init(C.int(opt.numThreads)) != 0 {
+	if C.frankenphp_init(C.int(opt.numThreads), C.int(opt.numThreads-numWorkers)) != 0 {
 		return MainThreadCreationError
 	}
 
@@ -439,6 +441,8 @@ func updateServerContext(request *http.Request, create bool, mrh C.uintptr_t) er
 	return nil
 }
 
+var counter int
+
 // ServeHTTP executes a PHP script according to the given context.
 func ServeHTTP(responseWriter http.ResponseWriter, request *http.Request) error {
 	shutdownWG.Add(1)
@@ -475,6 +479,10 @@ func go_fetch_request() C.uintptr_t {
 		return 0
 
 	case r := <-requestChan:
+		count := counter
+		counter += 1
+		logger.Warn("Fetched request", zap.Int("counter", count))
+		r = r.WithContext(context.WithValue(r.Context(), "counter__", count))
 		h := cgo.NewHandle(r)
 		r.Context().Value(handleKey).(*handleList).AddHandle(h)
 		return C.uintptr_t(h)
@@ -487,7 +495,55 @@ func maybeCloseContext(fc *FrankenPHPContext) {
 	})
 }
 
-// go_execute_script Note: only called in cgi-mode
+//export go_log_s
+func go_log_s(cstr *C.char) {
+	// Convert C string to Go string
+	str := C.GoString(cstr)
+
+	// Log (print) the string
+	logger.Warn(str)
+}
+
+var conReqs atomic.Int32
+
+//export go_fetch_and_execute
+func go_fetch_and_execute(rh unsafe.Pointer) {
+	//logger.Warn("Starting fetch and execute")
+
+	for {
+		select {
+		case <-done:
+			return
+		case r := <-requestChan:
+			conReqs.Add(1)
+			start := time.Now()
+			logger.Warn("Executing request", zap.Int("total", int(conReqs.Load())))
+			fc, ok := FromContext(r.Context())
+			handle := cgo.NewHandle(r)
+			r.Context().Value(handleKey).(*handleList).AddHandle(handle)
+			if !ok {
+				panic(InvalidRequestError)
+			}
+
+			if err := updateServerContext(r, true, 0); err != nil {
+				panic(err)
+			}
+
+			fc.exitStatus = C.frankenphp_execute_script(C.CString(fc.scriptFilename))
+			if fc.exitStatus < 0 {
+				panic(ScriptExecutionError)
+			}
+
+			maybeCloseContext(fc)
+			r.Context().Value(handleKey).(*handleList).FreeAll()
+			conReqs.Add(-1)
+
+			logger.Warn("finished execution", zap.Int("total", int(conReqs.Load())), zap.Duration("elapsed", time.Since(start)))
+		}
+	}
+}
+
+// go_execute_script Note: only called in cgi-mode and the main worker request
 //
 //export go_execute_script
 func go_execute_script(rh unsafe.Pointer) {
@@ -512,6 +568,8 @@ func go_execute_script(rh unsafe.Pointer) {
 	if fc.exitStatus < 0 {
 		panic(ScriptExecutionError)
 	}
+
+	logger.Warn("Handled request", zap.Any("counter", request.Context().Value("counter__")))
 }
 
 //export go_ub_write
