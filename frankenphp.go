@@ -468,6 +468,37 @@ func ServeHTTP(responseWriter http.ResponseWriter, request *http.Request) error 
 	return nil
 }
 
+//export go_fetch_and_execute
+func go_fetch_and_execute() {
+	for {
+		select {
+		case <-done:
+			return
+		case r := <-requestChan:
+			h := cgo.NewHandle(r)
+			r.Context().Value(handleKey).(*handleList).AddHandle(h)
+
+			fc, ok := FromContext(r.Context())
+			if !ok {
+				panic(InvalidRequestError)
+			}
+
+			if err := updateServerContext(r, true, 0); err != nil {
+				panic(err)
+			}
+
+			// scriptFilename is freed in frankenphp_execute_script()
+			fc.exitStatus = C.frankenphp_execute_script(C.CString(fc.scriptFilename))
+			if fc.exitStatus < 0 {
+				panic(ScriptExecutionError)
+			}
+
+			maybeCloseContext(fc)
+			r.Context().Value(handleKey).(*handleList).FreeAll()
+		}
+	}
+}
+
 //export go_fetch_request
 func go_fetch_request() C.uintptr_t {
 	select {

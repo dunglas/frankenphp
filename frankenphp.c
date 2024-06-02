@@ -770,9 +770,8 @@ static void *manager_thread(void *arg) {
 
   threadpool thpool = thpool_init(num_threads);
 
-  uintptr_t rh;
-  while ((rh = go_fetch_request())) {
-    thpool_add_work(thpool, go_execute_script, (void *)rh);
+  for(int i = 0; i < num_threads; i++) {
+    thpool_add_work(thpool, go_fetch_and_execute, NULL);
   }
 
   /* channel closed, shutdown gracefully */
