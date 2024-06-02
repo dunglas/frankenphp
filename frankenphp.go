@@ -313,7 +313,7 @@ func Init(options ...Option) error {
 	done = make(chan struct{})
 	requestChan = make(chan *http.Request)
 
-	startMainThreads(opt.numThreads)
+	go startMainThreads(opt.numThreads)
 
 	if err := initWorkers(opt.workers); err != nil {
 		return err
@@ -328,31 +328,29 @@ func Init(options ...Option) error {
 }
 
 func startMainThreads(numThreads int) bool {
-	go func() {
-		// prevent sharing this thread with other go funcs
-		runtime.LockOSThread()
-		// note: we do NOT unlock the thread so that Go will not try to reuse it when this func completes
+	// prevent sharing this thread with other go funcs
+	runtime.LockOSThread()
+	// note: we do NOT unlock the thread so that Go will not try to reuse it when this func completes
 
-		var threads sync.WaitGroup
+	var threads sync.WaitGroup
 
-		C.frankenphp_prepare_thread()
-		C.frankenphp_prepare_sapi(C.int(numThreads))
+	C.frankenphp_prepare_thread()
+	C.frankenphp_prepare_sapi(C.int(numThreads))
 
-		for i := 0; i < numThreads; i++ {
-			threads.Add(1)
-			go func() {
-				runtime.LockOSThread()
-				defer threads.Done()
+	for i := 0; i < numThreads; i++ {
+		threads.Add(1)
+		go func() {
+			runtime.LockOSThread()
+			defer threads.Done()
 
-				C.frankenphp_prepare_thread()
-				go_fetch_and_execute()
-			}()
-		}
+			C.frankenphp_prepare_thread()
+			go_fetch_and_execute()
+		}()
+	}
 
-		threads.Wait()
-		C.frankenphp_shutdown_sapi()
-		go_shutdown()
-	}()
+	threads.Wait()
+	C.frankenphp_shutdown_sapi()
+	go_shutdown()
 
 	return true
 }
