@@ -499,50 +499,10 @@ func go_fetch_and_execute() {
 	}
 }
 
-//export go_fetch_request
-func go_fetch_request() C.uintptr_t {
-	select {
-	case <-done:
-		return 0
-
-	case r := <-requestChan:
-		h := cgo.NewHandle(r)
-		r.Context().Value(handleKey).(*handleList).AddHandle(h)
-		return C.uintptr_t(h)
-	}
-}
-
 func maybeCloseContext(fc *FrankenPHPContext) {
 	fc.closed.Do(func() {
 		close(fc.done)
 	})
-}
-
-// go_execute_script Note: only called in cgi-mode
-//
-//export go_execute_script
-func go_execute_script(rh unsafe.Pointer) {
-	handle := cgo.Handle(rh)
-
-	request := handle.Value().(*http.Request)
-	fc, ok := FromContext(request.Context())
-	if !ok {
-		panic(InvalidRequestError)
-	}
-	defer func() {
-		maybeCloseContext(fc)
-		request.Context().Value(handleKey).(*handleList).FreeAll()
-	}()
-
-	if err := updateServerContext(request, true, 0); err != nil {
-		panic(err)
-	}
-
-	// scriptFilename is freed in frankenphp_execute_script()
-	fc.exitStatus = C.frankenphp_execute_script(C.CString(fc.scriptFilename))
-	if fc.exitStatus < 0 {
-		panic(ScriptExecutionError)
-	}
 }
 
 //export go_ub_write
