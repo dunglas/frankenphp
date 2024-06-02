@@ -5,10 +5,6 @@
 // [FrankenPHP app server]: https://frankenphp.dev
 package frankenphp
 
-//go:generate rm -Rf C-Thread-Pool/
-//go:generate git clone --depth=1 git@github.com:Pithikos/C-Thread-Pool.git
-//go:generate rm -Rf C-Thread-Pool/.git C-Thread-Pool/.github C-Thread-Pool/docs C-Thread-Pool/tests C-Thread-Pool/example.c
-
 // Use PHP includes corresponding to your PHP installation by running:
 //
 //   export CGO_CFLAGS=$(php-config --includes)

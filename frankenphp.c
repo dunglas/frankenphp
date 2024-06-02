@@ -18,9 +18,6 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-#include "C-Thread-Pool/thpool.c"
-#include "C-Thread-Pool/thpool.h"
-
 #include "_cgo_export.h"
 #include "frankenphp_arginfo.h"
 

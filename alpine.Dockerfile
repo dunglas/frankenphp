@@ -78,7 +78,6 @@ RUN go mod graph | awk '{if ($1 !~ "@") print $2}' | xargs go get
 WORKDIR /go/src/app
 COPY --link *.* ./
 COPY --link caddy caddy
-COPY --link C-Thread-Pool C-Thread-Pool
 COPY --link internal internal
 COPY --link testdata testdata
 
