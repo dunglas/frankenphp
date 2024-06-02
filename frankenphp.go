@@ -331,7 +331,7 @@ func startMainThreads(numThreads int) bool {
 	go func() {
 		// prevent sharing this thread with other go funcs
 		runtime.LockOSThread()
-		defer runtime.UnlockOSThread()
+		// note: we do NOT unlock the thread so that Go will not try to reuse it when this func completes
 
 		var threads sync.WaitGroup
 
@@ -342,10 +342,7 @@ func startMainThreads(numThreads int) bool {
 			threads.Add(1)
 			go func() {
 				runtime.LockOSThread()
-				defer func() {
-					threads.Done()
-					runtime.UnlockOSThread()
-				}()
+				defer threads.Done()
 
 				C.frankenphp_prepare_thread()
 				go_fetch_and_execute()
