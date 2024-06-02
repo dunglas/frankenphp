@@ -726,7 +726,7 @@ sapi_module_struct frankenphp_sapi_module = {
 
     STANDARD_SAPI_MODULE_PROPERTIES};
 
-static void *manager_thread(void *arg) {
+void frankenphp_prepare_thread() {
   // SIGPIPE must be masked in non-Go threads:
   // https://pkg.go.dev/os/signal#hdr-Go_programs_that_use_cgo_or_SWIG
   sigset_t set;
@@ -737,10 +737,9 @@ static void *manager_thread(void *arg) {
     perror("failed to block SIGPIPE");
     exit(EXIT_FAILURE);
   }
+}
 
-  int num_threads = *((int *)arg);
-  free(arg);
-  arg = NULL;
+void frankenphp_prepare_sapi(int num_threads) {
 
 #ifdef ZTS
 #if (PHP_VERSION_ID >= 80300)
@@ -767,17 +766,9 @@ static void *manager_thread(void *arg) {
 #endif
 
   frankenphp_sapi_module.startup(&frankenphp_sapi_module);
+}
 
-  threadpool thpool = thpool_init(num_threads);
-
-  for(int i = 0; i < num_threads; i++) {
-    thpool_add_work(thpool, go_fetch_and_execute, NULL);
-  }
-
-  /* channel closed, shutdown gracefully */
-  thpool_wait(thpool);
-  thpool_destroy(thpool);
-
+void frankenphp_shutdown_sapi() {
   frankenphp_sapi_module.shutdown(&frankenphp_sapi_module);
 
   sapi_shutdown();
@@ -791,26 +782,6 @@ static void *manager_thread(void *arg) {
     frankenphp_sapi_module.ini_entries = NULL;
   }
 #endif
-
-  go_shutdown();
-
-  return NULL;
-}
-
-int frankenphp_init(int num_threads) {
-  pthread_t thread;
-
-  int *num_threads_ptr = calloc(1, sizeof(int));
-  *num_threads_ptr = num_threads;
-
-  if (pthread_create(&thread, NULL, *manager_thread, (void *)num_threads_ptr) !=
-      0) {
-    go_shutdown();
-
-    return -1;
-  }
-
-  return pthread_detach(thread);
 }
 
 int frankenphp_request_startup() {

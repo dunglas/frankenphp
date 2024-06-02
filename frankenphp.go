@@ -317,9 +317,7 @@ func Init(options ...Option) error {
 	done = make(chan struct{})
 	requestChan = make(chan *http.Request)
 
-	if C.frankenphp_init(C.int(opt.numThreads)) != 0 {
-		return MainThreadCreationError
-	}
+	startMainThreads(opt.numThreads)
 
 	if err := initWorkers(opt.workers); err != nil {
 		return err
@@ -331,6 +329,39 @@ func Init(options ...Option) error {
 	}
 
 	return nil
+}
+
+func startMainThreads(numThreads int) bool {
+	go func() {
+		// prevent sharing this thread with other go funcs
+		runtime.LockOSThread()
+		defer runtime.UnlockOSThread()
+
+		var threads sync.WaitGroup
+
+		C.frankenphp_prepare_thread()
+		C.frankenphp_prepare_sapi(C.int(numThreads))
+
+		for i := 0; i < numThreads; i++ {
+			threads.Add(1)
+			go func() {
+				runtime.LockOSThread()
+				defer func() {
+					threads.Done()
+					runtime.UnlockOSThread()
+				}()
+
+				C.frankenphp_prepare_thread()
+				go_fetch_and_execute()
+			}()
+		}
+
+		threads.Wait()
+		C.frankenphp_shutdown_sapi()
+		go_shutdown()
+	}()
+
+	return true
 }
 
 // Shutdown stops the workers and the PHP runtime.
