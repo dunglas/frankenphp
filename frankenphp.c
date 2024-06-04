@@ -417,9 +417,8 @@ static zend_module_entry frankenphp_module = {
     TOSTRING(FRANKENPHP_VERSION),
     STANDARD_MODULE_PROPERTIES};
 
-static uintptr_t frankenphp_request_shutdown() {
+static void frankenphp_request_shutdown() {
   frankenphp_server_context *ctx = SG(server_context);
-  uintptr_t rh = ctx->current_request;
 
   if (ctx->main_request && ctx->current_request) {
     frankenphp_destroy_super_globals();
@@ -438,8 +437,6 @@ static uintptr_t frankenphp_request_shutdown() {
 #if defined(ZTS)
   ts_free_thread();
 #endif
-
-  return rh;
 }
 
 int frankenphp_update_server_context(
