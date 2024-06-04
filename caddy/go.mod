@@ -155,6 +155,7 @@ require (
 	github.com/tidwall/sjson v1.2.5 // indirect
 	github.com/unrolled/secure v1.14.0 // indirect
 	github.com/urfave/cli v1.22.15 // indirect
+	github.com/withinboredom/cgoc v0.0.0-20240604202728-9f58d0ff5e45 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	github.com/yosida95/uritemplate/v3 v3.0.2 // indirect
 	github.com/yuin/goldmark v1.7.1 // indirect

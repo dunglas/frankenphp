@@ -1,14 +1,13 @@
 module github.com/dunglas/frankenphp
 
-go 1.21
-
-toolchain go1.22.0
+go 1.22.2
 
 retract v1.0.0-rc.1 // Human error
 
 require (
 	github.com/maypok86/otter v1.2.1
 	github.com/stretchr/testify v1.9.0
+	github.com/withinboredom/cgoc v0.0.0-20240604202728-9f58d0ff5e45
 	go.uber.org/zap v1.27.0
 	golang.org/x/net v0.25.0
 )

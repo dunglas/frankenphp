@@ -31,12 +31,15 @@ package frankenphp
 // #include <zend_llist.h>
 // #include <SAPI.h>
 // #include "frankenphp.h"
+// #include "ring_buffer.h"
 import "C"
 import (
 	"bytes"
 	"context"
+	"encoding/binary"
 	"errors"
 	"fmt"
+	"github.com/withinboredom/cgoc/ring_buffer"
 	"io"
 	"net/http"
 	"os"
@@ -132,6 +135,8 @@ type FrankenPHPContext struct {
 
 	done                 chan interface{}
 	currentWorkerRequest cgo.Handle
+	outputBuffer         *ring_buffer.Buffer
+	headerBuffer         *ring_buffer.Buffer
 }
 
 func clientHasClosed(r *http.Request) bool {
@@ -148,6 +153,11 @@ func NewRequestWithContext(r *http.Request, opts ...RequestOption) (*http.Reques
 	fc := &FrankenPHPContext{
 		done: make(chan interface{}),
 	}
+
+	// create a 10 segment ring buffer (32*10 kb before reaching contention and slowing down to ~400gb per second)
+	fc.outputBuffer = ring_buffer.NewBuffer(10)
+	fc.headerBuffer = ring_buffer.NewBuffer(10)
+
 	for _, o := range opts {
 		if err := o(fc); err != nil {
 			return nil, err
@@ -430,6 +440,8 @@ func updateServerContext(request *http.Request, create bool, mrh C.uintptr_t) er
 		cAuthUser,
 		cAuthPassword,
 		C.int(request.ProtoMajor*1000+request.ProtoMinor),
+		(*C.RingBuffer)(unsafe.Pointer(fc.outputBuffer.RingBuffer)),
+		(*C.RingBuffer)(unsafe.Pointer(fc.headerBuffer.RingBuffer)),
 	)
 
 	if ret > 0 {
@@ -450,6 +462,8 @@ func ServeHTTP(responseWriter http.ResponseWriter, request *http.Request) error 
 	}
 
 	fc.responseWriter = responseWriter
+	go handleResponse(responseWriter, fc, request)
+	go handleHeader(fc)
 
 	rc := requestChan
 	// Detect if a worker is available to handle this request
@@ -466,6 +480,44 @@ func ServeHTTP(responseWriter http.ResponseWriter, request *http.Request) error 
 	}
 
 	return nil
+}
+
+func handleResponse(writer http.ResponseWriter, fc *FrankenPHPContext, r *http.Request) {
+	for {
+		select {
+		case <-fc.done:
+			return
+		case data := <-fc.outputBuffer.Read():
+			if writer == nil {
+				fc.logger.Info(string(data))
+				continue
+			}
+
+			if bytes.Equal(data, []byte{'\x00', '\x00', '\x0F', '\x00', '\x00'}) {
+				if err := http.NewResponseController(fc.responseWriter).Flush(); err != nil {
+					fc.logger.Error("the current responseWriter is not a flusher", zap.Error(err))
+				}
+				continue
+			}
+
+			var write int
+			var err error
+			for {
+				write, err = writer.Write(data)
+				if err != nil {
+					fc.logger.Error("write error", zap.Error(err))
+				}
+				if write == len(data) {
+					break
+				}
+				data = data[write:]
+			}
+
+			if clientHasClosed(r) {
+				// todo: notify request is closed!
+			}
+		}
+	}
 }
 
 //export go_fetch_request
@@ -681,6 +733,60 @@ func addHeader(fc *FrankenPHPContext, cString *C.char, length C.int) {
 	}
 
 	fc.responseWriter.Header().Add(parts[0], parts[1])
+}
+
+func handleHeader(fc *FrankenPHPContext) {
+	for {
+		select {
+		case <-fc.done:
+			return
+		case list := <-fc.headerBuffer.Read():
+			fc.logger.Warn("Starting to read buffer list!")
+			current := (*C.zend_llist)(unsafe.Pointer(&list[0])).head
+			for current != nil {
+				h := (*C.sapi_header_struct)(unsafe.Pointer(&(current.data)))
+
+				if fc.responseWriter != nil {
+					addHeader(fc, h.header, C.int(h.header_len))
+					current = current.next
+				}
+			}
+
+			statusA := <-fc.headerBuffer.Read()
+			var status int
+			err := binary.Read(bytes.NewReader(statusA), nativeEndian(), &status)
+			if err != nil {
+				fc.logger.Error("Failed to parse status", zap.Error(err))
+			}
+			if fc.responseWriter == nil {
+				continue
+			}
+
+			fc.responseWriter.WriteHeader(status)
+
+			if status >= 100 && status < 200 {
+				// Clear headers, it's not automatically done by ResponseWriter.WriteHeader() for 1xx responses
+				h := fc.responseWriter.Header()
+				for k := range h {
+					delete(h, k)
+				}
+			}
+		}
+	}
+}
+
+func nativeEndian() binary.ByteOrder {
+	var i int32 = 0x01020304
+
+	// low byte will be 0x04 on little-endian
+	// and 0x01 on big-endian
+	u := unsafe.Pointer(&i)
+	b := (*byte)(u)
+
+	if *b == 0x04 {
+		return binary.LittleEndian
+	}
+	return binary.BigEndian
 }
 
 //export go_write_headers

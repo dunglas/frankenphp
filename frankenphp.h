@@ -4,6 +4,7 @@
 #include <Zend/zend_types.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include "ring_buffer.h"
 
 #ifndef FRANKENPHP_VERSION
 #define FRANKENPHP_VERSION dev
@@ -47,7 +48,8 @@ int frankenphp_update_server_context(
 
     const char *request_method, char *query_string, zend_long content_length,
     char *path_translated, char *request_uri, const char *content_type,
-    char *auth_user, char *auth_password, int proto_num);
+    char *auth_user, char *auth_password, int proto_num,
+    RingBuffer *output_buffer, RingBuffer *output_header);
 int frankenphp_request_startup();
 int frankenphp_execute_script(char *file_name);
 void frankenphp_register_bulk_variables(go_string known_variables[27],

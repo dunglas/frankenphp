@@ -23,6 +23,7 @@
 
 #include "_cgo_export.h"
 #include "frankenphp_arginfo.h"
+#include "ring_buffer.h"
 
 #if defined(PHP_WIN32) && defined(ZTS)
 ZEND_TSRMLS_CACHE_DEFINE()
@@ -71,6 +72,8 @@ typedef struct frankenphp_server_context {
   bool worker_ready;
   char *cookie_data;
   bool finished;
+  RingBuffer *output_buffer;
+  RingBuffer *output_header;
 } frankenphp_server_context;
 
 static uintptr_t frankenphp_clean_server_context() {
@@ -448,7 +451,8 @@ int frankenphp_update_server_context(
 
     const char *request_method, char *query_string, zend_long content_length,
     char *path_translated, char *request_uri, const char *content_type,
-    char *auth_user, char *auth_password, int proto_num) {
+    char *auth_user, char *auth_password, int proto_num,
+    RingBuffer *output_buffer, RingBuffer *output_header) {
   frankenphp_server_context *ctx;
 
   if (create) {
@@ -474,6 +478,9 @@ int frankenphp_update_server_context(
   } else {
     ctx = (frankenphp_server_context *)SG(server_context);
   }
+
+  ctx->output_buffer = output_buffer;
+  ctx->output_header = output_header;
 
   ctx->main_request = main_request;
   ctx->current_request = current_request;
@@ -508,15 +515,16 @@ static size_t frankenphp_ub_write(const char *str, size_t str_length) {
     return 0;
   }
 
-  struct go_ub_write_return result = go_ub_write(
+  return ring_buffer_write(ctx->output_buffer, str, str_length);
+  /*struct go_ub_write_return result = go_ub_write(
       ctx->current_request ? ctx->current_request : ctx->main_request,
       (char *)str, str_length);
 
   if (result.r1) {
     php_handle_aborted_connection();
-  }
+  }*/
 
-  return result.r0;
+  //return result.r0;
 }
 
 static int frankenphp_send_headers(sapi_headers_struct *sapi_headers) {
@@ -541,13 +549,18 @@ static int frankenphp_send_headers(sapi_headers_struct *sapi_headers) {
     }
   }
 
-  go_write_headers(ctx->current_request, status, &sapi_headers->headers);
+  //go_write_headers(ctx->current_request, status, &sapi_headers->headers);
+  ring_buffer_write_full(ctx->output_header, &sapi_headers->headers, sizeof(uintptr_t));
+  ring_buffer_write_full(ctx->output_header, (void*)(uintptr_t)status, sizeof(uintptr_t));
 
   return SAPI_HEADER_SENT_SUCCESSFULLY;
 }
 
 static void frankenphp_sapi_flush(void *server_context) {
   frankenphp_server_context *ctx = (frankenphp_server_context *)server_context;
+
+  ring_buffer_write_full(ctx->output_buffer, "\x00\x00\x0F\x00\x00", 5);
+  return;
 
   if (ctx && ctx->current_request != 0 && go_sapi_flush(ctx->current_request)) {
     php_handle_aborted_connection();
