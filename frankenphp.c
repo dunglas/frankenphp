@@ -135,9 +135,8 @@ static void frankenphp_worker_request_shutdown() {
   zend_try { php_output_deactivate(); }
   zend_end_try();
 
-  frankenphp_destroy_super_globals();
-
   /* SAPI related shutdown (free stuff) */
+  frankenphp_destroy_super_globals();
   frankenphp_clean_server_context();
   zend_try { sapi_deactivate(); }
   zend_end_try();
@@ -154,10 +153,7 @@ static int frankenphp_worker_request_startup() {
   int retval = SUCCESS;
 
   zend_try {
-    for (int i = 0; i < NUM_TRACK_VARS; i++) {
-      zval_ptr_dtor_nogc(&PG(http_globals)[i]);
-    }
-
+    frankenphp_destroy_super_globals();
     php_output_activate();
 
     /* initialize global variables */
