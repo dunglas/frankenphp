@@ -105,9 +105,7 @@ static uintptr_t frankenphp_clean_server_context() {
 
 static void frankenphp_destroy_super_globals() {
   zend_try {
-    int i;
-
-    for (i = 0; i < NUM_TRACK_VARS; i++) {
+    for (int i = 0; i < NUM_TRACK_VARS; i++) {
       zval_ptr_dtor_nogc(&PG(http_globals)[i]);
     }
 
