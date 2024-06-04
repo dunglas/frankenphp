@@ -550,8 +550,8 @@ static int frankenphp_send_headers(sapi_headers_struct *sapi_headers) {
   }
 
   //go_write_headers(ctx->current_request, status, &sapi_headers->headers);
-  ring_buffer_write_full(ctx->output_header, &sapi_headers->headers, sizeof(uintptr_t));
-  ring_buffer_write_full(ctx->output_header, (void*)(uintptr_t)status, sizeof(uintptr_t));
+  //ring_buffer_write_full(ctx->output_header, &sapi_headers->headers, sizeof(uintptr_t));
+  //ring_buffer_write_full(ctx->output_header, (void*)(uintptr_t)status, sizeof(uintptr_t));
 
   return SAPI_HEADER_SENT_SUCCESSFULLY;
 }
