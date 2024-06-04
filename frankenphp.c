@@ -73,7 +73,7 @@ typedef struct frankenphp_server_context {
   bool finished;
 } frankenphp_server_context;
 
-static uintptr_t frankenphp_clean_server_context() {
+static uintptr_t frankenphp_free_server_context() {
   frankenphp_server_context *ctx = SG(server_context);
   if (ctx == NULL) {
     return 0;
@@ -137,7 +137,7 @@ static void frankenphp_worker_request_shutdown() {
 
   /* SAPI related shutdown (free stuff) */
   frankenphp_destroy_super_globals();
-  frankenphp_clean_server_context();
+  frankenphp_free_server_context();
   zend_try { sapi_deactivate(); }
   zend_end_try();
 
@@ -432,7 +432,7 @@ static uintptr_t frankenphp_request_shutdown() {
 
   free(ctx->cookie_data);
   ((frankenphp_server_context *)SG(server_context))->cookie_data = NULL;
-  uintptr_t rh = frankenphp_clean_server_context();
+  uintptr_t rh = frankenphp_free_server_context();
 
   free(ctx);
   SG(server_context) = NULL;
@@ -858,7 +858,7 @@ int frankenphp_execute_script(char *file_name) {
 
   zend_destroy_file_handle(&file_handle);
 
-  frankenphp_clean_server_context();
+  frankenphp_free_server_context();
   frankenphp_request_shutdown();
 
   return status;
