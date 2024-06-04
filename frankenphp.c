@@ -103,7 +103,7 @@ static uintptr_t frankenphp_clean_server_context() {
   return ctx->current_request;
 }
 
-static void frankenphp_request_reset() {
+static void frankenphp_destroy_super_globals() {
   zend_try {
     int i;
 
@@ -137,8 +137,7 @@ static void frankenphp_worker_request_shutdown() {
   zend_try { php_output_deactivate(); }
   zend_end_try();
 
-  /* Clean super globals */
-  frankenphp_request_reset();
+  frankenphp_destroy_super_globals();
 
   /* SAPI related shutdown (free stuff) */
   frankenphp_clean_server_context();
@@ -388,6 +387,7 @@ PHP_FUNCTION(frankenphp_handle_request) {
   }
 
   frankenphp_worker_request_shutdown();
+  // TODO: simplify
   ctx->current_request = 0;
   go_frankenphp_finish_request(ctx->main_request, request, true);
 
@@ -431,7 +431,7 @@ static uintptr_t frankenphp_request_shutdown() {
   frankenphp_server_context *ctx = SG(server_context);
 
   if (ctx->main_request && ctx->current_request) {
-    frankenphp_request_reset();
+    frankenphp_destroy_super_globals();
   }
 
   php_request_shutdown((void *)0);
