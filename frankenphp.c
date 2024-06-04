@@ -108,7 +108,7 @@ static void frankenphp_destroy_super_globals() {
     int i;
 
     for (i = 0; i < NUM_TRACK_VARS; i++) {
-      zval_ptr_dtor(&PG(http_globals)[i]);
+      zval_ptr_dtor_nogc(&PG(http_globals)[i]);
     }
 
     memset(&PG(http_globals), 0, sizeof(zval) * NUM_TRACK_VARS);
