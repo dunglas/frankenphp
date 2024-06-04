@@ -73,11 +73,11 @@ typedef struct frankenphp_server_context {
   bool finished;
 } frankenphp_server_context;
 
-static void frankenphp_free_server_context() {
+static void frankenphp_free_request_context() {
   frankenphp_server_context *ctx = SG(server_context);
-  if (ctx == NULL) {
-    return;
-  }
+
+  free(ctx->cookie_data);
+  ctx->cookie_data = NULL;
 
   free(SG(request_info).auth_password);
   SG(request_info).auth_password = NULL;
@@ -133,7 +133,7 @@ static void frankenphp_worker_request_shutdown() {
 
   /* SAPI related shutdown (free stuff) */
   frankenphp_destroy_super_globals();
-  frankenphp_free_server_context();
+  frankenphp_free_request_context();
   zend_try { sapi_deactivate(); }
   zend_end_try();
 
@@ -425,11 +425,7 @@ static void frankenphp_request_shutdown() {
   }
 
   php_request_shutdown((void *)0);
-
-  free(ctx->cookie_data);
-  ctx->cookie_data = NULL;
-
-  frankenphp_free_server_context();
+  frankenphp_free_request_context();
 
   free(ctx);
   SG(server_context) = ctx = NULL;
@@ -852,7 +848,7 @@ int frankenphp_execute_script(char *file_name) {
 
   zend_destroy_file_handle(&file_handle);
 
-  frankenphp_free_server_context();
+  frankenphp_free_request_context();
   frankenphp_request_shutdown();
 
   return status;
