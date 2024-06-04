@@ -73,10 +73,10 @@ typedef struct frankenphp_server_context {
   bool finished;
 } frankenphp_server_context;
 
-static uintptr_t frankenphp_free_server_context() {
+static void frankenphp_free_server_context() {
   frankenphp_server_context *ctx = SG(server_context);
   if (ctx == NULL) {
-    return 0;
+    return;
   }
 
   free(SG(request_info).auth_password);
@@ -99,8 +99,6 @@ static uintptr_t frankenphp_free_server_context() {
 
   free(SG(request_info).request_uri);
   SG(request_info).request_uri = NULL;
-
-  return ctx->current_request;
 }
 
 static void frankenphp_destroy_super_globals() {
@@ -423,6 +421,7 @@ static zend_module_entry frankenphp_module = {
 
 static uintptr_t frankenphp_request_shutdown() {
   frankenphp_server_context *ctx = SG(server_context);
+  uintptr_t rh = ctx->current_request;
 
   if (ctx->main_request && ctx->current_request) {
     frankenphp_destroy_super_globals();
@@ -431,12 +430,12 @@ static uintptr_t frankenphp_request_shutdown() {
   php_request_shutdown((void *)0);
 
   free(ctx->cookie_data);
-  ((frankenphp_server_context *)SG(server_context))->cookie_data = NULL;
-  uintptr_t rh = frankenphp_free_server_context();
+  ctx->cookie_data = NULL;
+
+  frankenphp_free_server_context();
 
   free(ctx);
-  SG(server_context) = NULL;
-  ctx = NULL;
+  SG(server_context) = ctx = NULL;
 
 #if defined(ZTS)
   ts_free_thread();
