@@ -132,16 +132,11 @@ static void frankenphp_worker_request_shutdown() {
   zend_end_try();
 
   /* SAPI related shutdown (free stuff) */
-  frankenphp_destroy_super_globals();
   frankenphp_free_request_context();
   zend_try { sapi_deactivate(); }
   zend_end_try();
 
   zend_set_memory_limit(PG(memory_limit));
-
-  for (int i = 0; i < NUM_TRACK_VARS; i++) {
-    array_init(&PG(http_globals)[i]);
-  }
 }
 
 /* Adapted from php_request_startup() */
@@ -377,7 +372,6 @@ PHP_FUNCTION(frankenphp_handle_request) {
   }
 
   frankenphp_worker_request_shutdown();
-  // TODO: simplify
   ctx->current_request = 0;
   go_frankenphp_finish_request(ctx->main_request, request, true);
 

@@ -74,16 +74,13 @@ $handler = static function () use ($myApp) {
     // Called when a request is received,
     // superglobals, php://input and the like are reset
     echo $myApp->handle($_GET, $_POST, $_COOKIE, $_FILES, $_SERVER);
-
-    // Close the HTTP connection
-    frankenphp_finish_request();
-
-    // Do something after sending the HTTP response
-    $myApp->terminate();
 };
 
 for($nbRequests = 0, $running = true; isset($_SERVER['MAX_REQUESTS']) && ($nbRequests < ((int) $_SERVER['MAX_REQUESTS'])) && $running; ++$nbRequests) {
     $running = \frankenphp_handle_request($handler);
+
+    // Do something after sending the HTTP response
+    $myApp->terminate();
 
     // Call the garbage collector to reduce the chances of it being triggered in the middle of a page generation
     gc_collect_cycles();
@@ -126,13 +123,14 @@ The previous worker snippet allows configuring a maximum number of request to ha
 [PHP superglobals](https://www.php.net/manual/en/language.variables.superglobals.php) (`$_SERVER`, `$_ENV`, `$_GET`...)
 behave as follow:
 
-* inside the [callback](https://www.php.net/manual/en/language.types.callable.php) passed to `frankenphp_handle_request()`, superglobals contain values generated from HTTP request being processed, and have different values for each request
-* outside of the callback , superglobals contain values bound to the worker script itself
+* before the first call to `frankenphp_handle_request()`, superglobals contain values bound to the worker script itself
+* during and after the call to `frankenphp_handle_request()`, superglobals contain values generated from the processed HTTP request, each call to `frankenphp_handle_request()` changes the superglobals values.
 
 To access the superglobals of the worker script inside the callback, you must copy them and import the copy in the scope of the callback:
 
 ```php
 <?php
+// Copy worker's $_SERVER superglobal before the first call to frankenphp_handle_request()
 $workerServer = $_SERVER;
 
 // Handler outside the loop for better performance (doing less work)
