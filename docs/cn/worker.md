@@ -68,11 +68,11 @@ $myApp->boot();
 
 // 循环外的处理程序以获得更好的性能（减少工作量）
 $handler = static function () use ($myApp) {
-        // 收到请求时调用
-        // 超全局变量 php://input
-        echo $myApp->handle($_GET, $_POST, $_COOKIE, $_FILES, $_SERVER);
+    // 收到请求时调用
+    // 超全局变量 php://input
+    echo $myApp->handle($_GET, $_POST, $_COOKIE, $_FILES, $_SERVER);
 };
-for($nbRequests = 0, $running = true; isset($_SERVER['MAX_REQUESTS']) && ($nbRequests < ((int)$_SERVER['MAX_REQUESTS'])) && $running; ++$nbRequests) {
+for ($nbRequests = 0, $running = true; isset($_SERVER['MAX_REQUESTS']) && ($nbRequests < ((int)$_SERVER['MAX_REQUESTS'])) && $running; ++$nbRequests) {
     $running = \frankenphp_handle_request($handler);
 
     // 发送 HTTP 响应后执行某些操作

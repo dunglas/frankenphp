@@ -76,7 +76,7 @@ $handler = static function () use ($myApp) {
     echo $myApp->handle($_GET, $_POST, $_COOKIE, $_FILES, $_SERVER);
 };
 
-for($nbRequests = 0, $running = true; isset($_SERVER['MAX_REQUESTS']) && ($nbRequests < ((int) $_SERVER['MAX_REQUESTS'])) && $running; ++$nbRequests) {
+for ($nbRequests = 0, $running = true; isset($_SERVER['MAX_REQUESTS']) && ($nbRequests < ((int) $_SERVER['MAX_REQUESTS'])) && $running; ++$nbRequests) {
     $running = \frankenphp_handle_request($handler);
 
     // Do something after sending the HTTP response
@@ -124,7 +124,7 @@ The previous worker snippet allows configuring a maximum number of request to ha
 behave as follow:
 
 * before the first call to `frankenphp_handle_request()`, superglobals contain values bound to the worker script itself
-* during and after the call to `frankenphp_handle_request()`, superglobals contain values generated from the processed HTTP request, each call to `frankenphp_handle_request()` changes the superglobals values.
+* during and after the call to `frankenphp_handle_request()`, superglobals contain values generated from the processed HTTP request, each call to `frankenphp_handle_request()` changes the superglobals values
 
 To access the superglobals of the worker script inside the callback, you must copy them and import the copy in the scope of the callback:
 
@@ -133,7 +133,6 @@ To access the superglobals of the worker script inside the callback, you must co
 // Copy worker's $_SERVER superglobal before the first call to frankenphp_handle_request()
 $workerServer = $_SERVER;
 
-// Handler outside the loop for better performance (doing less work)
 $handler = static function () use ($workerServer) {
     var_dump($_SERVER); // Request-bound $_SERVER
     var_dump($workerServer); // $_SERVER of the worker script
