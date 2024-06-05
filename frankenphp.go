@@ -755,7 +755,7 @@ func go_read_cookies(rh C.uintptr_t) *C.char {
 		cookieStrings[i] = cookie.String()
 	}
 
-	// freed in frankenphp_request_shutdown()
+	// freed in frankenphp_free_request_context()
 	return C.CString(strings.Join(cookieStrings, "; "))
 }
 

@@ -71,12 +71,12 @@ $myApp->boot();
 
 // Daha iyi performans için döngü dışında işleyici (daha az iş yapıyor)
 $handler = static function () use ($myApp) {
-        // Bir istek alındığında çağrılır,
-        // superglobals, php://input ve benzerleri sıfırlanır
-        echo $myApp->handle($_GET, $_POST, $_COOKIE, $_FILES, $_SERVER);
+    // Bir istek alındığında çağrılır,
+    // superglobals, php://input ve benzerleri sıfırlanır
+    echo $myApp->handle($_GET, $_POST, $_COOKIE, $_FILES, $_SERVER);
 };
 
-for($nbRequests = 0, $running = true; isset($_SERVER['MAX_REQUESTS']) && ($nbRequests < ((int)$_SERVER['MAX_REQUESTS'])) && $running; ++$nbRequests) {
+for ($nbRequests = 0, $running = true; isset($_SERVER['MAX_REQUESTS']) && ($nbRequests < ((int)$_SERVER['MAX_REQUESTS'])) && $running; ++$nbRequests) {
     $running = \frankenphp_handle_request($handler);
 
     // HTTP yanıtını gönderdikten sonra bir şey yapın

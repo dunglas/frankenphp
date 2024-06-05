@@ -71,12 +71,12 @@ $myApp->boot();
 
 // En dehors de la boucle pour de meilleures performances (moins de travail effectué)
 $handler = static function () use ($myApp) {
-        // Appelé lorsqu'une requête est reçue,
-        // les superglobales, php://input, etc., sont réinitialisés
-        echo $myApp->handle($_GET, $_POST, $_COOKIE, $_FILES, $_SERVER);
+    // Appelé lorsqu'une requête est reçue,
+    // les superglobales, php://input, etc., sont réinitialisés
+    echo $myApp->handle($_GET, $_POST, $_COOKIE, $_FILES, $_SERVER);
 };
 
-for($nbRequests = 0, $running = true; isset($_SERVER['MAX_REQUESTS']) && ($nbRequests < ((int)$_SERVER['MAX_REQUESTS'])) && $running; ++$nbRequests) {
+for ($nbRequests = 0, $running = true; isset($_SERVER['MAX_REQUESTS']) && ($nbRequests < ((int)$_SERVER['MAX_REQUESTS'])) && $running; ++$nbRequests) {
     $running = \frankenphp_handle_request($handler);
 
     // Faire quelque chose après l'envoi de la réponse HTTP
@@ -117,3 +117,26 @@ Comme PHP n'a pas été initialement conçu pour des processus de longue durée,
 Une solution pour utiliser ce type de code en mode worker est de redémarrer le script worker après avoir traité un certain nombre de requêtes :
 
 Le code du worker précédent permet de configurer un nombre maximal de requêtes à traiter en définissant une variable d'environnement nommée `MAX_REQUESTS`.
+
+## Comportement des superglobales
+
+[Les superglobales PHP](https://www.php.net/manual/fr/language.variables.superglobals.php) (`$_SERVER`, `$_ENV`, `$_GET`...)
+se comportent comme suit :
+
+* avant le premier appel à `frankenphp_handle_request()`, les superglobales contiennent des valeurs liées au script worker lui-même
+* pendant et après l'appel à `frankenphp_handle_request()`, les superglobales contiennent des valeurs générées à partir de la requête HTTP traitée, chaque appel à `frankenphp_handle_request()` change les valeurs des superglobales
+
+Pour accéder aux superglobales du script worker à l'intérieur de la fonction de rappel, vous devez les copier et importer la copie dans le scope de la fonction :
+
+```php
+<?php
+// Copier la superglobale $_SERVER du worker avant le premier appel à frankenphp_handle_request()
+$workerServer = $_SERVER;
+
+$handler = static function () use ($workerServer) {
+    var_dump($_SERVER); // $_SERVER lié à la requête
+    var_dump($workerServer); // $_SERVER du script worker
+};
+
+// ...
+```

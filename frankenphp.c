@@ -73,11 +73,11 @@ typedef struct frankenphp_server_context {
   bool finished;
 } frankenphp_server_context;
 
-static uintptr_t frankenphp_clean_server_context() {
+static void frankenphp_free_request_context() {
   frankenphp_server_context *ctx = SG(server_context);
-  if (ctx == NULL) {
-    return 0;
-  }
+
+  free(ctx->cookie_data);
+  ctx->cookie_data = NULL;
 
   free(SG(request_info).auth_password);
   SG(request_info).auth_password = NULL;
@@ -99,19 +99,13 @@ static uintptr_t frankenphp_clean_server_context() {
 
   free(SG(request_info).request_uri);
   SG(request_info).request_uri = NULL;
-
-  return ctx->current_request;
 }
 
-static void frankenphp_request_reset() {
+static void frankenphp_destroy_super_globals() {
   zend_try {
-    int i;
-
-    for (i = 0; i < NUM_TRACK_VARS; i++) {
-      zval_ptr_dtor(&PG(http_globals)[i]);
+    for (int i = 0; i < NUM_TRACK_VARS; i++) {
+      zval_ptr_dtor_nogc(&PG(http_globals)[i]);
     }
-
-    memset(&PG(http_globals), 0, sizeof(zval) * NUM_TRACK_VARS);
   }
   zend_end_try();
 }
@@ -137,11 +131,8 @@ static void frankenphp_worker_request_shutdown() {
   zend_try { php_output_deactivate(); }
   zend_end_try();
 
-  /* Clean super globals */
-  frankenphp_request_reset();
-
   /* SAPI related shutdown (free stuff) */
-  frankenphp_clean_server_context();
+  frankenphp_free_request_context();
   zend_try { sapi_deactivate(); }
   zend_end_try();
 
@@ -153,6 +144,7 @@ static int frankenphp_worker_request_startup() {
   int retval = SUCCESS;
 
   zend_try {
+    frankenphp_destroy_super_globals();
     php_output_activate();
 
     /* initialize global variables */
@@ -419,28 +411,22 @@ static zend_module_entry frankenphp_module = {
     TOSTRING(FRANKENPHP_VERSION),
     STANDARD_MODULE_PROPERTIES};
 
-static uintptr_t frankenphp_request_shutdown() {
+static void frankenphp_request_shutdown() {
   frankenphp_server_context *ctx = SG(server_context);
 
   if (ctx->main_request && ctx->current_request) {
-    frankenphp_request_reset();
+    frankenphp_destroy_super_globals();
   }
 
   php_request_shutdown((void *)0);
-
-  free(ctx->cookie_data);
-  ((frankenphp_server_context *)SG(server_context))->cookie_data = NULL;
-  uintptr_t rh = frankenphp_clean_server_context();
+  frankenphp_free_request_context();
 
   free(ctx);
-  SG(server_context) = NULL;
-  ctx = NULL;
+  SG(server_context) = ctx = NULL;
 
 #if defined(ZTS)
   ts_free_thread();
 #endif
-
-  return rh;
 }
 
 int frankenphp_update_server_context(
@@ -856,7 +842,7 @@ int frankenphp_execute_script(char *file_name) {
 
   zend_destroy_file_handle(&file_handle);
 
-  frankenphp_clean_server_context();
+  frankenphp_free_request_context();
   frankenphp_request_shutdown();
 
   return status;
