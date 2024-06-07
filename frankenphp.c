@@ -137,6 +137,7 @@ static void frankenphp_worker_request_shutdown() {
   zend_end_try();
 
   zend_set_memory_limit(PG(memory_limit));
+  SG(rfc1867_uploaded_files) = NULL;
 }
 
 /* Adapted from php_request_startup() */
