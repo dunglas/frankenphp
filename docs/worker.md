@@ -76,7 +76,7 @@ $handler = static function () use ($myApp) {
     echo $myApp->handle($_GET, $_POST, $_COOKIE, $_FILES, $_SERVER);
 };
 
-for ($nbRequests = 0, $running = true; isset($_SERVER['MAX_REQUESTS']) && ($nbRequests < ((int) $_SERVER['MAX_REQUESTS'])) && $running; ++$nbRequests) {
+for ($nbRequests = 0, $running = true; $running && (!isset($_SERVER['MAX_REQUESTS']) || $nbRequests < (int)$_SERVER['MAX_REQUESTS']); ++$nbRequests) {
     $running = \frankenphp_handle_request($handler);
 
     // Do something after sending the HTTP response
