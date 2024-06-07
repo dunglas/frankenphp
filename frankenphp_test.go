@@ -5,10 +5,12 @@
 package frankenphp_test
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
 	"log"
+	"mime/multipart"
 	"net/http"
 	"net/http/cookiejar"
 	"net/http/httptest"
@@ -597,6 +599,33 @@ func testRequestHeaders(t *testing.T, opts *testOptions) {
 
 		assert.Contains(t, string(body), "[Content-Type] => text/plain")
 		assert.Contains(t, string(body), fmt.Sprintf("[Frankenphp-I] => %d", i))
+	}, opts)
+}
+
+func TestFileUpload_module(t *testing.T) { testFileUpload(t, &testOptions{}) }
+func TestFileUpload_worker(t *testing.T) {
+	testFileUpload(t, &testOptions{workerScript: "file-upload.php"})
+}
+func testFileUpload(t *testing.T, opts *testOptions) {
+	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
+		requestBody := &bytes.Buffer{}
+		writer := multipart.NewWriter(requestBody)
+		part, _ := writer.CreateFormFile("file", "foo.txt")
+		_, err := part.Write([]byte("bar"))
+		require.NoError(t, err)
+
+		writer.Close()
+
+		req := httptest.NewRequest("POST", "http://example.com/file-upload.php", requestBody)
+		req.Header.Add("Content-Type", writer.FormDataContentType())
+
+		w := httptest.NewRecorder()
+		handler(w, req)
+
+		resp := w.Result()
+		body, _ := io.ReadAll(resp.Body)
+
+		assert.Contains(t, string(body), "Upload OK")
 	}, opts)
 }
 
