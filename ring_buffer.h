@@ -11,7 +11,7 @@
 typedef struct {
     size_t total_length;
     size_t fragment_offset;
-    const char *data; // Use pointer to avoid copying data
+    char *data; // Use pointer to avoid copying data
 } __attribute__((aligned(CACHE_LINE_SIZE))) RingBufferSlot;
 
 typedef struct {

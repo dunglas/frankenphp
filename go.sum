@@ -26,6 +26,7 @@ github.com/withinboredom/cgoc v0.0.0-20240604202341-227b90002903 h1:oL2JbGMpejYG
 github.com/withinboredom/cgoc v0.0.0-20240604202341-227b90002903/go.mod h1:WLIJM2Z8W2OKk52iuCaCvyHJD01JYN9wWBeNiWgC/vc=
 github.com/withinboredom/cgoc v0.0.0-20240604202728-9f58d0ff5e45/go.mod h1:LgiDbsq0vsfXQS2WrWcuDiPCvx5SbgUztAxDaVwifJo=
 github.com/withinboredom/cgoc v0.0.0/go.mod h1:LgiDbsq0vsfXQS2WrWcuDiPCvx5SbgUztAxDaVwifJo=
+github.com/withinboredom/cgoc v0.0.1-0.20240605091855-dab9cd62dd76/go.mod h1:LgiDbsq0vsfXQS2WrWcuDiPCvx5SbgUztAxDaVwifJo=
 go.uber.org/goleak v1.3.0 h1:2K3zAYmnTNqV73imy9J1T3WC+gmCePx2hEGkimedGto=
 go.uber.org/goleak v1.3.0/go.mod h1:CoHD4mav9JJNrW/WLlf7HGZPjdw8EucARQHekz1X6bE=
 go.uber.org/multierr v1.11.0 h1:blXXJkSxSSfBVBlC76pxqeO+LN3aDfLQo+309xJstO0=

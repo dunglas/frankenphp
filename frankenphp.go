@@ -462,8 +462,11 @@ func ServeHTTP(responseWriter http.ResponseWriter, request *http.Request) error 
 	}
 
 	fc.responseWriter = responseWriter
-	go handleResponse(responseWriter, fc, request)
-	go handleHeader(fc)
+	rqctx, cancel := context.WithCancel(context.Background())
+	wg := sync.WaitGroup{}
+	wg.Add(2)
+	go handleResponse(fc, request, rqctx, &wg)
+	go handleHeader(fc, rqctx, &wg)
 
 	rc := requestChan
 	// Detect if a worker is available to handle this request
@@ -479,38 +482,48 @@ func ServeHTTP(responseWriter http.ResponseWriter, request *http.Request) error 
 		<-fc.done
 	}
 
+	cancel()
+	wg.Wait()
+	fc.logger.Warn("Done with request", zap.String("request", fmt.Sprintf("%p", request)))
+	//fc.headerBuffer.Destroy()
+	fc.outputBuffer.Destroy()
+
 	return nil
 }
 
-func handleResponse(writer http.ResponseWriter, fc *FrankenPHPContext, r *http.Request) {
+func handleResponse(fc *FrankenPHPContext, r *http.Request, ctx context.Context, wg *sync.WaitGroup) {
+	defer wg.Done()
 	for {
 		select {
 		case <-fc.done:
 			return
+		case <-ctx.Done():
+			return
 		case data := <-fc.outputBuffer.Read():
-			if writer == nil {
+			if fc.responseWriter == nil {
 				fc.logger.Info(string(data))
 				continue
 			}
 
 			if bytes.Equal(data, []byte{'\x00', '\x00', '\x0F', '\x00', '\x00'}) {
 				if err := http.NewResponseController(fc.responseWriter).Flush(); err != nil {
-					fc.logger.Error("the current responseWriter is not a flusher", zap.Error(err))
+					fc.logger.Error("the current responseWriter is not a flusher", zap.Error(err), zap.String("request", fmt.Sprintf("%p", r)))
 				}
 				continue
 			}
 
-			var write int
+			//var write int
 			var err error
-			for {
-				write, err = writer.Write(data)
+			for len(data) > 0 {
+				_, err = fc.responseWriter.Write(data)
+				//fc.logger.Warn("sent", zap.String("bytes", string(data)), zap.String("request", fmt.Sprintf("%p", r)))
 				if err != nil {
-					fc.logger.Error("write error", zap.Error(err))
+					fc.logger.Error("write error", zap.Error(err), zap.String("request", fmt.Sprintf("%p", r)))
 				}
-				if write == len(data) {
-					break
-				}
-				data = data[write:]
+				//if write == len(data) {
+				break
+				//}
+				//data = data[write:]
 			}
 
 			if clientHasClosed(r) {
@@ -735,10 +748,13 @@ func addHeader(fc *FrankenPHPContext, cString *C.char, length C.int) {
 	fc.responseWriter.Header().Add(parts[0], parts[1])
 }
 
-func handleHeader(fc *FrankenPHPContext) {
+func handleHeader(fc *FrankenPHPContext, ctx context.Context, wg *sync.WaitGroup) {
+	defer wg.Done()
 	for {
 		select {
 		case <-fc.done:
+			return
+		case <-ctx.Done():
 			return
 		case list := <-fc.headerBuffer.Read():
 			fc.logger.Warn("Starting to read buffer list!")
