@@ -116,7 +116,7 @@ static void frankenphp_worker_request_shutdown() {
   zend_try { php_output_end_all(); }
   zend_end_try();
 
-  // TODO: store the list of modules to reload in a global module variable
+  /* TODO: store the list of modules to reload in a global module variable */
   const char **module_name;
   zend_module_entry *module;
   for (module_name = MODULES_TO_RELOAD; *module_name; module_name++) {
@@ -137,6 +137,8 @@ static void frankenphp_worker_request_shutdown() {
   zend_end_try();
 
   zend_set_memory_limit(PG(memory_limit));
+  /* TODO: remove next line when https://github.com/php/php-src/pull/14499 will
+   * be available */
   SG(rfc1867_uploaded_files) = NULL;
 }
 
@@ -157,7 +159,7 @@ static int frankenphp_worker_request_startup() {
 
     /*
      * Timeouts are currently fundamentally broken with ZTS:
-     *https://bugs.php.net/bug.php?id=79464
+     * https://bugs.php.net/bug.php?id=79464
      *
      *if (PG(max_input_time) == -1) {
      *	zend_set_timeout(EG(timeout_seconds), 1);
@@ -189,11 +191,11 @@ static int frankenphp_worker_request_startup() {
 
     zend_is_auto_global(ZSTR_KNOWN(ZEND_STR_AUTOGLOBAL_SERVER));
 
-    // unfinish the request
+    /* Unfinish the request */
     frankenphp_server_context *ctx = SG(server_context);
     ctx->finished = false;
 
-    // TODO: store the list of modules to reload in a global module variable
+    /* TODO: store the list of modules to reload in a global module variable */
     const char **module_name;
     zend_module_entry *module;
     for (module_name = MODULES_TO_RELOAD; *module_name; module_name++) {
@@ -259,12 +261,13 @@ PHP_FUNCTION(frankenphp_request_headers) {
 }
 /* }}} */
 
-// add_response_header and apache_response_headers are copied from
-// https://github.com/php/php-src/blob/master/sapi/cli/php_cli_server.c
-// Copyright (c) The PHP Group
-// Licensed under The PHP License
-// Original authors: Moriyoshi Koizumi <moriyoshi@php.net> and Xinchen Hui
-// <laruence@php.net>
+/* add_response_header and apache_response_headers are copied from
+ * https://github.com/php/php-src/blob/master/sapi/cli/php_cli_server.c
+ * Copyright (c) The PHP Group
+ * Licensed under The PHP License
+ * Original authors: Moriyoshi Koizumi <moriyoshi@php.net> and Xinchen Hui
+ * <laruence@php.net>
+ */
 static void add_response_header(sapi_header_struct *h,
                                 zval *return_value) /* {{{ */
 {
@@ -322,7 +325,7 @@ PHP_FUNCTION(frankenphp_handle_request) {
   frankenphp_server_context *ctx = SG(server_context);
 
   if (ctx->main_request == 0) {
-    // not a worker, throw an error
+    /* not a worker, throw an error */
     zend_throw_exception(
         spl_ce_RuntimeException,
         "frankenphp_handle_request() called while not in worker mode", 0);
@@ -340,7 +343,7 @@ PHP_FUNCTION(frankenphp_handle_request) {
   }
 
 #ifdef ZEND_MAX_EXECUTION_TIMERS
-  // Disable timeouts while waiting for a request to handle
+  /* Disable timeouts while waiting for a request to handle */
   zend_unset_timeout();
 #endif
 
@@ -353,8 +356,10 @@ PHP_FUNCTION(frankenphp_handle_request) {
   }
 
 #ifdef ZEND_MAX_EXECUTION_TIMERS
-  // Reset default timeout
-  // TODO: add support for max_input_time
+  /*
+   * Reset default timeout
+   * TODO: add support for max_input_time
+   */
   zend_set_timeout(INI_INT("max_execution_time"), 0);
 #endif
 
@@ -366,8 +371,10 @@ PHP_FUNCTION(frankenphp_handle_request) {
     zval_ptr_dtor(&retval);
   }
 
-  /* If an exception occured, print the message to the client before closing the
-   * connection */
+  /*
+   * If an exception occured, print the message to the client before closing the
+   * connection
+   */
   if (EG(exception)) {
     zend_exception_error(EG(exception), E_ERROR);
   }
@@ -491,7 +498,8 @@ static size_t frankenphp_ub_write(const char *str, size_t str_length) {
   frankenphp_server_context *ctx = SG(server_context);
 
   if (ctx->finished) {
-    // TODO: maybe log a warning that we tried to write to a finished request?
+    /* TODO: maybe log a warning that we tried to write to a finished request?
+     */
     return 0;
   }
 
@@ -714,8 +722,10 @@ sapi_module_struct frankenphp_sapi_module = {
     STANDARD_SAPI_MODULE_PROPERTIES};
 
 static void *manager_thread(void *arg) {
-  // SIGPIPE must be masked in non-Go threads:
-  // https://pkg.go.dev/os/signal#hdr-Go_programs_that_use_cgo_or_SWIG
+  /*
+   * SIGPIPE must be masked in non-Go threads:
+   * https://pkg.go.dev/os/signal#hdr-Go_programs_that_use_cgo_or_SWIG
+   */
   sigset_t set;
   sigemptyset(&set);
   sigaddset(&set, SIGPIPE);
@@ -849,17 +859,19 @@ int frankenphp_execute_script(char *file_name) {
   return status;
 }
 
-// Use global variables to store CLI arguments to prevent useless allocations
+/* Use global variables to store CLI arguments to prevent useless allocations */
 static char *cli_script;
 static int cli_argc;
 static char **cli_argv;
 
-// CLI code is adapted from
-// https://github.com/php/php-src/blob/master/sapi/cli/php_cli.c Copyright (c)
-// The PHP Group Licensed under The PHP License Original uthors: Edin Kadribasic
-// <edink@php.net>, Marcus Boerger <helly@php.net> and Johannes Schlueter
-// <johannes@php.net> Parts based on CGI SAPI Module by Rasmus Lerdorf, Stig
-// Bakken and Zeev Suraski
+/*
+ * CLI code is adapted from
+ * https://github.com/php/php-src/blob/master/sapi/cli/php_cli.c Copyright (c)
+ * The PHP Group Licensed under The PHP License Original uthors: Edin Kadribasic
+ * <edink@php.net>, Marcus Boerger <helly@php.net> and Johannes Schlueter
+ * <johannes@php.net> Parts based on CGI SAPI Module by Rasmus Lerdorf, Stig
+ * Bakken and Zeev Suraski
+ */
 static void cli_register_file_handles(bool no_close) /* {{{ */
 {
   php_stream *s_in, *s_out, *s_err;
@@ -886,7 +898,7 @@ static void cli_register_file_handles(bool no_close) /* {{{ */
     s_err->flags |= PHP_STREAM_FLAG_NO_CLOSE;
   }
 
-  // s_in_process = s_in;
+  /*s_in_process = s_in;*/
 
   php_stream_to_zval(s_in, &ic.value);
   php_stream_to_zval(s_out, &oc.value);
@@ -911,7 +923,8 @@ static void sapi_cli_register_variables(zval *track_vars_array) /* {{{ */
   size_t len;
   char *docroot = "";
 
-  /* In CGI mode, we consider the environment to be a part of the server
+  /*
+   * In CGI mode, we consider the environment to be a part of the server
    * variables
    */
   php_import_environment_variables(track_vars_array);
@@ -950,7 +963,9 @@ static void sapi_cli_register_variables(zval *track_vars_array) /* {{{ */
 static void *execute_script_cli(void *arg) {
   void *exit_status;
 
-  // The SAPI name "cli" is hardcoded into too many programs... let's usurp it.
+  /*
+   * The SAPI name "cli" is hardcoded into too many programs... let's usurp it.
+   */
   php_embed_module.name = "cli";
   php_embed_module.pretty_name = "PHP CLI embedded in FrankenPHP";
   php_embed_module.register_server_variables = sapi_cli_register_variables;
@@ -983,8 +998,10 @@ int frankenphp_execute_script_cli(char *script, int argc, char **argv) {
   cli_argc = argc;
   cli_argv = argv;
 
-  // Start the script in a dedicated thread to prevent conflicts between Go and
-  // PHP signal handlers
+  /*
+   * Start the script in a dedicated thread to prevent conflicts between Go and
+   * PHP signal handlers
+   */
   err = pthread_create(&thread, NULL, execute_script_cli, NULL);
   if (err != 0) {
     return err;
