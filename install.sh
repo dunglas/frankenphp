@@ -53,9 +53,22 @@ if [ -z "$THE_ARCH_BIN" ]; then
    exit 1
 fi
 
-curl -L --progress-bar "https://github.com/$THIS_PROJECT_OWNER/$THIS_PROJECT_NAME/releases/latest/download/$THE_ARCH_BIN" -o "$DEST"
 
-chmod +x "$DEST"
+SUDO=""
+
+# check if $DEST is writable and suppress an error message
+touch $DEST 2>/dev/null
+
+# we need sudo powers to write to DEST
+if [ $? -eq 1 ]; then
+    echo "You do not have permission to write to $DEST, enter your password to grant sudo powers"
+    SUDO="sudo"
+fi
+
+$SUDO curl -L --progress-bar "https://github.com/$THIS_PROJECT_OWNER/$THIS_PROJECT_NAME/releases/latest/download/$THE_ARCH_BIN" -o "$DEST"
+
+$SUDO chmod +x "$DEST"
+
 
 echo "Installed successfully to: $DEST"
 
