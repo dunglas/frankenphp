@@ -4,9 +4,9 @@
 
 Variants for PHP 8.2 and PHP 8.3 are provided.
 
-The tags follows this pattern: `dunglas/frankenphp/<frankenphp-version>-php<php-version>-<os>`
+The tags follows this pattern: `dunglas/frankenphp:<frankenphp-version>-php<php-version>-<os>`
 
-* `<frankenphp-version>` and `<php-version> can be a major, minor or patch version, respectively of FrankenPHP and PHP.
+* `<frankenphp-version>` and `<php-version>` are version numbers of FrankenPHP and PHP respectively, with specifities ranging from major (e.g. `1`), minor (e.g. `1.2`) to patch versions (e.g. `1.2.3`).
 * `<os>` is either `bookworm` (for Debian Bookworm) or `alpine` (for the latest stable version of Alpine).
 
 [Browse tags](https://hub.docker.com/r/dunglas/frankenphp/tags).
