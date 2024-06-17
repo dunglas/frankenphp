@@ -28,8 +28,8 @@
 ZEND_TSRMLS_CACHE_DEFINE()
 #endif
 
-/* Timeouts are currently fundamentally broken with ZTS except on Linux:
- * https://bugs.php.net/bug.php?id=79464 */
+/* Timeouts are currently fundamentally broken with ZTS except on Linux and
+ * FreeBSD: https://bugs.php.net/bug.php?id=79464 */
 #ifndef ZEND_MAX_EXECUTION_TIMERS
 static const char HARDCODED_INI[] = "max_execution_time=0\n"
                                     "max_input_time=-1\n\0";
@@ -157,16 +157,13 @@ static int frankenphp_worker_request_startup() {
     /* Keep the current execution context */
     sapi_activate();
 
-    /*
-     * Timeouts are currently fundamentally broken with ZTS:
-     * https://bugs.php.net/bug.php?id=79464
-     *
-     *if (PG(max_input_time) == -1) {
-     *	zend_set_timeout(EG(timeout_seconds), 1);
-     *} else {
-     *	zend_set_timeout(PG(max_input_time), 1);
-     *}
-     */
+#ifdef ZEND_MAX_EXECUTION_TIMERS
+    if (PG(max_input_time) == -1) {
+      zend_set_timeout(EG(timeout_seconds), 1);
+    } else {
+      zend_set_timeout(PG(max_input_time), 1);
+    }
+#endif
 
     if (PG(expose_php)) {
       sapi_add_header(SAPI_PHP_VERSION_HEADER,
@@ -358,9 +355,10 @@ PHP_FUNCTION(frankenphp_handle_request) {
 #ifdef ZEND_MAX_EXECUTION_TIMERS
   /*
    * Reset default timeout
-   * TODO: add support for max_input_time
    */
-  zend_set_timeout(INI_INT("max_execution_time"), 0);
+  if (PG(max_input_time) != -1) {
+    zend_set_timeout(INI_INT("max_execution_time"), 0);
+  }
 #endif
 
   /* Call the PHP func */
