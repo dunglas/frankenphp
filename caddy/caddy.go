@@ -210,8 +210,10 @@ type FrankenPHPModule struct {
 	// ResolveRootSymlink enables resolving the `root` directory to its actual value by evaluating a symbolic link, if one exists.
 	ResolveRootSymlink *bool `json:"resolve_root_symlink,omitempty"`
 	// Env sets an extra environment variable to the given value. Can be specified more than once for multiple environment variables.
-	Env    frankenphp.PreparedEnv `json:"env,omitempty"`
-	logger *zap.Logger
+	Env map[string]string `json:"env,omitempty"`
+
+	preparedEnv frankenphp.PreparedEnv
+	logger      *zap.Logger
 }
 
 // CaddyModule returns the Caddy module information.
@@ -249,6 +251,10 @@ func (f *FrankenPHPModule) Provision(ctx caddy.Context) error {
 		f.ResolveRootSymlink = &rrs
 	}
 
+	if f.preparedEnv == nil {
+		f.preparedEnv = frankenphp.PrepareEnv(f.Env)
+	}
+
 	return nil
 }
 
@@ -260,9 +266,9 @@ func (f FrankenPHPModule) ServeHTTP(w http.ResponseWriter, r *http.Request, _ ca
 
 	documentRoot := repl.ReplaceKnown(f.Root, "")
 
-	env := make(map[string]string, len(f.Env)+1)
+	env := make(map[string]string, len(f.preparedEnv)+1)
 	env["REQUEST_URI\x00"] = origReq.URL.RequestURI()
-	for k, v := range f.Env {
+	for k, v := range f.preparedEnv {
 		env[k] = repl.ReplaceKnown(v, "")
 	}
 
@@ -303,9 +309,11 @@ func (f *FrankenPHPModule) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 					return d.ArgErr()
 				}
 				if f.Env == nil {
-					f.Env = make(frankenphp.PreparedEnv)
+					f.Env = make(map[string]string)
+					f.preparedEnv = make(frankenphp.PreparedEnv)
 				}
-				f.Env[args[0]+"\x00"] = args[1]
+				f.Env[args[0]] = args[1]
+				f.preparedEnv[args[0]+"\x00"] = args[1]
 
 			case "resolve_root_symlink":
 				if d.NextArg() {
