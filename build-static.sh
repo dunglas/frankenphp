@@ -3,7 +3,7 @@
 set -o errexit
 set -x
 
-if ! type "git" > /dev/null; then
+if ! type "git" > /dev/null 2>&1; then
     echo "The \"git\" command must be installed."
     exit 1
 fi
@@ -16,7 +16,7 @@ if [ "${os}" = "darwin" ]; then
     md5binary="md5 -q"
 fi
 
-if [ "${os}" = "linux" ] && ! type "cmake" > /dev/null; then
+if [ "${os}" = "linux" ] && ! type "cmake" > /dev/null 2>&1; then
     echo "The \"cmake\" command must be installed."
     exit 1
 fi
@@ -28,7 +28,7 @@ if [ -z "${PHP_EXTENSIONS}" ]; then
         export PHP_EXTENSIONS
         cd -
     else
-        export PHP_EXTENSIONS="apcu,bcmath,bz2,calendar,ctype,curl,dba,dom,exif,fileinfo,filter,ftp,gd,gmp,gettext,iconv,igbinary,imagick,intl,ldap,mbregex,mbstring,mysqli,mysqlnd,opcache,openssl,parallel,pcntl,pdo,pdo_mysql,pdo_pgsql,pdo_sqlite,pgsql,phar,posix,protobuf,readline,redis,session,shmop,simplexml,soap,sockets,sodium,sqlite3,ssh2,sysvmsg,sysvsem,sysvshm,tidy,tokenizer,xlswriter,xml,xmlreader,xmlwriter,zip,zlib,yaml,zstd"
+        export PHP_EXTENSIONS="apcu,bcmath,bz2,calendar,ctype,curl,dba,dom,exif,fileinfo,filter,ftp,gd,gmp,gettext,iconv,igbinary,imagick,intl,ldap,mbregex,mbstring,mysqli,mysqlnd,opcache,openssl,pcntl,pdo,pdo_mysql,pdo_pgsql,pdo_sqlite,pgsql,phar,posix,protobuf,readline,redis,session,shmop,simplexml,soap,sockets,sodium,sqlite3,ssh2,sysvmsg,sysvsem,sysvshm,tidy,tokenizer,xlswriter,xml,xmlreader,xmlwriter,zip,zlib,yaml,zstd"
     fi
 fi
 
@@ -83,18 +83,20 @@ else
         cd static-php-cli/
         git pull
     else
-        git clone --depth 1 https://github.com/crazywhalecc/static-php-cli
+        # TODO: switch back to upstream when https://github.com/crazywhalecc/static-php-cli/pull/481 will be merged
+        #git clone --depth 1 https://github.com/crazywhalecc/static-php-cli
+        git clone --depth 1 --branch fix/480 https://github.com/dunglas/static-php-cli
         cd static-php-cli/
     fi
 
-    if type "brew" > /dev/null; then
+    if type "brew" > /dev/null 2>&1; then
         if ! type "composer" > /dev/null; then
             packages="composer"
         fi
         if ! type "go" > /dev/null; then
             packages="${packages} go"
         fi
-        if [ -n "${RELEASE}" ] && ! type "gh" > /dev/null; then
+        if [ -n "${RELEASE}" ] && ! type "gh" > /dev/null 2>&1; then
             packages="${packages} gh"
         fi
 
@@ -242,7 +244,7 @@ if [ -d "${EMBED}" ]; then
     truncate -s 0 app_checksum.txt
 fi
 
-if type "upx" > /dev/null && [ -z "${DEBUG_SYMBOLS}" ] && [ -z "${NO_COMPRESS}" ]; then
+if type "upx" > /dev/null 2>&1 && [ -z "${DEBUG_SYMBOLS}" ] && [ -z "${NO_COMPRESS}" ]; then
     upx --best "dist/${bin}"
 fi
 

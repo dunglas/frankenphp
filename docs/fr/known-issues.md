@@ -43,8 +43,10 @@ Les extensions suivantes sont connues pour ne pas être compatibles avec Franken
 
 Les extensions suivantes ont des bugs connus ou des comportements inattendus lorsqu'elles sont utilisées avec FrankenPHP :
 
-Nom | Problème
-[ext-openssl](https://www.php.net/manual/fr/book.openssl.php) | Lors de l'utilisation d'une version statique de FrankenPHP (construite avec la libc musl), l'extension OpenSSL peut planter sous de fortes charges. Une solution consiste à utiliser une version liée dynamiquement (comme celle utilisée dans les images Docker). Ce bogue est [suivi par PHP](https://github.com/php/php-src/issues/13648).
+| Nom                                                           | Problème                                                                                                                                                                                                                                                                                                                                      |
+|---------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [ext-openssl](https://www.php.net/manual/fr/book.openssl.php) | Lors de l'utilisation d'une version statique de FrankenPHP (construite avec la libc musl), l'extension OpenSSL peut planter sous de fortes charges. Une solution consiste à utiliser une version liée dynamiquement (comme celle utilisée dans les images Docker). Ce bogue est [suivi par PHP](https://github.com/php/php-src/issues/13648). |
+| [parallel](https://github.com/krakjoe/parallel)               | `parallel` fait geler et planter FrankenPHP. [Rapport de bogue](https://github.com/krakjoe/parallel/issues/308)                                                                                                                                                                                                                               |
 
 ## get_browser
 
