@@ -166,6 +166,6 @@ ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
 ENV SSL_CERT_DIR=/etc/ssl/certs
 ```
 
-It should work now that frankenphp can find the necessary certificates. 
+It should work now that frankenphp can find the necessary certificates.
 
 If debugging on your own, take care to observe the output of `openssl_get_cert_locations()` and ensure you are running it in the web server context, as your php cli context may have different ini settings. In my case, it worked perfectly fine in the cli context but failed in the web server context.
