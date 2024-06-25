@@ -13,7 +13,7 @@
 	#log {
 	#	# Redact the authorization query parameter that can be set by Mercure
 	#	format filter {
-	#		fields request>uri query {
+	#		request>uri query {
 	#			replace authorization REDACTED
 	#		}
 	#	}
