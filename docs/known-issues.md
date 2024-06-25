@@ -138,3 +138,34 @@ Then set the environment variable `PHP_BINARY` to the path of our php script and
 export PHP_BINARY=/usr/local/bin/php
 composer install
 ```
+
+## Troubleshooting SSL/TLS Issues with Email
+
+You may encounter SSL/TLS-related errors while attempting to send emails, particularly when using STARTTLS. Here is an example error encountered:
+
+```text
+Unable to connect with STARTTLS: stream_socket_enable_crypto(): SSL operation failed with code 5. OpenSSL Error messages:
+error:80000002:system library::No such file or directory
+error:80000002:system library::No such file or directory
+error:80000002:system library::No such file or directory
+error:0A000086:SSL routines::certificate verify failed
+```
+
+As the standalone binary doesn't bundle certificates, you need to point OpenSSL to your local certificates installation.
+
+You can debug this by considering the output of `openssl_get_cert_locations()` and ensuring your system has the necessary certificates installed and that frankenphp has the ability to find them. Thankfully there are environment variables that can be set to help with this:
+
+```dockerfile
+# Alpine example, you may need to adjust for other distributions
+
+# Install and update CA certificates
+RUN apk update && apk add --no-cache ca-certificates
+
+# Set SSL certificate environment variables
+ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
+ENV SSL_CERT_DIR=/etc/ssl/certs
+```
+
+It should work now that frankenphp can find the necessary certificates. 
+
+If debugging on your own, take care to observe the output of `openssl_get_cert_locations()` and ensure you are running it in the web server context, as your php cli context may have different ini settings. In my case, it worked perfectly fine in the cli context but failed in the web server context.
