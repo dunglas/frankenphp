@@ -132,9 +132,9 @@ done
 /usr/local/bin/frankenphp php-cli ${args[@]}
 ```
 
-Then set the environment variable `PHP_BINARY` to the path of our php script and composer should pass:
+Then set the environment variable `PHP_BINARY` to the path of our `php` script and run Composer:
 
-```bash
+```console
 export PHP_BINARY=/usr/local/bin/php
 composer install
 ```
