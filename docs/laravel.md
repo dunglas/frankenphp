@@ -51,13 +51,13 @@ After installing Octane, you may execute the `octane:install` Artisan command, w
 php artisan octane:install --server=frankenphp
 ```
 
-The Octane server can be started via the `octane:start` Artisan command.
+The Octane server can be started via the `octane:frankenphp` Artisan command.
 
 ```console
-php artisan octane:start
+php artisan octane:frankenphp
 ```
 
-The `octane:start` command can take the following options:
+The `octane:frankenphp` command can take the following options:
 
 * `--host`: The IP address the server should bind to (default: `127.0.0.1`)
 * `--port`: The port the server should be available on (default: `8000`)
