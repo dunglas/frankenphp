@@ -719,6 +719,11 @@ sapi_module_struct frankenphp_sapi_module = {
 
     STANDARD_SAPI_MODULE_PROPERTIES};
 
+struct thread_args {
+	int num_threads;
+	int num_non_worker_threads;
+};
+
 static void *manager_thread(void *arg) {
   /*
    * SIGPIPE must be masked in non-Go threads:
@@ -733,7 +738,10 @@ static void *manager_thread(void *arg) {
     exit(EXIT_FAILURE);
   }
 
-  int num_threads = *((int *)arg);
+	struct thread_args args = *((struct thread_args*)arg);
+
+  int num_threads = args.num_threads;
+  int num_non_worker_threads = args.num_non_worker_threads;
   free(arg);
   arg = NULL;
 
@@ -765,6 +773,16 @@ static void *manager_thread(void *arg) {
 
   threadpool thpool = thpool_init(num_threads);
 
+  // handle case where all threads are non-worker threads
+	if(num_threads == num_non_worker_threads) {
+			for(int i = 0; i < num_threads; i++) {
+				thpool_add_work(thpool, go_fetch_and_execute, NULL);
+			}
+
+			// todo: properly shutdown
+			return NULL;
+	}
+
   uintptr_t rh;
   while ((rh = go_fetch_request())) {
     thpool_add_work(thpool, go_execute_script, (void *)rh);
@@ -793,14 +811,17 @@ static void *manager_thread(void *arg) {
   return NULL;
 }
 
-int frankenphp_init(int num_threads) {
+int frankenphp_init(int num_threads, int non_worker_threads) {
   pthread_t thread;
 
-  int *num_threads_ptr = calloc(1, sizeof(int));
-  *num_threads_ptr = num_threads;
+  struct thread_args args;
+  args.num_threads = num_threads;
+  args.num_non_worker_threads = non_worker_threads;
 
-  if (pthread_create(&thread, NULL, *manager_thread, (void *)num_threads_ptr) !=
-      0) {
+  struct thread_args* num_threads_ptr = calloc(1, sizeof(args));
+  *num_threads_ptr = args;
+
+  if (pthread_create(&thread, NULL, *manager_thread, (void *)num_threads_ptr) != 0) {
     go_shutdown();
 
     return -1;
@@ -810,9 +831,12 @@ int frankenphp_init(int num_threads) {
 }
 
 int frankenphp_request_startup() {
+	//go_log_s("here we go!");
   if (php_request_startup() == SUCCESS) {
+  	//go_log_s("success!");
     return SUCCESS;
   }
+  //go_log_s("failure!");
 
   frankenphp_server_context *ctx = SG(server_context);
   SG(server_context) = NULL;
@@ -824,13 +848,22 @@ int frankenphp_request_startup() {
   return FAILURE;
 }
 
+int req = 0;
+
 int frankenphp_execute_script(char *file_name) {
+  char str[50];
+  int rn = req++;
+  sprintf(str, "starting %d", rn);
+	//go_log_s(str);
   if (frankenphp_request_startup() == FAILURE) {
     free(file_name);
     file_name = NULL;
 
     return FAILURE;
   }
+
+	sprintf(str, "started %d", rn);
+  //go_log_s(str);
 
   int status = SUCCESS;
 
@@ -854,6 +887,9 @@ int frankenphp_execute_script(char *file_name) {
   frankenphp_free_request_context();
   frankenphp_request_shutdown();
 
+  sprintf(str, "finished %d", rn);
+  //go_log_s(str);
+
   return status;
 }
 
@@ -872,6 +908,8 @@ static char **cli_argv;
  */
 static void cli_register_file_handles(bool no_close) /* {{{ */
 {
+	go_log_s("registering file handles");
+
   php_stream *s_in, *s_out, *s_err;
   php_stream_context *sc_in = NULL, *sc_out = NULL, *sc_err = NULL;
   zend_constant ic, oc, ec;
