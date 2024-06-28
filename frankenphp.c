@@ -18,9 +18,6 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-#include "C-Thread-Pool/thpool.c"
-#include "C-Thread-Pool/thpool.h"
-
 #include "_cgo_export.h"
 #include "frankenphp_arginfo.h"
 
@@ -719,7 +716,14 @@ sapi_module_struct frankenphp_sapi_module = {
 
     STANDARD_SAPI_MODULE_PROPERTIES};
 
-static void *manager_thread(void *arg) {
+static void *php_thread(void *arg) {
+  while (go_handle_request()) {
+  }
+
+  return NULL;
+}
+
+static void *php_init(void *arg) {
   /*
    * SIGPIPE must be masked in non-Go threads:
    * https://pkg.go.dev/os/signal#hdr-Go_programs_that_use_cgo_or_SWIG
@@ -761,17 +765,22 @@ static void *manager_thread(void *arg) {
 
   frankenphp_sapi_module.startup(&frankenphp_sapi_module);
 
-  threadpool thpool = thpool_init(num_threads);
+  pthread_t *threads = malloc(num_threads * sizeof(pthread_t));
+  for (int i = 0; i < num_threads; i++) {
+    if (pthread_create(&(*(threads + i)), NULL, &php_thread, NULL) != 0) {
+      perror("failed to create PHP thead");
+      exit(EXIT_FAILURE);
+    }
+  }
 
-  uintptr_t rh;
-  while ((rh = go_fetch_request())) {
-    thpool_add_work(thpool, go_execute_script, (void *)rh);
+  for (int i = 0; i < num_threads; i++) {
+    if (pthread_join((*(threads + i)), NULL) != 0) {
+      perror("failed to join PHP thead");
+      exit(EXIT_FAILURE);
+    }
   }
 
   /* channel closed, shutdown gracefully */
-  thpool_wait(thpool);
-  thpool_destroy(thpool);
-
   frankenphp_sapi_module.shutdown(&frankenphp_sapi_module);
 
   sapi_shutdown();
@@ -794,8 +803,8 @@ static void *manager_thread(void *arg) {
 int frankenphp_init(int num_threads) {
   pthread_t thread;
 
-  if (pthread_create(&thread, NULL, *manager_thread,
-                     (void *)(intptr_t)num_threads) != 0) {
+  if (pthread_create(&thread, NULL, &php_init, (void *)(intptr_t)num_threads) !=
+      0) {
     go_shutdown();
 
     return -1;
