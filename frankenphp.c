@@ -733,7 +733,7 @@ static void *manager_thread(void *arg) {
     exit(EXIT_FAILURE);
   }
 
-  intptr_t num_threads = (intptr_t) arg;
+  intptr_t num_threads = (intptr_t)arg;
 
 #ifdef ZTS
 #if (PHP_VERSION_ID >= 80300)
@@ -794,8 +794,8 @@ static void *manager_thread(void *arg) {
 int frankenphp_init(int num_threads) {
   pthread_t thread;
 
-  if (pthread_create(&thread, NULL, *manager_thread, (void *)(intptr_t)num_threads) !=
-      0) {
+  if (pthread_create(&thread, NULL, *manager_thread,
+                     (void *)(intptr_t)num_threads) != 0) {
     go_shutdown();
 
     return -1;
