@@ -51,13 +51,13 @@ Octane'ı kurduktan sonra, Octane'ın yapılandırma dosyasını uygulamanıza y
 php artisan octane:install --server=frankenphp
 ```
 
-Octane sunucusu `octane:start` Artisan komutu aracılığıyla başlatılabilir.
+Octane sunucusu `octane:frankenphp` Artisan komutu aracılığıyla başlatılabilir.
 
 ```console
-php artisan octane:start
+php artisan octane:frankenphp
 ```
 
-`octane:start` komutu aşağıdaki seçenekleri alabilir:
+`octane:frankenphp` komutu aşağıdaki seçenekleri alabilir:
 
 * `--host`: Sunucunun bağlanması gereken IP adresi (varsayılan: `127.0.0.1`)
 * `--port`: Sunucunun erişilebilir olması gereken port (varsayılan: `8000`)

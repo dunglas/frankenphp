@@ -51,13 +51,13 @@ composer require laravel/octane
 php artisan octane:install --server=frankenphp
 ```
 
-Octane 服务可以通过 `octane:start` Artisan 命令启动。
+Octane 服务可以通过 `octane:frankenphp` Artisan 命令启动。
 
 ```console
-php artisan octane:start
+php artisan octane:frankenphp
 ```
 
-`octane:start` 命令可以采用以下选项：
+`octane:frankenphp` 命令可以采用以下选项：
 
 * `--host`: 服务器应绑定到的 IP 地址（默认值: `127.0.0.1`）
 * `--port`: 服务器应可用的端口（默认值: `8000`）
