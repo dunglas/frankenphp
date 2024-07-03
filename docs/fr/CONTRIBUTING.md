@@ -19,7 +19,6 @@ Si la version de Docker est inférieure à 23.0, la construction échoue à caus
  !testdata/*.php
  !testdata/*.txt
 +!caddy
-+!C-Thread-Pool
 +!internal
 ```
 
