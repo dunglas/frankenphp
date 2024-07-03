@@ -450,8 +450,7 @@ int frankenphp_update_server_context(
 #endif
 
     /* todo: use a pool */
-    ctx = (frankenphp_server_context *)calloc(
-        1, sizeof(frankenphp_server_context));
+    ctx = (frankenphp_server_context *)malloc(sizeof(frankenphp_server_context));
     if (ctx == NULL) {
       return FAILURE;
     }
@@ -769,9 +768,9 @@ static void *php_init(void *arg) {
 
   frankenphp_sapi_module.startup(&frankenphp_sapi_module);
 
-  pthread_t *threads = calloc(num_threads, sizeof(pthread_t));
+  pthread_t *threads = malloc(num_threads * sizeof(pthread_t));
   if (threads == NULL) {
-    perror("calloc failed");
+    perror("malloc failed");
     exit(EXIT_FAILURE);
   }
 
