@@ -758,6 +758,10 @@ static void *php_init(void *arg) {
   frankenphp_sapi_module.ini_entries = HARDCODED_INI;
 #else
   frankenphp_sapi_module.ini_entries = malloc(sizeof(HARDCODED_INI));
+  if (frankenphp_sapi_module.ini_entries == NULL) {
+    perror("malloc failed");
+    exit(EXIT_FAILURE);
+  }
   memcpy(frankenphp_sapi_module.ini_entries, HARDCODED_INI,
          sizeof(HARDCODED_INI));
 #endif
@@ -765,10 +769,16 @@ static void *php_init(void *arg) {
 
   frankenphp_sapi_module.startup(&frankenphp_sapi_module);
 
-  pthread_t *threads = malloc(num_threads * sizeof(pthread_t));
+  pthread_t *threads = calloc(num_threads, sizeof(pthread_t));
+  if (threads == NULL) {
+    perror("calloc failed");
+    exit(EXIT_FAILURE);
+  }
+
   for (int i = 0; i < num_threads; i++) {
     if (pthread_create(&(*(threads + i)), NULL, &php_thread, NULL) != 0) {
       perror("failed to create PHP thead");
+      free(threads);
       exit(EXIT_FAILURE);
     }
   }
@@ -776,9 +786,11 @@ static void *php_init(void *arg) {
   for (int i = 0; i < num_threads; i++) {
     if (pthread_join((*(threads + i)), NULL) != 0) {
       perror("failed to join PHP thead");
+      free(threads);
       exit(EXIT_FAILURE);
     }
   }
+  free(threads);
 
   /* channel closed, shutdown gracefully */
   frankenphp_sapi_module.shutdown(&frankenphp_sapi_module);
