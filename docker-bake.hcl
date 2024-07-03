@@ -39,6 +39,7 @@ function "tag" {
 }
 
 # cleanTag ensures that the tag is a valid Docker tag
+# cleanTag ensures that the tag is a valid Docker tag
 # see https://github.com/distribution/distribution/blob/v2.8.2/reference/regexp.go#L37
 function "clean_tag" {
     params = [tag]
@@ -81,7 +82,8 @@ target "default" {
     }
     contexts = {
         php-base = "docker-image://php:${php-version}-zts-${os}"
-        golang-base = "docker-image://golang:${GO_VERSION}-${os}"
+        # FIXME: temporary workaround for https://github.com/dunglas/symfony-docker/issues/646
+        golang-base = "docker-image://golang:${os == "alpine" ? "1.22.4" : GO_VERSION}-${os}"
     }
     dockerfile = os == "alpine" ? "alpine.Dockerfile" : "Dockerfile"
     context = "./"
@@ -118,7 +120,9 @@ target "default" {
 
 target "static-builder" {
     contexts = {
-        golang-base = "docker-image://golang:${GO_VERSION}-alpine"
+        # FIXME: temporary workaround for https://github.com/dunglas/symfony-docker/issues/646
+        #golang-base = "docker-image://golang:${GO_VERSION}-alpine"
+        golang-base = "docker-image://golang:1.22.4-alpine"
     }
     dockerfile = "static-builder.Dockerfile"
     context = "./"
