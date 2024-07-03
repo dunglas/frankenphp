@@ -47,7 +47,6 @@ First, add the following configuration to your `Caddyfile` to enable this featur
 	php_server
 ```
 
-
 ## Plain PHP
 
 Set the relative file path (from `private-files/`) as the value of the `X-Accel-Redirect` header:
