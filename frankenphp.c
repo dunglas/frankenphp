@@ -17,6 +17,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <inttypes.h>
 
 #include "_cgo_export.h"
 #include "frankenphp_arginfo.h"
@@ -716,9 +717,29 @@ sapi_module_struct frankenphp_sapi_module = {
 
     STANDARD_SAPI_MODULE_PROPERTIES};
 
+/* Sets thread name for profiling and debugging.
+ *
+ * Adapted from https://github.com/Pithikos/C-Thread-Pool
+ * Copyright: Johan Hanssen Seferidis
+ * License: MIT
+*/
+static void set_thread_name(char *thread_name) {
+#if defined(__linux__)
+  /* Use prctl instead to prevent using _GNU_SOURCE flag and implicit declaration */
+  prctl(PR_SET_NAME, thread_name);
+#elif defined(__APPLE__) && defined(__MACH__)
+  pthread_setname_np(thread_name);
+#elif defined(__FreeBSD__) || defined(__OpenBSD__)
+  pthread_set_name_np(thread_p->pthread, thread_name);
+#endif
+}
+
 static void *php_thread(void *arg) {
-  while (go_handle_request()) {
-  }
+  char thread_name[16] = {0};
+  snprintf(thread_name, 16, "php-%" PRIxPTR, (uintptr_t)arg);
+  set_thread_name(thread_name);
+
+  while (go_handle_request()) {}
 
   return NULL;
 }
@@ -738,6 +759,8 @@ static void *php_init(void *arg) {
   }
 
   intptr_t num_threads = (intptr_t)arg;
+
+  set_thread_name("php-init");
 
 #ifdef ZTS
 #if (PHP_VERSION_ID >= 80300)
@@ -775,8 +798,8 @@ static void *php_init(void *arg) {
     exit(EXIT_FAILURE);
   }
 
-  for (int i = 0; i < num_threads; i++) {
-    if (pthread_create(&(*(threads + i)), NULL, &php_thread, NULL) != 0) {
+  for (uintptr_t i = 0; i < num_threads; i++) {
+    if (pthread_create(&(*(threads + i)), NULL, &php_thread, (void *)i) != 0) {
       perror("failed to create PHP thead");
       free(threads);
       exit(EXIT_FAILURE);
