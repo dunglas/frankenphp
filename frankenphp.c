@@ -450,7 +450,8 @@ int frankenphp_update_server_context(
 #endif
 
     /* todo: use a pool */
-    ctx = (frankenphp_server_context *)malloc(sizeof(frankenphp_server_context));
+    ctx =
+        (frankenphp_server_context *)malloc(sizeof(frankenphp_server_context));
     if (ctx == NULL) {
       return FAILURE;
     }
