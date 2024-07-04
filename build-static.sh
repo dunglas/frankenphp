@@ -83,9 +83,7 @@ else
         cd static-php-cli/
         git pull
     else
-        # TODO: switch back to upstream when https://github.com/crazywhalecc/static-php-cli/pull/481 will be merged
-        #git clone --depth 1 https://github.com/crazywhalecc/static-php-cli
-        git clone --depth 1 --branch fix/480 https://github.com/dunglas/static-php-cli
+        git clone --depth 1 https://github.com/crazywhalecc/static-php-cli
         cd static-php-cli/
     fi
 
