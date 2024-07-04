@@ -18,6 +18,11 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <inttypes.h>
+#if defined(__linux__)
+#include <sys/prctl.h>
+#elif defined(__FreeBSD__) || defined(__OpenBSD__)
+#include <pthread_np.h>
+#endif
 
 #include "_cgo_export.h"
 #include "frankenphp_arginfo.h"
@@ -730,7 +735,7 @@ static void set_thread_name(char *thread_name) {
 #elif defined(__APPLE__) && defined(__MACH__)
   pthread_setname_np(thread_name);
 #elif defined(__FreeBSD__) || defined(__OpenBSD__)
-  pthread_set_name_np(thread_p->pthread, thread_name);
+  pthread_set_name_np(pthread_self(), thread_name);
 #endif
 }
 
@@ -744,7 +749,7 @@ static void *php_thread(void *arg) {
   return NULL;
 }
 
-static void *php_init(void *arg) {
+static void *php_main(void *arg) {
   /*
    * SIGPIPE must be masked in non-Go threads:
    * https://pkg.go.dev/os/signal#hdr-Go_programs_that_use_cgo_or_SWIG
@@ -760,7 +765,7 @@ static void *php_init(void *arg) {
 
   intptr_t num_threads = (intptr_t)arg;
 
-  set_thread_name("php-init");
+  set_thread_name("php-main");
 
 #ifdef ZTS
 #if (PHP_VERSION_ID >= 80300)
@@ -838,7 +843,7 @@ static void *php_init(void *arg) {
 int frankenphp_init(int num_threads) {
   pthread_t thread;
 
-  if (pthread_create(&thread, NULL, &php_init, (void *)(intptr_t)num_threads) !=
+  if (pthread_create(&thread, NULL, &php_main, (void *)(intptr_t)num_threads) !=
       0) {
     go_shutdown();
 
