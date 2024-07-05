@@ -6,6 +6,7 @@
 #include <errno.h>
 #include <ext/spl/spl_exceptions.h>
 #include <ext/standard/head.h>
+#include <inttypes.h>
 #include <php.h>
 #include <php_config.h>
 #include <php_main.h>
@@ -17,7 +18,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <inttypes.h>
 #if defined(__linux__)
 #include <sys/prctl.h>
 #elif defined(__FreeBSD__) || defined(__OpenBSD__)
@@ -727,10 +727,11 @@ sapi_module_struct frankenphp_sapi_module = {
  * Adapted from https://github.com/Pithikos/C-Thread-Pool
  * Copyright: Johan Hanssen Seferidis
  * License: MIT
-*/
+ */
 static void set_thread_name(char *thread_name) {
 #if defined(__linux__)
-  /* Use prctl instead to prevent using _GNU_SOURCE flag and implicit declaration */
+  /* Use prctl instead to prevent using _GNU_SOURCE flag and implicit
+   * declaration */
   prctl(PR_SET_NAME, thread_name);
 #elif defined(__APPLE__) && defined(__MACH__)
   pthread_setname_np(thread_name);
@@ -744,7 +745,8 @@ static void *php_thread(void *arg) {
   snprintf(thread_name, 16, "php-%" PRIxPTR, (uintptr_t)arg);
   set_thread_name(thread_name);
 
-  while (go_handle_request()) {}
+  while (go_handle_request()) {
+  }
 
   return NULL;
 }
