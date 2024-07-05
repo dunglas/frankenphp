@@ -2,7 +2,7 @@
 FROM golang:1.22-alpine
 
 ENV CFLAGS="-ggdb3"
-ENV PHPIZE_DEPS \
+ENV PHPIZE_DEPS="\
 	autoconf \
 	dpkg-dev \
 	file \
@@ -11,7 +11,7 @@ ENV PHPIZE_DEPS \
 	libc-dev \
 	make \
 	pkgconfig \
-	re2c
+	re2c"
 
 RUN apk add --no-cache \
 	$PHPIZE_DEPS \
