@@ -2,7 +2,7 @@
 FROM golang:1.22
 
 ENV CFLAGS="-ggdb3"
-ENV PHPIZE_DEPS \
+ENV PHPIZE_DEPS="\
 	autoconf \
 	dpkg-dev \
 	file \
@@ -11,7 +11,7 @@ ENV PHPIZE_DEPS \
 	libc-dev \
 	make \
 	pkg-config \
-	re2c
+	re2c"
 
 # hadolint ignore=DL3009
 RUN apt-get update && \
