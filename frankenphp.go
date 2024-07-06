@@ -41,6 +41,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 	"unsafe"
 
 	"github.com/maypok86/otter"
@@ -311,11 +312,12 @@ func Init(options ...Option) error {
 
 	shutdownWG.Add(1)
 	done = make(chan struct{})
-	requestChan = make(chan *http.Request, 16)
+	requestChan = make(chan *http.Request)
 
 	if C.frankenphp_init(C.int(opt.numThreads)) != 0 {
 		return MainThreadCreationError
 	}
+	time.Sleep(1 * time.Second)
 
 	if err := initWorkers(opt.workers); err != nil {
 		return err

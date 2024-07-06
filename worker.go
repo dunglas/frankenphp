@@ -40,7 +40,7 @@ func startWorkers(fileName string, nbWorkers int, env PreparedEnv) error {
 		return fmt.Errorf("workers %q: already started", absFileName)
 	}
 
-	workersRequestChans.Store(absFileName, make(chan *http.Request, 16))
+	workersRequestChans.Store(absFileName, make(chan *http.Request))
 	shutdownWG.Add(nbWorkers)
 	workersReadyWG.Add(nbWorkers)
 
