@@ -311,7 +311,7 @@ func Init(options ...Option) error {
 
 	shutdownWG.Add(1)
 	done = make(chan struct{})
-	requestChan = make(chan *http.Request)
+	requestChan = make(chan *http.Request, 16)
 
 	if C.frankenphp_init(C.int(opt.numThreads)) != 0 {
 		return MainThreadCreationError
