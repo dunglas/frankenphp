@@ -471,6 +471,7 @@ func ServeHTTP(responseWriter http.ResponseWriter, request *http.Request) error 
 	select {
 	case <-done:
 	case rc <- request:
+		log.Printf("request sent")
 		<-fc.done
 	}
 
