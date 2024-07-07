@@ -34,6 +34,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"runtime"
@@ -452,8 +453,15 @@ func ServeHTTP(responseWriter http.ResponseWriter, request *http.Request) error 
 	if nil != fc.responseWriter {
 		if v, ok := workersRequestChans.Load(fc.scriptFilename); ok {
 			rc = v.(chan *http.Request)
+			log.Printf("serve with worker: %q", fc.scriptFilename)
+		} else {
+			log.Printf("worker not found?!")
 		}
+	} else {
+		log.Printf("serve without worker")
 	}
+
+	log.Printf("rc: %#v", rc)
 
 	select {
 	case <-done:
