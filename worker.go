@@ -79,6 +79,7 @@ func startWorkers(fileName string, nbWorkers int, env PreparedEnv) error {
 				if err := ServeHTTP(nil, r); err != nil {
 					panic(err)
 				}
+				l.Debug("worker started")
 
 				fc := r.Context().Value(contextKey).(*FrankenPHPContext)
 				if fc.currentWorkerRequest != 0 {

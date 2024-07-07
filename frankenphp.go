@@ -314,13 +314,17 @@ func Init(options ...Option) error {
 	done = make(chan struct{})
 	requestChan = make(chan *http.Request)
 
+	logger.Debug("before C.frankenphp_init")
 	if C.frankenphp_init(C.int(opt.numThreads)) != 0 {
 		return MainThreadCreationError
 	}
+	logger.Debug("after C.frankenphp_init")
 
+	logger.Debug("before initWorkers")
 	if err := initWorkers(opt.workers); err != nil {
 		return err
 	}
+	logger.Debug("after")
 
 	logger.Info("FrankenPHP started 🐘", zap.String("php_version", Version().Version), zap.Int("num_threads", opt.numThreads))
 	if EmbeddedAppPath != "" {
