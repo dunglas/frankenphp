@@ -63,7 +63,9 @@ func runTest(t *testing.T, test func(func(http.ResponseWriter, *http.Request), *
 	}
 	initOpts = append(initOpts, opts.initOpts...)
 
+	t.Log("before test init")
 	err := frankenphp.Init(initOpts...)
+	t.Log("after test init")
 	require.Nil(t, err)
 	defer frankenphp.Shutdown()
 
@@ -85,6 +87,7 @@ func runTest(t *testing.T, test func(func(http.ResponseWriter, *http.Request), *
 	wg.Add(opts.nbParrallelRequests)
 	for i := 0; i < opts.nbParrallelRequests; i++ {
 		go func(i int) {
+			t.Logf("Send internal test request %d", i)
 			test(handler, ts, i)
 			wg.Done()
 		}(i)
