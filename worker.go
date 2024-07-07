@@ -6,6 +6,7 @@ import "C"
 import (
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"path/filepath"
 	"runtime/cgo"
@@ -144,6 +145,7 @@ func go_frankenphp_worker_handle_request_start(mrh C.uintptr_t) C.uintptr_t {
 
 	l := getLogger()
 
+	log.Printf("rc: %#v", rc)
 	l.Debug("waiting for request", zap.String("worker", fc.scriptFilename))
 
 	var r *http.Request
@@ -154,6 +156,8 @@ func go_frankenphp_worker_handle_request_start(mrh C.uintptr_t) C.uintptr_t {
 		return 0
 	case r = <-rc:
 	}
+
+	l.Debug("request received")
 
 	fc.currentWorkerRequest = cgo.NewHandle(r)
 	r.Context().Value(handleKey).(*handleList).AddHandle(fc.currentWorkerRequest)
