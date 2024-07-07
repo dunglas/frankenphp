@@ -1,5 +1,7 @@
 <?php
 
+error_log("executor.php called\n", 4);
+
 $fn = require $_SERVER['SCRIPT_FILENAME'];
 if ('1' !== ($_SERVER['FRANKENPHP_WORKER'] ?? null)) {
     $fn();

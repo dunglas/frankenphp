@@ -748,6 +748,8 @@ static void *php_thread(void *arg) {
   while (go_handle_request()) {
   }
 
+  fprintf(stderr, "PHP thread finished\n");
+
   return NULL;
 }
 
