@@ -20,6 +20,7 @@ jobs:
         php-versions: ['8.2', '8.3']
     env:
       GOEXPERIMENT: cgocheck2
+      GOMAXPROCS: 10
     steps:
       -
         uses: actions/checkout@v4
