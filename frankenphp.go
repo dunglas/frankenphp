@@ -438,6 +438,7 @@ func updateServerContext(request *http.Request, create bool, mrh C.uintptr_t) er
 
 // ServeHTTP executes a PHP script according to the given context.
 func ServeHTTP(responseWriter http.ResponseWriter, request *http.Request) error {
+	log.Printf("begin ServeHTTP")
 	shutdownWG.Add(1)
 	defer shutdownWG.Done()
 
@@ -455,13 +456,13 @@ func ServeHTTP(responseWriter http.ResponseWriter, request *http.Request) error 
 			rc = v.(chan *http.Request)
 			log.Printf("serve with worker: %q", fc.scriptFilename)
 		} else {
-			log.Printf("worker not found?!")
+			log.Printf("serve without worker")
 		}
 	} else {
-		log.Printf("serve without worker")
+		log.Printf("main worker script")
 	}
 
-	log.Printf("rc: %#v", rc)
+	log.Printf("rc in ServeHTTP: %#v", rc)
 
 	select {
 	case <-done:
