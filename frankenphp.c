@@ -332,7 +332,6 @@ PHP_FUNCTION(frankenphp_handle_request) {
     RETURN_THROWS();
   }
 
-  fprintf(stderr, "before go_frankenphp_worker_ready (ready? %d)\n", ctx->worker_ready);
   if (!ctx->worker_ready) {
     /* Clean the first dummy request created to initialize the worker */
     frankenphp_worker_request_shutdown();
@@ -463,6 +462,7 @@ int frankenphp_update_server_context(
       return FAILURE;
     }
 
+    ctx->worker_ready = false;
     ctx->cookie_data = NULL;
     ctx->finished = false;
 
@@ -749,8 +749,6 @@ static void *php_thread(void *arg) {
   while (go_handle_request()) {
   }
 
-  fprintf(stderr, "PHP thread finished\n");
-
   return NULL;
 }
 
@@ -810,7 +808,7 @@ static void *php_main(void *arg) {
 
   for (uintptr_t i = 0; i < num_threads; i++) {
     if (pthread_create(&(*(threads + i)), NULL, &php_thread, (void *)i) != 0) {
-      perror("failed to create PHP thead");
+      perror("failed to create PHP thread");
       free(threads);
       exit(EXIT_FAILURE);
     }
@@ -818,7 +816,7 @@ static void *php_main(void *arg) {
 
   for (int i = 0; i < num_threads; i++) {
     if (pthread_join((*(threads + i)), NULL) != 0) {
-      perror("failed to join PHP thead");
+      perror("failed to join PHP thread");
       free(threads);
       exit(EXIT_FAILURE);
     }

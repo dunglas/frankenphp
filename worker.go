@@ -6,7 +6,6 @@ import "C"
 import (
 	"errors"
 	"fmt"
-	"log"
 	"net/http"
 	"path/filepath"
 	"runtime/cgo"
@@ -79,7 +78,6 @@ func startWorkers(fileName string, nbWorkers int, env PreparedEnv) error {
 				if err := ServeHTTP(nil, r); err != nil {
 					panic(err)
 				}
-				l.Debug("worker started")
 
 				fc := r.Context().Value(contextKey).(*FrankenPHPContext)
 				if fc.currentWorkerRequest != 0 {
@@ -107,11 +105,7 @@ func startWorkers(fileName string, nbWorkers int, env PreparedEnv) error {
 		}()
 	}
 
-	log.Printf("after go routine in startWorkers")
-
 	workersReadyWG.Wait()
-	log.Printf("workersReadyWG ready")
-
 	m.Lock()
 	defer m.Unlock()
 
@@ -132,7 +126,6 @@ func stopWorkers() {
 
 //export go_frankenphp_worker_ready
 func go_frankenphp_worker_ready() {
-	log.Print("in go_frankenphp_worker_ready")
 	workersReadyWG.Done()
 }
 
@@ -161,8 +154,6 @@ func go_frankenphp_worker_handle_request_start(mrh C.uintptr_t) C.uintptr_t {
 		return 0
 	case r = <-rc:
 	}
-
-	l.Debug("request received")
 
 	fc.currentWorkerRequest = cgo.NewHandle(r)
 	r.Context().Value(handleKey).(*handleList).AddHandle(fc.currentWorkerRequest)
