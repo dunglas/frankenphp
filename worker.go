@@ -132,6 +132,7 @@ func stopWorkers() {
 
 //export go_frankenphp_worker_ready
 func go_frankenphp_worker_ready() {
+	log.Print("go_frankenphp_worker_ready")
 	workersReadyWG.Done()
 }
 

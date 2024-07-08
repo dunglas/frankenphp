@@ -462,12 +462,12 @@ func ServeHTTP(responseWriter http.ResponseWriter, request *http.Request) error 
 		if v, ok := workersRequestChans.Load(fc.scriptFilename); ok {
 			rc = v.(chan *http.Request)
 			log.Printf("serve with worker: %q", fc.scriptFilename)
-			worker = true
 		} else {
 			log.Printf("serve without worker")
 		}
 	} else {
 		log.Printf("main worker script")
+		worker = true
 	}
 
 	select {
