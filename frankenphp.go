@@ -42,6 +42,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 	"unsafe"
 
 	"github.com/maypok86/otter"
@@ -321,10 +322,11 @@ func Init(options ...Option) error {
 	logger.Debug("after C.frankenphp_init")
 
 	logger.Debug("before initWorkers")
+	time.Sleep(2 * time.Second)
 	if err := initWorkers(opt.workers); err != nil {
 		return err
 	}
-	logger.Debug("after")
+	logger.Debug("after initWorkers")
 
 	logger.Info("FrankenPHP started 🐘", zap.String("php_version", Version().Version), zap.Int("num_threads", opt.numThreads))
 	if EmbeddedAppPath != "" {
