@@ -332,7 +332,7 @@ PHP_FUNCTION(frankenphp_handle_request) {
     RETURN_THROWS();
   }
 
-  fprintf(stderr, "before go_frankenphp_worker_readyé");
+  fprintf(stderr, "before go_frankenphp_worker_ready (ready? %d)\n", ctx->worker_ready);
   if (!ctx->worker_ready) {
     /* Clean the first dummy request created to initialize the worker */
     frankenphp_worker_request_shutdown();

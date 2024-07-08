@@ -132,7 +132,7 @@ func stopWorkers() {
 
 //export go_frankenphp_worker_ready
 func go_frankenphp_worker_ready() {
-	log.Print("go_frankenphp_worker_ready")
+	log.Print("in go_frankenphp_worker_ready")
 	workersReadyWG.Done()
 }
 
@@ -151,7 +151,6 @@ func go_frankenphp_worker_handle_request_start(mrh C.uintptr_t) C.uintptr_t {
 
 	l := getLogger()
 
-	log.Printf("rc in go_frankenphp_worker_handle_request_start: %#v", rc)
 	l.Debug("waiting for request", zap.String("worker", fc.scriptFilename))
 
 	var r *http.Request

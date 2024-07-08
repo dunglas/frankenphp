@@ -34,7 +34,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"os"
 	"runtime"
@@ -42,7 +41,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"time"
 	"unsafe"
 
 	"github.com/maypok86/otter"
@@ -315,18 +313,13 @@ func Init(options ...Option) error {
 	done = make(chan struct{})
 	requestChan = make(chan *http.Request)
 
-	logger.Debug("before C.frankenphp_init")
 	if C.frankenphp_init(C.int(opt.numThreads)) != 0 {
 		return MainThreadCreationError
 	}
-	logger.Debug("after C.frankenphp_init")
 
-	logger.Debug("before initWorkers")
-	time.Sleep(2 * time.Second)
 	if err := initWorkers(opt.workers); err != nil {
 		return err
 	}
-	logger.Debug("after initWorkers")
 
 	logger.Info("FrankenPHP started 🐘", zap.String("php_version", Version().Version), zap.Int("num_threads", opt.numThreads))
 	if EmbeddedAppPath != "" {
@@ -454,26 +447,17 @@ func ServeHTTP(responseWriter http.ResponseWriter, request *http.Request) error 
 
 	fc.responseWriter = responseWriter
 
-	worker := false
-
 	rc := requestChan
 	// Detect if a worker is available to handle this request
 	if nil != fc.responseWriter {
 		if v, ok := workersRequestChans.Load(fc.scriptFilename); ok {
 			rc = v.(chan *http.Request)
-			log.Printf("serve with worker: %q", fc.scriptFilename)
-		} else {
-			log.Printf("serve without worker")
 		}
-	} else {
-		log.Printf("main worker script")
-		worker = true
 	}
 
 	select {
 	case <-done:
 	case rc <- request:
-		log.Printf("request sent (worker %#v)", worker)
 		<-fc.done
 	}
 
@@ -495,7 +479,6 @@ func go_handle_request() bool {
 			panic(InvalidRequestError)
 		}
 		defer func() {
-			log.Print("maybeCloseContext in go_handle_request")
 			maybeCloseContext(fc)
 			r.Context().Value(handleKey).(*handleList).FreeAll()
 		}()
