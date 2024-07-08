@@ -444,7 +444,6 @@ func updateServerContext(request *http.Request, create bool, mrh C.uintptr_t) er
 
 // ServeHTTP executes a PHP script according to the given context.
 func ServeHTTP(responseWriter http.ResponseWriter, request *http.Request) error {
-	log.Printf("begin ServeHTTP")
 	shutdownWG.Add(1)
 	defer shutdownWG.Done()
 
@@ -455,12 +454,15 @@ func ServeHTTP(responseWriter http.ResponseWriter, request *http.Request) error 
 
 	fc.responseWriter = responseWriter
 
+	worker := false
+
 	rc := requestChan
 	// Detect if a worker is available to handle this request
 	if nil != fc.responseWriter {
 		if v, ok := workersRequestChans.Load(fc.scriptFilename); ok {
 			rc = v.(chan *http.Request)
 			log.Printf("serve with worker: %q", fc.scriptFilename)
+			worker = true
 		} else {
 			log.Printf("serve without worker")
 		}
@@ -468,12 +470,10 @@ func ServeHTTP(responseWriter http.ResponseWriter, request *http.Request) error 
 		log.Printf("main worker script")
 	}
 
-	log.Printf("rc in ServeHTTP: %#v", rc)
-
 	select {
 	case <-done:
 	case rc <- request:
-		log.Printf("request sent")
+		log.Printf("request sent (worker %#v)", worker)
 		<-fc.done
 	}
 
@@ -495,6 +495,7 @@ func go_handle_request() bool {
 			panic(InvalidRequestError)
 		}
 		defer func() {
+			time.Sleep(1 * time.Second)
 			maybeCloseContext(fc)
 			r.Context().Value(handleKey).(*handleList).FreeAll()
 		}()
