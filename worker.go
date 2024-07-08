@@ -107,7 +107,11 @@ func startWorkers(fileName string, nbWorkers int, env PreparedEnv) error {
 		}()
 	}
 
+	log.Printf("after go routine in startWorkers")
+
 	workersReadyWG.Wait()
+	log.Printf("workersReadyWG ready")
+
 	m.Lock()
 	defer m.Unlock()
 

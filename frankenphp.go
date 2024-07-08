@@ -495,7 +495,7 @@ func go_handle_request() bool {
 			panic(InvalidRequestError)
 		}
 		defer func() {
-			time.Sleep(1 * time.Second)
+			log.Print("maybeCloseContext in go_handle_request")
 			maybeCloseContext(fc)
 			r.Context().Value(handleKey).(*handleList).FreeAll()
 		}()
