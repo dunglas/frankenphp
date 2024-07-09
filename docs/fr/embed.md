@@ -39,6 +39,13 @@ composer install --ignore-platform-reqs --no-dev -a
 composer dump-env prod
 ```
 
+### Personnaliser la configuration
+
+Pour personnaliser [la configuration](config.md),
+vous pouvez mettre un fichier `Caddyfile` ainsi qu'un fichier `php.ini`
+dans le répertoire principal de l'application à intégrer
+(`$TMPDIR/my-prepared-app` dans l'exemple précédent).
+
 ## Créer un binaire Linux
 
 La manière la plus simple de créer un binaire Linux est d'utiliser le builder basé sur Docker que nous fournissons.

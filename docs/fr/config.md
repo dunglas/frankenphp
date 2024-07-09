@@ -18,6 +18,9 @@ RUN cp $PHP_INI_DIR/php.ini-development $PHP_INI_DIR/php.ini
 RUN cp $PHP_INI_DIR/php.ini-production $PHP_INI_DIR/php.ini
 ```
 
+Le binaire statique cherchera un fichier `php.ini` dans le répertoire de travail courant,
+dans `/usr/local/lib/` ainsi que [les autres emplacements standards](https://www.php.net/manual/fr/configuration.file.php).
+
 ## Configuration du Caddyfile
 
 Pour enregistrer l'exécutable de FrankenPHP, l'[option globale](https://caddyserver.com/docs/caddyfile/concepts#global-options) `frankenphp` doit être définie, puis les [directives HTTP](https://caddyserver.com/docs/caddyfile/concepts#directives) `php_server` ou `php` peuvent être utilisées dans les blocs de site pour servir votre application PHP.
