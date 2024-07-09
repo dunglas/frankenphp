@@ -19,7 +19,7 @@ RUN cp $PHP_INI_DIR/php.ini-production $PHP_INI_DIR/php.ini
 ```
 
 Le binaire statique cherchera un fichier `php.ini` dans le répertoire de travail courant,
-dans `/usr/local/lib/` ainsi que [les autres emplacements standards] (https://www.php.net/manual/en/configuration.file.php).
+dans `/usr/local/lib/` ainsi que [les autres emplacements standards](https://www.php.net/manual/fr/configuration.file.php).
 
 ## Configuration du Caddyfile
 
