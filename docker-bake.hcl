@@ -82,8 +82,7 @@ target "default" {
     }
     contexts = {
         php-base = "docker-image://php:${php-version}-zts-${os}"
-        # FIXME: temporary workaround for https://github.com/dunglas/symfony-docker/issues/646
-        golang-base = "docker-image://golang:${os == "alpine" ? "1.22.4" : GO_VERSION}-${os}"
+        golang-base = "docker-image://golang:${GO_VERSION}-${os}"
     }
     dockerfile = os == "alpine" ? "alpine.Dockerfile" : "Dockerfile"
     context = "./"
