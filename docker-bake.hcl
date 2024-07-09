@@ -120,9 +120,7 @@ target "default" {
 
 target "static-builder" {
     contexts = {
-        # FIXME: temporary workaround for https://github.com/dunglas/symfony-docker/issues/646
-        #golang-base = "docker-image://golang:${GO_VERSION}-alpine"
-        golang-base = "docker-image://golang:1.22.4-alpine"
+        golang-base = "docker-image://golang:${GO_VERSION}-alpine"
     }
     dockerfile = "static-builder.Dockerfile"
     context = "./"
