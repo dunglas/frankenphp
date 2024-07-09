@@ -42,6 +42,11 @@ composer install --ignore-platform-reqs --no-dev -a
 composer dump-env prod
 ```
 
+### Customizing the Configuration
+
+To customize [the configuration](config.md), you can put a `Caddyfile` as well as a `php.ini` file
+in the main directory of the app to embedded (`$TMPDIR/my-prepared-app` in the previous example).
+
 ## Creating a Linux Binary
 
 The easiest way to create a Linux binary is to use the Docker-based builder we provide.
