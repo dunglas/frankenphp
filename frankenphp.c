@@ -6,6 +6,7 @@
 #include <errno.h>
 #include <ext/spl/spl_exceptions.h>
 #include <ext/standard/head.h>
+#include <inttypes.h>
 #include <php.h>
 #include <php_config.h>
 #include <php_main.h>
@@ -17,9 +18,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-
-#include "C-Thread-Pool/thpool.c"
-#include "C-Thread-Pool/thpool.h"
+#if defined(__linux__)
+#include <sys/prctl.h>
+#elif defined(__FreeBSD__) || defined(__OpenBSD__)
+#include <pthread_np.h>
+#endif
 
 #include "_cgo_export.h"
 #include "frankenphp_arginfo.h"
@@ -453,12 +456,13 @@ int frankenphp_update_server_context(
 #endif
 
     /* todo: use a pool */
-    ctx = (frankenphp_server_context *)calloc(
-        1, sizeof(frankenphp_server_context));
+    ctx =
+        (frankenphp_server_context *)malloc(sizeof(frankenphp_server_context));
     if (ctx == NULL) {
       return FAILURE;
     }
 
+    ctx->worker_ready = false;
     ctx->cookie_data = NULL;
     ctx->finished = false;
 
@@ -719,7 +723,36 @@ sapi_module_struct frankenphp_sapi_module = {
 
     STANDARD_SAPI_MODULE_PROPERTIES};
 
-static void *manager_thread(void *arg) {
+/* Sets thread name for profiling and debugging.
+ *
+ * Adapted from https://github.com/Pithikos/C-Thread-Pool
+ * Copyright: Johan Hanssen Seferidis
+ * License: MIT
+ */
+static void set_thread_name(char *thread_name) {
+#if defined(__linux__)
+  /* Use prctl instead to prevent using _GNU_SOURCE flag and implicit
+   * declaration */
+  prctl(PR_SET_NAME, thread_name);
+#elif defined(__APPLE__) && defined(__MACH__)
+  pthread_setname_np(thread_name);
+#elif defined(__FreeBSD__) || defined(__OpenBSD__)
+  pthread_set_name_np(pthread_self(), thread_name);
+#endif
+}
+
+static void *php_thread(void *arg) {
+  char thread_name[16] = {0};
+  snprintf(thread_name, 16, "php-%" PRIxPTR, (uintptr_t)arg);
+  set_thread_name(thread_name);
+
+  while (go_handle_request()) {
+  }
+
+  return NULL;
+}
+
+static void *php_main(void *arg) {
   /*
    * SIGPIPE must be masked in non-Go threads:
    * https://pkg.go.dev/os/signal#hdr-Go_programs_that_use_cgo_or_SWIG
@@ -734,6 +767,8 @@ static void *manager_thread(void *arg) {
   }
 
   intptr_t num_threads = (intptr_t)arg;
+
+  set_thread_name("php-main");
 
 #ifdef ZTS
 #if (PHP_VERSION_ID >= 80300)
@@ -754,6 +789,10 @@ static void *manager_thread(void *arg) {
   frankenphp_sapi_module.ini_entries = HARDCODED_INI;
 #else
   frankenphp_sapi_module.ini_entries = malloc(sizeof(HARDCODED_INI));
+  if (frankenphp_sapi_module.ini_entries == NULL) {
+    perror("malloc failed");
+    exit(EXIT_FAILURE);
+  }
   memcpy(frankenphp_sapi_module.ini_entries, HARDCODED_INI,
          sizeof(HARDCODED_INI));
 #endif
@@ -761,17 +800,30 @@ static void *manager_thread(void *arg) {
 
   frankenphp_sapi_module.startup(&frankenphp_sapi_module);
 
-  threadpool thpool = thpool_init(num_threads);
-
-  uintptr_t rh;
-  while ((rh = go_fetch_request())) {
-    thpool_add_work(thpool, go_execute_script, (void *)rh);
+  pthread_t *threads = malloc(num_threads * sizeof(pthread_t));
+  if (threads == NULL) {
+    perror("malloc failed");
+    exit(EXIT_FAILURE);
   }
 
-  /* channel closed, shutdown gracefully */
-  thpool_wait(thpool);
-  thpool_destroy(thpool);
+  for (uintptr_t i = 0; i < num_threads; i++) {
+    if (pthread_create(&(*(threads + i)), NULL, &php_thread, (void *)i) != 0) {
+      perror("failed to create PHP thread");
+      free(threads);
+      exit(EXIT_FAILURE);
+    }
+  }
 
+  for (int i = 0; i < num_threads; i++) {
+    if (pthread_join((*(threads + i)), NULL) != 0) {
+      perror("failed to join PHP thread");
+      free(threads);
+      exit(EXIT_FAILURE);
+    }
+  }
+  free(threads);
+
+  /* channel closed, shutdown gracefully */
   frankenphp_sapi_module.shutdown(&frankenphp_sapi_module);
 
   sapi_shutdown();
@@ -794,8 +846,8 @@ static void *manager_thread(void *arg) {
 int frankenphp_init(int num_threads) {
   pthread_t thread;
 
-  if (pthread_create(&thread, NULL, *manager_thread,
-                     (void *)(intptr_t)num_threads) != 0) {
+  if (pthread_create(&thread, NULL, &php_main, (void *)(intptr_t)num_threads) !=
+      0) {
     go_shutdown();
 
     return -1;

@@ -19,7 +19,6 @@ If docker version is lower than 23.0, build is failed by dockerignore [pattern i
  !testdata/*.php
  !testdata/*.txt
 +!caddy
-+!C-Thread-Pool
 +!internal
 ```
 

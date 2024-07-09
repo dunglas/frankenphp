@@ -19,7 +19,6 @@ Docker sürümü 23.0'dan düşükse, derleme dockerignore [pattern issue](https
  !testdata/*.php
  !testdata/*.txt
 +!caddy
-+!C-Thread-Pool
 +!internal
 ```
 

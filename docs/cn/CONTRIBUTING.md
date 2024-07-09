@@ -19,7 +19,6 @@ docker run --cap-add=SYS_PTRACE --security-opt seccomp=unconfined -p 8080:8080 -
  !testdata/*.php
  !testdata/*.txt
 +!caddy
-+!C-Thread-Pool
 +!internal
 ```
 

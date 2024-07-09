@@ -5,10 +5,6 @@
 // [FrankenPHP app server]: https://frankenphp.dev
 package frankenphp
 
-//go:generate rm -Rf C-Thread-Pool/
-//go:generate git clone --depth=1 git@github.com:Pithikos/C-Thread-Pool.git
-//go:generate rm -Rf C-Thread-Pool/.git C-Thread-Pool/.github C-Thread-Pool/docs C-Thread-Pool/tests C-Thread-Pool/example.c
-
 // Use PHP includes corresponding to your PHP installation by running:
 //
 //   export CGO_CFLAGS=$(php-config --includes)
@@ -468,16 +464,36 @@ func ServeHTTP(responseWriter http.ResponseWriter, request *http.Request) error 
 	return nil
 }
 
-//export go_fetch_request
-func go_fetch_request() C.uintptr_t {
+//export go_handle_request
+func go_handle_request() bool {
 	select {
 	case <-done:
-		return 0
+		return false
 
 	case r := <-requestChan:
 		h := cgo.NewHandle(r)
 		r.Context().Value(handleKey).(*handleList).AddHandle(h)
-		return C.uintptr_t(h)
+
+		fc, ok := FromContext(r.Context())
+		if !ok {
+			panic(InvalidRequestError)
+		}
+		defer func() {
+			maybeCloseContext(fc)
+			r.Context().Value(handleKey).(*handleList).FreeAll()
+		}()
+
+		if err := updateServerContext(r, true, 0); err != nil {
+			panic(err)
+		}
+
+		// scriptFilename is freed in frankenphp_execute_script()
+		fc.exitStatus = C.frankenphp_execute_script(C.CString(fc.scriptFilename))
+		if fc.exitStatus < 0 {
+			panic(ScriptExecutionError)
+		}
+
+		return true
 	}
 }
 
@@ -485,33 +501,6 @@ func maybeCloseContext(fc *FrankenPHPContext) {
 	fc.closed.Do(func() {
 		close(fc.done)
 	})
-}
-
-// go_execute_script Note: only called in cgi-mode
-//
-//export go_execute_script
-func go_execute_script(rh unsafe.Pointer) {
-	handle := cgo.Handle(rh)
-
-	request := handle.Value().(*http.Request)
-	fc, ok := FromContext(request.Context())
-	if !ok {
-		panic(InvalidRequestError)
-	}
-	defer func() {
-		maybeCloseContext(fc)
-		request.Context().Value(handleKey).(*handleList).FreeAll()
-	}()
-
-	if err := updateServerContext(request, true, 0); err != nil {
-		panic(err)
-	}
-
-	// scriptFilename is freed in frankenphp_execute_script()
-	fc.exitStatus = C.frankenphp_execute_script(C.CString(fc.scriptFilename))
-	if fc.exitStatus < 0 {
-		panic(ScriptExecutionError)
-	}
 }
 
 //export go_ub_write
