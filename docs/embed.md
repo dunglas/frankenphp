@@ -2,7 +2,7 @@
 
 FrankenPHP has the ability to embed the source code and assets of PHP applications in a static, self-contained binary.
 
-Thanks to this feature, PHP applications can be distributed as standalone binaries that include the application itself, the PHP interpreter and Caddy, a production-level web server.
+Thanks to this feature, PHP applications can be distributed as standalone binaries that include the application itself, the PHP interpreter, and Caddy, a production-level web server.
 
 Learn more about this feature [in the presentation made by Kévin at SymfonyCon 2023](https://dunglas.dev/2023/12/php-and-symfony-apps-as-standalone-binaries/).
 
@@ -12,12 +12,12 @@ For embedding Laravel applications, [read this specific documentation entry](lar
 
 Before creating the self-contained binary be sure that your app is ready for embedding.
 
-For instance you likely want to:
+For instance, you likely want to:
 
 * Install the production dependencies of the app
 * Dump the autoloader
 * Enable the production mode of your application (if any)
-* Strip uneeded files such as `.git` or tests to reduce the size of your final binary
+* Strip unneeded files such as `.git` or tests to reduce the size of your final binary
 
 For instance, for a Symfony app, you can use the following commands:
 
@@ -45,7 +45,7 @@ composer dump-env prod
 ### Customizing the Configuration
 
 To customize [the configuration](config.md), you can put a `Caddyfile` as well as a `php.ini` file
-in the main directory of the app to embedded (`$TMPDIR/my-prepared-app` in the previous example).
+in the main directory of the app to be embedded (`$TMPDIR/my-prepared-app` in the previous example).
 
 ## Creating a Linux Binary
 
@@ -112,7 +112,7 @@ If your app contains a [worker script](worker.md), start the worker with somethi
 ./my-app php-server --worker public/index.php
 ```
 
-To enable HTTPS (a Let's Encrypt certificate is automatically created), HTTP/2 and HTTP/3, specify the domain name to use:
+To enable HTTPS (a Let's Encrypt certificate is automatically created), HTTP/2, and HTTP/3, specify the domain name to use:
 
 ```console
 ./my-app php-server --domain localhost
