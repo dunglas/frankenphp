@@ -68,6 +68,20 @@ RUN apk update; \
 		xz ; \
 	ln -sf /usr/bin/php83 /usr/bin/php
 
+# FIXME: temporary workaround for https://github.com/dunglas/symfony-docker/issues/646
+WORKDIR /
+RUN git clone https://go.googlesource.com/go goroot
+WORKDIR /goroot
+# Revert https://github.com/golang/go/commit/3560cf0afb3c29300a6c88ccd98256949ca7a6f6 to prevent the crash with musl
+RUN git config --global user.email "build@example.com" && \
+	git config --global user.name "Build" && \
+	git checkout "$(go env GOVERSION)" && \
+	git revert 3560cf0afb3c29300a6c88ccd98256949ca7a6f6
+WORKDIR /goroot/src
+RUN ./make.bash
+ENV PATH="/goroot/bin:$PATH"
+RUN go version
+
 # https://getcomposer.org/doc/03-cli.md#composer-allow-superuser
 ENV COMPOSER_ALLOW_SUPERUSER=1
 COPY --from=composer/composer:2-bin /composer /usr/bin/composer

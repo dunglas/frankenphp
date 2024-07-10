@@ -65,20 +65,32 @@ RUN apk add --no-cache --virtual .build-deps \
 	readline-dev \
 	sqlite-dev \
 	upx \
-	# Needed by gotip
+	# Needed for the custom Go build
 	git \
 	bash
 
-RUN GOBIN=/usr/local/go/bin go install golang.org/dl/gotip@latest && (yes || true) | gotip download 585817
+# FIXME: temporary workaround for https://github.com/dunglas/symfony-docker/issues/646
+WORKDIR /
+RUN git clone https://go.googlesource.com/go goroot
+WORKDIR /goroot
+# Revert https://github.com/golang/go/commit/3560cf0afb3c29300a6c88ccd98256949ca7a6f6 to prevent the crash with musl
+RUN git config --global user.email "build@example.com" && \
+	git config --global user.name "Build" && \
+	git checkout "$(go env GOVERSION)" && \
+	git revert 3560cf0afb3c29300a6c88ccd98256949ca7a6f6
+WORKDIR /goroot/src
+RUN ./make.bash
+ENV PATH="/goroot/bin:$PATH"
+RUN go version
 
 WORKDIR /go/src/app
 
 COPY --link go.mod go.sum ./
-RUN gotip mod graph | awk '{if ($1 !~ "@") print $2}' | xargs gotip get
+RUN go mod graph | awk '{if ($1 !~ "@") print $2}' | xargs go get
 
 WORKDIR /go/src/app/caddy
 COPY caddy/go.mod caddy/go.sum ./
-RUN gotip mod graph | awk '{if ($1 !~ "@") print $2}' | xargs gotip get
+RUN go mod graph | awk '{if ($1 !~ "@") print $2}' | xargs go get
 
 WORKDIR /go/src/app
 COPY --link *.* ./
@@ -91,7 +103,7 @@ COPY --link testdata testdata
 ENV CGO_LDFLAGS="-lssl -lcrypto -lreadline -largon2 -lcurl -lonig -lz $PHP_LDFLAGS" CGO_CFLAGS="-DFRANKENPHP_VERSION=$FRANKENPHP_VERSION $PHP_CFLAGS" CGO_CPPFLAGS=$PHP_CPPFLAGS
 
 WORKDIR /go/src/app/caddy/frankenphp
-RUN GOBIN=/usr/local/bin gotip install -ldflags "-w -s -extldflags '-Wl,-z,stack-size=0x80000' -X 'github.com/caddyserver/caddy/v2.CustomVersion=FrankenPHP $FRANKENPHP_VERSION PHP $PHP_VERSION Caddy'" && \
+RUN GOBIN=/usr/local/bin go install -ldflags "-w -s -extldflags '-Wl,-z,stack-size=0x80000' -X 'github.com/caddyserver/caddy/v2.CustomVersion=FrankenPHP $FRANKENPHP_VERSION PHP $PHP_VERSION Caddy'" && \
 	setcap cap_net_bind_service=+ep /usr/local/bin/frankenphp && \
 	upx --best /usr/local/bin/frankenphp && \
 	frankenphp version
