@@ -71,7 +71,7 @@ RUN apk add --no-cache --virtual .build-deps \
 	git \
 	bash
 
-# FIXME: temporary workaround for https://github.com/dunglas/symfony-docker/issues/646
+# FIXME: temporary workaround for https://github.com/golang/go/issues/68285
 WORKDIR /
 RUN git clone https://go.googlesource.com/go goroot
 WORKDIR /goroot
