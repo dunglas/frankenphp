@@ -19,7 +19,7 @@ RUN cp $PHP_INI_DIR/php.ini-production $PHP_INI_DIR/php.ini
 ```
 
 The static binary will look for a `php.ini` file in the current working directory,
-in `/usr/local/lib/` as well as [the other standard locations](https://www.php.net/manual/en/configuration.file.php).
+in `/lib/` as well as [the other standard locations](https://www.php.net/manual/en/configuration.file.php).
 
 ## Caddyfile Config
 
