@@ -81,8 +81,8 @@ RUN git config --global user.email "build@example.com" && \
 	git checkout "$(go env GOVERSION)" && \
 	git revert 3560cf0afb3c29300a6c88ccd98256949ca7a6f6
 WORKDIR /goroot/src
-ENV GOARCH="$TARGETARCH"
-RUN echo $GOARCH && ./make.bash
+ENV GOHOSTARCH="$TARGETARCH"
+RUN echo $GOHOSTARCH && ./make.bash
 ENV PATH="/goroot/bin:$PATH"
 RUN go version
 
