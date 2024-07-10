@@ -82,7 +82,7 @@ RUN git config --global user.email "build@example.com" && \
 	git revert 3560cf0afb3c29300a6c88ccd98256949ca7a6f6
 WORKDIR /goroot/src
 ENV GOHOSTARCH="$TARGETARCH"
-RUN echo $GOHOSTARCH && ./make.bash
+RUN ./make.bssh
 ENV PATH="/goroot/bin:$PATH"
 RUN go version
 
