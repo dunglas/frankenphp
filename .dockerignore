@@ -12,3 +12,4 @@
 !build-static.sh
 !app.tar
 !app_checksum.txt
+!*.patch

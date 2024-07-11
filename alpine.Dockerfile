@@ -75,11 +75,9 @@ RUN apk add --no-cache --virtual .build-deps \
 WORKDIR /
 RUN git clone https://go.googlesource.com/go goroot
 WORKDIR /goroot
-# Revert https://github.com/golang/go/commit/3560cf0afb3c29300a6c88ccd98256949ca7a6f6 to prevent the crash with musl
-RUN git config --global user.email "build@example.com" && \
-	git config --global user.name "Build" && \
-	git checkout "$(go env GOVERSION)" && \
-	git revert 3560cf0afb3c29300a6c88ccd98256949ca7a6f6
+COPY 0001-fix-musl-crash.patch .
+RUN	git checkout "$(go env GOVERSION)" && \
+	git apply 0001-fix-musl-crash.patch
 WORKDIR /goroot/src
 ENV GOHOSTARCH="$TARGETARCH"
 RUN ./make.bash
