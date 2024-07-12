@@ -76,7 +76,7 @@ WORKDIR /
 RUN git clone https://go.googlesource.com/go goroot
 WORKDIR /goroot
 COPY 0001-fix-musl-crash.patch .
-RUN	git checkout "$(go env GOVERSION)" && \
+RUN git checkout "$(go env GOVERSION)" && \
 	git apply 0001-fix-musl-crash.patch
 WORKDIR /goroot/src
 ENV GOHOSTARCH="$TARGETARCH"
