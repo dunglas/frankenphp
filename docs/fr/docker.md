@@ -153,7 +153,7 @@ USER ${USER}
 ### Exécution sans capacité
 
 Même lorsqu'il s'exécute en tant qu'utilisateur autre que root, FrankenPHP a besoin de la capacité `CAP_NET_BIND_SERVICE`
-pour que son serveur utilise les ports privilégiés (80 et 442).
+pour que son serveur utilise les ports privilégiés (80 et 443).
 
 Si vous exposez FrankenPHP sur un port non privilégié (à partir de 1024), il est possible de faire fonctionner le serveur web avec un utilisateur qui n'est pas root, et sans avoir besoin d'aucune capacité.
 
