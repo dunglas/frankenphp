@@ -52,6 +52,7 @@ For more advanced use cases, see https://github.com/dunglas/frankenphp/blob/main
 			cmd.Flags().BoolP("debug", "v", false, "Enable verbose debug logs")
 			cmd.Flags().BoolP("mercure", "m", false, "Enable the built-in Mercure.rocks hub")
 			cmd.Flags().BoolP("no-compress", "", false, "Disable Zstandard, Brotli and Gzip compression")
+			cmd.Flags().BoolP("admin", "", false, "Enable the admin API")
 			cmd.RunE = caddycmd.WrapCommandFuncForCobra(cmdPHPServer)
 		},
 	})
@@ -68,6 +69,7 @@ func cmdPHPServer(fs caddycmd.Flags) (int, error) {
 	debug := fs.Bool("debug")
 	compress := !fs.Bool("no-compress")
 	mercure := fs.Bool("mercure")
+	admin := fs.Bool("admin")
 
 	workers, err := fs.GetStringArray("worker")
 	if err != nil {
@@ -298,7 +300,7 @@ func cmdPHPServer(fs caddycmd.Flags) (int, error) {
 	var false bool
 	cfg := &caddy.Config{
 		Admin: &caddy.AdminConfig{
-			Disabled: true,
+			Disabled: !admin,
 			Config: &caddy.ConfigSettings{
 				Persist: &false,
 			},
