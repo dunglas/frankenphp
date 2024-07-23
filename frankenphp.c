@@ -756,6 +756,10 @@ static void *php_thread(void *arg) {
   while (go_handle_request()) {
   }
 
+  #ifdef ZTS
+    ts_free_thread();
+  #endif
+
   return NULL;
 }
 
