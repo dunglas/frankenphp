@@ -450,7 +450,7 @@ int frankenphp_update_server_context(
 #ifdef ZTS
     /* initial resource fetch */
     if (local_ctx == NULL) {
-        (void)ts_resource(0);
+      (void)ts_resource(0);
     }
 #ifdef PHP_WIN32
     ZEND_TSRMLS_CACHE_UPDATE();
@@ -756,9 +756,9 @@ static void *php_thread(void *arg) {
   while (go_handle_request()) {
   }
 
-  #ifdef ZTS
-    ts_free_thread();
-  #endif
+#ifdef ZTS
+  ts_free_thread();
+#endif
 
   return NULL;
 }
