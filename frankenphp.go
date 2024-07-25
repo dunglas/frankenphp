@@ -53,7 +53,6 @@ type contextKeyStruct struct{}
 type handleKeyStruct struct{}
 
 var contextKey = contextKeyStruct{}
-var handleKey = handleKeyStruct{}
 
 var (
 	InvalidRequestError         = errors.New("not a FrankenPHP request")
@@ -127,7 +126,7 @@ type FrankenPHPContext struct {
 	exitStatus     C.int
 
 	done                 chan interface{}
-	currentWorkerRequest cgo.Handle
+	currentWorkerRequest Handle
 }
 
 func clientHasClosed(r *http.Request) bool {
@@ -191,7 +190,6 @@ func NewRequestWithContext(r *http.Request, opts ...RequestOption) (*http.Reques
 	fc.scriptFilename = sanitizedPathJoin(fc.documentRoot, fc.scriptName)
 
 	c := context.WithValue(r.Context(), contextKey, fc)
-	c = context.WithValue(c, handleKey, Handles())
 
 	return r.WithContext(c), nil
 }
@@ -242,6 +240,11 @@ func Config() PHPConfig {
 		ZendMaxExecutionTimers: bool(cConfig.zend_max_execution_timers),
 	}
 }
+
+var (
+	requestHandles HandleKey
+	mainRequests   HandleKey
+)
 
 // Init starts the PHP runtime and the configured workers.
 func Init(options ...Option) error {
@@ -294,6 +297,9 @@ func Init(options ...Option) error {
 		return NotEnoughThreads
 	}
 
+	// create enough request handles to keep spin-lock down
+	requestHandles = ConcurrentHandle.NewConcurrentHandle(opt.numThreads * 4)
+
 	config := Config()
 
 	if config.Version.MajorVersion < 8 || (config.Version.MajorVersion == 8 && config.Version.MinorVersion < 2) {
@@ -311,7 +317,8 @@ func Init(options ...Option) error {
 
 	shutdownWG.Add(1)
 	done = make(chan struct{})
-	requestChan = make(chan *http.Request)
+	// keep latency down by having enough to concurrently handle requests, plus a small buffer
+	requestChan = make(chan *http.Request, opt.numThreads*2)
 
 	if C.frankenphp_init(C.int(opt.numThreads)) != 0 {
 		return MainThreadCreationError
@@ -359,10 +366,10 @@ func getLogger() *zap.Logger {
 	return logger
 }
 
-func updateServerContext(request *http.Request, create bool, mrh C.uintptr_t) error {
+func updateServerContext(request *http.Request, create bool, mrh C.uintptr_t) (*Handle, error) {
 	fc, ok := FromContext(request.Context())
 	if !ok {
-		return InvalidRequestError
+		return nil, InvalidRequestError
 	}
 
 	authUser, authPassword, ok := request.BasicAuth()
@@ -382,7 +389,7 @@ func updateServerContext(request *http.Request, create bool, mrh C.uintptr_t) er
 		var err error
 		contentLength, err = strconv.Atoi(contentLengthStr)
 		if err != nil {
-			return fmt.Errorf("invalid Content-Length header: %w", err)
+			return nil, fmt.Errorf("invalid Content-Length header: %w", err)
 		}
 	}
 
@@ -402,14 +409,13 @@ func updateServerContext(request *http.Request, create bool, mrh C.uintptr_t) er
 
 	cRequestUri := C.CString(request.URL.RequestURI())
 
-	var rh cgo.Handle
+	var rh Handle
+	var h Handle
 	if fc.responseWriter == nil {
-		h := cgo.NewHandle(request)
-		request.Context().Value(handleKey).(*handleList).AddHandle(h)
+		h = mainRequests.NewHandle(request)
 		mrh = C.uintptr_t(h)
 	} else {
-		rh = cgo.NewHandle(request)
-		request.Context().Value(handleKey).(*handleList).AddHandle(rh)
+		rh = requestHandles.NewHandle(request)
 	}
 
 	ret := C.frankenphp_update_server_context(
@@ -428,11 +434,15 @@ func updateServerContext(request *http.Request, create bool, mrh C.uintptr_t) er
 		C.int(request.ProtoMajor*1000+request.ProtoMinor),
 	)
 
-	if ret > 0 {
-		return RequestContextCreationError
+	if rh == 0 {
+		rh = h
 	}
 
-	return nil
+	if ret > 0 {
+		return &rh, RequestContextCreationError
+	}
+
+	return &rh, nil
 }
 
 // ServeHTTP executes a PHP script according to the given context.
@@ -471,19 +481,16 @@ func go_handle_request() bool {
 		return false
 
 	case r := <-requestChan:
-		h := cgo.NewHandle(r)
-		r.Context().Value(handleKey).(*handleList).AddHandle(h)
-
 		fc, ok := FromContext(r.Context())
 		if !ok {
 			panic(InvalidRequestError)
 		}
 		defer func() {
 			maybeCloseContext(fc)
-			r.Context().Value(handleKey).(*handleList).FreeAll()
 		}()
 
-		if err := updateServerContext(r, true, 0); err != nil {
+		rh, err := updateServerContext(r, true, 0)
+		if err != nil {
 			panic(err)
 		}
 
@@ -492,6 +499,8 @@ func go_handle_request() bool {
 		if fc.exitStatus < 0 {
 			panic(ScriptExecutionError)
 		}
+
+		rh.Delete()
 
 		return true
 	}
@@ -505,7 +514,7 @@ func maybeCloseContext(fc *FrankenPHPContext) {
 
 //export go_ub_write
 func go_ub_write(rh C.uintptr_t, cBuf *C.char, length C.int) (C.size_t, C.bool) {
-	r := cgo.Handle(rh).Value().(*http.Request)
+	r := Handle(rh).Value().(*http.Request)
 	fc, _ := FromContext(r.Context())
 
 	var writer io.Writer
@@ -542,7 +551,7 @@ var headerKeyCache = func() otter.Cache[string, string] {
 
 //export go_register_variables
 func go_register_variables(rh C.uintptr_t, trackVarsArray *C.zval) {
-	r := cgo.Handle(rh).Value().(*http.Request)
+	r := Handle(rh).Value().(*http.Request)
 	fc := r.Context().Value(contextKey).(*FrankenPHPContext)
 
 	p := &runtime.Pinner{}
@@ -612,7 +621,7 @@ func go_register_variables(rh C.uintptr_t, trackVarsArray *C.zval) {
 func go_apache_request_headers(rh, mrh C.uintptr_t) (*C.go_string, C.size_t, C.uintptr_t) {
 	if rh == 0 {
 		// worker mode, not handling a request
-		mr := cgo.Handle(mrh).Value().(*http.Request)
+		mr := Handle(mrh).Value().(*http.Request)
 		mfc := mr.Context().Value(contextKey).(*FrankenPHPContext)
 
 		if c := mfc.logger.Check(zap.DebugLevel, "apache_request_headers() called in non-HTTP context"); c != nil {
@@ -621,7 +630,7 @@ func go_apache_request_headers(rh, mrh C.uintptr_t) (*C.go_string, C.size_t, C.u
 
 		return nil, 0, 0
 	}
-	r := cgo.Handle(rh).Value().(*http.Request)
+	r := Handle(rh).Value().(*http.Request)
 
 	pinner := &runtime.Pinner{}
 	pinnerHandle := C.uintptr_t(cgo.NewHandle(pinner))
@@ -674,7 +683,7 @@ func addHeader(fc *FrankenPHPContext, cString *C.char, length C.int) {
 
 //export go_write_headers
 func go_write_headers(rh C.uintptr_t, status C.int, headers *C.zend_llist) {
-	r := cgo.Handle(rh).Value().(*http.Request)
+	r := Handle(rh).Value().(*http.Request)
 	fc := r.Context().Value(contextKey).(*FrankenPHPContext)
 
 	if fc.responseWriter == nil {
@@ -702,7 +711,7 @@ func go_write_headers(rh C.uintptr_t, status C.int, headers *C.zend_llist) {
 
 //export go_sapi_flush
 func go_sapi_flush(rh C.uintptr_t) bool {
-	r := cgo.Handle(rh).Value().(*http.Request)
+	r := Handle(rh).Value().(*http.Request)
 	fc := r.Context().Value(contextKey).(*FrankenPHPContext)
 
 	if fc.responseWriter == nil || clientHasClosed(r) {
@@ -718,7 +727,7 @@ func go_sapi_flush(rh C.uintptr_t) bool {
 
 //export go_read_post
 func go_read_post(rh C.uintptr_t, cBuf *C.char, countBytes C.size_t) (readBytes C.size_t) {
-	r := cgo.Handle(rh).Value().(*http.Request)
+	r := Handle(rh).Value().(*http.Request)
 
 	p := unsafe.Slice((*byte)(unsafe.Pointer(cBuf)), countBytes)
 	var err error
@@ -733,7 +742,7 @@ func go_read_post(rh C.uintptr_t, cBuf *C.char, countBytes C.size_t) (readBytes 
 
 //export go_read_cookies
 func go_read_cookies(rh C.uintptr_t) *C.char {
-	r := cgo.Handle(rh).Value().(*http.Request)
+	r := Handle(rh).Value().(*http.Request)
 
 	cookies := r.Cookies()
 	if len(cookies) == 0 {
