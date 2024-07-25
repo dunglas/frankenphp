@@ -858,7 +858,6 @@ int frankenphp_request_startup() {
   if (php_request_startup() == SUCCESS) {
     return SUCCESS;
   }
-  memset(local_ctx, 0, sizeof(frankenphp_server_context));
 
   php_request_shutdown((void *)0);
 
