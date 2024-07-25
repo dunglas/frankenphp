@@ -71,7 +71,7 @@ RUN apk add --no-cache --virtual .build-deps \
 	git \
 	bash
 	
-RUN GOBIN=/usr/local/go/bin go install golang.org/dl/gotip@latest && gotip download
+RUN GOBIN=/usr/local/go/bin go install golang.org/dl/gotip@latest && (yes || true) | gotip download 600296
 	
 WORKDIR /go/src/app
 
