@@ -124,7 +124,7 @@ The previous worker snippet allows configuring a maximum number of request to ha
 ## Superglobals Behavior
 
 [PHP superglobals](https://www.php.net/manual/en/language.variables.superglobals.php) (`$_SERVER`, `$_ENV`, `$_GET`...)
-behave as follow:
+behave as follows:
 
 * before the first call to `frankenphp_handle_request()`, superglobals contain values bound to the worker script itself
 * during and after the call to `frankenphp_handle_request()`, superglobals contain values generated from the processed HTTP request, each call to `frankenphp_handle_request()` changes the superglobals values
