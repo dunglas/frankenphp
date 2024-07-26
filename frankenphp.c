@@ -76,6 +76,8 @@ typedef struct frankenphp_server_context {
   bool finished;
 } frankenphp_server_context;
 
+__thread frankenphp_server_context *local_ctx = NULL;
+
 static void frankenphp_free_request_context() {
   frankenphp_server_context *ctx = SG(server_context);
 
@@ -430,12 +432,7 @@ static void frankenphp_request_shutdown() {
   php_request_shutdown((void *)0);
   frankenphp_free_request_context();
 
-  free(ctx);
-  SG(server_context) = ctx = NULL;
-
-#if defined(ZTS)
-  ts_free_thread();
-#endif
+  memset(local_ctx, 0, sizeof(frankenphp_server_context));
 }
 
 int frankenphp_update_server_context(
@@ -447,20 +444,7 @@ int frankenphp_update_server_context(
   frankenphp_server_context *ctx;
 
   if (create) {
-#ifdef ZTS
-    /* initial resource fetch */
-    (void)ts_resource(0);
-#ifdef PHP_WIN32
-    ZEND_TSRMLS_CACHE_UPDATE();
-#endif
-#endif
-
-    /* todo: use a pool */
-    ctx =
-        (frankenphp_server_context *)malloc(sizeof(frankenphp_server_context));
-    if (ctx == NULL) {
-      return FAILURE;
-    }
+    ctx = local_ctx;
 
     ctx->worker_ready = false;
     ctx->cookie_data = NULL;
@@ -746,8 +730,22 @@ static void *php_thread(void *arg) {
   snprintf(thread_name, 16, "php-%" PRIxPTR, (uintptr_t)arg);
   set_thread_name(thread_name);
 
+#ifdef ZTS
+  /* initial resource fetch */
+  (void)ts_resource(0);
+#ifdef PHP_WIN32
+  ZEND_TSRMLS_CACHE_UPDATE();
+#endif
+#endif
+
+  local_ctx = malloc(sizeof(frankenphp_server_context));
+
   while (go_handle_request()) {
   }
+
+#ifdef ZTS
+  ts_free_thread();
+#endif
 
   return NULL;
 }
@@ -860,11 +858,6 @@ int frankenphp_request_startup() {
   if (php_request_startup() == SUCCESS) {
     return SUCCESS;
   }
-
-  frankenphp_server_context *ctx = SG(server_context);
-  SG(server_context) = NULL;
-  free(ctx);
-  ctx = NULL;
 
   php_request_shutdown((void *)0);
 
