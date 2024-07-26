@@ -127,7 +127,7 @@ Go into the directory containing your project (`<project-name>`), and start the 
 docker compose up -d --wait
 ```
 
-Your server is up and running, and a HTTPS certificate has been automatically generated for you.
+Your server is up and running, and an HTTPS certificate has been automatically generated for you.
 Go to `https://your-domain-name.example.com` and enjoy!
 
 > [!CAUTION]
