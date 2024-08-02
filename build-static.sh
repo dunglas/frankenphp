@@ -3,7 +3,7 @@
 set -o errexit
 set -x
 
-if ! type "git" > /dev/null 2>&1; then
+if ! type "git" >/dev/null 2>&1; then
     echo "The \"git\" command must be installed."
     exit 1
 fi
@@ -16,7 +16,7 @@ if [ "${os}" = "darwin" ]; then
     md5binary="md5 -q"
 fi
 
-if [ "${os}" = "linux" ] && ! type "cmake" > /dev/null 2>&1; then
+if [ "${os}" = "linux" ] && ! type "cmake" >/dev/null 2>&1; then
     echo "The \"cmake\" command must be installed."
     exit 1
 fi
@@ -87,14 +87,14 @@ else
         cd static-php-cli/
     fi
 
-    if type "brew" > /dev/null 2>&1; then
-        if ! type "composer" > /dev/null; then
+    if type "brew" >/dev/null 2>&1; then
+        if ! type "composer" >/dev/null; then
             packages="composer"
         fi
-        if ! type "go" > /dev/null; then
+        if ! type "go" >/dev/null; then
             packages="${packages} go"
         fi
-        if [ -n "${RELEASE}" ] && ! type "gh" > /dev/null 2>&1; then
+        if [ -n "${RELEASE}" ] && ! type "gh" >/dev/null 2>&1; then
             packages="${packages} gh"
         fi
 
@@ -144,7 +144,7 @@ export LIBPHP_VERSION
 cd ../
 
 if [ "${os}" = "linux" ]; then
-    if  [ -n "${MIMALLOC}" ]; then
+    if [ -n "${MIMALLOC}" ]; then
         # Replace musl's mallocng by mimalloc
         # The default musl allocator is slow, especially when used by multi-threaded apps,
         # and triggers weird bugs
@@ -167,7 +167,7 @@ if [ "${os}" = "linux" ]; then
             git checkout "$(git describe --tags "$(git rev-list --tags --max-count=1 || true)" || true)"
 
             curl -f -L --retry 5 https://raw.githubusercontent.com/tweag/rust-alpine-mimalloc/b26002b49d466a295ea8b50828cb7520a71a872a/mimalloc.diff -o mimalloc.diff
-            patch -p1 < mimalloc.diff
+            patch -p1 <mimalloc.diff
 
             mkdir -p out/
             cd out/
@@ -198,8 +198,7 @@ if [ "${os}" = "linux" ]; then
         fi
 
         # Patch musl library to use mimalloc
-        for libc_path in "/usr/local/musl/lib/libc.a" "/usr/local/musl/$(uname -m)-linux-musl/lib/libc.a" "/usr/lib/libc.a"
-        do
+        for libc_path in "/usr/local/musl/lib/libc.a" "/usr/local/musl/$(uname -m)-linux-musl/lib/libc.a" "/usr/lib/libc.a"; do
             if [ ! -f "${libc_path}" ] || [ -f "${libc_path}.unpatched" ]; then
                 continue
             fi
@@ -229,7 +228,7 @@ cd ../
 # Embed PHP app, if any
 if [ -n "${EMBED}" ] && [ -d "${EMBED}" ]; then
     tar -cf app.tar -C "${EMBED}" .
-    ${md5binary} app.tar | awk '{printf $1}' > app_checksum.txt
+    ${md5binary} app.tar | awk '{printf $1}' >app_checksum.txt
 fi
 
 cd caddy/frankenphp/
@@ -242,7 +241,7 @@ if [ -d "${EMBED}" ]; then
     truncate -s 0 app_checksum.txt
 fi
 
-if type "upx" > /dev/null 2>&1 && [ -z "${DEBUG_SYMBOLS}" ] && [ -z "${NO_COMPRESS}" ]; then
+if type "upx" >/dev/null 2>&1 && [ -z "${DEBUG_SYMBOLS}" ] && [ -z "${NO_COMPRESS}" ]; then
     upx --best "dist/${bin}"
 fi
 

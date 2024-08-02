@@ -7,17 +7,14 @@ on:
   push:
     branches:
       - main
-
+permissions:
+  contents: read
+  packages: read
+  statuses: write  
 jobs:
   build:
     name: Lint Code Base
     runs-on: ubuntu-latest
-
-    permissions:
-      contents: read
-      packages: read
-      statuses: write
-
     steps:
       -
         name: Checkout Code
@@ -36,6 +33,7 @@ jobs:
           VALIDATE_CPP: false
           VALIDATE_JSCPD: false
           VALIDATE_GO: false
+          VALIDATE_GO_MODULES: false
           VALIDATE_PHP_PHPCS: false
           VALIDATE_PHP_PHPSTAN: false
           VALIDATE_PHP_PSALM: false
