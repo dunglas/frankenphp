@@ -11,6 +11,8 @@ on:
       - main
     paths-ignore:
       - 'docs/**'
+permissions:
+  contents: read
 jobs:
   tests:
     runs-on: ubuntu-latest

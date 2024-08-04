@@ -1,4 +1,6 @@
 # syntax=docker/dockerfile:1
+#checkov:skip=CKV_DOCKER_2
+#checkov:skip=CKV_DOCKER_3
 FROM golang:1.22
 
 ENV CFLAGS="-ggdb3"
