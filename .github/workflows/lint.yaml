@@ -39,5 +39,5 @@ jobs:
           VALIDATE_PHP_PSALM: false
           VALIDATE_TERRAGRUNT: false
           # Prettier and StandardJS are incompatible
-          #VALIDATE_JAVASCRIPT_PRETTIER: false
-          #VALIDATE_TYPESCRIPT_PRETTIER: false
+          VALIDATE_JAVASCRIPT_PRETTIER: false
+          VALIDATE_TYPESCRIPT_PRETTIER: false

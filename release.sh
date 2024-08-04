@@ -10,24 +10,24 @@ set -o pipefail
 set -o xtrace
 
 if ! type "git" >/dev/null; then
- echo "The \"git\" command must be installed."
- exit 1
+	echo "The \"git\" command must be installed."
+	exit 1
 fi
 
 if ! type "gh" >/dev/null; then
- echo "The \"gh\" command must be installed."
- exit 1
+	echo "The \"gh\" command must be installed."
+	exit 1
 fi
 
 if [[ $# -ne 1 ]]; then
- echo "Usage: ./release.sh version" >&2
- exit 1
+	echo "Usage: ./release.sh version" >&2
+	exit 1
 fi
 
 # Adapted from https://semver.org/#is-there-a-suggested-regular-expression-regex-to-check-a-semver-string
 if [[ ! $1 =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-((0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*)(\.(0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*))*))?(\+([0-9a-zA-Z-]+(\.[0-9a-zA-Z-]+)*))?$ ]]; then
- echo "Invalid version number: $1" >&2
- exit 1
+	echo "Invalid version number: $1" >&2
+	exit 1
 fi
 
 git checkout main
