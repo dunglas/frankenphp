@@ -1,0 +1,85 @@
+---
+name: Sanitizers
+on:
+  pull_request:
+    branches:
+      - main
+    paths-ignore:
+      - "docs/**"
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - "docs/**"
+permissions:
+  contents: read
+jobs:
+  # Adapted from https://github.com/beberlei/hdrhistogram-php
+  sanitizers:
+    runs-on: ubuntu-latest
+    env:
+      CFLAGS: -g -fsanitize=undefined,address -DZEND_TRACK_ARENA_ALLOC
+      LDFLAGS: -fsanitize=undefined,address
+      CC: clang-18
+      CXX: clang++-18
+    steps:
+      -
+        uses: actions/checkout@v4
+      -
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+          cache-dependency-path: |
+            go.sum 
+            caddy/go.sum
+      -
+        name: Install LLVM
+        run: sudo bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"
+      -
+        name: Determine PHP version
+        id: determine-php-version
+        run: |
+          curl -fsSL 'https://www.php.net/releases/index.php?json&max=1&version=8.3' -o version.json
+          echo version="$(jq -r 'keys[0]') version.json" >> "$GITHUB_OUTPUT"
+          echo archive="$(jq -r '.[] .source[] | select(.filename |endswith(".xz")) | "https://www.php.net/distributions/" + .filename' version.json)" >> "$GITHUB_OUTPUT"
+      -
+        name: Cache PHP
+        id: cache-php
+        uses: actions/cache@v4
+        with:
+          path: php/target/
+          key: php-sanitizers-${{ runner.arch }}-${{ steps.determine-php-version.outputs.version }}
+      -
+        if: steps.cache-php.outputs.cache-hit != 'true'
+        name: Compile PHP
+        run: |
+          sudo apt-get remove --purge --autoremove 'php*-*' 'libmemcached*'
+          mkdir php/
+          curl -fsSL "${{ steps.determine-php-version.outputs.archive }}" | tar -Jx -C php --strip-components=1
+          cd php/
+          ./configure \
+            --enable-debug \
+            --enable-embed \
+            --enable-zts \
+            --disable-zend-signals \
+            --disable-cli \
+            --disable-cgi \
+            --disable-phpdbg \
+            --prefix="$(pwd)/target/"
+          make -j"$(getconf _NPROCESSORS_ONLN)"
+          make install
+      -
+        name: Add PHP to the PATH
+        run: |
+          echo "$(pwd)/php/target/bin" >> "$GITHUB_PATH"
+      -
+        name: Set CGO flags
+        run: |
+          {
+            echo "LDFLAGS=-L$(pwd)/php/target/lib/ $LDFLAGS"
+            echo "CGO_CFLAGS=$CFLAGS $(php-config --includes)"
+            echo "CGO_LDLAGS=-L$(pwd)/php/target/lib/ $(php-config --ldflags || true) $(php-config --libs || true) $LDFLAGS"
+          } >> "$GITHUB_ENV"
+      -
+        name: Run library tests with sanitizers
+        run: go test -asan -v ./...
