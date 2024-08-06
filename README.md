@@ -53,6 +53,7 @@ You can also run command-line scripts with:
 * [The worker mode](https://frankenphp.dev/docs/worker/)
 * [Early Hints support (103 HTTP status code)](https://frankenphp.dev/docs/early-hints/)
 * [Real-time](https://frankenphp.dev/docs/mercure/)
+* [Efficiently Serving Large Static Files](https://frankenphp.dev/docs/x-sendfile/)
 * [Configuration](https://frankenphp.dev/docs/config/)
 * [Docker images](https://frankenphp.dev/docs/docker/)
 * [Deploy in production](docs/production.md)
