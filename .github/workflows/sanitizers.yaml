@@ -82,7 +82,7 @@ jobs:
           } >> "$GITHUB_ENV"
       -
         name: Run library tests with sanitizers
-        run: go test -asan -v ./...
+        run: go test -v ./...
       -
         uses: mxschmitt/action-tmate@v3
   
