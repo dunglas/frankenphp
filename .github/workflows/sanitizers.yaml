@@ -18,8 +18,8 @@ jobs:
   sanitizers:
     runs-on: ubuntu-latest
     env:
-      CFLAGS: -g -O0 -fsanitize=address -DZEND_TRACK_ARENA_ALLOC
-      LDFLAGS: -fsanitize=address
+      CFLAGS: -g -O0 -fsanitize=address -shared-libasan -DZEND_TRACK_ARENA_ALLOC
+      LDFLAGS: -fsanitize=address -shared-libasan
       CC: clang-18
       CXX: clang++-18
     steps:
@@ -77,12 +77,12 @@ jobs:
         run: |
           {
             echo "LIBRARY_PATH=$LIBRARY_PATH:$(pwd)/php/target/lib"
+            echo "LD_PRELOAD=$(clang -print-file-name=libclang_rt.asan-x86_64.so)"
             echo "CGO_CFLAGS=$CFLAGS $(php-config --includes)"
             echo "CGO_LDLAGS=$(php-config --ldflags || true) $(php-config --libs || true) $LDFLAGS"
           } >> "$GITHUB_ENV"
       -
+        uses: mxschmitt/action-tmate@v3    
+      -
         name: Run library tests with sanitizers
         run: go test -v ./...
-      -
-        uses: mxschmitt/action-tmate@v3
-  
