@@ -18,8 +18,8 @@ jobs:
   sanitizers:
     runs-on: ubuntu-latest
     env:
-      CFLAGS: -g -fsanitize=undefined,address -DZEND_TRACK_ARENA_ALLOC
-      LDFLAGS: -fsanitize=undefined,address
+      CFLAGS: -g -O0 -fsanitize=address -DZEND_TRACK_ARENA_ALLOC
+      LDFLAGS: -fsanitize=address
       CC: clang-18
       CXX: clang++-18
     steps:
@@ -76,14 +76,13 @@ jobs:
         name: Set CGO flags
         run: |
           {
-            echo "LDFLAGS=-L$(pwd)/php/target/lib/ $LDFLAGS"
+            echo "LIBRARY_PATH=$LIBRARY_PATH:$(pwd)/php/target/lib"
             echo "CGO_CFLAGS=$CFLAGS $(php-config --includes)"
-            echo "CGO_LDLAGS=-L$(pwd)/php/target/lib/ $(php-config --ldflags || true) $(php-config --libs || true) $LDFLAGS"
+            echo "CGO_LDLAGS=$(php-config --ldflags || true) $(php-config --libs || true) $LDFLAGS"
           } >> "$GITHUB_ENV"
-      -
-        uses: mxschmitt/action-tmate@v3
       -
         name: Run library tests with sanitizers
         run: go test -asan -v ./...
-
-      
+      -
+        uses: mxschmitt/action-tmate@v3
+  
