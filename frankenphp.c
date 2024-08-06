@@ -81,7 +81,7 @@ __thread frankenphp_server_context *local_ctx = NULL;
 static void frankenphp_free_request_context() {
   frankenphp_server_context *ctx = SG(server_context);
 
-  free(ctx->cookie_data);
+  //free(ctx->cookie_data);
   ctx->cookie_data = NULL;
 
   free(SG(request_info).auth_password);
