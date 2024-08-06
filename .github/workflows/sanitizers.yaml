@@ -83,7 +83,5 @@ jobs:
             echo "CGO_LDLAGS=$LDFLAGS -shared-libasan $(php-config --ldflags || true) $(php-config --libs || true)"
           } >> "$GITHUB_ENV"
       -
-        uses: mxschmitt/action-tmate@v3    
-      -
         name: Run library tests with sanitizers
         run: go test -v ./...
