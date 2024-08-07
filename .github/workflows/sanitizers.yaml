@@ -47,7 +47,7 @@ jobs:
         id: cache-php
         uses: actions/cache@v4
         with:
-          path: php/target/
+          path: php/
           key: php-sanitizers-${{ runner.arch }}-${{ steps.determine-php-version.outputs.version }}
       -
         if: steps.cache-php.outputs.cache-hit != 'true'
@@ -65,18 +65,18 @@ jobs:
             --disable-cli \
             --disable-cgi \
             --disable-phpdbg \
-            --prefix="$(pwd)/target/"
+            #--prefix="$(pwd)/target/"
           make -j"$(getconf _NPROCESSORS_ONLN)"
-          make install
+          sudo make install
       -
         name: Add PHP to the PATH
         run: |
-          echo "$(pwd)/php/target/bin" >> "$GITHUB_PATH"
+          #echo "$(pwd)/php/target/bin" >> "$GITHUB_PATH"
       -
         name: Set CGO flags
         run: |
           {
-            echo "LIBRARY_PATH=$LIBRARY_PATH:$(pwd)/php/target/lib"
+            #echo "LIBRARY_PATH=$LIBRARY_PATH:$(pwd)/php/target/lib"
             # https://github.com/google/sanitizers/wiki/AddressSanitizerAsDso
             #echo "LD_PRELOAD=$(clang -print-file-name=libclang_rt.asan-x86_64.so)"
             echo "CGO_CFLAGS=$CFLAGS $(php-config --includes)"
