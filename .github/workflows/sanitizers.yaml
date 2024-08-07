@@ -78,9 +78,9 @@ jobs:
           {
             echo "LIBRARY_PATH=$LIBRARY_PATH:$(pwd)/php/target/lib"
             # https://github.com/google/sanitizers/wiki/AddressSanitizerAsDso
-            echo "LD_PRELOAD=$(clang -print-file-name=libclang_rt.asan-x86_64.so)"
-            echo "CGO_CFLAGS=$CFLAGS -shared-libasan $(php-config --includes)"
-            echo "CGO_LDLAGS=$LDFLAGS -shared-libasan $(php-config --ldflags || true) $(php-config --libs || true)"
+            #echo "LD_PRELOAD=$(clang -print-file-name=libclang_rt.asan-x86_64.so)"
+            echo "CGO_CFLAGS=$CFLAGS $(php-config --includes)"
+            echo "CGO_LDLAGS=$LDFLAGS $(php-config --ldflags || true) $(php-config --libs || true)"
           } >> "$GITHUB_ENV"
       -
         name: Run library tests with sanitizers
