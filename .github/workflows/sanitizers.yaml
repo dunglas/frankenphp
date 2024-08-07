@@ -79,9 +79,14 @@ jobs:
             echo "LIBRARY_PATH=$LIBRARY_PATH:$(pwd)/php/target/lib"
             # https://github.com/google/sanitizers/wiki/AddressSanitizerAsDso
             echo "LD_PRELOAD=$(clang -print-file-name=libclang_rt.asan-x86_64.so)"
-            echo "CGO_CFLAGS=-g -O0 -fsanitize=address -DZEND_TRACK_ARENA_ALLOC $(php-config --includes)"
+            echo "CGO_CFLAGS=-g -O0 -DZEND_TRACK_ARENA_ALLOC $(php-config --includes)"
             echo "CGO_LDLAGS=$(php-config --ldflags || true) $(php-config --libs || true)"
           } >> "$GITHUB_ENV"
       -
         name: Run library tests with sanitizers
-        run: go test -asan -v ./...
+        env:
+          LSAN_OPTIONS: suppressions=suppr.txt
+        run: |
+          echo 'leak:libbfd' > suppr.txt
+          echo 'leak:linux-gnu-ld.bfd' >> suppr.txt
+          go test -asan -v ./...
