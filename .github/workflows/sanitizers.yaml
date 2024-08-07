@@ -76,7 +76,7 @@ jobs:
         name: Set CGO flags
         run: |
           {
-            #echo "LIBRARY_PATH=$LIBRARY_PATH:$(pwd)/php/target/lib"
+            echo "LIBRARY_PATH=$LIBRARY_PATH:$(pwd)/php/target/lib"
             # https://github.com/google/sanitizers/wiki/AddressSanitizerAsDso
             #echo "LD_PRELOAD=$(clang -print-file-name=libclang_rt.asan-x86_64.so)"
             echo "CGO_CFLAGS=-g -O0 -DZEND_TRACK_ARENA_ALLOC $(php-config --includes)"
