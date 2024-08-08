@@ -5,21 +5,25 @@ on:
     branches:
       - main
     paths-ignore:
-      - "docs/**"
+      - 'docs/**'
   push:
     branches:
       - main
     paths-ignore:
-      - "docs/**"
+      - 'docs/**'
 permissions:
   contents: read
 jobs:
   # Adapted from https://github.com/beberlei/hdrhistogram-php
   sanitizers:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        sanitizer: ['asan', 'msan']
     env:
-      CFLAGS: -g -O0 -fsanitize=address -DZEND_TRACK_ARENA_ALLOC
-      LDFLAGS: -fsanitize=address
+      CFLAGS: -g -O0 -fsanitize=${{ matrix.sanitizer == 'asan' && 'address' || 'memory' }}  -DZEND_TRACK_ARENA_ALLOC
+      LDFLAGS: -fsanitize=${{ matrix.sanitizer == 'asan' && 'address' || 'memory' }}
       CC: clang
       CXX: clang++
     steps:
@@ -31,13 +35,10 @@ jobs:
       -
         uses: actions/setup-go@v5
         with:
-          go-version: "1.22"
+          go-version: '1.22'
           cache-dependency-path: |
             go.sum 
             caddy/go.sum
-      #-
-      #  name: Install LLVM
-      #  run: sudo bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"
       -
         name: Determine PHP version
         id: determine-php-version
@@ -51,7 +52,7 @@ jobs:
       #  uses: actions/cache@v4
       #  with:
       #    path: php/target
-      #    key: php-sanitizers-${{ runner.arch }}-${{ steps.determine-php-version.outputs.version }}
+      #    key: php-sanitizers-${{ matrix.sanitizer }}-${{ runner.arch }}-${{ steps.determine-php-version.outputs.version }}
       -
         #if: steps.cache-php.outputs.cache-hit != 'true'
         name: Compile PHP
@@ -90,13 +91,11 @@ jobs:
           sudo rm /etc/ld.so.cache
           sudo ldconfig
       -
-        name: Run library tests with ASAN
+        name: Run library tests with ${{ matrix.sanitizer }}
         #env:
         #  LSAN_OPTIONS: suppressions=suppr.txt
         run: |
           #echo 'leak:libbfd' > suppr.txt
           #echo 'leak:linux-gnu-ld.bfd' >> suppr.txt
-          go test -asan -v ./...
-      -
-        name: Run library tests with MSAN
-        run: go test -msan -v ./...
+          go test -${{ matrix.sanitizer }} -v ./...
+
