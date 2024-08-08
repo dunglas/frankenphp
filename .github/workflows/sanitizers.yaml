@@ -17,11 +17,11 @@ jobs:
   # Adapted from https://github.com/beberlei/hdrhistogram-php
   sanitizers:
     runs-on: ubuntu-latest
-    #env:
-      #CFLAGS: -g -O0 -fsanitize=address -DZEND_TRACK_ARENA_ALLOC
-      #LDFLAGS: -fsanitize=address
-      #CC: clang
-      #CXX: clang++
+    env:
+      CFLAGS: -g -O0 -fsanitize=address -DZEND_TRACK_ARENA_ALLOC
+      LDFLAGS: -fsanitize=address
+      CC: clang
+      CXX: clang++
     steps:
       -
         name: Remove local PHP
@@ -45,13 +45,13 @@ jobs:
           curl -fsSL 'https://www.php.net/releases/index.php?json&max=1&version=8.3' -o version.json
           echo version="$(jq -r 'keys[0]') version.json" >> "$GITHUB_OUTPUT"
           echo archive="$(jq -r '.[] .source[] | select(.filename |endswith(".xz")) | "https://www.php.net/distributions/" + .filename' version.json)" >> "$GITHUB_OUTPUT"
-      #-
-      #  name: Cache PHP
-      #  id: cache-php
-      #  uses: actions/cache@v4
-      #  with:
-      #    path: php/target
-      #    key: php-sanitizers-${{ runner.arch }}-${{ steps.determine-php-version.outputs.version }}
+      -
+        name: Cache PHP
+        id: cache-php
+        uses: actions/cache@v4
+        with:
+          path: php/target
+          key: php-sanitizers-${{ runner.arch }}-${{ steps.determine-php-version.outputs.version }}
       -
         #if: steps.cache-php.outputs.cache-hit != 'true'
         name: Compile PHP
@@ -63,33 +63,32 @@ jobs:
             --enable-debug \
             --enable-embed \
             --enable-zts \
-            --disable-zend-signals
-            #--disable-cli \
-            #--disable-cgi \
-            #--disable-phpdbg \
-            #--prefix="$(pwd)/target/"
+            --disable-zend-signals \
+            --disable-cli \
+            --disable-cgi \
+            --disable-phpdbg \
+            --prefix="$(pwd)/target/"
           make -j"$(getconf _NPROCESSORS_ONLN)"
           sudo make install
+      -
+        name: Add PHP to the PATH
+        run: |
+          echo "$(pwd)/php/target/bin" >> "$GITHUB_PATH"
+      -
+        name: Set environement variables
+        run: |
+          {
+            echo "LIBRARY_PATH=$LIBRARY_PATH:$(pwd)/php/target/lib"
+            # https://github.com/google/sanitizers/wiki/AddressSanitizerAsDso
+            #echo "LD_PRELOAD=$($CC -print-file-name=libclang_rt.asan-x86_64.so)"
+            echo "CGO_CFLAGS=-g -O0 -DZEND_TRACK_ARENA_ALLOC $(php-config --includes)"
+            echo "CGO_LDLAGS=$(php-config --ldflags) $(php-config --libs)"
+          } >> "$GITHUB_ENV"
       -
         name: Clear ld.so.cache
         run: |
           sudo rm /etc/ld.so.cache
           sudo ldconfig
-      #-
-      #  name: Add PHP to the PATH
-      #  run: |
-      #    echo "$(pwd)/php/target/bin" >> "$GITHUB_PATH"
-      -
-        name: Set CGO flags
-        run: |
-          {
-            #echo "LIBRARY_PATH=$LIBRARY_PATH:$(pwd)/php/target/lib"
-            # https://github.com/google/sanitizers/wiki/AddressSanitizerAsDso
-            #echo "LD_PRELOAD=$($CC -print-file-name=libclang_rt.asan-x86_64.so)"
-            #echo "CGO_CFLAGS=-g -O0 -DZEND_TRACK_ARENA_ALLOC $(php-config --includes)"
-            echo "CGO_CFLAGS=$(php-config --includes)"
-            echo "CGO_LDLAGS=$(php-config --ldflags) $(php-config --libs)"
-          } >> "$GITHUB_ENV"
       -
         name: Run library tests with sanitizers
         #env:
@@ -97,5 +96,4 @@ jobs:
         run: |
           #echo 'leak:libbfd' > suppr.txt
           #echo 'leak:linux-gnu-ld.bfd' >> suppr.txt
-          #go test -asan -v ./...
-          go test -v ./...
+          go test -asan -v ./...
