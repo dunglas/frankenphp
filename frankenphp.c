@@ -102,7 +102,7 @@ static void frankenphp_free_request_context() {
   free(SG(request_info).path_translated);
   SG(request_info).path_translated = NULL;
 
-  //free(SG(request_info).request_uri);
+  free(SG(request_info).request_uri);
   SG(request_info).request_uri = NULL;
 }
 
@@ -865,6 +865,9 @@ int frankenphp_request_startup() {
 }
 
 int frankenphp_execute_script(char *file_name) {
+  char *foo = malloc(5);
+	foo[20] = 'x';
+
   if (frankenphp_request_startup() == FAILURE) {
     free(file_name);
     file_name = NULL;

@@ -98,4 +98,3 @@ jobs:
           #echo 'leak:libbfd' > suppr.txt
           #echo 'leak:linux-gnu-ld.bfd' >> suppr.txt
           go test -${{ matrix.sanitizer }} -v ./...
-
