@@ -90,10 +90,13 @@ jobs:
           sudo rm /etc/ld.so.cache
           sudo ldconfig
       -
-        name: Run library tests with sanitizers
+        name: Run library tests with ASAN
         #env:
         #  LSAN_OPTIONS: suppressions=suppr.txt
         run: |
           #echo 'leak:libbfd' > suppr.txt
           #echo 'leak:linux-gnu-ld.bfd' >> suppr.txt
-          go test -asan -msan -v ./...
+          go test -asan -v ./...
+      -
+        name: Run library tests with MSAN
+        run: go test -msan -v ./...
