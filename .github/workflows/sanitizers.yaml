@@ -20,8 +20,8 @@ jobs:
     env:
       #CFLAGS: -g -O0 -fsanitize=address -DZEND_TRACK_ARENA_ALLOC
       #LDFLAGS: -fsanitize=address
-      CC: clang-18
-      CXX: clang++-18
+      CC: clang
+      CXX: clang++
     steps:
       -
         uses: actions/checkout@v4
@@ -32,9 +32,9 @@ jobs:
           cache-dependency-path: |
             go.sum 
             caddy/go.sum
-      -
-        name: Install LLVM
-        run: sudo bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"
+      #-
+      #  name: Install LLVM
+      #  run: sudo bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"
       -
         name: Determine PHP version
         id: determine-php-version
@@ -42,15 +42,15 @@ jobs:
           curl -fsSL 'https://www.php.net/releases/index.php?json&max=1&version=8.3' -o version.json
           echo version="$(jq -r 'keys[0]') version.json" >> "$GITHUB_OUTPUT"
           echo archive="$(jq -r '.[] .source[] | select(.filename |endswith(".xz")) | "https://www.php.net/distributions/" + .filename' version.json)" >> "$GITHUB_OUTPUT"
+      #-
+      #  name: Cache PHP
+      #  id: cache-php
+      #  uses: actions/cache@v4
+      #  with:
+      #    path: php/target
+      #    key: php-sanitizers-${{ runner.arch }}-${{ steps.determine-php-version.outputs.version }}
       -
-        name: Cache PHP
-        id: cache-php
-        uses: actions/cache@v4
-        with:
-          path: php/target
-          key: php-sanitizers-${{ runner.arch }}-${{ steps.determine-php-version.outputs.version }}
-      -
-        if: steps.cache-php.outputs.cache-hit != 'true'
+        #if: steps.cache-php.outputs.cache-hit != 'true'
         name: Compile PHP
         run: |
           sudo apt-get remove --purge --autoremove 'php*-*' 'libmemcached*'
@@ -78,7 +78,7 @@ jobs:
           {
             echo "LIBRARY_PATH=$LIBRARY_PATH:$(pwd)/php/target/lib"
             # https://github.com/google/sanitizers/wiki/AddressSanitizerAsDso
-            #echo "LD_PRELOAD=$(clang -print-file-name=libclang_rt.asan-x86_64.so)"
+            #echo "LD_PRELOAD=$($CC -print-file-name=libclang_rt.asan-x86_64.so)"
             echo "CGO_CFLAGS=-g -O0 -DZEND_TRACK_ARENA_ALLOC $(php-config --includes)"
             echo "CGO_LDLAGS=$(php-config --ldflags || true) $(php-config --libs || true)"
           } >> "$GITHUB_ENV"
