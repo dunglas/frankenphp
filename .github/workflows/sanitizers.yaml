@@ -81,8 +81,8 @@ jobs:
             #echo "LIBRARY_PATH=$LIBRARY_PATH:$(pwd)/php/target/lib"
             # https://github.com/google/sanitizers/wiki/AddressSanitizerAsDso
             #echo "LD_PRELOAD=$($CC -print-file-name=libclang_rt.asan-x86_64.so)"
-            echo "CGO_CFLAGS=-g -O0 -DZEND_TRACK_ARENA_ALLOC $(php-config --includes)"
-            echo "CGO_LDLAGS=$(php-config --ldflags) $(php-config --libs)"
+            echo "CGO_CFLAGS=$CFLAGS $(php-config --includes)"
+            echo "CGO_LDLAGS=$LDFLAGS $(php-config --ldflags) $(php-config --libs)"
           } >> "$GITHUB_ENV"
       -
         name: Clear ld.so.cache
@@ -96,4 +96,4 @@ jobs:
         run: |
           #echo 'leak:libbfd' > suppr.txt
           #echo 'leak:linux-gnu-ld.bfd' >> suppr.txt
-          go test -asan -v ./...
+          go test -asan -msan -v ./...
