@@ -24,6 +24,9 @@ jobs:
       #CXX: clang++
     steps:
       -
+        name: Remove local PHP
+        run: sudo apt-get remove --purge --autoremove 'php*' 'libmemcached*'
+      -
         uses: actions/checkout@v4
       -
         uses: actions/setup-go@v5
@@ -53,7 +56,6 @@ jobs:
         #if: steps.cache-php.outputs.cache-hit != 'true'
         name: Compile PHP
         run: |
-          sudo apt-get remove --purge --autoremove 'php*-*' 'libmemcached*'
           mkdir php/
           curl -fsSL "${{ steps.determine-php-version.outputs.archive }}" | tar -Jx -C php --strip-components=1
           cd php/
@@ -68,6 +70,11 @@ jobs:
             #--prefix="$(pwd)/target/"
           make -j"$(getconf _NPROCESSORS_ONLN)"
           sudo make install
+      -
+        name: Clear ld.so.cache
+        run: |
+          rm /etc/ld.so.cache
+          ldconfig
       #-
       #  name: Add PHP to the PATH
       #  run: |
