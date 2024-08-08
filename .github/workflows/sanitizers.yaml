@@ -73,8 +73,8 @@ jobs:
       -
         name: Clear ld.so.cache
         run: |
-          rm /etc/ld.so.cache
-          ldconfig
+          sudo rm /etc/ld.so.cache
+          sudo ldconfig
       #-
       #  name: Add PHP to the PATH
       #  run: |
