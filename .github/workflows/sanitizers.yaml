@@ -67,7 +67,7 @@ jobs:
             --disable-zend-signals \
             --disable-cli \
             --disable-cgi \
-            --disable-phpdbg
+            --disable-phpdbg \
             --prefix="$(pwd)/target/"
           make -j"$(getconf _NPROCESSORS_ONLN)"
           sudo make install
