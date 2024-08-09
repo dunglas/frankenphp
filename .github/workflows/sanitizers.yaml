@@ -48,7 +48,7 @@ jobs:
         id: determine-php-version
         run: |
           curl -fsSL 'https://www.php.net/releases/index.php?json&max=1&version=8.3' -o version.json
-          echo version="$(jq -r 'keys[0]') version.json" >> "$GITHUB_OUTPUT"
+          echo version="$(jq -r 'keys[0]' version.json)" >> "$GITHUB_OUTPUT"
           echo archive="$(jq -r '.[] .source[] | select(.filename |endswith(".xz")) | "https://www.php.net/distributions/" + .filename' version.json)" >> "$GITHUB_OUTPUT"
       -
         name: Cache PHP
@@ -58,7 +58,7 @@ jobs:
           path: php/target
           key: php-sanitizers-${{ matrix.sanitizer }}-${{ runner.arch }}-${{ steps.determine-php-version.outputs.version }}
       -
-        #if: steps.cache-php.outputs.cache-hit != 'true'
+        if: steps.cache-php.outputs.cache-hit != 'true'
         name: Compile PHP
         run: |
           mkdir php/
