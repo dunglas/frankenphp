@@ -94,17 +94,16 @@ jobs:
           sudo make install
       -
         name: Add PHP to the PATH
-        run: |
-          echo "$(pwd)/php/target/bin" >> "$GITHUB_PATH"
+        run: echo "$(pwd)/php/target/bin" >> "$GITHUB_PATH"
       -
-        name: Set environement variables
+        name: Set Set CGO flags
         run: |
           {
             echo "CGO_CFLAGS=$CFLAGS $(php-config --includes)"
-            echo "CGO_LDFLAGS=$LDFLAGS -L$(pwd)/php/target/lib $(php-config --ldflags) $(php-config --libs)"
+            echo "CGO_LDFLAGS=$LDFLAGS $(php-config --ldflags) $(php-config --libs)"
           } >> "$GITHUB_ENV"
       -
-        name: Compile FrankenPHP
+        name: Compile tests
         run: go test -${{ matrix.sanitizer }} -v -x -c
       -
         name: Run tests
