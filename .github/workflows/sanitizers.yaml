@@ -62,6 +62,8 @@ jobs:
           curl -fsSL "${{ steps.determine-php-version.outputs.archive }}" | tar -Jx -C php --strip-components=1
           cd php/
           ./configure \
+            CFLAGS="$CFLAGS" \
+            LDFLAGS="$LDFLAGS" \
             --enable-debug \
             --enable-embed \
             --enable-zts \
@@ -80,17 +82,20 @@ jobs:
         name: Set environement variables
         run: |
           {
+            echo "LIBRARY_PATH="$(pwd)/php/target/lib:$LIBRARY_PATH"
+            echo "LD_LIBRARY_PATH="$(pwd)/php/target/lib:$LD_LIBRARY_PATH"
             echo "CGO_CFLAGS=$CFLAGS $(php-config --includes)"
             echo "CGO_LDFLAGS=$LDFLAGS -L$(pwd)/php/target/lib $(php-config --ldflags) $(php-config --libs)"
           } >> "$GITHUB_ENV"
       -
         name: Clear ld.so.cache
         run: |
+          ls $(pwd)/php/target/lib
           sudo rm /etc/ld.so.cache
           sudo ldconfig
       -
-        name: Run library tests with ${{ matrix.sanitizer }}
-        run: |
-          go env
-          go test -${{ matrix.sanitizer }} -v -x -c
-          ./frankenphp.test -test.v
+        name: Compile
+        run: go test -${{ matrix.sanitizer }} -v -x -c
+      -
+        name: Run tests
+        run: ./frankenphp.test -test.v
