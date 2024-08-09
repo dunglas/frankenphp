@@ -95,7 +95,7 @@ jobs:
           sudo rm /etc/ld.so.cache
           sudo ldconfig
       -
-        name: Compile
+        name: Compile FrankenPHP
         run: go test -${{ matrix.sanitizer }} -v -x -c
       -
         name: Run tests

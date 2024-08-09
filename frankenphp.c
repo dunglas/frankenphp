@@ -865,9 +865,6 @@ int frankenphp_request_startup() {
 }
 
 int frankenphp_execute_script(char *file_name) {
-  char *foo = malloc(5);
-	foo[20] = 'x';
-
   if (frankenphp_request_startup() == FAILURE) {
     free(file_name);
     file_name = NULL;
