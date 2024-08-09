@@ -27,6 +27,7 @@ jobs:
       LDFLAGS: -fsanitize=${{ matrix.sanitizer == 'asan' && 'address' || 'memory' }}
       CC: clang
       CXX: clang++
+      USE_ZEND_ALLOC: 0
     steps:
       -
         name: Remove local PHP
@@ -82,8 +83,8 @@ jobs:
         name: Set environement variables
         run: |
           {
-            echo "LIBRARY_PATH="$(pwd)/php/target/lib:$LIBRARY_PATH"
-            echo "LD_LIBRARY_PATH="$(pwd)/php/target/lib:$LD_LIBRARY_PATH"
+            echo "LIBRARY_PATH=$(pwd)/php/target/lib:$LIBRARY_PATH"
+            echo "LD_LIBRARY_PATH=$(pwd)/php/target/lib:$LD_LIBRARY_PATH"
             echo "CGO_CFLAGS=$CFLAGS $(php-config --includes)"
             echo "CGO_LDFLAGS=$LDFLAGS -L$(pwd)/php/target/lib $(php-config --ldflags) $(php-config --libs)"
           } >> "$GITHUB_ENV"
