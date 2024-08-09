@@ -58,7 +58,7 @@ jobs:
           path: php/target
           key: php-sanitizers-${{ matrix.sanitizer }}-${{ runner.arch }}-${{ steps.determine-php-version.outputs.version }}
       -
-        if: steps.cache-php.outputs.cache-hit != 'true'
+        #if: steps.cache-php.outputs.cache-hit != 'true'
         name: Compile PHP
         run: |
           mkdir php/
@@ -103,12 +103,6 @@ jobs:
             echo "CGO_CFLAGS=$CFLAGS $(php-config --includes)"
             echo "CGO_LDFLAGS=$LDFLAGS -L$(pwd)/php/target/lib $(php-config --ldflags) $(php-config --libs)"
           } >> "$GITHUB_ENV"
-      #-
-      #  name: Clear ld.so.cache
-      #  run: |
-      #    ls $(pwd)/php/target/lib
-      #    sudo rm /etc/ld.so.cache
-      #    sudo ldconfig
       -
         name: Compile FrankenPHP
         run: go test -${{ matrix.sanitizer }} -v -x -c
