@@ -46,15 +46,15 @@ jobs:
           curl -fsSL 'https://www.php.net/releases/index.php?json&max=1&version=8.3' -o version.json
           echo version="$(jq -r 'keys[0]') version.json" >> "$GITHUB_OUTPUT"
           echo archive="$(jq -r '.[] .source[] | select(.filename |endswith(".xz")) | "https://www.php.net/distributions/" + .filename' version.json)" >> "$GITHUB_OUTPUT"
-      #-
-      #  name: Cache PHP
-      #  id: cache-php
-      #  uses: actions/cache@v4
-      #  with:
-      #    path: php/target
-      #    key: php-sanitizers-${{ matrix.sanitizer }}-${{ runner.arch }}-${{ steps.determine-php-version.outputs.version }}
       -
-        #if: steps.cache-php.outputs.cache-hit != 'true'
+        name: Cache PHP
+        id: cache-php
+        uses: actions/cache@v4
+        with:
+          path: php/target
+          key: php-sanitizers-${{ matrix.sanitizer }}-${{ runner.arch }}-${{ steps.determine-php-version.outputs.version }}
+      -
+        if: steps.cache-php.outputs.cache-hit != 'true'
         name: Compile PHP
         run: |
           mkdir php/
@@ -68,20 +68,18 @@ jobs:
             --disable-cli \
             --disable-cgi \
             --disable-phpdbg
-            #--prefix="$(pwd)/target/"
+            --prefix="$(pwd)/target/"
           make -j"$(getconf _NPROCESSORS_ONLN)"
           sudo make install
-      #-
-      #  name: Add PHP to the PATH
-      #  run: |
-      #    echo "$(pwd)/php/target/bin" >> "$GITHUB_PATH"
+      -
+        name: Add PHP to the PATH
+        run: |
+          echo "$(pwd)/php/target/bin" >> "$GITHUB_PATH"
       -
         name: Set environement variables
         run: |
           {
-            #echo "LIBRARY_PATH=$LIBRARY_PATH:$(pwd)/php/target/lib"
-            # https://github.com/google/sanitizers/wiki/AddressSanitizerAsDso
-            #echo "LD_PRELOAD=$($CC -print-file-name=libclang_rt.asan-x86_64.so)"
+            echo "LIBRARY_PATH=$LIBRARY_PATH:$(pwd)/php/target/lib"
             echo "CGO_CFLAGS=$CFLAGS $(php-config --includes)"
             echo "CGO_LDFLAGS=$LDFLAGS $(php-config --ldflags) $(php-config --libs)"
           } >> "$GITHUB_ENV"
@@ -92,11 +90,7 @@ jobs:
           sudo ldconfig
       -
         name: Run library tests with ${{ matrix.sanitizer }}
-        #env:
-        #  LSAN_OPTIONS: suppressions=suppr.txt
         run: |
-          #echo 'leak:libbfd' > suppr.txt
-          #echo 'leak:linux-gnu-ld.bfd' >> suppr.txt
           go env
           go test -${{ matrix.sanitizer }} -v -x -c
           ./frankenphp.test -test.v

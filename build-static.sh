@@ -120,14 +120,20 @@ else
 	./bin/spc build --debug --enable-zts --build-embed ${extraOpts} "${PHP_EXTENSIONS}" --with-libs="${PHP_EXTENSION_LIBS}"
 fi
 
+# See https://github.com/docker-library/php/blob/master/8.3/alpine3.20/zts/Dockerfile#L53-L55
 CGO_CFLAGS="-DFRANKENPHP_VERSION=${FRANKENPHP_VERSION} -I${PWD}/buildroot/include/ $(./buildroot/bin/php-config --includes | sed s#-I/#-I"${PWD}"/buildroot/#g)"
 if [ -n "${DEBUG_SYMBOLS}" ]; then
 	CGO_CFLAGS="-g ${CGO_CFLAGS}"
+else
+	CGO_CFLAGS="-fstack-protector-strong -fpic -fpie -O2 -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 ${CGO_CFLAGS}"
 fi
 export CGO_CFLAGS
+export CGO_CPPFLAGS="${CGO_CFLAGS}"
 
 if [ "${os}" = "mac" ]; then
 	export CGO_LDFLAGS="-framework CoreFoundation -framework SystemConfiguration"
+elif [ "${os}" = "linux" ] && [ -z "${DEBUG_SYMBOLS}" ]; then
+	CGO_LDFLAGS="-Wl,-O1 -pie"
 fi
 
 CGO_LDFLAGS="${CGO_LDFLAGS} ${PWD}/buildroot/lib/libbrotlicommon.a ${PWD}/buildroot/lib/libbrotlienc.a ${PWD}/buildroot/lib/libbrotlidec.a $(./buildroot/bin/php-config --ldflags || true) $(./buildroot/bin/php-config --libs || true)"
