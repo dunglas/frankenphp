@@ -25,6 +25,8 @@ on:
     - cron:  '0 0 * * *'
 permissions:
   contents: write
+  id-token: write
+  attestations: write
 env:
   IMAGE_NAME: ${{ (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.version) || startsWith(github.ref, 'refs/tags/')) && 'dunglas/frankenphp' || 'dunglas/frankenphp-dev' }}    
 jobs:
@@ -181,6 +183,11 @@ jobs:
         run: gh release upload "${{ (github.ref_type == 'tag' && github.ref_name) || needs.prepare.outputs.ref }}" frankenphp-linux-x86_64${{ matrix.debug && '-debug' || '' }}${{ matrix.mimalloc && '-mimalloc' || '' }} --repo dunglas/frankenphp --clobber
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      -
+        if: fromJson(needs.prepare.outputs.push) && (matrix.debug || matrix.mimalloc) && (needs.prepare.outputs.ref || github.ref_type == 'tag')
+        uses: actions/attest-build-provenance@v1
+        with:
+          subject-path: ${{ github.workspace }}/frankenphp-linux-x86_64${{ matrix.debug && '-debug' || '' }}${{ matrix.mimalloc && '-mimalloc' || '' }}
 
   # Adapted from https://docs.docker.com/build/ci/github-actions/multi-platform/
   push:
@@ -235,6 +242,12 @@ jobs:
         run: gh release upload "${{ (github.ref_type == 'tag' && github.ref_name) || needs.prepare.outputs.ref }}" frankenphp-linux-x86_64 frankenphp-linux-aarch64 --repo dunglas/frankenphp --clobber
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      -
+        if: needs.prepare.outputs.ref || github.ref_type == 'tag'
+        uses: actions/attest-build-provenance@v1
+        with:
+          subject-path: ${{ github.workspace }}/frankenphp-linux-*
+
   build-mac:
     strategy:
       fail-fast: false
@@ -275,6 +288,11 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE: ${{ (needs.prepare.outputs.ref || github.ref_type == 'tag') && '1' || '' }}
+      -
+        if: needs.prepare.outputs.ref || github.ref_type == 'tag'
+        uses: actions/attest-build-provenance@v1
+        with:
+          subject-path: ${{ github.workspace }}/dist/frankenphp-mac-*
       -
         name: Upload artifact
         if: github.ref_type == 'branch'
