@@ -247,7 +247,7 @@ func testResponseHeaders(t *testing.T, opts *testOptions) {
 		body, _ := io.ReadAll(resp.Body)
 
 		if i%3 != 0 {
-			assert.Equal(t, i, resp.StatusCode)
+			assert.Equal(t, i+100, resp.StatusCode)
 		} else {
 			assert.Equal(t, 200, resp.StatusCode)
 		}
