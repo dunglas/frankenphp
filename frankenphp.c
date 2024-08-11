@@ -455,6 +455,9 @@ int frankenphp_update_server_context(
     ctx = (frankenphp_server_context *)SG(server_context);
   }
 
+  // It is not reset by zend engine, set it to 200.
+  SG(sapi_headers).http_response_code = 200;
+
   ctx->main_request = main_request;
   ctx->current_request = current_request;
 

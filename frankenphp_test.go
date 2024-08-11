@@ -246,6 +246,12 @@ func testResponseHeaders(t *testing.T, opts *testOptions) {
 		resp := w.Result()
 		body, _ := io.ReadAll(resp.Body)
 
+		if i%3 != 0 {
+			assert.Equal(t, i+100, resp.StatusCode)
+		} else {
+			assert.Equal(t, 200, resp.StatusCode)
+		}
+
 		assert.Contains(t, string(body), "'X-Powered-By' => 'PH")
 		assert.Contains(t, string(body), "'Foo' => 'bar',")
 		assert.Contains(t, string(body), "'Foo2' => 'bar2',")
