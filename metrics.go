@@ -57,7 +57,7 @@ type PrometheusMetrics struct {
 	registry           prometheus.Registerer
 	totalThreads       prometheus.Counter
 	busyThreads        prometheus.Gauge
-	totalWorkers       map[string]prometheus.Counter
+	totalWorkers       map[string]prometheus.Gauge
 	busyWorkers        map[string]prometheus.Gauge
 	workerRequestTime  map[string]prometheus.Counter
 	workerRequestCount map[string]prometheus.Counter
@@ -65,24 +65,27 @@ type PrometheusMetrics struct {
 }
 
 func (m *PrometheusMetrics) StartWorker(name string) {
+	name = sanitizeWorkerName(name)
 	m.busyThreads.Inc()
+	m.totalWorkers[name].Inc()
 }
 
 func (m *PrometheusMetrics) StopWorker(name string) {
+	name = sanitizeWorkerName(name)
 	m.busyThreads.Dec()
+	m.totalWorkers[name].Dec()
 }
 
 func (m *PrometheusMetrics) TotalWorkers(name string, num int) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	m.totalWorkers[name] = prometheus.NewCounter(prometheus.CounterOpts{
+	m.totalWorkers[name] = prometheus.NewGauge(prometheus.GaugeOpts{
 		Namespace: "frankenphp",
 		Subsystem: getWorkerNameForMetrics(name),
 		Name:      "total_workers",
 		Help:      "Total number of PHP workers for this worker",
 	})
-	m.totalWorkers[name].Add(float64(num))
 	m.registry.MustRegister(m.totalWorkers[name])
 
 	m.busyWorkers[name] = prometheus.NewGauge(prometheus.GaugeOpts{
@@ -158,7 +161,7 @@ func NewPrometheusMetrics(registry prometheus.Registerer) *PrometheusMetrics {
 			Name: "frankenphp_busy_threads",
 			Help: "Number of busy PHP threads",
 		}),
-		totalWorkers:       map[string]prometheus.Counter{},
+		totalWorkers:       map[string]prometheus.Gauge{},
 		busyWorkers:        map[string]prometheus.Gauge{},
 		workerRequestTime:  map[string]prometheus.Counter{},
 		workerRequestCount: map[string]prometheus.Counter{},
