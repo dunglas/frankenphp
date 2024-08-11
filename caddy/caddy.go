@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/prometheus/client_golang/prometheus"
 	"net/http"
 	"path/filepath"
 	"strconv"
@@ -44,6 +45,8 @@ var mainPHPInterpreterKey mainPHPinterpreterKeyType
 
 var phpInterpreter = caddy.NewUsagePool()
 
+var metrics = frankenphp.NewPrometheusMetrics(prometheus.DefaultRegisterer)
+
 type phpInterpreterDestructor struct{}
 
 func (phpInterpreterDestructor) Destruct() error {
@@ -80,7 +83,7 @@ func (f *FrankenPHPApp) Start() error {
 	repl := caddy.NewReplacer()
 	logger := caddy.Log()
 
-	opts := []frankenphp.Option{frankenphp.WithNumThreads(f.NumThreads), frankenphp.WithLogger(logger)}
+	opts := []frankenphp.Option{frankenphp.WithNumThreads(f.NumThreads), frankenphp.WithLogger(logger), frankenphp.WithMetrics(metrics)}
 	for _, w := range f.Workers {
 		opts = append(opts, frankenphp.WithWorkers(repl.ReplaceKnown(w.FileName, ""), w.Num, w.Env))
 	}
