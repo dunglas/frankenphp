@@ -2,7 +2,6 @@ package frankenphp
 
 import (
 	"github.com/prometheus/client_golang/prometheus"
-	"go.uber.org/zap"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -65,14 +64,24 @@ type PrometheusMetrics struct {
 }
 
 func (m *PrometheusMetrics) StartWorker(name string) {
-	name = sanitizeWorkerName(name)
 	m.busyThreads.Inc()
+
+	// tests do not register workers before starting them
+	if _, ok := m.totalWorkers[name]; !ok {
+		return
+	}
+	name = sanitizeWorkerName(name)
 	m.totalWorkers[name].Inc()
 }
 
 func (m *PrometheusMetrics) StopWorker(name string) {
-	name = sanitizeWorkerName(name)
 	m.busyThreads.Dec()
+
+	// tests do not register workers before starting them
+	if _, ok := m.totalWorkers[name]; !ok {
+		return
+	}
+	name = sanitizeWorkerName(name)
 	m.totalWorkers[name].Dec()
 }
 
@@ -124,8 +133,11 @@ func (m *PrometheusMetrics) StopRequest() {
 }
 
 func (m *PrometheusMetrics) StopWorkerRequest(name string, duration time.Duration) {
-	logger.Error("StopWorkerRequest", zap.String("name", name), zap.Duration("duration", duration))
 	name = sanitizeWorkerName(name)
+	if _, ok := m.workerRequestTime[name]; !ok {
+		return
+	}
+
 	m.workerRequestCount[name].Inc()
 	m.busyWorkers[name].Dec()
 	m.workerRequestTime[name].Add(duration.Seconds())
@@ -133,6 +145,9 @@ func (m *PrometheusMetrics) StopWorkerRequest(name string, duration time.Duratio
 
 func (m *PrometheusMetrics) StartWorkerRequest(name string) {
 	name = sanitizeWorkerName(name)
+	if _, ok := m.busyWorkers[name]; !ok {
+		return
+	}
 	m.busyWorkers[name].Inc()
 }
 
