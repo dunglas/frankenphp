@@ -139,6 +139,7 @@ func (m *PrometheusMetrics) StartWorkerRequest(name string) {
 func getWorkerNameForMetrics(name string) string {
 	name = strings.ReplaceAll(name, ".php", "")
 	name = strings.ReplaceAll(name, "/", "_")
+	name = strings.ReplaceAll(name, ".", "")
 	return name
 }
 
