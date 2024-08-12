@@ -187,7 +187,6 @@ func NewRequestWithContext(r *http.Request, opts ...RequestOption) (*http.Reques
 	fc.scriptFilename = sanitizedPathJoin(fc.documentRoot, fc.scriptName)
 
 	c := context.WithValue(r.Context(), contextKey, fc)
-	c = context.WithValue(c, handleKey, Handles())
 
 	return r.WithContext(c), nil
 }
@@ -307,7 +306,7 @@ func Init(options ...Option) error {
 
 	shutdownWG.Add(1)
 	done = make(chan struct{})
-	requestChan = make(chan *http.Request)
+	requestChan = make(chan *http.Request, opt.numThreads*2)
 
 	if C.frankenphp_init(C.int(opt.numThreads)) != 0 {
 		return MainThreadCreationError
@@ -355,10 +354,10 @@ func getLogger() *zap.Logger {
 	return logger
 }
 
-func updateServerContext(request *http.Request, create bool, mrh C.uintptr_t) error {
+func updateServerContext(request *http.Request, create bool, mrh C.uintptr_t) (*Handle, error) {
 	fc, ok := FromContext(request.Context())
 	if !ok {
-		return InvalidRequestError
+		return nil, InvalidRequestError
 	}
 
 	authUser, authPassword, ok := request.BasicAuth()
@@ -378,7 +377,7 @@ func updateServerContext(request *http.Request, create bool, mrh C.uintptr_t) er
 		var err error
 		contentLength, err = strconv.Atoi(contentLengthStr)
 		if err != nil {
-			return fmt.Errorf("invalid Content-Length header: %w", err)
+			return nil, fmt.Errorf("invalid Content-Length header: %w", err)
 		}
 	}
 
@@ -400,12 +399,9 @@ func updateServerContext(request *http.Request, create bool, mrh C.uintptr_t) er
 
 	var rh Handle
 	if fc.responseWriter == nil {
-		h := NewHandle(request)
-		request.Context().Value(handleKey).(*handleList).AddHandle(h)
-		mrh = C.uintptr_t(h)
+		mrh = C.uintptr_t(NewHandle(request))
 	} else {
 		rh = NewHandle(request)
-		request.Context().Value(handleKey).(*handleList).AddHandle(rh)
 	}
 
 	ret := C.frankenphp_update_server_context(
@@ -425,10 +421,18 @@ func updateServerContext(request *http.Request, create bool, mrh C.uintptr_t) er
 	)
 
 	if ret > 0 {
-		return RequestContextCreationError
+		rh.Delete()
+		Handle(mrh).Delete()
+		return nil, RequestContextCreationError
 	}
 
-	return nil
+	if rh != 0 {
+		return &rh, nil
+	}
+
+	rh = Handle(mrh)
+
+	return &rh, nil
 }
 
 // ServeHTTP executes a PHP script according to the given context.
@@ -467,19 +471,16 @@ func go_handle_request() bool {
 		return false
 
 	case r := <-requestChan:
-		h := NewHandle(r)
-		r.Context().Value(handleKey).(*handleList).AddHandle(h)
-
 		fc, ok := FromContext(r.Context())
 		if !ok {
 			panic(InvalidRequestError)
 		}
 		defer func() {
 			maybeCloseContext(fc)
-			r.Context().Value(handleKey).(*handleList).FreeAll()
 		}()
 
-		if err := updateServerContext(r, true, 0); err != nil {
+		rh, err := updateServerContext(r, true, 0)
+		if err != nil {
 			panic(err)
 		}
 
@@ -488,6 +489,8 @@ func go_handle_request() bool {
 		if fc.exitStatus < 0 {
 			panic(ScriptExecutionError)
 		}
+
+		rh.Delete()
 
 		return true
 	}

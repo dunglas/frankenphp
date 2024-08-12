@@ -154,13 +154,14 @@ func go_frankenphp_worker_handle_request_start(mrh C.uintptr_t) C.uintptr_t {
 	case r = <-rc:
 	}
 
-	fc.currentWorkerRequest = NewHandle(r)
-	r.Context().Value(handleKey).(*handleList).AddHandle(fc.currentWorkerRequest)
-
 	l.Debug("request handling started", zap.String("worker", fc.scriptFilename), zap.String("url", r.RequestURI))
-	if err := updateServerContext(r, false, mrh); err != nil {
+
+	rh, err := updateServerContext(r, false, mrh)
+	fc.currentWorkerRequest = *rh
+	if err != nil {
 		// Unexpected error
 		l.Debug("unexpected error", zap.String("worker", fc.scriptFilename), zap.String("url", r.RequestURI), zap.Error(err))
+		rh.Delete()
 
 		return 0
 	}
@@ -175,7 +176,7 @@ func go_frankenphp_finish_request(mrh, rh C.uintptr_t, deleteHandle bool) {
 	fc := r.Context().Value(contextKey).(*FrankenPHPContext)
 
 	if deleteHandle {
-		r.Context().Value(handleKey).(*handleList).FreeAll()
+		rHandle.Delete()
 		Handle(mrh).Value().(*http.Request).Context().Value(contextKey).(*FrankenPHPContext).currentWorkerRequest = 0
 	}
 
