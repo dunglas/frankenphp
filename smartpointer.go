@@ -3,7 +3,6 @@ package frankenphp
 // #include <stdlib.h>
 import "C"
 import (
-	"runtime/cgo"
 	"unsafe"
 )
 
@@ -21,11 +20,11 @@ type pointerList struct {
 
 // HandleList A list of pointers that can be freed at a later time
 type handleList struct {
-	Handles []cgo.Handle
+	Handles []Handle
 }
 
 // AddHandle Call when registering a handle for the very first time
-func (h *handleList) AddHandle(handle cgo.Handle) {
+func (h *handleList) AddHandle(handle Handle) {
 	h.Handles = append(h.Handles, handle)
 }
 
@@ -59,6 +58,6 @@ func Pointers() *pointerList {
 // Handles Get a new list of handles
 func Handles() *handleList {
 	return &handleList{
-		Handles: make([]cgo.Handle, 0, 8),
+		Handles: make([]Handle, 0, 8),
 	}
 }

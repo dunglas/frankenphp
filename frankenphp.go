@@ -34,7 +34,6 @@ import (
 	"net/http"
 	"os"
 	"runtime"
-	"runtime/cgo"
 	"strconv"
 	"strings"
 	"sync"
@@ -124,7 +123,7 @@ type FrankenPHPContext struct {
 	exitStatus     C.int
 
 	done                 chan interface{}
-	currentWorkerRequest cgo.Handle
+	currentWorkerRequest Handle
 }
 
 func clientHasClosed(r *http.Request) bool {
@@ -399,13 +398,13 @@ func updateServerContext(request *http.Request, create bool, mrh C.uintptr_t) er
 
 	cRequestUri := C.CString(request.URL.RequestURI())
 
-	var rh cgo.Handle
+	var rh Handle
 	if fc.responseWriter == nil {
-		h := cgo.NewHandle(request)
+		h := NewHandle(request)
 		request.Context().Value(handleKey).(*handleList).AddHandle(h)
 		mrh = C.uintptr_t(h)
 	} else {
-		rh = cgo.NewHandle(request)
+		rh = NewHandle(request)
 		request.Context().Value(handleKey).(*handleList).AddHandle(rh)
 	}
 
@@ -468,7 +467,7 @@ func go_handle_request() bool {
 		return false
 
 	case r := <-requestChan:
-		h := cgo.NewHandle(r)
+		h := NewHandle(r)
 		r.Context().Value(handleKey).(*handleList).AddHandle(h)
 
 		fc, ok := FromContext(r.Context())
@@ -502,7 +501,7 @@ func maybeCloseContext(fc *FrankenPHPContext) {
 
 //export go_ub_write
 func go_ub_write(rh C.uintptr_t, cBuf *C.char, length C.int) (C.size_t, C.bool) {
-	r := cgo.Handle(rh).Value().(*http.Request)
+	r := Handle(rh).Value().(*http.Request)
 	fc, _ := FromContext(r.Context())
 
 	var writer io.Writer
@@ -539,7 +538,7 @@ var headerKeyCache = func() otter.Cache[string, string] {
 
 //export go_register_variables
 func go_register_variables(rh C.uintptr_t, trackVarsArray *C.zval) {
-	r := cgo.Handle(rh).Value().(*http.Request)
+	r := Handle(rh).Value().(*http.Request)
 	fc := r.Context().Value(contextKey).(*FrankenPHPContext)
 
 	p := &runtime.Pinner{}
@@ -609,7 +608,7 @@ func go_register_variables(rh C.uintptr_t, trackVarsArray *C.zval) {
 func go_apache_request_headers(rh, mrh C.uintptr_t) (*C.go_string, C.size_t, C.uintptr_t) {
 	if rh == 0 {
 		// worker mode, not handling a request
-		mr := cgo.Handle(mrh).Value().(*http.Request)
+		mr := Handle(mrh).Value().(*http.Request)
 		mfc := mr.Context().Value(contextKey).(*FrankenPHPContext)
 
 		if c := mfc.logger.Check(zap.DebugLevel, "apache_request_headers() called in non-HTTP context"); c != nil {
@@ -618,10 +617,10 @@ func go_apache_request_headers(rh, mrh C.uintptr_t) (*C.go_string, C.size_t, C.u
 
 		return nil, 0, 0
 	}
-	r := cgo.Handle(rh).Value().(*http.Request)
+	r := Handle(rh).Value().(*http.Request)
 
 	pinner := &runtime.Pinner{}
-	pinnerHandle := C.uintptr_t(cgo.NewHandle(pinner))
+	pinnerHandle := C.uintptr_t(NewHandle(pinner))
 
 	headers := make([]C.go_string, 0, len(r.Header)*2)
 
@@ -652,7 +651,7 @@ func go_apache_request_cleanup(rh C.uintptr_t) {
 		return
 	}
 
-	h := cgo.Handle(rh)
+	h := Handle(rh)
 	p := h.Value().(*runtime.Pinner)
 	p.Unpin()
 	h.Delete()
@@ -671,7 +670,7 @@ func addHeader(fc *FrankenPHPContext, cString *C.char, length C.int) {
 
 //export go_write_headers
 func go_write_headers(rh C.uintptr_t, status C.int, headers *C.zend_llist) {
-	r := cgo.Handle(rh).Value().(*http.Request)
+	r := Handle(rh).Value().(*http.Request)
 	fc := r.Context().Value(contextKey).(*FrankenPHPContext)
 
 	if fc.responseWriter == nil {
@@ -699,7 +698,7 @@ func go_write_headers(rh C.uintptr_t, status C.int, headers *C.zend_llist) {
 
 //export go_sapi_flush
 func go_sapi_flush(rh C.uintptr_t) bool {
-	r := cgo.Handle(rh).Value().(*http.Request)
+	r := Handle(rh).Value().(*http.Request)
 	fc := r.Context().Value(contextKey).(*FrankenPHPContext)
 
 	if fc.responseWriter == nil || clientHasClosed(r) {
@@ -715,7 +714,7 @@ func go_sapi_flush(rh C.uintptr_t) bool {
 
 //export go_read_post
 func go_read_post(rh C.uintptr_t, cBuf *C.char, countBytes C.size_t) (readBytes C.size_t) {
-	r := cgo.Handle(rh).Value().(*http.Request)
+	r := Handle(rh).Value().(*http.Request)
 
 	p := unsafe.Slice((*byte)(unsafe.Pointer(cBuf)), countBytes)
 	var err error
@@ -730,7 +729,7 @@ func go_read_post(rh C.uintptr_t, cBuf *C.char, countBytes C.size_t) (readBytes 
 
 //export go_read_cookies
 func go_read_cookies(rh C.uintptr_t) *C.char {
-	r := cgo.Handle(rh).Value().(*http.Request)
+	r := Handle(rh).Value().(*http.Request)
 
 	cookies := r.Cookies()
 	if len(cookies) == 0 {
