@@ -193,5 +193,6 @@ func (h Handle) Delete() {
 	if v := handles[h-1].Swap(nilSlot); v == nil || v == nilSlot {
 		panic("runtime/cgo: misuse of an released Handle")
 	}
+	//nolint:staticcheck
 	releasedIdx.Put(uint64(h))
 }
