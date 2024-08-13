@@ -24,11 +24,11 @@ func TestHandle(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		h1 := NewHandle(tt.v1)
-		h2 := NewHandle(tt.v2)
+		h1 := newHandle(tt.v1)
+		h2 := newHandle(tt.v2)
 
 		if uintptr(h1) == 0 || uintptr(h2) == 0 {
-			t.Fatalf("NewHandle returns zero")
+			t.Fatalf("newHandle returns zero")
 		}
 
 		if uintptr(h1) == uintptr(h2) {
@@ -38,7 +38,7 @@ func TestHandle(t *testing.T) {
 		h1v := h1.Value()
 		h2v := h2.Value()
 		if !reflect.DeepEqual(h1v, h2v) || !reflect.DeepEqual(h1v, tt.v1) {
-			t.Fatalf("Value of a Handle got wrong, got %+v %+v, want %+v", h1v, h2v, tt.v1)
+			t.Fatalf("Value of a handle got wrong, got %+v %+v, want %+v", h1v, h2v, tt.v1)
 		}
 
 		h1.Delete()
@@ -58,7 +58,7 @@ func TestHandle(t *testing.T) {
 
 func TestInvalidHandle(t *testing.T) {
 	t.Run("zero", func(t *testing.T) {
-		h := Handle(0)
+		h := handle(0)
 
 		defer func() {
 			if r := recover(); r != nil {
@@ -71,7 +71,7 @@ func TestInvalidHandle(t *testing.T) {
 	})
 
 	t.Run("invalid", func(t *testing.T) {
-		h := NewHandle(42)
+		h := newHandle(42)
 
 		defer func() {
 			if r := recover(); r != nil {
@@ -81,7 +81,7 @@ func TestInvalidHandle(t *testing.T) {
 			t.Fatalf("Invalid handle did not trigger a panic")
 		}()
 
-		Handle(h + 1).Delete()
+		handle(h + 1).Delete()
 	})
 }
 func formatNum(n int) string {
@@ -99,7 +99,7 @@ func formatNum(n int) string {
 func BenchmarkHandle(b *testing.B) {
 	b.Run("non-concurrent", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
-			h := NewHandle(i)
+			h := newHandle(i)
 			_ = h.Value()
 			h.Delete()
 		}
@@ -109,7 +109,7 @@ func BenchmarkHandle(b *testing.B) {
 		b.RunParallel(func(pb *testing.PB) {
 			var v int
 			for pb.Next() {
-				h := NewHandle(v)
+				h := newHandle(v)
 				_ = h.Value()
 				h.Delete()
 			}

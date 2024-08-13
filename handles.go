@@ -9,92 +9,8 @@ import (
 	"sync/atomic"
 )
 
-// Handle provides a way to pass values that contain Go pointers
-// (pointers to memory allocated by Go) between Go and C without
-// breaking the cgo pointer passing rules. A Handle is an integer
-// value that can represent any Go value. A Handle can be passed
-// through C and back to Go, and Go code can use the Handle to
-// retrieve the original Go value.
-//
-// The underlying type of Handle is guaranteed to fit in an integer type
-// that is large enough to hold the bit pattern of any pointer. The zero
-// value of a Handle is not valid, and thus is safe to use as a sentinel
-// in C APIs.
-//
-// For instance, on the Go side:
-//
-//	package main
-//
-//	/*
-//	#include <stdint.h> // for uintptr_t
-//
-//	extern void MyGoPrint(uintptr_t handle);
-//	void myprint(uintptr_t handle);
-//	*/
-//	import "C"
-//	import "runtime/cgo"
-//
-//	//export MyGoPrint
-//	func MyGoPrint(handle C.uintptr_t) {
-//		h := cgo.Handle(handle)
-//		val := h.Value().(string)
-//		println(val)
-//		h.Delete()
-//	}
-//
-//	func main() {
-//		val := "hello Go"
-//		C.myprint(C.uintptr_t(cgo.NewHandle(val)))
-//		// Output: hello Go
-//	}
-//
-// and on the C side:
-//
-//	#include <stdint.h> // for uintptr_t
-//
-//	// A Go function
-//	extern void MyGoPrint(uintptr_t handle);
-//
-//	// A C function
-//	void myprint(uintptr_t handle) {
-//	    MyGoPrint(handle);
-//	}
-//
-// Some C functions accept a void* argument that points to an arbitrary
-// data value supplied by the caller. It is not safe to coerce a [cgo.Handle]
-// (an integer) to a Go [unsafe.Pointer], but instead we can pass the address
-// of the cgo.Handle to the void* parameter, as in this variant of the
-// previous example:
-//
-//	package main
-//
-//	/*
-//	extern void MyGoPrint(void *context);
-//	static inline void myprint(void *context) {
-//	    MyGoPrint(context);
-//	}
-//	*/
-//	import "C"
-//	import (
-//		"runtime/cgo"
-//		"unsafe"
-//	)
-//
-//	//export MyGoPrint
-//	func MyGoPrint(context unsafe.Pointer) {
-//		h := *(*cgo.Handle)(context)
-//		val := h.Value().(string)
-//		println(val)
-//		h.Delete()
-//	}
-//
-//	func main() {
-//		val := "hello Go"
-//		h := cgo.NewHandle(val)
-//		C.myprint(unsafe.Pointer(&h))
-//		// Output: hello Go
-//	}
-type Handle uintptr
+// handle is based on the CL here: https://go-review.googlesource.com/c/go/+/600875
+type handle uintptr
 
 // slot represents a slot in the handles slice for concurrent access.
 type slot struct {
@@ -118,16 +34,7 @@ func init() {
 	growLock = sync.RWMutex{}
 }
 
-// NewHandle returns a handle for a given value.
-//
-// The handle is valid until the program calls Delete on it. The handle
-// uses resources, and this package assumes that C code may hold on to
-// the handle, so a program must explicitly call Delete when the handle
-// is no longer needed.
-//
-// The intended use is to pass the returned handle to C code, which
-// passes it back to Go, which calls Value.
-func NewHandle(v any) Handle {
+func newHandle(v any) handle {
 	var h uint64 = 1
 	s := &slot{value: v}
 	for {
@@ -145,10 +52,10 @@ func NewHandle(v any) Handle {
 		growLock.RLock()
 		if handles[h-1].CompareAndSwap(nilSlot, s) {
 			growLock.RUnlock()
-			return Handle(h)
+			return handle(h)
 		} else if handles[h-1].CompareAndSwap(nil, s) {
 			growLock.RUnlock()
-			return Handle(h)
+			return handle(h)
 		} else {
 			h++
 		}
@@ -156,42 +63,34 @@ func NewHandle(v any) Handle {
 	}
 }
 
-// Value returns the associated Go value for a valid handle.
-//
-// The method panics if the handle is invalid.
-func (h Handle) Value() any {
+func (h handle) Value() any {
 	growLock.RLock()
 	defer growLock.RUnlock()
-	if h > Handle(len(handles)) {
-		panic("runtime/cgo: misuse of an invalid Handle")
+	if h > handle(len(handles)) {
+		panic("runtime/cgo: misuse of an invalid handle")
 	}
 
 	v := handles[h-1].Load()
 	if v == nil || v == nilSlot {
-		panic("runtime/cgo: misuse of an released Handle")
+		panic("runtime/cgo: misuse of an released handle")
 	}
 
 	return v.value
 }
 
-// Delete invalidates a handle. This method should only be called once
-// the program no longer needs to pass the handle to C and the C code
-// no longer has a copy of the handle value.
-//
-// The method panics if the handle is invalid.
-func (h Handle) Delete() {
+func (h handle) Delete() {
 	growLock.RLock()
 	defer growLock.RUnlock()
 	if h == 0 {
-		panic("runtime/cgo: misuse of an zero Handle")
+		panic("runtime/cgo: misuse of an zero handle")
 	}
 
-	if h > Handle(len(handles)) {
-		panic("runtime/cgo: misuse of an invalid Handle")
+	if h > handle(len(handles)) {
+		panic("runtime/cgo: misuse of an invalid handle")
 	}
 
 	if v := handles[h-1].Swap(nilSlot); v == nil || v == nilSlot {
-		panic("runtime/cgo: misuse of an released Handle")
+		panic("runtime/cgo: misuse of an released handle")
 	}
 	//nolint:staticcheck
 	releasedIdx.Put(uint64(h))
