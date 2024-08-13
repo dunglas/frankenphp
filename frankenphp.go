@@ -481,6 +481,7 @@ func go_handle_request() bool {
 
 		rh, err := updateServerContext(r, true, 0)
 		if err != nil {
+			rh.Delete()
 			panic(err)
 		}
 
