@@ -13,6 +13,7 @@ package frankenphp
 // We also set these flags for hardening: https://github.com/docker-library/php/blob/master/8.2/bookworm/zts/Dockerfile#L57-L59
 
 // #cgo darwin pkg-config: libxml-2.0
+// #cgo CFLAGS: -Wall -Werror
 // #cgo CFLAGS: -I/usr/local/include/php -I/usr/local/include/php/main -I/usr/local/include/php/TSRM -I/usr/local/include/php/Zend -I/usr/local/include/php/ext -I/usr/local/include/php/ext/date/lib
 // #cgo linux CFLAGS: -D_GNU_SOURCE
 // #cgo darwin LDFLAGS: -L/opt/homebrew/opt/libiconv/lib -liconv
