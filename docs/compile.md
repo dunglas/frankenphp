@@ -1,22 +1,23 @@
 # Compile From Sources
 
-This document explain how to create a FrankenPHP build that will load PHP as a dynamic library.
+This document explains how to create a FrankenPHP binary that will load PHP as a dynamic library.
 This is the recommended method.
 
-Alternatively, [creating static builds](static.md) is also possible.
+Alternatively, [static builds](static.md) can also be created.
 
 ## Install PHP
 
-FrankenPHP is compatible with the PHP 8.2 and superior.
+FrankenPHP is compatible with PHP 8.2 and superior.
 
-First, [get the sources of PHP](https://www.php.net/downloads.php) and extract them:
+First, [get the PHP sources](https://www.php.net/downloads.php) and extract them:
 
 ```console
 tar xf php-*
 cd php-*/
 ```
 
-Then, configure PHP for your platform:
+Then, run the `configure` script with the options needed for your platform.
+Th following `./configure` flags are mandatory, but you can add others, for example to compile extensions or additional features.
 
 ### Linux
 
@@ -26,13 +27,6 @@ Then, configure PHP for your platform:
     --enable-zts \
     --disable-zend-signals \
     --enable-zend-max-execution-timers
-```
-
-Finally, compile and install PHP:
-
-```console
-make -j$(nproc)
-sudo make install
 ```
 
 ### Mac
@@ -58,19 +52,18 @@ Then run the configure script:
     --with-iconv=/opt/homebrew/opt/libiconv/
 ```
 
-These flags are required, but you can add other flags (e.g. extra extensions)
-if needed.
+## Compile PHP
 
 Finally, compile and install PHP:
 
 ```console
-make -j$(sysctl -n hw.logicalcpu)
+make -j"$(getconf _NPROCESSORS_ONLN)"
 sudo make install
 ```
 
 ## Compile the Go App
 
-You can now use the Go library and compile our Caddy build:
+You can now build the final binary:
 
 ```console
 curl -L https://github.com/dunglas/frankenphp/archive/refs/heads/main.tar.gz | tar xz
@@ -88,6 +81,7 @@ XCADDY_GO_BUILD_FLAGS="-ldflags '-w -s'" \
 xcaddy build \
     --output frankenphp \
     --with github.com/dunglas/frankenphp/caddy \
+    --with github.com/dunglas/caddy-cbrotli \
     --with github.com/dunglas/mercure/caddy \
     --with github.com/dunglas/vulcain/caddy
     # Add extra Caddy modules here

@@ -16,7 +16,10 @@ tar xf php-*
 cd php-*/
 ```
 
-Ardından, PHP'yi platformunuz için yapılandırın:
+Ardından, PHP'yi platformunuz için yapılandırın.
+
+Bu şekilde yapılandırma gereklidir, ancak başka opsiyonlar da ekleyebilirsiniz (örn. ekstra uzantılar)
+İhtiyaç halinde.
 
 ### Linux
 
@@ -26,13 +29,6 @@ Ardından, PHP'yi platformunuz için yapılandırın:
     --enable-zts \
     --disable-zend-signals \
     --enable-zend-max-execution-timers
-```
-
-Son olarak, PHP'yi derleyin ve kurun:
-
-```console
-make -j$(nproc)
-sudo make install
 ```
 
 ### Mac
@@ -58,13 +54,12 @@ Ardından yapılandırma betiğini çalıştırın:
     --with-iconv=/opt/homebrew/opt/libiconv/
 ```
 
-Bu şekilde yapılandırma gereklidir, ancak başka opsiyonlar da ekleyebilirsiniz (örn. ekstra uzantılar)
-İhtiyaç halinde.
+## PHP Derleyin
 
-Son olarak, PHP'yi derleyin ve yükleyin:
+Son olarak, PHP'yi derleyin ve kurun:
 
 ```console
-make -j$(sysctl -n hw.logicalcpu)
+make -j"$(getconf _NPROCESSORS_ONLN)"
 sudo make install
 ```
 
@@ -88,6 +83,7 @@ XCADDY_GO_BUILD_FLAGS="-ldflags '-w -s'" \
 xcaddy build \
     --output frankenphp \
     --with github.com/dunglas/frankenphp/caddy \
+    --with github.com/dunglas/caddy-cbrotli \
     --with github.com/dunglas/mercure/caddy \
     --with github.com/dunglas/vulcain/caddy
     # Add extra Caddy modules here
