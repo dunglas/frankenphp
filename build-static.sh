@@ -33,7 +33,7 @@ if [ -z "${PHP_EXTENSIONS}" ]; then
 fi
 
 if [ -z "${PHP_EXTENSION_LIBS}" ]; then
-	export PHP_EXTENSION_LIBS="bzip2,freetype,libavif,libjpeg,liblz4,libwebp,libzip"
+	export PHP_EXTENSION_LIBS="bzip2,freetype,libavif,libjpeg,liblz4,libwebp,libzip,nghttp2"
 fi
 
 # The Brotli library must always be built as it is required by http://github.com/dunglas/caddy-cbrotli
