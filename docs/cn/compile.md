@@ -16,7 +16,9 @@ tar xf php-*
 cd php-*/
 ```
 
-然后，为您的平台配置 PHP：
+然后，为您的平台配置 PHP.
+
+这些参数是必需的，但你也可以添加其他编译参数（例如额外的扩展）。
 
 ### Linux
 
@@ -26,13 +28,6 @@ cd php-*/
     --enable-zts \
     --disable-zend-signals \
     --enable-zend-max-execution-timers
-```
-
-最后，编译并安装 PHP：
-
-```console
-make -j$(nproc)
-sudo make install
 ```
 
 ### Mac
@@ -57,12 +52,12 @@ echo 'export PATH="/opt/homebrew/opt/bison/bin:$PATH"' >> ~/.zshrc
     --with-iconv=/opt/homebrew/opt/libiconv/
 ```
 
-这些参数是必需的，但你也可以添加其他编译参数（例如额外的扩展）。
+## 编译并安装 PHP
 
 最后，编译并安装 PHP：
 
 ```console
-make -j$(sysctl -n hw.logicalcpu)
+make -j"$(getconf _NPROCESSORS_ONLN)"
 sudo make install
 ```
 
@@ -86,6 +81,7 @@ XCADDY_GO_BUILD_FLAGS="-ldflags '-w -s'" \
 xcaddy build \
     --output frankenphp \
     --with github.com/dunglas/frankenphp/caddy \
+    --with github.com/dunglas/caddy-cbrotli \
     --with github.com/dunglas/mercure/caddy \
     --with github.com/dunglas/vulcain/caddy
     # Add extra Caddy modules here

@@ -1,8 +1,9 @@
 # Compiler depuis les sources
 
-Ce document explique comment créer un build FrankenPHP qui chargera PHP comme une bibliothèque dynamique. C'est la méthode recommandée.
+Ce document explique comment créer un build FrankenPHP qui chargera PHP en tant que bibliothèque dynamique.
+C'est la méthode recommandée.
 
-En alternative, il est aussi possible de [créer des builds statiques](static.md).
+Alternativement, il est aussi possible de [créer des builds statiques](static.md).
 
 ## Installer PHP
 
@@ -15,7 +16,9 @@ tar xf php-*
 cd php-*/
 ```
 
-Ensuite, configurez PHP pour votre système d'exploitation :
+Ensuite, configurez PHP pour votre système d'exploitation.
+
+Les options de configuration suivantes sont nécessaires pour la compilation, mais vous pouvez également inclure d'autres options selon vos besoins, par exemple pour ajouter des extensions et fonctionnalités supplémentaires.
 
 ### Linux
 
@@ -25,13 +28,6 @@ Ensuite, configurez PHP pour votre système d'exploitation :
     --enable-zts \
     --disable-zend-signals \
     --enable-zend-max-execution-timers
-```
-
-Finalement, compilez et installez PHP :
-
-```console
-make -j$(nproc)
-sudo make install
 ```
 
 ### Mac
@@ -56,18 +52,18 @@ Puis exécutez le script de configuration :
     --with-iconv=/opt/homebrew/opt/libiconv/
 ```
 
-Les options de configuration spécifiées sont nécessaires pour la compilation, mais vous pouvez également inclure d'autres options selon vos besoins, par exemple pour ajouter des extensions supplémentaires.
+## Compilez PHP
 
 Finalement, compilez et installez PHP :
 
 ```console
-make -j$(sysctl -n hw.logicalcpu)
+make -j"$(getconf _NPROCESSORS_ONLN)"
 sudo make install
 ```
 
 ## Compiler l'application Go
 
-Vous pouvez maintenant utiliser la bibliothèque Go et compiler notre build de Caddy :
+Vous pouvez maintenant compilez FrankenPHP :
 
 ```console
 curl -L https://github.com/dunglas/frankenphp/archive/refs/heads/main.tar.gz | tar x
@@ -77,7 +73,7 @@ CGO_CFLAGS=$(php-config --includes) CGO_LDFLAGS="$(php-config --ldflags) $(php-c
 
 ### Utiliser xcaddy
 
-Vous pouvez utiliser à la place [xcaddy](https://github.com/caddyserver/xcaddy) pour compiler FrankenPHP avec [des modules Caddy additionnels](https://caddyserver.com/docs/modules/):
+Alternativement, Vous pouvez utiliser [xcaddy](https://github.com/caddyserver/xcaddy) pour compiler FrankenPHP avec [des modules Caddy additionnels](https://caddyserver.com/docs/modules/):
 
 ```console
 CGO_ENABLED=1 \
@@ -85,6 +81,7 @@ XCADDY_GO_BUILD_FLAGS="-ldflags '-w -s'" \
 xcaddy build \
     --output frankenphp \
     --with github.com/dunglas/frankenphp/caddy \
+    --with github.com/dunglas/caddy-cbrotli \
     --with github.com/dunglas/mercure/caddy \
     --with github.com/dunglas/vulcain/caddy
     # Add extra Caddy modules here
