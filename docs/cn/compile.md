@@ -66,7 +66,7 @@ sudo make install
 您现在可以使用 Go 库并编译我们的 Caddy 构建：
 
 ```console
-curl -L https://github.com/dunglas/frankenphp/archive/refs/heads/main.tar.gz | tar x
+curl -L https://github.com/dunglas/frankenphp/archive/refs/heads/main.tar.gz | tar xz
 cd frankenphp-main/caddy/frankenphp
 CGO_CFLAGS=$(php-config --includes) CGO_LDFLAGS="$(php-config --ldflags) $(php-config --libs)" go build
 ```
