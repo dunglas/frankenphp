@@ -326,7 +326,6 @@ func (f *FrankenPHPModule) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 					} else {
 					    return d.ArgErr()
 					}
-
 				}
 				rrs := true
 				f.ResolveRootSymlink = &rrs
