@@ -36,6 +36,16 @@ func WithRequestDocumentRoot(documentRoot string, resolveSymlink bool) RequestOp
 	}
 }
 
+// WithRequestResolvedDocumentRoot is similar to WithRequestDocumentRoot
+// but doesn't does any checks or resolving on the path to improve performance.
+func WithRequestResolvedDocumentRoot(documentRoot string) RequestOption {
+	return func(o *FrankenPHPContext) error {
+		o.documentRoot = documentRoot
+
+		return nil
+	}
+}
+
 // The path in the URL will be split into two, with the first piece ending
 // with the value of SplitPath. The first piece will be assumed as the
 // actual resource (CGI script) name, and the second piece will be set to
