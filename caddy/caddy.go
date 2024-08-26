@@ -317,15 +317,15 @@ func (f *FrankenPHPModule) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 
 			case "resolve_root_symlink":
 				if d.NextArg() {
-					if v, err := strconv.ParseBool(d.Val()); err == nil {
-						f.ResolveRootSymlink = &v
-
-						if d.NextArg() {
-							return d.ArgErr()
-						}
-					} else {
+					v, err := strconv.ParseBool(d.Val())
+					if(err !== nil) {
+						return err
+					}
+					if d.NextArg() {
 						return d.ArgErr()
 					}
+
+					f.ResolveRootSymlink = &v
 				}
 			}
 		}
