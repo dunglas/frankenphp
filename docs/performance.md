@@ -66,3 +66,17 @@ php_server {
 
 This will improve performance if the `root` directive contains [placeholders](https://caddyserver.com/docs/conventions#placeholders). The gain will be negilible in other cases.
 
+## PHP Performance
+
+FrankenPHP executes the official PHP interpreter.
+All usual PHP-related performance optimizations apply with FrankenPHP.
+
+In particular:
+
+* check that [OPcache](https://www.php.net/manual/en/book.opcache.php) is installed, enabled and properly configured
+* enable [Composer autoloader optimizations](https://getcomposer.org/doc/articles/autoloader-optimization.md)
+* ensure that the `realpath` cache is big enough for the needs of your application
+* use [preloading](https://www.php.net/manual/en/opcache.preloading.php)
+
+For more details, read [the dedicated Symfony documentation entry](https://symfony.com/doc/current/performance.html)
+(most tips are useful even if you don't use Symfony).
