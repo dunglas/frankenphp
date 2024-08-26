@@ -49,7 +49,7 @@ php_server {
 ## Placeholders
 
 You can use [placeholders](https://caddyserver.com/docs/conventions#placeholders) in the `root` and `env` directives.
-However, this prevent caching these values, and comes with a significant performance cost.
+However, this prevents caching these values, and comes with a significant performance cost.
 
 If possible, avoid placeholders in these directives.
 
