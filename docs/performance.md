@@ -28,7 +28,7 @@ In general, the Go runtime doesn't require any special configuration, but in cer
 You likely want to set the `GODEBUG` environment variable to `cgocheck=0` (the default in the FrankenPHP Docker images).
 
 If you run FrankenPHP in containers (Docker, Kubernetes, LXC...) and limit the memory available for the containers,
-set the `GOMEMLIMIT` environement variable to the available amount of memory.
+set the `GOMEMLIMIT` environment variable to the available amount of memory.
 
 For more details, [the Go documentation page dedicated to this subject](https://pkg.go.dev/runtime#hdr-Environment_Variables) is a must-read to get the most out of the runtime.
 
