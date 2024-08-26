@@ -21,7 +21,7 @@ you need to create a worker script and to be sure that the app is not leaking me
 
 ## Go Runtime Configuration
 
-FrankenPHP is written and Go.
+FrankenPHP is written in Go.
 
 In general, the Go runtime doesn't require any special configuration, but in certain circumstances it can be helped to perform better.
 
