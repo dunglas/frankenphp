@@ -25,7 +25,7 @@ FrankenPHP is written in Go.
 
 In general, the Go runtime doesn't require any special configuration, but in certain circumstances it can be helped to perform better.
 
-You likely want to set the `GODEBUG` environement variable to `cgocheck=0` (the default in the FrankenPHP Docker images).
+You likely want to set the `GODEBUG` environment variable to `cgocheck=0` (the default in the FrankenPHP Docker images).
 
 If you run FrankenPHP in containers (Docker, Kubernetes, LXC...) and limit the memory available for the containers,
 set the `GOMEMLIMIT` environement variable to the available amount of memory.
