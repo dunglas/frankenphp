@@ -3,7 +3,7 @@
 By default, FrankenPHP tries to offer a good compromise between performance and ease of use.
 However, it is possible to slightly improve performance using the appropriate configuration.
 
-## Number of Threads and of Workers
+## Number of Threads and Workers
 
 By default, FrankenPHP starts 2 times more threads and workers (in worker mode) than the available numbers of CPU.
 
