@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"net/http"
 	"path/filepath"
-	"runtime/cgo"
 	"sync"
 
 	"go.uber.org/zap"
@@ -131,7 +130,7 @@ func go_frankenphp_worker_ready() {
 
 //export go_frankenphp_worker_handle_request_start
 func go_frankenphp_worker_handle_request_start(mrh C.uintptr_t) C.uintptr_t {
-	mainRequest := cgo.Handle(mrh).Value().(*http.Request)
+	mainRequest := handle(mrh).Value().(*http.Request)
 	fc := mainRequest.Context().Value(contextKey).(*FrankenPHPContext)
 
 	v, ok := workersRequestChans.Load(fc.scriptFilename)
@@ -155,13 +154,14 @@ func go_frankenphp_worker_handle_request_start(mrh C.uintptr_t) C.uintptr_t {
 	case r = <-rc:
 	}
 
-	fc.currentWorkerRequest = cgo.NewHandle(r)
-	r.Context().Value(handleKey).(*handleList).AddHandle(fc.currentWorkerRequest)
-
 	l.Debug("request handling started", zap.String("worker", fc.scriptFilename), zap.String("url", r.RequestURI))
-	if err := updateServerContext(r, false, mrh); err != nil {
+
+	rh, err := updateServerContext(r, false, mrh)
+	fc.currentWorkerRequest = *rh
+	if err != nil {
 		// Unexpected error
 		l.Debug("unexpected error", zap.String("worker", fc.scriptFilename), zap.String("url", r.RequestURI), zap.Error(err))
+		rh.Delete()
 
 		return 0
 	}
@@ -171,13 +171,13 @@ func go_frankenphp_worker_handle_request_start(mrh C.uintptr_t) C.uintptr_t {
 
 //export go_frankenphp_finish_request
 func go_frankenphp_finish_request(mrh, rh C.uintptr_t, deleteHandle bool) {
-	rHandle := cgo.Handle(rh)
+	rHandle := handle(rh)
 	r := rHandle.Value().(*http.Request)
 	fc := r.Context().Value(contextKey).(*FrankenPHPContext)
 
 	if deleteHandle {
-		r.Context().Value(handleKey).(*handleList).FreeAll()
-		cgo.Handle(mrh).Value().(*http.Request).Context().Value(contextKey).(*FrankenPHPContext).currentWorkerRequest = 0
+		rHandle.Delete()
+		handle(mrh).Value().(*http.Request).Context().Value(contextKey).(*FrankenPHPContext).currentWorkerRequest = 0
 	}
 
 	maybeCloseContext(fc)
