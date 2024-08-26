@@ -359,19 +359,19 @@ func (f *FrankenPHPModule) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 				f.preparedEnv[args[0]+"\x00"] = args[1]
 
 			case "resolve_root_symlink":
+				if !d.NextArg() {
+					continue
+				}
+
+				v, err := strconv.ParseBool(d.Val())
+				if err != nil {
+					return err
+				}
 				if d.NextArg() {
-					if v, err := strconv.ParseBool(d.Val()); err == nil {
-						f.ResolveRootSymlink = &v
-
-						if d.NextArg() {
-							return d.ArgErr()
-						}
-					}
-
 					return d.ArgErr()
 				}
-				rrs := true
-				f.ResolveRootSymlink = &rrs
+
+				f.ResolveRootSymlink = &v
 			}
 		}
 	}
