@@ -64,7 +64,7 @@ php_server {
 }
 ```
 
-This will improve performance if the `root` directive contains [placeholders](https://caddyserver.com/docs/conventions#placeholders). The gain will be negilible in other cases.
+This will improve performance if the `root` directive contains [placeholders](https://caddyserver.com/docs/conventions#placeholders). The gain will be negligible in other cases.
 
 ## PHP Performance
 
