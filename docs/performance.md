@@ -16,7 +16,7 @@ To find the right values, it's best to try out different values and run load tes
 ## Worker Mode
 
 Enabling [the worker mode](worker.md) will dramatically improve the performance,
-but your app must be adapted to be comptible with this mode:
+but your app must be adapted to be compatible with this mode:
 you need to create a worker script and to be sure that the app is not leaking memory.
 
 ## Go Runtime Configuration
