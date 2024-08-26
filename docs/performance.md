@@ -8,7 +8,7 @@ However, it is possible to slightly improve performance using the appropriate co
 By default, FrankenPHP starts 2 times more threads and workers (in worker mode) than the available numbers of CPU.
 
 The appropriate values depend heavily on how your application is written, what it does and your hardware.
-We strongly recommend to change these values.
+We strongly recommend changing these values.
 
 To find the right values, it's best to try out different values and run load tests simulating real traffic.
 [k6](https://k6.io) and [Gatling](https://gatling.io) are good tools for this.
