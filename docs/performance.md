@@ -25,18 +25,18 @@ you need to create a worker script and to be sure that the app is not leaking me
 ## Prefer Not Using musl Builds
 
 The static binaries we provide and the Alpine Linux variant of the official Docker images
-are using [the musl libc](https://musl.libc.org/).
+are using [the musl libc](https://musl.libc.org).
 
 PHP is known to be significantly slower when using this alternative C library instead of the traditional GNU library,
 especially when compiled in ZTS mode (thread-safe), which is required for FrankenPHP.
 
-Some bugs also only happen when using glibc.
+Also, some bugs also only happen when using musl.
 
-In production environement, we strongly recommend to use the glibc.
+In production environements, we strongly recommend to use the glibc.
 
-This can be done by using the Debian Docker images (the default) and [by compiling FrankenPHP from sources](compile.md).
+This can be achieved by using the Debian Docker images (the default) and [by compiling FrankenPHP from sources](compile.md).
 
-Alternatively, we provide static binaries compiled with [the mimalloc allocator](https://github.com/microsoft/mimalloc), which makes FrankenPHP+musl a bit faster (but still slower than glibc).
+Alternatively, we provide static binaries compiled with [the mimalloc allocator](https://github.com/microsoft/mimalloc), which makes FrankenPHP+musl faster (but still slower than FrankenPHP+glibc).
 
 ## Go Runtime Configuration
 
