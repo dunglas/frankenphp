@@ -11,6 +11,7 @@ import (
 	"time"
 
 	mercureModule "github.com/dunglas/mercure/caddy"
+	"go.uber.org/zap/zapcore"
 
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig"
@@ -21,7 +22,6 @@ import (
 	"github.com/caddyserver/caddy/v2/modules/caddyhttp/rewrite"
 	"github.com/caddyserver/certmagic"
 	"github.com/dunglas/frankenphp"
-	"go.uber.org/zap"
 
 	"github.com/spf13/cobra"
 )
@@ -313,7 +313,7 @@ func cmdPHPServer(fs caddycmd.Flags) (int, error) {
 		cfg.Logging = &caddy.Logging{
 			Logs: map[string]*caddy.CustomLog{
 				"default": {
-					BaseLog: caddy.BaseLog{Level: zap.DebugLevel.CapitalString()},
+					BaseLog: caddy.BaseLog{Level: zapcore.DebugLevel.CapitalString()},
 				},
 			},
 		}

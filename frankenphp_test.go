@@ -28,6 +28,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 	"go.uber.org/zap/zaptest"
 	"go.uber.org/zap/zaptest/observer"
 )
@@ -410,7 +411,7 @@ func TestLog_worker(t *testing.T) {
 	testLog(t, &testOptions{workerScript: "log.php"})
 }
 func testLog(t *testing.T, opts *testOptions) {
-	logger, logs := observer.New(zap.InfoLevel)
+	logger, logs := observer.New(zapcore.InfoLevel)
 	opts.logger = zap.New(logger)
 
 	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
@@ -430,7 +431,7 @@ func TestConnectionAbort_worker(t *testing.T) {
 func testConnectionAbort(t *testing.T, opts *testOptions) {
 	testFinish := func(finish string) {
 		t.Run(fmt.Sprintf("finish=%s", finish), func(t *testing.T) {
-			logger, logs := observer.New(zap.InfoLevel)
+			logger, logs := observer.New(zapcore.InfoLevel)
 			opts.logger = zap.New(logger)
 
 			runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
