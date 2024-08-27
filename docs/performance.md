@@ -13,11 +13,30 @@ We strongly recommend changing these values.
 To find the right values, it's best to try out different values and run load tests simulating real traffic.
 [k6](https://k6.io) and [Gatling](https://gatling.io) are good tools for this.
 
+To configure the number of threads, use the `num_threads` option of the `php_server` and `php` directives.
+To change the number of workers, use the `num` option of the `worker` section of the `frankenphp` directive.
+
 ## Worker Mode
 
 Enabling [the worker mode](worker.md) will dramatically improve the performance,
 but your app must be adapted to be compatible with this mode:
 you need to create a worker script and to be sure that the app is not leaking memory.
+
+## Prefer Not Using musl Builds
+
+The static binaries we provide and the Alpine Linux variant of the official Docker images
+are using [the musl libc](https://musl.libc.org/).
+
+PHP is known to be significantly slower when using this alternative C library instead of the traditional GNU library,
+especially when compiled in ZTS mode (thread-safe), which is required for FrankenPHP.
+
+Some bugs also only happen when using glibc.
+
+In production environement, we strongly recommend to use the glibc.
+
+This can be done by using the Debian Docker images (the default) and [by compiling FrankenPHP from sources](compile.md).
+
+Alternatively, we provide static binaries compiled with [the mimalloc allocator](https://github.com/microsoft/mimalloc), which makes FrankenPHP+musl a bit faster (but still slower than glibc).
 
 ## Go Runtime Configuration
 
