@@ -56,6 +56,7 @@ Vous pouvez également exécuter des scripts en ligne de commande avec :
 * [Configuration](config.md)
 * [Images Docker](docker.md)
 * [Déploiement en production](production.md)
+* [Optimisation des performances](performance.md)
 * [Créer des applications PHP **standalone**, auto-exécutables](embed.md)
 * [Créer un build statique](static.md)
 * [Compiler depuis les sources](compile.md)
