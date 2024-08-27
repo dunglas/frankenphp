@@ -85,6 +85,10 @@ php_server {
 
 This will improve performance if the `root` directive contains [placeholders](https://caddyserver.com/docs/conventions#placeholders). The gain will be negligible in other cases.
 
+## Logs
+
+Logging is obviously very useful, but, by definition, it requires I/O operations and memory allocations, which considerably reduces performance. Make sure you [set the logging level](https://caddyserver.com/docs/caddyfile/options#log) correctly, and only log what's necessary.
+
 ## PHP Performance
 
 FrankenPHP executes the official PHP interpreter.
