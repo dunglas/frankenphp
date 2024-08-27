@@ -1,7 +1,7 @@
 # Performance
 
 By default, FrankenPHP tries to offer a good compromise between performance and ease of use.
-However, it is possible to slightly improve performance using the appropriate configuration.
+However, it is possible to substantially improve performance using an appropriate configuration.
 
 ## Number of Threads and Workers
 
@@ -10,7 +10,7 @@ By default, FrankenPHP starts 2 times more threads and workers (in worker mode) 
 The appropriate values depend heavily on how your application is written, what it does and your hardware.
 We strongly recommend changing these values.
 
-To find the right values, it's best to try out different values and run load tests simulating real traffic.
+To find the right values, it's best to run load tests simulating real traffic.
 [k6](https://k6.io) and [Gatling](https://gatling.io) are good tools for this.
 
 To configure the number of threads, use the `num_threads` option of the `php_server` and `php` directives.
@@ -18,11 +18,11 @@ To change the number of workers, use the `num` option of the `worker` section of
 
 ## Worker Mode
 
-Enabling [the worker mode](worker.md) will dramatically improve the performance,
+Enabling [the worker mode](worker.md) dramatically improves performance,
 but your app must be adapted to be compatible with this mode:
 you need to create a worker script and to be sure that the app is not leaking memory.
 
-## Prefer Not Using musl Builds
+## Don't Use musl
 
 The static binaries we provide and the Alpine Linux variant of the official Docker images
 are using [the musl libc](https://musl.libc.org).
@@ -42,7 +42,8 @@ Alternatively, we provide static binaries compiled with [the mimalloc allocator]
 
 FrankenPHP is written in Go.
 
-In general, the Go runtime doesn't require any special configuration, but in certain circumstances it can be helped to perform better.
+In general, the Go runtime doesn't require any special configuration, but in certain circumstances,
+specific configuration improves performance.
 
 You likely want to set the `GODEBUG` environment variable to `cgocheck=0` (the default in the FrankenPHP Docker images).
 
@@ -74,7 +75,7 @@ If possible, avoid placeholders in these directives.
 
 ## `resolve_root_symlink`
 
-By default, if the document root is a symbolic link, it is automatically resolved by FrankenPHP (this is needed by PHP).
+By default, if the document root is a symbolic link, it is automatically resolved by FrankenPHP (this is necessary for PHP to work properly).
 If the document root is not a symlink, you can disable this feature.
 
 ```caddyfile
@@ -83,15 +84,19 @@ php_server {
 }
 ```
 
-This will improve performance if the `root` directive contains [placeholders](https://caddyserver.com/docs/conventions#placeholders). The gain will be negligible in other cases.
+This will improve performance if the `root` directive contains [placeholders](https://caddyserver.com/docs/conventions#placeholders).
+The gain will be negligible in other cases.
 
 ## Logs
 
-Logging is obviously very useful, but, by definition, it requires I/O operations and memory allocations, which considerably reduces performance. Make sure you [set the logging level](https://caddyserver.com/docs/caddyfile/options#log) correctly, and only log what's necessary.
+Logging is obviously very useful, but, by definition,
+it requires I/O operations and memory allocations, which considerably reduces performance.
+Make sure you [set the logging level](https://caddyserver.com/docs/caddyfile/options#log) correctly,
+and only log what's necessary.
 
 ## PHP Performance
 
-FrankenPHP executes the official PHP interpreter.
+FrankenPHP uses the official PHP interpreter.
 All usual PHP-related performance optimizations apply with FrankenPHP.
 
 In particular:
