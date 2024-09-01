@@ -319,6 +319,10 @@ func Init(options ...Option) error {
 		return err
 	}
 
+    if err := initWatcher(opt.watch, opt.workers); err != nil {
+		return err
+	}
+
 	logger.Info("FrankenPHP started 🐘", zap.String("php_version", Version().Version), zap.Int("num_threads", opt.numThreads))
 	if EmbeddedAppPath != "" {
 		logger.Info("embedded PHP app 📦", zap.String("path", EmbeddedAppPath))
@@ -330,6 +334,7 @@ func Init(options ...Option) error {
 // Shutdown stops the workers and the PHP runtime.
 func Shutdown() {
 	stopWorkers()
+	stopWatcher()
 	close(done)
 	shutdownWG.Wait()
 	requestChan = nil

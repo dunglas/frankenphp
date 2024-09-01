@@ -64,6 +64,8 @@ type FrankenPHPApp struct {
 	NumThreads int `json:"num_threads,omitempty"`
 	// Workers configures the worker scripts to start.
 	Workers []workerConfig `json:"workers,omitempty"`
+	// Directories to watch for changes
+	Watch []string `json:"watch,omitempty"`
 }
 
 // CaddyModule returns the Caddy module information.
@@ -81,6 +83,9 @@ func (f *FrankenPHPApp) Start() error {
 	opts := []frankenphp.Option{frankenphp.WithNumThreads(f.NumThreads), frankenphp.WithLogger(logger)}
 	for _, w := range f.Workers {
 		opts = append(opts, frankenphp.WithWorkers(repl.ReplaceKnown(w.FileName, ""), w.Num, w.Env))
+	}
+	for _, fileName := range f.Watch {
+		opts = append(opts, frankenphp.WithFileWatcher(fileName))
 	}
 
 	_, loaded, err := phpInterpreter.LoadOrNew(mainPHPInterpreterKey, func() (caddy.Destructor, error) {
@@ -126,6 +131,11 @@ func (f *FrankenPHPApp) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 				}
 
 				f.NumThreads = v
+			case "watch":
+				if !d.NextArg() {
+					return d.ArgErr()
+				}
+				f.Watch = append(f.Watch, d.Val())
 
 			case "worker":
 				wc := workerConfig{}

@@ -130,6 +130,37 @@ php_server [<matcher>] {
 }
 ```
 
+### Watching for file changes
+Since workers won't restart automatically on file changes you can also
+define a number of directories that should be watched. This is useful for
+development environments.
+
+```caddyfile
+{
+    frankenphp {
+        worker /path/to/app/public/worker.php
+        watch /path/to/app/sourcefiles
+    }
+}
+```
+
+The configuration above will watch the `/path/to/app/sourcefiles` directory recursively.
+You can also add multiple `watch` directives
+
+```caddyfile
+{
+    frankenphp {
+        watch /path/to/app/folder1             # watches all subdirectories
+        watch /path/to/app/folder2/*.php       # watches only php files in the app directory
+        watch /path/to/app/folder3/**/*.php    # watches only php files in the app directory and subdirectories
+    }
+}
+```
+Be sure not to include files that are created at runtime (like logs) into you watcher, since they might cause unwanted
+worker restarts.
+The file watcher is based on [fsnotify](https://github.com/fsnotify/fsnotify).
+
+
 ### Full Duplex (HTTP/1)
 
 When using HTTP/1.x, it may be desirable to enable full-duplex mode to allow writing a response before the entire body
