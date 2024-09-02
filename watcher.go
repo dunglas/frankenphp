@@ -1,37 +1,43 @@
 package frankenphp
 
 import (
-	"github.com/fsnotify/fsnotify"
+	fswatch "github.com/dunglas/go-fswatch"
 	"go.uber.org/zap"
-	"path/filepath"
-	"strings"
-	"os"
 	"time"
 	"sync/atomic"
 	"sync"
 )
 
-// sometimes multiple fs events fire at once so we'll wait a few ms before reloading
-const debounceDuration = 300
-var watcher *fsnotify.Watcher
-var watcherMu sync.RWMutex
-var isReloadingWorkers atomic.Bool
+type watchEvent struct {
+	events []fswatch.Event
+	watchOpt watchOpt
+}
+
+// sometimes multiple events fire at once so we'll wait a few ms before reloading
+const debounceDuration = 150
+// latency of the watcher in seconds
+const watcherLatency = 0.1
+
+var (
+	watchSessions []*fswatch.Session
+	watcherMu sync.RWMutex
+	isReloadingWorkers atomic.Bool
+	fileEventChannel = make(chan watchEvent)
+)
 
 func initWatcher(watchOpts []watchOpt, workerOpts []workerOpt) error {
 	if(len(watchOpts) == 0) {
 		return nil
 	}
-	fsWatcher, err := fsnotify.NewWatcher()
-	if err != nil {
-		return err
-	}
-	watcherMu.Lock()
-	watcher = fsWatcher;
-	watcherMu.Unlock()
 
-	if err := addWatchedDirectories(watchOpts); err != nil {
-		logger.Error("failed to watch directories")
-		return err
+	watchSessions := make([]*fswatch.Session, len(watchOpts))
+	for i, watchOpt := range watchOpts {
+		session, err := createSession(watchOpt)
+		if(err != nil) {
+			return err
+		}
+		watchSessions[i] = session
+		go session.Start()
 	}
 
 	go listenForFileChanges(watchOpts, workerOpts)
@@ -39,116 +45,60 @@ func initWatcher(watchOpts []watchOpt, workerOpts []workerOpt) error {
 	return nil;
 }
 
+func createSession(watchOpt watchOpt) (*fswatch.Session, error) {
+	eventTypeFilters := []fswatch.EventType{
+		fswatch.Created,
+		fswatch.Updated,
+		fswatch.Renamed,
+		fswatch.Removed,
+	}
+	// Todo: allow more fine grained control over the options
+	opts := []fswatch.Option{
+		fswatch.WithRecursive(watchOpt.isRecursive),
+		fswatch.WithFollowSymlinks(false),
+		fswatch.WithEventTypeFilters(eventTypeFilters),
+		fswatch.WithLatency(0.01),
+	}
+	return fswatch.NewSession([]string{watchOpt.dirName}, registerFileEvent(watchOpt), opts...)
+}
+
 func stopWatcher() {
-	if(watcher != nil) {
-		watcherMu.RLock()
-		watcher.Close()
-		watcherMu.RUnlock()
+	logger.Info("stopping watcher")
+	for _, session := range watchSessions {
+		session.Destroy()
 	}
 }
 
 func listenForFileChanges(watchOpts []watchOpt, workerOpts []workerOpt) {
-	watcherMu.RLock()
-	events := watcher.Events
-	errors := watcher.Errors
-	watcherMu.RUnlock()
 	for {
 		select {
-		case event, ok := <-events:
-			if !ok {
-				logger.Error("unexpected watcher event")
-				return
+		case watchEvent := <-fileEventChannel:
+			for _, event := range watchEvent.events {
+				handleFileEvent(event, watchEvent.watchOpt, workerOpts)
 			}
-			watchCreatedDirectories(event, watchOpts)
-			if isReloadingWorkers.Load() || !fileMatchesPattern(event.Name, watchOpts) {
-				continue
-			}
-			isReloadingWorkers.Store(true)
-			logger.Info("filesystem change detected", zap.String("event", event.Name))
-			go reloadWorkers(workerOpts)
-
-		case err, ok := <-errors:
-			if !ok {
-				return
-			}
-			logger.Error("watcher: error:", zap.Error(err))
+		case <-done:
+			logger.Info("stopping watcher")
+			return
 		}
 	}
 }
 
 
-func addWatchedDirectories(watchOpts []watchOpt) error {
-	for _, watchOpt := range watchOpts {
-		logger.Debug("watching for changes", zap.String("dir", watchOpt.dirName), zap.String("pattern", watchOpt.pattern), zap.Bool("recursive", watchOpt.isRecursive))
-		if(!watchOpt.isRecursive) {
-			watcherMu.RLock()
-			err := watcher.Add(watchOpt.dirName)
-			watcherMu.RUnlock()
-			if(err != nil) {
-				return err
-			}
-			continue
-		}
-		if err := watchRecursively(watchOpt.dirName); err != nil {
-			return err
-		}
+func registerFileEvent(watchOpt watchOpt) func([]fswatch.Event) {
+	return func(events []fswatch.Event) {
+		fileEventChannel <- watchEvent{events,watchOpt}
 	}
-
-	return nil
 }
 
-func watchRecursively(dir string) error {
-	fileInfo, err := os.Stat(dir)
-	if err != nil {
-		return err
-	}
-	if !fileInfo.IsDir() {
-		watcherMu.RLock()
-		defer watcherMu.RUnlock()
-		return watcher.Add(dir)
-	}
-	if err := filepath.Walk(dir, watchFile); err != nil {
-		return err;
-	}
-
-	return nil
-}
-
-func watchCreatedDirectories(event fsnotify.Event, watchOpts []watchOpt) {
-	if !event.Has(fsnotify.Create) {
+func handleFileEvent(event fswatch.Event, watchOpt watchOpt, workerOpts []workerOpt) {
+	if isReloadingWorkers.Load() || !fileMatchesPattern(event.Path, watchOpt) {
 		return
 	}
-	fileInfo, err := os.Stat(event.Name)
-	if err != nil {
-		logger.Error("unable to stat file", zap.Error(err))
-		return
-	}
-	if !fileInfo.IsDir() {
-		return
-	}
-	for _, watchOpt := range watchOpts {
-		if(watchOpt.isRecursive && strings.HasPrefix(event.Name, watchOpt.dirName)) {
-			logger.Debug("watching new dir", zap.String("dir", event.Name))
-			watcherMu.RLock()
-			err := watcher.Add(event.Name)
-			if(err != nil) {
-				logger.Error("failed to watch new dir", zap.Error(err))
-			}
-			watcherMu.RLock()
-		}
-	}
-
+	isReloadingWorkers.Store(true)
+	logger.Info("filesystem change detected", zap.String("path", event.Path))
+	go reloadWorkers(workerOpts)
 }
 
-func watchFile(path string, fi os.FileInfo, err error) error {
-	// ignore paths that start with a dot (like .git)
-	if fi.Mode().IsDir() && !strings.HasPrefix(filepath.Base(fi.Name()), ".") {
-		watcherMu.RLock()
-		defer watcherMu.RUnlock()
-		return watcher.Add(path)
-	}
-	return nil
-}
 	
 func reloadWorkers(workerOpts []workerOpt) {
 	<-time.After(time.Millisecond * time.Duration(debounceDuration))

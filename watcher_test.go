@@ -12,7 +12,7 @@ import (
 )
 
 // we have to wait a few milliseconds for the worker debounce to take effect
-const debounceMilliseconds = 500
+const debounceMilliseconds = 1000
 
 
 func TestWorkerShouldReloadOnMatchingPattern(t *testing.T) {

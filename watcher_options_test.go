@@ -63,53 +63,39 @@ func TestRelativePathname(t *testing.T) {
 	assert.True(t, watchOpt.isRecursive)
 }
 
-func TestShouldWatchWithoutPattern(t *testing.T) {
+func TestPatternShouldMatch(t *testing.T) {
 	const fileName = "/some/path/watch-me.php"
-	wOpt := watchOpt{pattern: "", dirName: "/some/path", isRecursive: false}
-	watchOpts := []watchOpt{wOpt}
-
-	assert.True(t, fileMatchesPattern(fileName, watchOpts))
-}
-
-func TestShouldNotWatchBecauseOfNoRecursion(t *testing.T) {
-	const fileName = "/some/path/sub-path/watch-me.php"
-	wOpt := watchOpt{pattern: ".php", dirName: "/some/path", isRecursive: false}
-	watchOpts := []watchOpt{wOpt}
-
-	assert.False(t, fileMatchesPattern(fileName, watchOpts))
-}
-
-func TestShouldWatchBecauseOfRecursion(t *testing.T) {
-	const fileName = "/some/path/sub-path/watch-me.php"
-	wOpt := watchOpt{pattern: "", dirName: "/some/path", isRecursive: true}
-	watchOpts := []watchOpt{wOpt}
-
-	assert.True(t, fileMatchesPattern(fileName, watchOpts))
-}
-
-func TestShouldWatchBecauseOfPatters(t *testing.T) {
-	const fileName = "/some/path/sub-path/watch-me.php"
 	wOpt := watchOpt{pattern: "*.php", dirName: "/some/path", isRecursive: true}
-	watchOpts := []watchOpt{wOpt}
 
-	assert.True(t, fileMatchesPattern(fileName, watchOpts))
+	assert.True(t, fileMatchesPattern(fileName, wOpt))
 }
 
-func TestShouldNotWatchBecauseOfPattern(t *testing.T) {
-	const fileName = "/some/path/sub-path/watch-me.php"
+func TestPatternShouldMatchExactly(t *testing.T) {
+	const fileName = "/some/path/watch-me.php"
+	wOpt := watchOpt{pattern: "watch-me.php", dirName: "/some/path", isRecursive: true}
+
+	assert.True(t, fileMatchesPattern(fileName, wOpt))
+}
+
+func TestPatternShouldNotMatch(t *testing.T) {
+	const fileName = "/some/path/watch-me.php"
 	wOpt := watchOpt{pattern: "*.json", dirName: "/some/path", isRecursive: true}
-	watchOpts := []watchOpt{wOpt}
 
-	assert.False(t, fileMatchesPattern(fileName, watchOpts))
+	assert.False(t, fileMatchesPattern(fileName, wOpt))
 }
 
-func TestShouldMatchWithMultipleWatchOptions(t *testing.T) {
-	const fileName = "/third/path/watch-me.php"
-	wOpt1 := watchOpt{pattern: "*.php", dirName: "/first/path", isRecursive: true}
-	wOpt2 := watchOpt{pattern: "*.php", dirName: "/second/path", isRecursive: true}
-	wOpt3 := watchOpt{pattern: "*.php", dirName: "/third/path", isRecursive: true}
-	watchOpts := []watchOpt{wOpt1,wOpt2,wOpt3}
+func TestPatternShouldNotMatchExactly(t *testing.T) {
+	const fileName = "/some/path/watch-me.php"
+	wOpt := watchOpt{pattern: "watch-me-too.php", dirName: "/some/path", isRecursive: true}
 
-	assert.True(t, fileMatchesPattern(fileName, watchOpts))
+	assert.False(t, fileMatchesPattern(fileName, wOpt))
 }
+
+func TestEmptyPatternShouldAlwaysMatch(t *testing.T) {
+	const fileName = "/some/path/watch-me.php"
+	wOpt := watchOpt{pattern: "", dirName: "/some/path", isRecursive: true}
+
+	assert.True(t, fileMatchesPattern(fileName, wOpt))
+}
+
 

@@ -48,6 +48,7 @@ require (
 	github.com/dgryski/go-farm v0.0.0-20200201041132-a6ae2369ad13 // indirect
 	github.com/dlclark/regexp2 v1.11.4 // indirect
 	github.com/dolthub/maphash v0.1.0 // indirect
+	github.com/dunglas/go-fswatch v0.0.0-20240820155803-888450fb7f15 // indirect
 	github.com/dunglas/httpsfv v1.0.2 // indirect
 	github.com/dunglas/mercure v0.16.3 // indirect
 	github.com/dunglas/vulcain v1.0.5 // indirect

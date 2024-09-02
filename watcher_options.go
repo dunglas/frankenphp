@@ -36,26 +36,18 @@ func createWatchOption(fileName string) (watchOpt, error) {
 	return watchOpt, nil
 }
 
-func fileMatchesPattern(fileName string, watchOpts []watchOpt) bool {
-	for _, watchOpt := range watchOpts {
-		if !strings.HasPrefix(fileName, watchOpt.dirName) {
-			continue
-		}
-		if(!watchOpt.isRecursive && filepath.Dir(fileName) != watchOpt.dirName) {
-			continue
-		}
-		if watchOpt.pattern == "" {
-			return true
-		}
-		baseName := filepath.Base(fileName)
-		patternMatches, err := filepath.Match(watchOpt.pattern, baseName)
-		if(err != nil) {
-			logger.Error("failed to match filename", zap.String("file", fileName), zap.Error(err))
-			continue
-		}
-		if(patternMatches){
-			return true
-		}
+func fileMatchesPattern(fileName string, watchOpt watchOpt) bool {
+	if watchOpt.pattern == "" {
+		return true
+	}
+	baseName := filepath.Base(fileName)
+	patternMatches, err := filepath.Match(watchOpt.pattern, baseName)
+	if(err != nil) {
+		logger.Error("failed to match filename", zap.String("file", fileName), zap.Error(err))
+		return false
+	}
+	if(patternMatches){
+		return true
 	}
 	return false
 }

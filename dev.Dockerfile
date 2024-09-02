@@ -63,6 +63,14 @@ RUN git clone --branch=PHP-8.3 https://github.com/php/php-src.git . && \
 	echo "opcache.enable=1" >> /usr/local/lib/php.ini && \
 	php --version
 
+RUN wget https://github.com/emcrisostomo/fswatch/releases/download/1.17.1/fswatch-1.17.1.tar.gz  && \
+    tar xzf fswatch-1.17.1.tar.gz && \
+	cd fswatch-* && \
+	./configure && \
+	make && \
+	make install && \
+    ldconfig
+
 WORKDIR /go/src/app
 COPY . .
 
