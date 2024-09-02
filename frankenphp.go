@@ -43,6 +43,7 @@ import (
 
 	"github.com/maypok86/otter"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 	// debug on Linux
 	//_ "github.com/ianlancetaylor/cgosymbolizer"
 )
@@ -319,13 +320,17 @@ func Init(options ...Option) error {
 		return err
 	}
 
-    if err := initWatcher(opt.watch, opt.workers); err != nil {
+	if err := initWatcher(opt.watch, opt.workers); err != nil {
 		return err
 	}
 
-	logger.Info("FrankenPHP started 🐘", zap.String("php_version", Version().Version), zap.Int("num_threads", opt.numThreads))
+	if c := logger.Check(zapcore.InfoLevel, "FrankenPHP started 🐘"); c != nil {
+		c.Write(zap.String("php_version", Version().Version), zap.Int("num_threads", opt.numThreads))
+	}
 	if EmbeddedAppPath != "" {
-		logger.Info("embedded PHP app 📦", zap.String("path", EmbeddedAppPath))
+		if c := logger.Check(zapcore.InfoLevel, "embedded PHP app 📦"); c != nil {
+			c.Write(zap.String("path", EmbeddedAppPath))
+		}
 	}
 
 	return nil
@@ -522,7 +527,9 @@ func go_ub_write(rh C.uintptr_t, cBuf *C.char, length C.int) (C.size_t, C.bool) 
 
 	i, e := writer.Write(unsafe.Slice((*byte)(unsafe.Pointer(cBuf)), length))
 	if e != nil {
-		fc.logger.Error("write error", zap.Error(e))
+		if c := fc.logger.Check(zapcore.ErrorLevel, "write error"); c != nil {
+			c.Write(zap.Error(e))
+		}
 	}
 
 	if fc.responseWriter == nil {
@@ -618,7 +625,7 @@ func go_apache_request_headers(rh, mrh C.uintptr_t) (*C.go_string, C.size_t, C.u
 		mr := cgo.Handle(mrh).Value().(*http.Request)
 		mfc := mr.Context().Value(contextKey).(*FrankenPHPContext)
 
-		if c := mfc.logger.Check(zap.DebugLevel, "apache_request_headers() called in non-HTTP context"); c != nil {
+		if c := mfc.logger.Check(zapcore.DebugLevel, "apache_request_headers() called in non-HTTP context"); c != nil {
 			c.Write(zap.String("worker", mfc.scriptFilename))
 		}
 
@@ -667,7 +674,9 @@ func go_apache_request_cleanup(rh C.uintptr_t) {
 func addHeader(fc *FrankenPHPContext, cString *C.char, length C.int) {
 	parts := strings.SplitN(C.GoStringN(cString, length), ": ", 2)
 	if len(parts) != 2 {
-		fc.logger.Debug("invalid header", zap.String("header", parts[0]))
+		if c := fc.logger.Check(zapcore.DebugLevel, "invalid header"); c != nil {
+			c.Write(zap.String("header", parts[0]))
+		}
 
 		return
 	}
@@ -713,7 +722,9 @@ func go_sapi_flush(rh C.uintptr_t) bool {
 	}
 
 	if err := http.NewResponseController(fc.responseWriter).Flush(); err != nil {
-		fc.logger.Error("the current responseWriter is not a flusher", zap.Error(err))
+		if c := fc.logger.Check(zapcore.ErrorLevel, "the current responseWriter is not a flusher"); c != nil {
+			c.Write(zap.Error(err))
+		}
 	}
 
 	return false
@@ -765,16 +776,24 @@ func go_log(message *C.char, level C.int) {
 
 	switch le {
 	case emerg, alert, crit, err:
-		l.Error(m, zap.Stringer("syslog_level", syslogLevel(level)))
+		if c := l.Check(zapcore.ErrorLevel, m); c != nil {
+			c.Write(zap.Stringer("syslog_level", syslogLevel(level)))
+		}
 
 	case warning:
-		l.Warn(m, zap.Stringer("syslog_level", syslogLevel(level)))
+		if c := l.Check(zapcore.WarnLevel, m); c != nil {
+			c.Write(zap.Stringer("syslog_level", syslogLevel(level)))
+		}
 
 	case debug:
-		l.Debug(m, zap.Stringer("syslog_level", syslogLevel(level)))
+		if c := l.Check(zapcore.DebugLevel, m); c != nil {
+			c.Write(zap.Stringer("syslog_level", syslogLevel(level)))
+		}
 
 	default:
-		l.Info(m, zap.Stringer("syslog_level", syslogLevel(level)))
+		if c := l.Check(zapcore.InfoLevel, m); c != nil {
+			c.Write(zap.Stringer("syslog_level", syslogLevel(level)))
+		}
 	}
 }
 

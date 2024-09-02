@@ -127,6 +127,7 @@ php_server [<matcher>] {
 	split_path <delim...> # Sets the substrings for splitting the URI into two parts. The first matching substring will be used to split the "path info" from the path. The first piece is suffixed with the matching substring and will be assumed as the actual resource (CGI script) name. The second piece will be set to PATH_INFO for the script to use. Default: `.php`
 	resolve_root_symlink false # Disables resolving the `root` directory to its actual value by evaluating a symbolic link, if one exists (enabled by default).
 	env <key> <value> # Sets an extra environment variable to the given value. Can be specified more than once for multiple environment variables.
+	file_server off # Disables the built-in file_server directive.
 }
 ```
 
