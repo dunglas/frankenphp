@@ -80,10 +80,13 @@ func listenForFileChanges(watchOpts []watchOpt, workerOpts []workerOpt) {
 func addWatchedDirectories(watchOpts []watchOpt) error {
 	for _, watchOpt := range watchOpts {
 		logger.Debug("watching for changes", zap.String("dir", watchOpt.dirName), zap.String("pattern", watchOpt.pattern), zap.Bool("recursive", watchOpt.isRecursive))
-		if(watchOpt.isRecursive == false) {
+		if(!watchOpt.isRecursive) {
 			watcherMu.RLock()
-			watcher.Add(watchOpt.dirName)
+			err := watcher.Add(watchOpt.dirName)
 			watcherMu.RUnlock()
+			if(err != nil) {
+				return err
+			}
 			continue
 		}
 		if err := watchRecursively(watchOpt.dirName); err != nil {
@@ -101,9 +104,8 @@ func watchRecursively(dir string) error {
 	}
 	if !fileInfo.IsDir() {
 		watcherMu.RLock()
-		watcher.Add(dir)
-		watcherMu.RUnlock()
-		return nil
+		defer watcherMu.RUnlock()
+		return watcher.Add(dir)
 	}
 	if err := filepath.Walk(dir, watchFile); err != nil {
 		return err;
@@ -121,14 +123,17 @@ func watchCreatedDirectories(event fsnotify.Event, watchOpts []watchOpt) {
 		logger.Error("unable to stat file", zap.Error(err))
 		return
 	}
-	if fileInfo.IsDir() != true {
+	if !fileInfo.IsDir() {
 		return
 	}
 	for _, watchOpt := range watchOpts {
 		if(watchOpt.isRecursive && strings.HasPrefix(event.Name, watchOpt.dirName)) {
 			logger.Debug("watching new dir", zap.String("dir", event.Name))
 			watcherMu.RLock()
-			watcher.Add(event.Name)
+			err := watcher.Add(event.Name)
+			if(err != nil) {
+				logger.Error("failed to watch new dir", zap.Error(err))
+			}
 			watcherMu.RLock()
 		}
 	}

@@ -41,7 +41,7 @@ func fileMatchesPattern(fileName string, watchOpts []watchOpt) bool {
 		if !strings.HasPrefix(fileName, watchOpt.dirName) {
 			continue
 		}
-		if(watchOpt.isRecursive == false && filepath.Dir(fileName) != watchOpt.dirName) {
+		if(!watchOpt.isRecursive && filepath.Dir(fileName) != watchOpt.dirName) {
 			continue
 		}
 		if watchOpt.pattern == "" {

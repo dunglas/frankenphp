@@ -67,7 +67,10 @@ func fetchBody(method string, url string, handler func(http.ResponseWriter, *htt
 func updateTestFile(fileName string, content string){
 	dirName := filepath.Dir(fileName)
 	if _, err := os.Stat(dirName); os.IsNotExist(err) {
-		os.MkdirAll(dirName, 0700)
+		err = os.MkdirAll(dirName, 0700)
+		if(err != nil) {
+			panic(err)
+		}
 	}
 	bytes := []byte(content)
 	err := os.WriteFile(fileName, bytes, 0644)
