@@ -61,7 +61,7 @@ func fetchBody(method string, url string, handler func(http.ResponseWriter, *htt
 func updateTestFile(fileName string, content string){
 	bytes := []byte(content)
 	err := os.WriteFile(fileName, bytes, 0644)
-    if(err != nil) {
-        panic(err)
-    }
+	if(err != nil) {
+		panic(err)
+	}
 }
