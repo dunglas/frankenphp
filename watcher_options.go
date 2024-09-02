@@ -12,7 +12,7 @@ type watchOpt struct {
 	isRecursive bool
 }
 
-func fileNameToWatchOption(fileName string) (watchOpt, error) {
+func createWatchOption(fileName string) (watchOpt, error) {
 	watchOpt := watchOpt{pattern: "", dirName: fileName, isRecursive: true}
     dirName, baseName := filepath.Split(watchOpt.dirName)
     if(strings.Contains(baseName, "*") || strings.Contains(baseName, ".")) {
@@ -34,4 +34,28 @@ func fileNameToWatchOption(fileName string) (watchOpt, error) {
     watchOpt.dirName = absName
 
     return watchOpt, nil
+}
+
+func fileMatchesPattern(fileName string, watchOpts []watchOpt) bool {
+	for _, watchOpt := range watchOpts {
+		if !strings.HasPrefix(fileName, watchOpt.dirName) {
+			continue
+		}
+		if(watchOpt.isRecursive == false && filepath.Dir(fileName) != watchOpt.dirName) {
+            continue
+        }
+		if watchOpt.pattern == "" {
+			return true
+		}
+		baseName := filepath.Base(fileName)
+		patternMatches, err := filepath.Match(watchOpt.pattern, baseName)
+		if(err != nil) {
+			logger.Error("failed to match filename", zap.String("file", fileName), zap.Error(err))
+			continue
+		}
+		if(patternMatches){
+			return true
+		}
+	}
+	return false
 }

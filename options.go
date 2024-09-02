@@ -44,7 +44,7 @@ func WithWorkers(fileName string, num int, env map[string]string) Option {
 // WithFileWatcher configures filesystem watching.
 func WithFileWatcher(fileName string) Option {
 	return func(o *opt) error {
-		watchOpt, err := fileNameToWatchOption(fileName)
+		watchOpt, err := createWatchOption(fileName)
 
 		if(err == nil) {
 			o.watch = append(o.watch, watchOpt)

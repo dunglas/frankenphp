@@ -9,7 +9,7 @@ import (
 func TestSimpleRecursiveWatchOption(t *testing.T) {
 	const fileName = "/some/path"
 
-	watchOpt, err := fileNameToWatchOption(fileName)
+	watchOpt, err := createWatchOption(fileName)
 
 	assert.Nil(t, err)
 	assert.Equal(t, "", watchOpt.pattern)
@@ -20,7 +20,7 @@ func TestSimpleRecursiveWatchOption(t *testing.T) {
 func TestSingleFileWatchOption(t *testing.T) {
 	const fileName = "/some/path/watch-me.json"
 
-	watchOpt, err := fileNameToWatchOption(fileName)
+	watchOpt, err := createWatchOption(fileName)
 
 	assert.Nil(t, err)
 	assert.Equal(t, "watch-me.json", watchOpt.pattern)
@@ -31,7 +31,7 @@ func TestSingleFileWatchOption(t *testing.T) {
 func TestNonRecursivePatternWatchOption(t *testing.T) {
 	const fileName = "/some/path/*.json"
 
-	watchOpt, err := fileNameToWatchOption(fileName)
+	watchOpt, err := createWatchOption(fileName)
 
 	assert.Nil(t, err)
 	assert.Equal(t, "*.json", watchOpt.pattern)
@@ -42,7 +42,7 @@ func TestNonRecursivePatternWatchOption(t *testing.T) {
 func TestRecursivePatternWatchOption(t *testing.T) {
 	const fileName = "/some/path/**/*.json"
 
-	watchOpt, err := fileNameToWatchOption(fileName)
+	watchOpt, err := createWatchOption(fileName)
 
 	assert.Nil(t, err)
 	assert.Equal(t, "*.json", watchOpt.pattern)
@@ -54,7 +54,7 @@ func TestRelativePathname(t *testing.T) {
 	const fileName = "../testdata/**/*.txt"
 	absPath, err1 := filepath.Abs("../testdata")
 
-	watchOpt, err2 := fileNameToWatchOption(fileName)
+	watchOpt, err2 := createWatchOption(fileName)
 
 	assert.Nil(t, err1)
 	assert.Nil(t, err2)
@@ -68,7 +68,7 @@ func TestShouldWatchWithoutPattern(t *testing.T) {
 	wOpt := watchOpt{pattern: "", dirName: "/some/path", isRecursive: false}
 	watchOpts := []watchOpt{wOpt}
 
-	assert.True(t, fileShouldBeWatched(fileName, watchOpts))
+	assert.True(t, fileMatchesPattern(fileName, watchOpts))
 }
 
 func TestShouldNotWatchBecauseOfNoRecursion(t *testing.T) {
@@ -76,7 +76,7 @@ func TestShouldNotWatchBecauseOfNoRecursion(t *testing.T) {
 	wOpt := watchOpt{pattern: ".php", dirName: "/some/path", isRecursive: false}
 	watchOpts := []watchOpt{wOpt}
 
-	assert.False(t, fileShouldBeWatched(fileName, watchOpts))
+	assert.False(t, fileMatchesPattern(fileName, watchOpts))
 }
 
 func TestShouldWatchBecauseOfRecursion(t *testing.T) {
@@ -84,7 +84,7 @@ func TestShouldWatchBecauseOfRecursion(t *testing.T) {
 	wOpt := watchOpt{pattern: "", dirName: "/some/path", isRecursive: true}
 	watchOpts := []watchOpt{wOpt}
 
-	assert.True(t, fileShouldBeWatched(fileName, watchOpts))
+	assert.True(t, fileMatchesPattern(fileName, watchOpts))
 }
 
 func TestShouldWatchBecauseOfPatters(t *testing.T) {
@@ -92,7 +92,7 @@ func TestShouldWatchBecauseOfPatters(t *testing.T) {
 	wOpt := watchOpt{pattern: "*.php", dirName: "/some/path", isRecursive: true}
 	watchOpts := []watchOpt{wOpt}
 
-	assert.True(t, fileShouldBeWatched(fileName, watchOpts))
+	assert.True(t, fileMatchesPattern(fileName, watchOpts))
 }
 
 func TestShouldNotWatchBecauseOfPattern(t *testing.T) {
@@ -100,7 +100,7 @@ func TestShouldNotWatchBecauseOfPattern(t *testing.T) {
 	wOpt := watchOpt{pattern: "*.json", dirName: "/some/path", isRecursive: true}
 	watchOpts := []watchOpt{wOpt}
 
-	assert.False(t, fileShouldBeWatched(fileName, watchOpts))
+	assert.False(t, fileMatchesPattern(fileName, watchOpts))
 }
 
 func TestShouldMatchWithMultipleWatchOptions(t *testing.T) {
@@ -110,6 +110,6 @@ func TestShouldMatchWithMultipleWatchOptions(t *testing.T) {
 	wOpt3 := watchOpt{pattern: "*.php", dirName: "/third/path", isRecursive: true}
 	watchOpts := []watchOpt{wOpt1,wOpt2,wOpt3}
 
-	assert.True(t, fileShouldBeWatched(fileName, watchOpts))
+	assert.True(t, fileMatchesPattern(fileName, watchOpts))
 }
 

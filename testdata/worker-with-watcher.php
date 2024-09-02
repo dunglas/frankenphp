@@ -1,10 +1,8 @@
 <?php
 
-$jsonFile = file_get_contents(__DIR__ . '/files/test.json');
 $textFile = file_get_contents(__DIR__ . '/files/test.txt');
 
-$printFiles = function () use ($jsonFile, $textFile) {
-    echo $jsonFile;
+$printFiles = function () use ($textFile) {
     echo $textFile;
 };
 

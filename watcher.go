@@ -26,7 +26,7 @@ func initWatcher(watchOpts []watchOpt, workerOpts []workerOpt) error {
 
 	go listenForFileChanges(watchOpts, workerOpts)
 
-	if err := watchDirectories(watchOpts); err != nil {
+	if err := addWatchedDirectories(watchOpts); err != nil {
 		logger.Error("failed to watch directories")
 		return err
 	}
@@ -48,8 +48,8 @@ func listenForFileChanges(watchOpts []watchOpt, workerOpts []workerOpt) {
                 logger.Error("unexpected watcher event")
                 return
             }
-            watchCreatedDirs(event, watchOpts)
-            if isReloadingWorkers || !fileShouldBeWatched(event.Name, watchOpts) {
+            watchCreatedDirectories(event, watchOpts)
+            if isReloadingWorkers || !fileMatchesPattern(event.Name, watchOpts) {
                 continue
             }
             isReloadingWorkers = true
@@ -66,7 +66,7 @@ func listenForFileChanges(watchOpts []watchOpt, workerOpts []workerOpt) {
 }
 
 
-func watchDirectories(watchOpts []watchOpt) error {
+func addWatchedDirectories(watchOpts []watchOpt) error {
 	for _, watchOpt := range watchOpts {
 		logger.Debug("watching for changes", zap.String("dir", watchOpt.dirName), zap.String("pattern", watchOpt.pattern), zap.Bool("recursive", watchOpt.isRecursive))
 		if(watchOpt.isRecursive == false) {
@@ -90,14 +90,14 @@ func watchRecursively(dir string) error {
 		watcher.Add(dir)
 		return nil
 	}
-	if err := filepath.Walk(dir, watchSingleDir); err != nil {
+	if err := filepath.Walk(dir, watchFile); err != nil {
 		return err;
 	}
 
 	return nil
 }
 
-func watchCreatedDirs(event fsnotify.Event, watchOpts []watchOpt) {
+func watchCreatedDirectories(event fsnotify.Event, watchOpts []watchOpt) {
 	if !event.Has(fsnotify.Create) {
 		return
 	}
@@ -118,7 +118,7 @@ func watchCreatedDirs(event fsnotify.Event, watchOpts []watchOpt) {
 
 }
 
-func watchSingleDir(path string, fi os.FileInfo, err error) error {
+func watchFile(path string, fi os.FileInfo, err error) error {
 	// ignore paths that start with a dot (like .git)
 	if fi.Mode().IsDir() && !strings.HasPrefix(filepath.Base(fi.Name()), ".") {
 		return watcher.Add(path)
@@ -140,26 +140,3 @@ func reloadWorkers(workerOpts []workerOpt) {
 	isReloadingWorkers = false
 }
 
-func fileShouldBeWatched(eventFileName string, watchOpts []watchOpt) bool {
-	for _, watchOpt := range watchOpts {
-		if !strings.HasPrefix(eventFileName, watchOpt.dirName) {
-			continue
-		}
-		if(watchOpt.isRecursive == false && filepath.Dir(eventFileName) != watchOpt.dirName) {
-            continue
-        }
-		if watchOpt.pattern == "" {
-			return true
-		}
-		baseName := filepath.Base(eventFileName)
-		patternMatches, err := filepath.Match(watchOpt.pattern, baseName)
-		if(err != nil) {
-			logger.Error("failed to match filename", zap.String("file", eventFileName), zap.Error(err))
-			continue
-		}
-		if(patternMatches){
-			return true
-		}
-	}
-	return false
-}

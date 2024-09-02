@@ -11,28 +11,40 @@ import (
 )
 
 
-func TestWorkerWithWatcher(t *testing.T) {
-	updateTestFile("./testdata/files/test.json", "JsonFile1")
-    updateTestFile("./testdata/files/test.txt", "TextFile1")
+func TestWorkerShouldReloadOnMatchingPattern(t *testing.T) {
+	const filePattern = "./testdata/**/*.txt"
+	updateTestFile("./testdata/files/test.txt", "version1")
 
 	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
 		// first we verify that the worker is working correctly
 		body := fetchBody("GET", "http://example.com/worker-with-watcher.php", handler)
-		assert.Equal(t, "JsonFile1TextFile1", body)
+		assert.Equal(t, "version1", body)
 
 		// now we verify that updating a .txt file does not cause a reload
-		updateTestFile("./testdata/files/test.txt", "TextFile2")
+		updateTestFile("./testdata/files/test.txt", "version2")
 		time.Sleep(1000 * time.Millisecond)
 		body = fetchBody("GET", "http://example.com/worker-with-watcher.php", handler)
-		assert.Equal(t, "JsonFile1TextFile1", body)
+		assert.Equal(t, "version2", body)
 
-		// lastly we verify that updating a .json file does cause a reload
-		updateTestFile("./testdata/files/test.json", "JsonFile2")
+	}, &testOptions{nbParrallelRequests: 1, nbWorkers: 1, workerScript: "worker-with-watcher.php", watch:filePattern})
+}
+
+func TestWorkerShouldNotReloadOnNonMatchingPattern(t *testing.T) {
+	const filePattern = "./testdata/**/*.json"
+	updateTestFile("./testdata/files/test.txt", "version1")
+
+	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
+		// first we verify that the worker is working correctly
+		body := fetchBody("GET", "http://example.com/worker-with-watcher.php", handler)
+		assert.Equal(t, "version1", body)
+
+		// now we verify that updating a .txt file does not cause a reload
+		updateTestFile("./testdata/files/test.txt", "version2")
 		time.Sleep(1000 * time.Millisecond)
-        body = fetchBody("GET", "http://example.com/worker-with-watcher.php", handler)
-		assert.Equal(t, "JsonFile2TextFile2", body)
+		body = fetchBody("GET", "http://example.com/worker-with-watcher.php", handler)
+		assert.Equal(t, "version1", body)
 
-	}, &testOptions{nbParrallelRequests: 1, nbWorkers: 1, workerScript: "worker-with-watcher.php", watch:"./testdata/**/*.json"})
+	}, &testOptions{nbParrallelRequests: 1, nbWorkers: 1, workerScript: "worker-with-watcher.php", watch:filePattern})
 }
 
 
