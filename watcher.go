@@ -7,12 +7,13 @@ import (
 	"strings"
 	"os"
 	"time"
+	"sync/atomic"
 )
 
 // sometimes multiple fs events fire at once so we'll wait a few ms before reloading
 const debounceDuration = 300
 var watcher *fsnotify.Watcher
-var isReloadingWorkers bool = false
+var isReloadingWorkers atomic.Bool
 
 func initWatcher(watchOpts []watchOpt, workerOpts []workerOpt) error {
 	if(len(watchOpts) == 0) {
@@ -42,27 +43,27 @@ func stopWatcher() {
 
 func listenForFileChanges(watchOpts []watchOpt, workerOpts []workerOpt) {
 	for {
-        select {
-        case event, ok := <-watcher.Events:
-            if !ok {
-                logger.Error("unexpected watcher event")
-                return
-            }
-            watchCreatedDirectories(event, watchOpts)
-            if isReloadingWorkers || !fileMatchesPattern(event.Name, watchOpts) {
-                continue
-            }
-            isReloadingWorkers = true
-            logger.Info("filesystem change detected", zap.String("event", event.Name))
-            go reloadWorkers(workerOpts)
+		select {
+		case event, ok := <-watcher.Events:
+			if !ok {
+				logger.Error("unexpected watcher event")
+				return
+			}
+			watchCreatedDirectories(event, watchOpts)
+			if isReloadingWorkers.Load() || !fileMatchesPattern(event.Name, watchOpts) {
+				continue
+			}
+			isReloadingWorkers.Store(true)
+			logger.Info("filesystem change detected", zap.String("event", event.Name))
+			go reloadWorkers(workerOpts)
 
-        case err, ok := <-watcher.Errors:
-            if !ok {
-                return
-            }
-            logger.Error("watcher: error:", zap.Error(err))
-        }
-    }
+		case err, ok := <-watcher.Errors:
+			if !ok {
+				return
+			}
+			logger.Error("watcher: error:", zap.Error(err))
+		}
+	}
 }
 
 
@@ -112,7 +113,7 @@ func watchCreatedDirectories(event fsnotify.Event, watchOpts []watchOpt) {
 	for _, watchOpt := range watchOpts {
 		if(watchOpt.isRecursive && strings.HasPrefix(event.Name, watchOpt.dirName)) {
 			logger.Debug("watching new dir", zap.String("dir", event.Name))
-            watcher.Add(event.Name)
+			watcher.Add(event.Name)
 		}
 	}
 
@@ -137,6 +138,6 @@ func reloadWorkers(workerOpts []workerOpt) {
 	}
 
 	logger.Info("workers restarted successfully")
-	isReloadingWorkers = false
+	isReloadingWorkers.Store(false)
 }
 

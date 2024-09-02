@@ -7,33 +7,33 @@ import (
 )
 
 type watchOpt struct {
-	pattern    string
-	dirName     string
+	pattern	string
+	dirName	 string
 	isRecursive bool
 }
 
 func createWatchOption(fileName string) (watchOpt, error) {
 	watchOpt := watchOpt{pattern: "", dirName: fileName, isRecursive: true}
-    dirName, baseName := filepath.Split(watchOpt.dirName)
-    if(strings.Contains(baseName, "*") || strings.Contains(baseName, ".")) {
-        watchOpt.dirName = dirName
-        watchOpt.pattern = baseName
-        watchOpt.isRecursive = false
-    }
+	dirName, baseName := filepath.Split(watchOpt.dirName)
+	if(strings.Contains(baseName, "*") || strings.Contains(baseName, ".")) {
+		watchOpt.dirName = dirName
+		watchOpt.pattern = baseName
+		watchOpt.isRecursive = false
+	}
 
-    if(strings.Contains(fileName, "/**")) {
-        watchOpt.dirName = strings.Split(fileName, "/**")[0]
-        watchOpt.isRecursive = true
-    }
+	if(strings.Contains(fileName, "/**")) {
+		watchOpt.dirName = strings.Split(fileName, "/**")[0]
+		watchOpt.isRecursive = true
+	}
 
-    absName, err := filepath.Abs(watchOpt.dirName)
-    if err != nil {
-        logger.Error("directory could not be watched", zap.String("dir", watchOpt.dirName), zap.Error(err))
-        return watchOpt, err
-    }
-    watchOpt.dirName = absName
+	absName, err := filepath.Abs(watchOpt.dirName)
+	if err != nil {
+		logger.Error("directory could not be watched", zap.String("dir", watchOpt.dirName), zap.Error(err))
+		return watchOpt, err
+	}
+	watchOpt.dirName = absName
 
-    return watchOpt, nil
+	return watchOpt, nil
 }
 
 func fileMatchesPattern(fileName string, watchOpts []watchOpt) bool {
@@ -42,8 +42,8 @@ func fileMatchesPattern(fileName string, watchOpts []watchOpt) bool {
 			continue
 		}
 		if(watchOpt.isRecursive == false && filepath.Dir(fileName) != watchOpt.dirName) {
-            continue
-        }
+			continue
+		}
 		if watchOpt.pattern == "" {
 			return true
 		}
