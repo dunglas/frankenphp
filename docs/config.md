@@ -132,6 +132,7 @@ php_server [<matcher>] {
 ```
 
 ### Watching for file changes
+
 Since workers won't restart automatically on file changes you can also
 define a number of directories that should be watched. This is useful for
 development environments.
@@ -157,10 +158,10 @@ You can also add multiple `watch` directives
     }
 }
 ```
+
 Be sure not to include files that are created at runtime (like logs) into you watcher, since they might cause unwanted
 worker restarts.
 The file watcher is based on [fsnotify](https://github.com/fsnotify/fsnotify).
-
 
 ### Full Duplex (HTTP/1)
 
