@@ -46,6 +46,7 @@ func startWorkers(fileName string, nbWorkers int, env PreparedEnv) error {
 
 	workersRequestChans.Store(absFileName, make(chan *http.Request))
 	shutdownWG.Add(nbWorkers)
+	workerShutdownWG.Add(nbWorkers)
 	workersReadyWG.Add(nbWorkers)
 
 	var (
@@ -63,6 +64,7 @@ func startWorkers(fileName string, nbWorkers int, env PreparedEnv) error {
 	for i := 0; i < nbWorkers; i++ {
 		go func() {
 			defer shutdownWG.Done()
+			defer workerShutdownWG.Done()
 			for {
 				// Create main dummy request
 				r, err := http.NewRequest(http.MethodGet, filepath.Base(absFileName), nil)

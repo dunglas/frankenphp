@@ -12,8 +12,8 @@ import (
 
 
 func TestWorkerShouldReloadOnMatchingPattern(t *testing.T) {
-	const filePattern = "/go/src/app/testdata/**/*.txt"
-	updateTestFile("/go/src/app/testdata/files/test.txt", "version1")
+	const filePattern = "./testdata/**/*.txt"
+	updateTestFile("./testdata/files/test.txt", "version1")
 
 	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
 		// first we verify that the worker is working correctly
@@ -21,7 +21,7 @@ func TestWorkerShouldReloadOnMatchingPattern(t *testing.T) {
 		assert.Equal(t, "version1", body)
 
 		// now we verify that updating a .txt file does not cause a reload
-		updateTestFile("/go/src/app/testdata/files/test.txt", "version2")
+		updateTestFile("./testdata/files/test.txt", "version2")
 		time.Sleep(1000 * time.Millisecond)
 		body = fetchBody("GET", "http://example.com/worker-with-watcher.php", handler)
 		assert.Equal(t, "version2", body)
@@ -30,8 +30,8 @@ func TestWorkerShouldReloadOnMatchingPattern(t *testing.T) {
 }
 
 func TestWorkerShouldNotReloadOnNonMatchingPattern(t *testing.T) {
-	const filePattern = "/go/src/app/testdata/**/*.json"
-	updateTestFile("/go/src/app/testdata/files/test.txt", "version1")
+	const filePattern = "./testdata/**/*.json"
+	updateTestFile("./testdata/files/test.txt", "version1")
 
 	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
 		// first we verify that the worker is working correctly
@@ -39,7 +39,7 @@ func TestWorkerShouldNotReloadOnNonMatchingPattern(t *testing.T) {
 		assert.Equal(t, "version1", body)
 
 		// now we verify that updating a .txt file does not cause a reload
-		updateTestFile("/go/src/app/testdata/files/test.txt", "version2")
+		updateTestFile("./testdata/files/test.txt", "version2")
 		time.Sleep(1000 * time.Millisecond)
 		body = fetchBody("GET", "http://example.com/worker-with-watcher.php", handler)
 		assert.Equal(t, "version1", body)
