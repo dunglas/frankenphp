@@ -141,6 +141,9 @@ func stopWorkers() {
 		close(workersDone)
 	}
 	workerShutdownWG.Wait()
+	// Always reset the WaitGroup to ensure we're in a clean state
+    workersReadyWG = sync.WaitGroup{}
+    workerShutdownWG = sync.WaitGroup{}
 }
 
 //export go_frankenphp_worker_ready

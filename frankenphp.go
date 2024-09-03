@@ -338,14 +338,11 @@ func Init(options ...Option) error {
 
 // Shutdown stops the workers and the PHP runtime.
 func Shutdown() {
-	stopWorkers()
 	stopWatcher()
+	stopWorkers()
 	close(done)
 	shutdownWG.Wait()
 	requestChan = nil
-
-	// Always reset the WaitGroup to ensure we're in a clean state
-	workersReadyWG = sync.WaitGroup{}
 
 	// Remove the installed app
 	if EmbeddedAppPath != "" {
