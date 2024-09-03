@@ -3,54 +3,44 @@ package frankenphp
 import (
 	fswatch "github.com/dunglas/go-fswatch"
 	"go.uber.org/zap"
-	"time"
 	"sync/atomic"
+	"sync"
 )
 
-type watchEvent struct {
-	events []fswatch.Event
-	watchOpt watchOpt
-}
-
-// sometimes multiple events fire at once so we'll wait a few ms before reloading
-const debounceDuration = 100
 // latency of the watcher in seconds
-const watcherLatency = 0.1
+const watcherLatency = 0.15
 
 var (
-	watchSessions         []*fswatch.Session
-	blockReloading        atomic.Bool
-	fileEventChannel      chan watchEvent
-	watcherDone           chan interface{}
+	watchSessions      []*fswatch.Session
+	blockReloading     atomic.Bool
+	reloadWaitGroup    sync.WaitGroup
 )
 
 func initWatcher(watchOpts []watchOpt, workerOpts []workerOpt) error {
 	if(len(watchOpts) == 0 || len(workerOpts) == 0) {
 		return nil
 	}
-	blockReloading.Store(true)
 
 	watchSessions := make([]*fswatch.Session, len(watchOpts))
 	for i, watchOpt := range watchOpts {
-		session, err := createSession(watchOpt)
+		session, err := createSession(watchOpt, workerOpts)
 		if(err != nil) {
 			return err
 		}
 		watchSessions[i] = session
 		go session.Start()
 	}
-	watcherDone = make(chan interface{} )
-	fileEventChannel = make(chan watchEvent)
-	for _, session := range watchSessions {
-    	go session.Start()
-    }
 
-	go listenForFileChanges(watchOpts, workerOpts)
+	for _, session := range watchSessions {
+		go session.Start()
+	}
+
 	blockReloading.Store(false)
+	reloadWaitGroup = sync.WaitGroup{}
 	return nil;
 }
 
-func createSession(watchOpt watchOpt) (*fswatch.Session, error) {
+func createSession(watchOpt watchOpt, workerOpts []workerOpt) (*fswatch.Session, error) {
 	eventTypeFilters := []fswatch.EventType{
 		fswatch.Created,
 		fswatch.Updated,
@@ -64,17 +54,13 @@ func createSession(watchOpt watchOpt) (*fswatch.Session, error) {
 		fswatch.WithEventTypeFilters(eventTypeFilters),
 		fswatch.WithLatency(0.01),
 	}
-	return fswatch.NewSession([]string{watchOpt.dirName}, registerFileEvent(watchOpt), opts...)
+	return fswatch.NewSession([]string{watchOpt.dirName}, registerFileEvent(watchOpt, workerOpts), opts...)
 }
 
 func stopWatcher() {
-	if watcherDone == nil {
-		return
-	}
 	logger.Info("stopping watcher")
 	blockReloading.Store(true)
-	close(watcherDone)
-	watcherDone = nil
+	reloadWaitGroup.Wait()
 	for _, session := range watchSessions {
 		if err := session.Destroy(); err != nil {
 			panic(err)
@@ -82,39 +68,29 @@ func stopWatcher() {
 	}
 }
 
-func listenForFileChanges(watchOpts []watchOpt, workerOpts []workerOpt) {
-	for {
-		select {
-		case watchEvent := <-fileEventChannel:
-			for _, event := range watchEvent.events {
-				handleFileEvent(event, watchEvent.watchOpt, workerOpts)
+func registerFileEvent(watchOpt watchOpt, workerOpts []workerOpt) func([]fswatch.Event) {
+	return func(events []fswatch.Event) {
+		for _, event := range events {
+			if (handleFileEvent(event, watchOpt, workerOpts)){
+				return
 			}
-		case <-watcherDone:
-			return
 		}
 	}
 }
 
-
-func registerFileEvent(watchOpt watchOpt) func([]fswatch.Event) {
-	return func(events []fswatch.Event) {
-		fileEventChannel <- watchEvent{events,watchOpt}
-	}
-}
-
-func handleFileEvent(event fswatch.Event, watchOpt watchOpt, workerOpts []workerOpt) {
-	if blockReloading.Load() || !fileMatchesPattern(event.Path, watchOpt) {
-		return
+func handleFileEvent(event fswatch.Event, watchOpt watchOpt, workerOpts []workerOpt) bool {
+	if !fileMatchesPattern(event.Path, watchOpt) || blockReloading.Load() {
+		return false
 	}
 	blockReloading.Store(true)
+	reloadWaitGroup.Add(1)
 	logger.Info("filesystem change detected", zap.String("path", event.Path))
 	go reloadWorkers(workerOpts)
+	return true
 }
 
 	
 func reloadWorkers(workerOpts []workerOpt) {
-	<-time.After(time.Millisecond * time.Duration(debounceDuration))
-
 	logger.Info("restarting workers due to file changes...")
 	stopWorkers()
 	if err := initWorkers(workerOpts); err != nil {
@@ -124,6 +100,7 @@ func reloadWorkers(workerOpts []workerOpt) {
 
 	logger.Info("workers restarted successfully")
 	blockReloading.Store(false)
+	reloadWaitGroup.Done()
 }
 
 

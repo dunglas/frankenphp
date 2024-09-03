@@ -11,8 +11,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// we have to wait a few milliseconds for the worker debounce to take effect
-const debounceMilliseconds = 1000
+// we have to wait a few milliseconds for the watcher debounce to take effect
+const timeToWaitForChanges = 600
 
 
 func TestWorkerShouldReloadOnMatchingPattern(t *testing.T) {
@@ -26,7 +26,7 @@ func TestWorkerShouldReloadOnMatchingPattern(t *testing.T) {
 		// now we verify that updating a .txt file does not cause a reload
 		absPath, err := filepath.Abs("./testdata/files/test.txt")
 		updateTestFile(absPath, "updated")
-		time.Sleep(debounceMilliseconds * time.Millisecond)
+		time.Sleep(timeToWaitForChanges * time.Millisecond)
 		body = fetchBody("GET", "http://example.com/worker-with-watcher.php", handler)
 		assert.Nil(t, err)
 		assert.Equal(t, "requests:1", body)
@@ -45,7 +45,7 @@ func TestWorkerShouldNotReloadOnNonMatchingPattern(t *testing.T) {
 		// now we verify that updating a .json file does not cause a reload
 		absPath, err := filepath.Abs("./testdata/files/test.json")
 		updateTestFile(absPath, "{updated:true}")
-		time.Sleep(debounceMilliseconds * time.Millisecond)
+		time.Sleep(timeToWaitForChanges * time.Millisecond)
 		body = fetchBody("GET", "http://example.com/worker-with-watcher.php", handler)
 		assert.Nil(t, err)
 		assert.Equal(t, "requests:2", body)
