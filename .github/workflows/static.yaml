@@ -28,7 +28,8 @@ permissions:
   id-token: write
   attestations: write
 env:
-  IMAGE_NAME: ${{ (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.version) || startsWith(github.ref, 'refs/tags/')) && 'dunglas/frankenphp' || 'dunglas/frankenphp-dev' }}    
+  IMAGE_NAME: ${{ (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.version) || startsWith(github.ref, 'refs/tags/')) && 'dunglas/frankenphp' || 'dunglas/frankenphp-dev' }}
+  PHP_VERSION: 8.3.10 # Temporary workaround for https://github.com/dunglas/frankenphp/issues/1011
 jobs:
   prepare:
     runs-on: ubuntu-latest
