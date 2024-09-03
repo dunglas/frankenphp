@@ -5,7 +5,6 @@ import (
 	"go.uber.org/zap"
 	"time"
 	"sync/atomic"
-	"sync"
 )
 
 type watchEvent struct {
@@ -14,21 +13,22 @@ type watchEvent struct {
 }
 
 // sometimes multiple events fire at once so we'll wait a few ms before reloading
-const debounceDuration = 150
+const debounceDuration = 100
 // latency of the watcher in seconds
 const watcherLatency = 0.1
 
 var (
-	watchSessions []*fswatch.Session
-	watcherMu sync.RWMutex
-	isReloadingWorkers atomic.Bool
-	fileEventChannel = make(chan watchEvent)
+	watchSessions         []*fswatch.Session
+	blockReloading        atomic.Bool
+	fileEventChannel      chan watchEvent
+	watcherDone           chan interface{}
 )
 
 func initWatcher(watchOpts []watchOpt, workerOpts []workerOpt) error {
-	if(len(watchOpts) == 0) {
+	if(len(watchOpts) == 0 || len(workerOpts) == 0) {
 		return nil
 	}
+	blockReloading.Store(true)
 
 	watchSessions := make([]*fswatch.Session, len(watchOpts))
 	for i, watchOpt := range watchOpts {
@@ -39,9 +39,14 @@ func initWatcher(watchOpts []watchOpt, workerOpts []workerOpt) error {
 		watchSessions[i] = session
 		go session.Start()
 	}
+	watcherDone = make(chan interface{} )
+	fileEventChannel = make(chan watchEvent)
+	for _, session := range watchSessions {
+    	go session.Start()
+    }
 
 	go listenForFileChanges(watchOpts, workerOpts)
-
+	blockReloading.Store(false)
 	return nil;
 }
 
@@ -63,9 +68,17 @@ func createSession(watchOpt watchOpt) (*fswatch.Session, error) {
 }
 
 func stopWatcher() {
+	if watcherDone == nil {
+		return
+	}
 	logger.Info("stopping watcher")
+	blockReloading.Store(true)
+	close(watcherDone)
+	watcherDone = nil
 	for _, session := range watchSessions {
-		session.Destroy()
+		if err := session.Destroy(); err != nil {
+			panic(err)
+		}
 	}
 }
 
@@ -76,8 +89,7 @@ func listenForFileChanges(watchOpts []watchOpt, workerOpts []workerOpt) {
 			for _, event := range watchEvent.events {
 				handleFileEvent(event, watchEvent.watchOpt, workerOpts)
 			}
-		case <-done:
-			logger.Info("stopping watcher")
+		case <-watcherDone:
 			return
 		}
 	}
@@ -91,10 +103,10 @@ func registerFileEvent(watchOpt watchOpt) func([]fswatch.Event) {
 }
 
 func handleFileEvent(event fswatch.Event, watchOpt watchOpt, workerOpts []workerOpt) {
-	if isReloadingWorkers.Load() || !fileMatchesPattern(event.Path, watchOpt) {
+	if blockReloading.Load() || !fileMatchesPattern(event.Path, watchOpt) {
 		return
 	}
-	isReloadingWorkers.Store(true)
+	blockReloading.Store(true)
 	logger.Info("filesystem change detected", zap.String("path", event.Path))
 	go reloadWorkers(workerOpts)
 }
@@ -111,7 +123,7 @@ func reloadWorkers(workerOpts []workerOpt) {
 	}
 
 	logger.Info("workers restarted successfully")
-	isReloadingWorkers.Store(false)
+	blockReloading.Store(false)
 }
 
 

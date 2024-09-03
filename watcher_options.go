@@ -46,8 +46,5 @@ func fileMatchesPattern(fileName string, watchOpt watchOpt) bool {
 		logger.Error("failed to match filename", zap.String("file", fileName), zap.Error(err))
 		return false
 	}
-	if(patternMatches){
-		return true
-	}
-	return false
+	return patternMatches
 }
