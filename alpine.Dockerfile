@@ -104,6 +104,14 @@ COPY --link caddy caddy
 COPY --link internal internal
 COPY --link testdata testdata
 
+# install fswatch (necessary for file watching)
+ARG FSWATCH_VERSION='1.17.1'
+WORKDIR /usr/local/src/fswatch
+RUN curl -L https://github.com/emcrisostomo/fswatch/releases/download/$FSWATCH_VERSION/fswatch-$FSWATCH_VERSION.tar.gz > fswatch.tar.gz  && \
+    tar xzf fswatch.tar.gz
+WORKDIR /usr/local/src/fswatch/fswatch-$FSWATCH_VERSION
+RUN	./configure && make && make install && ldconfig /usr/local/lib && fswatch --version
+
 # See https://github.com/docker-library/php/blob/master/8.3/alpine3.20/zts/Dockerfile#L53-L55
 ENV CGO_CFLAGS="-DFRANKENPHP_VERSION=$FRANKENPHP_VERSION $PHP_CFLAGS"
 ENV CGO_CPPFLAGS=$PHP_CPPFLAGS
@@ -121,6 +129,8 @@ WORKDIR /go/src/app
 FROM common AS runner
 
 ENV GODEBUG=cgocheck=0
+
+COPY --from=builder /usr/local/lib/libfswatch.so* /usr/local/lib/
 
 COPY --from=builder /usr/local/bin/frankenphp /usr/local/bin/frankenphp
 RUN setcap cap_net_bind_service=+ep /usr/local/bin/frankenphp && \
