@@ -63,6 +63,17 @@ func TestRelativePathname(t *testing.T) {
 	assert.True(t, watchOpt.isRecursive)
 }
 
+func TestMatchLiteralFilePattern(t *testing.T) {
+	const fileName = "/some/path/**/fileName"
+
+	watchOpt, err := createWatchOption(fileName)
+
+	assert.Nil(t, err)
+	assert.Equal(t, "fileName", watchOpt.pattern)
+	assert.Equal(t, "/some/path", watchOpt.dirName)
+	assert.True(t, watchOpt.isRecursive)
+}
+
 func TestPatternShouldMatch(t *testing.T) {
 	const fileName = "/some/path/watch-me.php"
 	wOpt := watchOpt{pattern: "*.php", dirName: "/some/path", isRecursive: true}

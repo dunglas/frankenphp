@@ -21,8 +21,9 @@ func createWatchOption(fileName string) (watchOpt, error) {
 		watchOpt.isRecursive = false
 	}
 
-	if(strings.Contains(fileName, "/**")) {
-		watchOpt.dirName = strings.Split(fileName, "/**")[0]
+	if(strings.Contains(fileName, "/**/")) {
+		watchOpt.dirName = strings.Split(fileName, "/**/")[0]
+		watchOpt.pattern = strings.Split(fileName, "/**/")[1]
 		watchOpt.isRecursive = true
 	}
 

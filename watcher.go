@@ -5,10 +5,11 @@ import (
 	"go.uber.org/zap"
 	"sync/atomic"
 	"sync"
+	"time"
 )
 
-// latency of the watcher in seconds
-const watcherLatency = 0.15
+// latency of the watcher in milliseconds
+const watcherLatency = 150
 
 var (
 	watchSessions      []*fswatch.Session
@@ -52,7 +53,7 @@ func createSession(watchOpt watchOpt, workerOpts []workerOpt) (*fswatch.Session,
 		fswatch.WithRecursive(watchOpt.isRecursive),
 		fswatch.WithFollowSymlinks(false),
 		fswatch.WithEventTypeFilters(eventTypeFilters),
-		fswatch.WithLatency(0.01),
+		fswatch.WithLatency(watcherLatency / 1000),
 	}
 	return fswatch.NewSession([]string{watchOpt.dirName}, registerFileEvent(watchOpt, workerOpts), opts...)
 }
@@ -79,10 +80,9 @@ func registerFileEvent(watchOpt watchOpt, workerOpts []workerOpt) func([]fswatch
 }
 
 func handleFileEvent(event fswatch.Event, watchOpt watchOpt, workerOpts []workerOpt) bool {
-	if !fileMatchesPattern(event.Path, watchOpt) || blockReloading.Load() {
+	if !fileMatchesPattern(event.Path, watchOpt) || !blockReloading.CompareAndSwap(false, true) {
 		return false
 	}
-	blockReloading.Store(true)
 	reloadWaitGroup.Add(1)
 	logger.Info("filesystem change detected", zap.String("path", event.Path))
 	go reloadWorkers(workerOpts)
@@ -92,6 +92,8 @@ func handleFileEvent(event fswatch.Event, watchOpt watchOpt, workerOpts []worker
 	
 func reloadWorkers(workerOpts []workerOpt) {
 	logger.Info("restarting workers due to file changes...")
+	// we'll be giving the reload process a grace period
+	time.Sleep(watcherLatency * time.Millisecond)
 	stopWorkers()
 	if err := initWorkers(workerOpts); err != nil {
 		logger.Error("failed to restart workers when watching files")
