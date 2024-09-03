@@ -275,7 +275,7 @@ func (f *FrankenPHPModule) Provision(ctx caddy.Context) error {
 	if f.preparedEnv == nil {
 		f.preparedEnv = frankenphp.PrepareEnv(f.Env)
 
-		for e := range f.preparedEnv {
+		for _, e := range f.preparedEnv {
 			if needReplacement(e) {
 				f.preparedEnvNeedsReplacement = true
 
@@ -287,7 +287,7 @@ func (f *FrankenPHPModule) Provision(ctx caddy.Context) error {
 	return nil
 }
 
-// needReplacement checks if a string contains placeholdes.
+// needReplacement checks if a string contains placeholders.
 func needReplacement(s string) bool {
 	return strings.Contains(s, "{") || strings.Contains(s, "}")
 }
