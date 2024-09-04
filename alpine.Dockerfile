@@ -2,7 +2,7 @@
 #checkov:skip=CKV_DOCKER_2
 #checkov:skip=CKV_DOCKER_3
 #checkov:skip=CKV_DOCKER_7
-FROM php-base AS common
+FROM php:zts-alpine AS common
 
 ARG TARGETARCH
 
@@ -50,7 +50,7 @@ FROM common AS builder
 ARG FRANKENPHP_VERSION='dev'
 SHELL ["/bin/ash", "-eo", "pipefail", "-c"]
 
-COPY --link --from=golang-base /usr/local/go /usr/local/go
+COPY --link --from=golang:1.22-alpine /usr/local/go /usr/local/go
 
 ENV PATH=/usr/local/go/bin:$PATH
 
@@ -131,6 +131,8 @@ FROM common AS runner
 ENV GODEBUG=cgocheck=0
 
 COPY --from=builder /usr/local/lib/libfswatch.so* /usr/local/lib/
+COPY --from=builder /usr/local/bin/fswatch /usr/local/bin/fswatch
+RUN apk add libstdc++ #required for fswatch to work
 
 COPY --from=builder /usr/local/bin/frankenphp /usr/local/bin/frankenphp
 RUN setcap cap_net_bind_service=+ep /usr/local/bin/frankenphp && \
