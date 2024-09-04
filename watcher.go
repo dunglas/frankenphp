@@ -5,7 +5,6 @@ import (
 	"go.uber.org/zap"
 	"sync/atomic"
 	"sync"
-	"time"
 )
 
 // latency of the watcher in milliseconds
@@ -29,7 +28,6 @@ func initWatcher(watchOpts []watchOpt, workerOpts []workerOpt) error {
 			return err
 		}
 		watchSessions[i] = session
-		go session.Start()
 	}
 
 	for _, session := range watchSessions {
@@ -61,12 +59,15 @@ func createSession(watchOpt watchOpt, workerOpts []workerOpt) (*fswatch.Session,
 func stopWatcher() {
 	logger.Info("stopping watcher")
 	blockReloading.Store(true)
-	reloadWaitGroup.Wait()
 	for _, session := range watchSessions {
+		if err := session.Stop(); err != nil {
+            logger.Error("failed to stop watcher")
+        }
 		if err := session.Destroy(); err != nil {
-			panic(err)
+			logger.Error("failed to destroy watcher")
 		}
 	}
+	reloadWaitGroup.Wait()
 }
 
 func registerFileEvent(watchOpt watchOpt, workerOpts []workerOpt) func([]fswatch.Event) {
@@ -92,8 +93,6 @@ func handleFileEvent(event fswatch.Event, watchOpt watchOpt, workerOpts []worker
 	
 func reloadWorkers(workerOpts []workerOpt) {
 	logger.Info("restarting workers due to file changes...")
-	// we'll be giving the reload process a grace period
-	time.Sleep(watcherLatency * time.Millisecond)
 	stopWorkers()
 	if err := initWorkers(workerOpts); err != nil {
 		logger.Error("failed to restart workers when watching files")
