@@ -2,7 +2,7 @@
 #checkov:skip=CKV_DOCKER_2
 #checkov:skip=CKV_DOCKER_3
 #checkov:skip=CKV_DOCKER_7
-FROM php:zts-alpine AS common
+FROM php-base AS common
 
 ARG TARGETARCH
 
@@ -50,7 +50,7 @@ FROM common AS builder
 ARG FRANKENPHP_VERSION='dev'
 SHELL ["/bin/ash", "-eo", "pipefail", "-c"]
 
-COPY --link --from=golang:1.22-alpine /usr/local/go /usr/local/go
+COPY --link --from=golang-base /usr/local/go /usr/local/go
 
 ENV PATH=/usr/local/go/bin:$PATH
 
