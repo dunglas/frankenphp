@@ -71,8 +71,8 @@ func stopWatcher() {
 	watchIntegrity.Store(watchIntegrity.Load() + 1)
 	for _, session := range watchSessions {
 		if err := session.Stop(); err != nil {
-            logger.Error("failed to stop watcher")
-        }
+			logger.Error("failed to stop watcher")
+		}
 		if err := session.Destroy(); err != nil {
 			logger.Error("failed to destroy watcher")
 		}
@@ -94,19 +94,20 @@ func handleFileEvent(event fswatch.Event, watchOpt watchOpt, workerOpts []worker
 	if !fileMatchesPattern(event.Path, watchOpt) || !blockReloading.CompareAndSwap(false, true) {
 		return false
 	}
+	reloadWaitGroup.Wait()
 	if(integrity != watchIntegrity.Load()) {
 		return false
 	}
 	reloadWaitGroup.Add(1)
-	logger.Info("filesystem change detected", zap.String("path", event.Path))
+	logger.Info("filesystem change detected, restarting workers...", zap.String("path", event.Path))
 	go reloadWorkers(workerOpts)
 	return true
 }
 
 	
 func reloadWorkers(workerOpts []workerOpt) {
-	logger.Info("restarting workers due to file changes...")
 	stopWorkers()
+	// reloads will be blocked until workers are stopped and queued while they are starting
 	blockReloading.Store(false)
 	if err := initWorkers(workerOpts); err != nil {
 		logger.Error("failed to restart workers when watching files")
