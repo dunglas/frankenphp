@@ -14,6 +14,10 @@ variable "GO_VERSION" {
     default = "1.22"
 }
 
+variable FSWATCH_VERSION {
+	default = "1.17.1"
+}
+
 variable "SHA" {}
 
 variable "LATEST" {
@@ -115,6 +119,7 @@ target "default" {
     }
     args = {
         FRANKENPHP_VERSION = VERSION
+        FSWATCH_VERSION = FSWATCH_VERSION
     }
 }
 
@@ -140,6 +145,7 @@ target "static-builder" {
     }
     args = {
         FRANKENPHP_VERSION = VERSION
+        FSWATCH_VERSION = FSWATCH_VERSION
     }
     secret = ["id=github-token,env=GITHUB_TOKEN"]
 }
