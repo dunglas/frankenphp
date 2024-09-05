@@ -161,8 +161,7 @@ You can also add multiple `watch` directives
 
 Be sure not to include files that are created at runtime (like logs) into you watcher, since they might cause unwanted
 worker restarts.
-The file watcher is based on [go-fswatch](https://github.com/dunglas/go-fswatch) and shares the limitations of the 
-underlying fswatch library.
+The file watcher is based on [fswatch](https://github.com/emcrisostomo/fswatch).
 
 ### Full Duplex (HTTP/1)
 
