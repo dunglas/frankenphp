@@ -107,10 +107,13 @@ COPY --link testdata testdata
 # install fswatch (necessary for file watching)
 ARG FSWATCH_VERSION
 WORKDIR /usr/local/src/fswatch
-RUN curl -L https://github.com/emcrisostomo/fswatch/releases/download/$FSWATCH_VERSION/fswatch-$FSWATCH_VERSION.tar.gz > fswatch.tar.gz  && \
-    tar xzf fswatch.tar.gz
+RUN curl -L https://github.com/emcrisostomo/fswatch/releases/download/$FSWATCH_VERSION/fswatch-$FSWATCH_VERSION.tar.gz | tar xz
 WORKDIR /usr/local/src/fswatch/fswatch-$FSWATCH_VERSION
-RUN	./configure && make && make install && ldconfig /usr/local/lib && fswatch --version
+RUN ./configure && \
+	make -j"$(nproc)" && \
+	make install && \
+	ldconfig /usr/local/lib && \
+	fswatch --version
 
 # See https://github.com/docker-library/php/blob/master/8.3/alpine3.20/zts/Dockerfile#L53-L55
 ENV CGO_CFLAGS="-DFRANKENPHP_VERSION=$FRANKENPHP_VERSION $PHP_CFLAGS"
