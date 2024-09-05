@@ -131,7 +131,7 @@ php_server [<matcher>] {
 }
 ```
 
-### Watching for file changes
+### Watching for File Changes
 
 Since workers won't restart automatically on file changes you can also
 define a number of directories that should be watched. This is useful for
