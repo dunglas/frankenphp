@@ -90,8 +90,7 @@ COPY --link testdata testdata
 ARG FSWATCH_VERSION='1.17.1'
 # in the future, we may replace this custom compilation by the installation of https://packages.debian.org/bookworm/fswatch, which provides the library and headers, but the version currently shipped by Debian is too old
 WORKDIR /usr/local/src/fswatch
-RUN curl -L https://github.com/emcrisostomo/fswatch/releases/download/$FSWATCH_VERSION/fswatch-$FSWATCH_VERSION.tar.gz > fswatch.tar.gz  && \
-    tar xzf fswatch.tar.gz
+RUN curl -L https://github.com/emcrisostomo/fswatch/releases/download/$FSWATCH_VERSION/fswatch-$FSWATCH_VERSION.tar.gz | tar xz
 WORKDIR /usr/local/src/fswatch/fswatch-$FSWATCH_VERSION
 RUN	./configure && make && make install && ldconfig
 
