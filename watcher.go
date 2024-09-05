@@ -57,6 +57,9 @@ func createSession(watchOpt watchOpt, workerOpts []workerOpt) (*fswatch.Session,
 }
 
 func stopWatcher() {
+	if(len(watchSessions) == 0) {
+		return
+	}
 	logger.Info("stopping watcher")
 	blockReloading.Store(true)
 	for _, session := range watchSessions {
@@ -84,6 +87,7 @@ func handleFileEvent(event fswatch.Event, watchOpt watchOpt, workerOpts []worker
 	if !fileMatchesPattern(event.Path, watchOpt) || !blockReloading.CompareAndSwap(false, true) {
 		return false
 	}
+	reloadWaitGroup.Wait()
 	reloadWaitGroup.Add(1)
 	logger.Info("filesystem change detected", zap.String("path", event.Path))
 	go reloadWorkers(workerOpts)
@@ -94,13 +98,13 @@ func handleFileEvent(event fswatch.Event, watchOpt watchOpt, workerOpts []worker
 func reloadWorkers(workerOpts []workerOpt) {
 	logger.Info("restarting workers due to file changes...")
 	stopWorkers()
+	blockReloading.Store(false)
 	if err := initWorkers(workerOpts); err != nil {
 		logger.Error("failed to restart workers when watching files")
 		panic(err)
 	}
 
 	logger.Info("workers restarted successfully")
-	blockReloading.Store(false)
 	reloadWaitGroup.Done()
 }
 
