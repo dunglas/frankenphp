@@ -2,8 +2,8 @@ package frankenphp
 
 import (
 	"github.com/stretchr/testify/assert"
-	"testing"
 	"path/filepath"
+	"testing"
 )
 
 func TestSimpleRecursiveWatchOption(t *testing.T) {
@@ -108,5 +108,3 @@ func TestEmptyPatternShouldAlwaysMatch(t *testing.T) {
 
 	assert.True(t, fileMatchesPattern(fileName, wOpt))
 }
-
-

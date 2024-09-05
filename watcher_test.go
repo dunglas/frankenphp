@@ -1,21 +1,20 @@
 package frankenphp_test
 
 import (
+	"github.com/stretchr/testify/assert"
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"testing"
 	"os"
-	"time"
 	"path/filepath"
-	"github.com/stretchr/testify/assert"
+	"testing"
+	"time"
 )
 
 // we have to wait a few milliseconds for the watcher debounce to take effect
 const pollingTime = 150
 const minTimesToPollForChanges = 5
 const maxTimesToPollForChanges = 100 // we will poll a maximum of 100x150ms = 15s
-
 
 func TestWorkerShouldReloadOnMatchingPattern(t *testing.T) {
 	const filePattern = "./testdata/**/*.txt"
@@ -29,7 +28,7 @@ func TestWorkerShouldReloadOnMatchingPattern(t *testing.T) {
 		requestBodyHasReset := pollForWorkerReset(t, handler, maxTimesToPollForChanges)
 
 		assert.True(t, requestBodyHasReset)
-	}, &testOptions{nbParrallelRequests: 1, nbWorkers: 1, workerScript: "worker-with-watcher.php", watch:filePattern})
+	}, &testOptions{nbParrallelRequests: 1, nbWorkers: 1, workerScript: "worker-with-watcher.php", watch: filePattern})
 }
 
 func TestWorkerShouldNotReloadOnNonMatchingPattern(t *testing.T) {
@@ -45,9 +44,8 @@ func TestWorkerShouldNotReloadOnNonMatchingPattern(t *testing.T) {
 
 		assert.False(t, requestBodyHasReset)
 
-	}, &testOptions{nbParrallelRequests: 1, nbWorkers: 1, workerScript: "worker-with-watcher.php", watch:filePattern})
+	}, &testOptions{nbParrallelRequests: 1, nbWorkers: 1, workerScript: "worker-with-watcher.php", watch: filePattern})
 }
-
 
 func fetchBody(method string, url string, handler func(http.ResponseWriter, *http.Request)) string {
 	req := httptest.NewRequest(method, url, nil)
@@ -59,19 +57,19 @@ func fetchBody(method string, url string, handler func(http.ResponseWriter, *htt
 	return string(body)
 }
 
-func pollForWorkerReset(t *testing.T, handler func(http.ResponseWriter, *http.Request), limit int) bool{
+func pollForWorkerReset(t *testing.T, handler func(http.ResponseWriter, *http.Request), limit int) bool {
 	for i := 0; i < limit; i++ {
 		updateTestFile("./testdata/files/test.txt", "updated", t)
 		time.Sleep(pollingTime * time.Millisecond)
 		body := fetchBody("GET", "http://example.com/worker-with-watcher.php", handler)
-		if(body == "requests:1") {
-			return true;
+		if body == "requests:1" {
+			return true
 		}
 	}
-	return false;
+	return false
 }
 
-func updateTestFile(fileName string, content string, t *testing.T){
+func updateTestFile(fileName string, content string, t *testing.T) {
 	absFileName, err := filepath.Abs(fileName)
 	assert.NoError(t, err)
 	dirName := filepath.Dir(absFileName)

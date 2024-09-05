@@ -63,7 +63,7 @@ func runTest(t *testing.T, test func(func(http.ResponseWriter, *http.Request), *
 	if opts.workerScript != "" {
 		initOpts = append(initOpts, frankenphp.WithWorkers(testDataDir+opts.workerScript, opts.nbWorkers, opts.env))
 	}
-	if(opts.watch != "") {
+	if opts.watch != "" {
 		initOpts = append(initOpts, frankenphp.WithFileWatcher(opts.watch))
 	}
 	initOpts = append(initOpts, opts.initOpts...)
