@@ -3,25 +3,25 @@ package frankenphp
 import (
 	fswatch "github.com/dunglas/go-fswatch"
 	"go.uber.org/zap"
-	"sync/atomic"
 	"sync"
+	"sync/atomic"
 )
 
 // latency of the watcher in seconds
 const watcherLatency = 0.15
 
 var (
-	watchSessions      []*fswatch.Session
+	watchSessions       []*fswatch.Session
 	// we block reloading until workers have stopped
-	blockReloading     atomic.Bool
+	blockReloading      atomic.Bool
 	// when stopping the watcher we need to wait for reloading to finish
-	reloadWaitGroup    sync.WaitGroup
+	reloadWaitGroup     sync.WaitGroup
 	// the integrity ensures rouge events are ignored
-	watchIntegrity	   atomic.Int32
+	watchIntegrity      atomic.Int32
 )
 
 func initWatcher(watchOpts []watchOpt, workerOpts []workerOpt) error {
-	if(len(watchOpts) == 0 || len(workerOpts) == 0) {
+	if len(watchOpts) == 0 || len(workerOpts) == 0 {
 		return nil
 	}
 
@@ -29,7 +29,7 @@ func initWatcher(watchOpts []watchOpt, workerOpts []workerOpt) error {
 	watchSessions := make([]*fswatch.Session, len(watchOpts))
 	for i, watchOpt := range watchOpts {
 		session, err := createSession(watchOpt, workerOpts)
-		if(err != nil) {
+		if err != nil {
 			return err
 		}
 		watchSessions[i] = session
@@ -41,7 +41,7 @@ func initWatcher(watchOpts []watchOpt, workerOpts []workerOpt) error {
 
 	reloadWaitGroup = sync.WaitGroup{}
 	blockReloading.Store(false)
-	return nil;
+	return nil
 }
 
 func createSession(watchOpt watchOpt, workerOpts []workerOpt) (*fswatch.Session, error) {
@@ -62,11 +62,16 @@ func createSession(watchOpt watchOpt, workerOpts []workerOpt) (*fswatch.Session,
 	return fswatch.NewSession([]string{watchOpt.dirName}, handleFileEvent, opts...)
 }
 
-func stopWatcher() {
-	if(len(watchSessions) == 0) {
+func drainWatcher() {
+	if len(watchSessions) == 0 {
 		return
 	}
 	logger.Info("stopping watcher")
+	stopWatcher()
+	reloadWaitGroup.Wait()
+}
+
+func stopWatcher() {
 	blockReloading.Store(true)
 	watchIntegrity.Store(watchIntegrity.Load() + 1)
 	for _, session := range watchSessions {
@@ -77,14 +82,13 @@ func stopWatcher() {
 			logger.Error("failed to destroy watcher")
 		}
 	}
-	reloadWaitGroup.Wait()
 }
 
 func registerFileEvent(watchOpt watchOpt, workerOpts []workerOpt, integrity int32) func([]fswatch.Event) {
 	return func(events []fswatch.Event) {
 		for _, event := range events {
-			if (handleFileEvent(event, watchOpt, workerOpts, integrity)){
-				return
+			if handleFileEvent(event, watchOpt, workerOpts, integrity) {
+				break
 			}
 		}
 	}
@@ -95,27 +99,18 @@ func handleFileEvent(event fswatch.Event, watchOpt watchOpt, workerOpts []worker
 		return false
 	}
 	reloadWaitGroup.Wait()
-	if(integrity != watchIntegrity.Load()) {
+	if integrity != watchIntegrity.Load() {
 		return false
 	}
-	reloadWaitGroup.Add(1)
+
 	logger.Info("filesystem change detected, restarting workers...", zap.String("path", event.Path))
-	go reloadWorkers(workerOpts)
+	go triggerWorkerReload(workerOpts)
 	return true
 }
 
-	
-func reloadWorkers(workerOpts []workerOpt) {
-	stopWorkers()
-	// reloads will be blocked until workers are stopped and queued while they are starting
-	blockReloading.Store(false)
-	if err := initWorkers(workerOpts); err != nil {
-		logger.Error("failed to restart workers when watching files")
-		panic(err)
-	}
-
-	logger.Info("workers restarted successfully")
+func triggerWorkerReload(workerOpts []workerOpt) {
+	reloadWaitGroup.Add(1)
+	restartWorkers(workerOpts)
 	reloadWaitGroup.Done()
+	blockReloading.Store(false)
 }
-
-

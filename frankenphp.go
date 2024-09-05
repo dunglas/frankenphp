@@ -338,10 +338,9 @@ func Init(options ...Option) error {
 
 // Shutdown stops the workers and the PHP runtime.
 func Shutdown() {
-	stopWatcher()
-	stopWorkers()
-	close(done)
-	shutdownWG.Wait()
+	drainWatcher()
+	drainWorkers()
+	drainThreads()
 	requestChan = nil
 
 	// Remove the installed app
@@ -355,6 +354,11 @@ func Shutdown() {
 //export go_shutdown
 func go_shutdown() {
 	shutdownWG.Done()
+}
+
+func drainThreads() {
+	close(done)
+	shutdownWG.Wait()
 }
 
 func getLogger() *zap.Logger {

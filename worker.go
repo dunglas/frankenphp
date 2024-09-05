@@ -20,7 +20,7 @@ var (
 	workersRequestChans sync.Map // map[fileName]chan *http.Request
 	workersReadyWG      sync.WaitGroup
 	workerShutdownWG    sync.WaitGroup
-	workersDone	        chan interface{}
+	workersDone         chan interface{}
 )
 
 // TODO: start all the worker in parallell to reduce the boot time
@@ -51,7 +51,7 @@ func startWorkers(fileName string, nbWorkers int, env PreparedEnv) error {
 	workersReadyWG.Add(nbWorkers)
 
 	var (
-		m	sync.RWMutex
+		m    sync.RWMutex
 		errs []error
 	)
 
@@ -140,13 +140,24 @@ func stopWorkers() {
 
 		return true
 	})
-	if(workersDone != nil) {
-		close(workersDone)
-	}
+	close(workersDone)
+}
+
+func drainWorkers() {
+	stopWorkers()
 	workerShutdownWG.Wait()
 	// Always reset the WaitGroup to ensure we're in a clean state
-    workersReadyWG = sync.WaitGroup{}
-    workerShutdownWG = sync.WaitGroup{}
+	workersReadyWG = sync.WaitGroup{}
+	workerShutdownWG = sync.WaitGroup{}
+}
+
+func restartWorkers(workerOpts []workerOpt) {
+	drainWorkers()
+	if err := initWorkers(workerOpts); err != nil {
+		logger.Error("failed to restart workers when watching files")
+		panic(err)
+	}
+	logger.Info("workers restarted successfully")
 }
 
 //export go_frankenphp_worker_ready
