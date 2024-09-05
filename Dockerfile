@@ -95,7 +95,8 @@ WORKDIR /usr/local/src/fswatch/fswatch-$FSWATCH_VERSION
 RUN ./configure && \
 	make -j"$(nproc)" && \
 	make install && \
-	ldconfig
+	ldconfig && \
+ 	fswatch --version
 
 # See https://github.com/docker-library/php/blob/master/8.3/bookworm/zts/Dockerfile#L57-L59 for PHP values
 ENV CGO_CFLAGS="-DFRANKENPHP_VERSION=$FRANKENPHP_VERSION $PHP_CFLAGS"
