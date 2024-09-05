@@ -63,7 +63,11 @@ ARG FSWATCH_VERSION='1.17.1'
 WORKDIR /usr/local/src/fswatch
 RUN wget -o https://github.com/emcrisostomo/fswatch/releases/download/$FSWATCH_VERSION/fswatch-$FSWATCH_VERSION.tar.gz | tar xz
 WORKDIR /usr/local/src/fswatch/fswatch-$FSWATCH_VERSION
-RUN	./configure && make && make install && ldconfig /usr/local/lib && fswatch --version
+RUN ./configure && \
+	make -j"$(nproc)" && \
+	make install && \
+	ldconfig /usr/local/lib && \
+	fswatch --version
 
 WORKDIR /go/src/app
 COPY . .
