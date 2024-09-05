@@ -12,7 +12,7 @@ func TestSimpleRecursiveWatchOption(t *testing.T) {
 	watchOpt, err := createWatchOption(fileName)
 
 	assert.NoError(t, err)
-	assert.Equal(t, "", watchOpt.pattern)
+	assert.Empty(t, watchOpt.pattern)
 	assert.Equal(t, "/some/path", watchOpt.dirName)
 	assert.True(t, watchOpt.isRecursive)
 }
