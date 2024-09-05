@@ -142,6 +142,7 @@ func stopWorkers() {
 	})
 	if(workersDone != nil) {
 		close(workersDone)
+		workersDone = nil;
 	}
 	workerShutdownWG.Wait()
 	// Always reset the WaitGroup to ensure we're in a clean state
