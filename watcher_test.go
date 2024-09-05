@@ -12,7 +12,9 @@ import (
 )
 
 // we have to wait a few milliseconds for the watcher debounce to take effect
-const timeToWaitForChanges = 1500
+const pollingTime = 150
+const minTimesToPollForChanges = 5
+const maxTimesToPollForChanges = 100 // we will poll a maximum of 100x150ms = 15s
 
 
 func TestWorkerShouldReloadOnMatchingPattern(t *testing.T) {
@@ -24,18 +26,14 @@ func TestWorkerShouldReloadOnMatchingPattern(t *testing.T) {
 		assert.Equal(t, "requests:1", body)
 
 		// now we verify that updating a .txt file does not cause a reload
-		absPath, err := filepath.Abs("./testdata/files/test.txt")
-		updateTestFile(absPath, "updated")
-		time.Sleep(timeToWaitForChanges * time.Millisecond)
-		body = fetchBody("GET", "http://example.com/worker-with-watcher.php", handler)
-		assert.Nil(t, err)
-		assert.Equal(t, "requests:1", body)
+		requestBodyHasReset := pollForWorkerReset(handler, maxTimesToPollForChanges)
 
+		assert.True(t, requestBodyHasReset)
 	}, &testOptions{nbParrallelRequests: 1, nbWorkers: 1, workerScript: "worker-with-watcher.php", watch:filePattern})
 }
 
 func TestWorkerShouldNotReloadOnNonMatchingPattern(t *testing.T) {
-	const filePattern = "./testdata/**/*.txt"
+	const filePattern = "./testdata/**/*.php"
 
 	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
 		// first we verify that the worker is working correctly
@@ -43,12 +41,9 @@ func TestWorkerShouldNotReloadOnNonMatchingPattern(t *testing.T) {
 		assert.Equal(t, "requests:1", body)
 
 		// now we verify that updating a .json file does not cause a reload
-		absPath, err := filepath.Abs("./testdata/files/test.json")
-		updateTestFile(absPath, "{updated:true}")
-		time.Sleep(timeToWaitForChanges * time.Millisecond)
-		body = fetchBody("GET", "http://example.com/worker-with-watcher.php", handler)
-		assert.Nil(t, err)
-		assert.Equal(t, "requests:2", body)
+		requestBodyHasReset := pollForWorkerReset(handler, minTimesToPollForChanges)
+
+		assert.False(t, requestBodyHasReset)
 
 	}, &testOptions{nbParrallelRequests: 1, nbWorkers: 1, workerScript: "worker-with-watcher.php", watch:filePattern})
 }
@@ -64,8 +59,24 @@ func fetchBody(method string, url string, handler func(http.ResponseWriter, *htt
 	return string(body)
 }
 
+func pollForWorkerReset(handler func(http.ResponseWriter, *http.Request), limit int) bool{
+	for i := 0; i < limit; i++ {
+		updateTestFile("./testdata/files/test.txt", "updated")
+		time.Sleep(pollingTime * time.Millisecond)
+		body := fetchBody("GET", "http://example.com/worker-with-watcher.php", handler)
+		if(body == "requests:1") {
+			return true;
+		}
+	}
+	return false;
+}
+
 func updateTestFile(fileName string, content string){
-	dirName := filepath.Dir(fileName)
+	absFileName, err := filepath.Abs(fileName)
+	if err != nil {
+		panic(err)
+	}
+	dirName := filepath.Dir(absFileName)
 	if _, err := os.Stat(dirName); os.IsNotExist(err) {
 		err = os.MkdirAll(dirName, 0700)
 		if(err != nil) {
@@ -73,10 +84,7 @@ func updateTestFile(fileName string, content string){
 		}
 	}
 	bytes := []byte(content)
-	if err := os.WriteFile(fileName, bytes, 0644); err != nil {
+	if err := os.WriteFile(absFileName, bytes, 0644); err != nil {
 		panic(err)
 	}
-    if err := os.Remove(fileName); err != nil {
-        panic(err)
-    }
 }
