@@ -7,8 +7,8 @@ import (
 	"sync"
 )
 
-// latency of the watcher in milliseconds
-const watcherLatency = 150
+// latency of the watcher in seconds
+const watcherLatency = 0.15
 
 var (
 	watchSessions      []*fswatch.Session
@@ -51,7 +51,7 @@ func createSession(watchOpt watchOpt, workerOpts []workerOpt) (*fswatch.Session,
 		fswatch.WithRecursive(watchOpt.isRecursive),
 		fswatch.WithFollowSymlinks(false),
 		fswatch.WithEventTypeFilters(eventTypeFilters),
-		fswatch.WithLatency(watcherLatency / 1000),
+		fswatch.WithLatency(watcherLatency),
 	}
 	return fswatch.NewSession([]string{watchOpt.dirName}, registerFileEvent(watchOpt, workerOpts), opts...)
 }
