@@ -11,7 +11,7 @@ func TestSimpleRecursiveWatchOption(t *testing.T) {
 
 	watchOpt, err := createWatchOption(fileName)
 
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, "", watchOpt.pattern)
 	assert.Equal(t, "/some/path", watchOpt.dirName)
 	assert.True(t, watchOpt.isRecursive)
@@ -22,7 +22,7 @@ func TestSingleFileWatchOption(t *testing.T) {
 
 	watchOpt, err := createWatchOption(fileName)
 
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, "watch-me.json", watchOpt.pattern)
 	assert.Equal(t, "/some/path", watchOpt.dirName)
 	assert.False(t, watchOpt.isRecursive)
@@ -33,7 +33,7 @@ func TestNonRecursivePatternWatchOption(t *testing.T) {
 
 	watchOpt, err := createWatchOption(fileName)
 
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, "*.json", watchOpt.pattern)
 	assert.Equal(t, "/some/path", watchOpt.dirName)
 	assert.False(t, watchOpt.isRecursive)
@@ -44,7 +44,7 @@ func TestRecursivePatternWatchOption(t *testing.T) {
 
 	watchOpt, err := createWatchOption(fileName)
 
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, "*.json", watchOpt.pattern)
 	assert.Equal(t, "/some/path", watchOpt.dirName)
 	assert.True(t, watchOpt.isRecursive)
@@ -56,8 +56,8 @@ func TestRelativePathname(t *testing.T) {
 
 	watchOpt, err2 := createWatchOption(fileName)
 
-	assert.Nil(t, err1)
-	assert.Nil(t, err2)
+	assert.NoError(t, err1)
+	assert.NoError(t, err2)
 	assert.Equal(t, "*.txt", watchOpt.pattern)
 	assert.Equal(t, absPath, watchOpt.dirName)
 	assert.True(t, watchOpt.isRecursive)
@@ -68,7 +68,7 @@ func TestMatchLiteralFilePattern(t *testing.T) {
 
 	watchOpt, err := createWatchOption(fileName)
 
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, "fileName", watchOpt.pattern)
 	assert.Equal(t, "/some/path", watchOpt.dirName)
 	assert.True(t, watchOpt.isRecursive)
