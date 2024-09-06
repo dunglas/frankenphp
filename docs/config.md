@@ -141,26 +141,59 @@ development environments.
 {
     frankenphp {
         worker /path/to/app/public/worker.php
-        watch /path/to/app/sourcefiles
+        watch /path/to/app
     }
 }
 ```
 
-The configuration above will watch the `/path/to/app/sourcefiles` directory recursively.
-You can also add multiple `watch` directives
+The configuration above will watch the `/path/to/app` directory recursively.
+
+#### Watcher Shortform
+
+You can also add multiple `watch` directives and use simple wildcard patterns, the following is valid:
 
 ```caddyfile
 {
     frankenphp {
-        watch /path/to/app/folder1             # watches all subdirectories
-        watch /path/to/app/folder2/*.php       # watches only php files in the app directory
-        watch /path/to/app/folder3/**/*.php    # watches only php files in the app directory and subdirectories
+        watch /path/to/folder1             # watches all subdirectories
+        watch /path/to/folder2/*.php       # watches only php files in the app directory
+        watch /path/to/folder3/**/*.php    # watches only php files in the app directory and subdirectories
+        watch /path/to/folder4 poll        # watches all subdirectories with the 'poll' monitor type
     }
 }
 ```
 
-Be sure not to include files that are created at runtime (like logs) into you watcher, since they might cause unwanted
-worker restarts.
+#### Watcher Longform
+
+It's also possible to pass a more verbose config, that uses fswatch's native regular expressions:
+
+```caddyfile
+{
+    frankenphp {
+        watch {
+            path /path/to/folder1
+            path /path/to/folder2
+            recursive true            # watch subdirectories
+            follow_symlinks false     # weather to follow symlinks
+            exclude \.log$            # regex, exclude all files ending with .log
+            include \system.log$      # regex, specifically include all files ending with system.log
+            case_sensitive false      # use case sensitive regex
+            extended_regex false      # use extended regex
+            monitor_type default      # allowed: "default", "fsevents", "kqueue", "inotify", "windows", "poll", "fen"
+            delay 150                 # delay of triggering file change events in ms
+        }
+    }
+}
+```
+
+#### Some notes
+
+- ``include`` will only apply to excluded files
+- If ``include`` is defined, exclude will default to '\.', excluding all directories and files containing a dot
+- ``exclude`` currently does not work properly on [some linux systems](https://github.com/emcrisostomo/fswatch/issues/247)
+ since it sometimes excludes the watched directory itself
+- Be wary about watching files that are created at runtime (like logs), since they might cause unwanted worker restarts.
+
 The file watcher is based on [fswatch](https://github.com/emcrisostomo/fswatch).
 
 ### Full Duplex (HTTP/1)
