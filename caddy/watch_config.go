@@ -28,11 +28,11 @@ type watchConfig struct {
 	// Use wildcard pattern instead of regex to match files
 	WildcardPattern string `json:"wildcard_pattern,omitempty"`
 	// Determines weather to use the one line short-form
-	isShortForm bool
+	IsShortForm bool
 }
 
 func applyWatchConfig(opts []frankenphp.Option, watchConfig watchConfig) []frankenphp.Option {
-	if watchConfig.isShortForm {
+	if watchConfig.IsShortForm {
 		return append(opts, frankenphp.WithFileWatcher(
             frankenphp.WithWatcherShortForm(watchConfig.Dirs[0]),
             frankenphp.WithWatcherMonitorType(watchConfig.MonitorType),
@@ -49,14 +49,14 @@ func applyWatchConfig(opts []frankenphp.Option, watchConfig watchConfig) []frank
     ))
 }
 
-func parseWatchDirective(f *FrankenPHPApp, d *caddyfile.Dispenser) error{
+func parseWatchDirective(f *FrankenPHPApp, d *caddyfile.Dispenser) error {
 	watchConfig := watchConfig{
 		Recursive: true,
 		Latency: 150,
 	}
 	if d.NextArg() {
 		watchConfig.Dirs = append(watchConfig.Dirs, d.Val())
-		watchConfig.isShortForm = true
+		watchConfig.IsShortForm = true
 	}
 
 	if d.NextArg() {
