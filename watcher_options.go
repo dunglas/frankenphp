@@ -86,6 +86,14 @@ func WithWatcherSymlinks(withSymlinks bool) WatchOption {
 	}
 }
 
+func WithWildcardPattern(pattern string) WatchOption {
+	return func(o *watchOpt) error {
+		o.wildCardPattern = pattern
+		return nil
+	}
+}
+
+// for the one line shortform in the caddy config, aka: 'watch /path/*pattern'
 func parseShortForm(watchOpt *watchOpt, fileName string) error {
 	watchOpt.isRecursive = true
 	dirName := fileName

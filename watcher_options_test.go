@@ -150,6 +150,12 @@ func TestWithLatency(t *testing.T) {
 	assert.Equal(t, 0.5, watchOpt.latency)
 }
 
+func TestWithWildcardPattern(t *testing.T) {
+	watchOpt := createWithOption(WithWildcardPattern("*php"), t)
+
+	assert.Equal(t, "*php", watchOpt.wildCardPattern)
+}
+
 func TestAllowReloadOnMatch(t *testing.T) {
 	const fileName = "/some/path/watch-me.php"
 	watchOpt := createFromShortForm("/some/path/**/*.php", t)
@@ -183,6 +189,13 @@ func TestAllowReloadIfOptionIsNotAWildcard(t *testing.T) {
 	watchOpt := getDefaultWatchOpt()
 
 	assert.True(t, watchOpt.allowReload(fileName))
+}
+
+func TestDisallowExplicitlySetWildcardPattern(t *testing.T) {
+	const fileName = "/some/path/file.txt"
+	watchOpt := createWithOption(WithWildcardPattern("*php"), t)
+
+	assert.False(t, watchOpt.allowReload(fileName))
 }
 
 func createFromShortForm(shortForm string, t *testing.T) watchOpt {

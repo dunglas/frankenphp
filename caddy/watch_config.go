@@ -25,12 +25,14 @@ type watchConfig struct {
 	ExcludeFiles string `json:"exclude,omitempty"`
 	// Allowed: "default", "fsevents", "kqueue", "inotify", "windows", "poll", "fen"
 	MonitorType string `json:"monitor_type,omitempty"`
-	// Determines weather to use the wildcard shortform
-	IsShortForm bool `json:"shortform,omitempty"`
+	// Use wildcard pattern instead of regex to match files
+	WildcardPattern string `json:"wildcard_pattern,omitempty"`
+	// Determines weather to use the one line short-form
+	isShortForm bool
 }
 
 func applyWatchConfig(opts []frankenphp.Option, watchConfig watchConfig) []frankenphp.Option {
-	if watchConfig.IsShortForm {
+	if watchConfig.isShortForm {
 		return append(opts, frankenphp.WithFileWatcher(
             frankenphp.WithWatcherShortForm(watchConfig.Dirs[0]),
             frankenphp.WithWatcherMonitorType(watchConfig.MonitorType),
@@ -43,6 +45,7 @@ func applyWatchConfig(opts []frankenphp.Option, watchConfig watchConfig) []frank
         frankenphp.WithWatcherFilters(watchConfig.IncludeFiles, watchConfig.ExcludeFiles, watchConfig.CaseSensitive, watchConfig.ExtendedRegex),
         frankenphp.WithWatcherLatency(watchConfig.Latency),
         frankenphp.WithWatcherMonitorType(watchConfig.MonitorType),
+        frankenphp.WithWildcardPattern(watchConfig.WildcardPattern),
     ))
 }
 
@@ -53,7 +56,7 @@ func parseWatchDirective(f *FrankenPHPApp, d *caddyfile.Dispenser) error{
 	}
 	if d.NextArg() {
 		watchConfig.Dirs = append(watchConfig.Dirs, d.Val())
-		watchConfig.IsShortForm = true
+		watchConfig.isShortForm = true
 	}
 
 	if d.NextArg() {
@@ -66,7 +69,7 @@ func parseWatchDirective(f *FrankenPHPApp, d *caddyfile.Dispenser) error{
 	for d.NextBlock(1) {
         v := d.Val()
         switch v {
-		case "directory", "dir":
+		case "dir", "directory", "path":
             if !d.NextArg() {
                 return d.ArgErr()
             }
@@ -120,16 +123,12 @@ func parseWatchDirective(f *FrankenPHPApp, d *caddyfile.Dispenser) error{
 				return err
 			}
 			watchConfig.CaseSensitive = v
-		case "shortform":
+		case "pattern", "wildcard":
 			if !d.NextArg() {
-				watchConfig.IsShortForm = true
+				return d.ArgErr()
 				continue
 			}
-			v, err := strconv.ParseBool(d.Val())
-			if err != nil {
-				return err
-			}
-			watchConfig.IsShortForm = v
+			watchConfig.WildcardPattern = d.Val()
 		case "extended_regex":
 			if !d.NextArg() {
 				watchConfig.ExtendedRegex = true
