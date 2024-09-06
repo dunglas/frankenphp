@@ -15,6 +15,8 @@ ENV PHPIZE_DEPS="\
 	pkgconfig \
 	re2c"
 
+SHELL ["/bin/ash", "-eo", "pipefail", "-c"]
+
 RUN apk add --no-cache \
 	$PHPIZE_DEPS \
 	argon2-dev \

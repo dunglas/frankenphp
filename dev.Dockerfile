@@ -15,6 +15,8 @@ ENV PHPIZE_DEPS="\
 	pkg-config \
 	re2c"
 
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+
 # hadolint ignore=DL3009
 RUN apt-get update && \
 	apt-get -y --no-install-recommends install \
