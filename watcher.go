@@ -9,13 +9,13 @@ import (
 
 var (
 	// TODO: combine session and watchOpt into a struct
-	watchSessions       []*fswatch.Session
+	watchSessions []*fswatch.Session
 	// we block reloading until workers have stopped
-	blockReloading      atomic.Bool
+	blockReloading atomic.Bool
 	// when stopping the watcher we need to wait for reloading to finish
-	reloadWaitGroup     sync.WaitGroup
+	reloadWaitGroup sync.WaitGroup
 	// active watch options that need to be disabled on shutdown
-	activeWatchOpts     []*watchOpt
+	activeWatchOpts []*watchOpt
 )
 
 func initWatcher(watchOpts []watchOpt, workerOpts []workerOpt) error {

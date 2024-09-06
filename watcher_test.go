@@ -1,6 +1,7 @@
 package frankenphp_test
 
 import (
+	"github.com/dunglas/frankenphp"
 	"github.com/stretchr/testify/assert"
 	"io"
 	"net/http"
@@ -9,7 +10,6 @@ import (
 	"path/filepath"
 	"testing"
 	"time"
-	"github.com/dunglas/frankenphp"
 )
 
 // we have to wait a few milliseconds for the watcher debounce to take effect
@@ -52,7 +52,7 @@ func TestWorkersReloadOnMatchingIncludedRegex(t *testing.T) {
 }
 
 func TestWorkersDoNotReloadOnExcludingRegex(t *testing.T) {
-	const exclude ="\\.txt$"
+	const exclude = "\\.txt$"
 	watchOptions := []frankenphp.WatchOption{
 		frankenphp.WithWatcherDirs([]string{"./testdata"}),
 		frankenphp.WithWatcherRecursion(true),
@@ -90,7 +90,7 @@ func fetchBody(method string, url string, handler func(http.ResponseWriter, *htt
 func pollForWorkerReset(t *testing.T, handler func(http.ResponseWriter, *http.Request), limit int) bool {
 	// first we make an initial request to start the request counter
 	body := fetchBody("GET", "http://example.com/worker-with-watcher.php", handler)
-    assert.Equal(t, "requests:1", body)
+	assert.Equal(t, "requests:1", body)
 
 	// now we spam file updates and check if the request counter resets
 	for i := 0; i < limit; i++ {

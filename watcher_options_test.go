@@ -1,10 +1,10 @@
 package frankenphp
 
 import (
-	"github.com/stretchr/testify/assert"
-	"testing"
 	fswatch "github.com/dunglas/go-fswatch"
+	"github.com/stretchr/testify/assert"
 	"path/filepath"
+	"testing"
 )
 
 func TestSimpleRecursiveWatchOption(t *testing.T) {
@@ -91,21 +91,21 @@ func TestAddingTwoFilePaths(t *testing.T) {
 
 	assert.NoError(t, err1)
 	assert.NoError(t, err2)
-	assert.Equal(t, []string{"/first/path","/second/path"}, watchOpt.dirs)
+	assert.Equal(t, []string{"/first/path", "/second/path"}, watchOpt.dirs)
 }
 
 func TestAddingAnInclusionFilterWithDefaultForExclusion(t *testing.T) {
 	expectedInclusionFilter := fswatch.Filter{
-		Text: "\\.php$", 
-		FilterType: fswatch.FilterInclude, 
-		CaseSensitive: true, 
-		Extended: true,
+		Text:          "\\.php$",
+		FilterType:    fswatch.FilterInclude,
+		CaseSensitive: true,
+		Extended:      true,
 	}
 	expectedExclusionFilter := fswatch.Filter{
-		Text: "\\.", 
-		FilterType: fswatch.FilterExclude, 
-		CaseSensitive: true, 
-		Extended: true,
+		Text:          "\\.",
+		FilterType:    fswatch.FilterExclude,
+		CaseSensitive: true,
+		Extended:      true,
 	}
 
 	watchOpt := createWithOption(WithWatcherFilters("\\.php$", "", true, true), t)
@@ -115,10 +115,10 @@ func TestAddingAnInclusionFilterWithDefaultForExclusion(t *testing.T) {
 
 func TestWithExclusionFilter(t *testing.T) {
 	expectedExclusionFilter := fswatch.Filter{
-		Text: "\\.php$", 
-		FilterType: fswatch.FilterExclude, 
-		CaseSensitive: false, 
-		Extended: false,
+		Text:          "\\.php$",
+		FilterType:    fswatch.FilterExclude,
+		CaseSensitive: false,
+		Extended:      false,
 	}
 
 	watchOpt := createWithOption(WithWatcherFilters("", "\\.php$", false, false), t)
@@ -187,10 +187,10 @@ func TestAllowReloadIfOptionIsNotAWildcard(t *testing.T) {
 
 func createFromShortForm(shortForm string, t *testing.T) watchOpt {
 	watchOpt := getDefaultWatchOpt()
-    applyOptions := WithWatcherShortForm(shortForm)
-    err := applyOptions(&watchOpt)
-    assert.NoError(t, err)
-    return watchOpt
+	applyOptions := WithWatcherShortForm(shortForm)
+	err := applyOptions(&watchOpt)
+	assert.NoError(t, err)
+	return watchOpt
 }
 
 func createWithOption(applyOptions WatchOption, t *testing.T) watchOpt {

@@ -14,21 +14,21 @@ type watchOpt struct {
 	dirs            []string
 	isRecursive     bool
 	followSymlinks  bool
-	isActive		bool
+	isActive        bool
 	latency         float64
 	wildCardPattern string
-	filters		    []fswatch.Filter
-	monitorType	    fswatch.MonitorType
-	eventTypes	    []fswatch.EventType
+	filters         []fswatch.Filter
+	monitorType     fswatch.MonitorType
+	eventTypes      []fswatch.EventType
 }
 
 func getDefaultWatchOpt() watchOpt {
 	return watchOpt{
-		isActive: true,
+		isActive:    true,
 		isRecursive: true,
-		latency: 0.15,
+		latency:     0.15,
 		monitorType: fswatch.SystemDefaultMonitor,
-		eventTypes: parseEventTypes(),
+		eventTypes:  parseEventTypes(),
 	}
 }
 
@@ -89,53 +89,53 @@ func WithWatcherSymlinks(withSymlinks bool) WatchOption {
 func parseShortForm(watchOpt *watchOpt, fileName string) error {
 	watchOpt.isRecursive = true
 	dirName := fileName
-    splitDirName, baseName := filepath.Split(fileName)
-    if fileName != "." && fileName != ".." && strings.ContainsAny(baseName, "*.") {
-        dirName = splitDirName
-        watchOpt.wildCardPattern = baseName
-        watchOpt.isRecursive = false
-    }
+	splitDirName, baseName := filepath.Split(fileName)
+	if fileName != "." && fileName != ".." && strings.ContainsAny(baseName, "*.") {
+		dirName = splitDirName
+		watchOpt.wildCardPattern = baseName
+		watchOpt.isRecursive = false
+	}
 
-    if strings.Contains(fileName, "/**/") {
-        dirName = strings.Split(fileName, "/**/")[0]
-        watchOpt.wildCardPattern = strings.Split(fileName, "/**/")[1]
-        watchOpt.isRecursive = true
-    }
+	if strings.Contains(fileName, "/**/") {
+		dirName = strings.Split(fileName, "/**/")[0]
+		watchOpt.wildCardPattern = strings.Split(fileName, "/**/")[1]
+		watchOpt.isRecursive = true
+	}
 
-    absDir, err := parseAbsPath(dirName)
-    if err != nil {
-       return err
-    }
-    watchOpt.dirs = []string{absDir}
-    return nil
+	absDir, err := parseAbsPath(dirName)
+	if err != nil {
+		return err
+	}
+	watchOpt.dirs = []string{absDir}
+	return nil
 }
 
 func parseFilters(include string, exclude string, caseSensitive bool, extended bool) []fswatch.Filter {
 	filters := []fswatch.Filter{}
 
-	if(include != "" && exclude == "") {
+	if include != "" && exclude == "" {
 		exclude = "\\."
 	}
 
-    if(include != "") {
-        includeFilter := fswatch.Filter {
-            Text: include,
-            FilterType: fswatch.FilterInclude,
-            CaseSensitive: caseSensitive,
-            Extended: extended,
-        }
-        filters = append(filters, includeFilter)
-    }
+	if include != "" {
+		includeFilter := fswatch.Filter{
+			Text:          include,
+			FilterType:    fswatch.FilterInclude,
+			CaseSensitive: caseSensitive,
+			Extended:      extended,
+		}
+		filters = append(filters, includeFilter)
+	}
 
-    if(exclude != "") {
-        excludeFilter := fswatch.Filter {
-            Text: exclude,
-            FilterType: fswatch.FilterExclude,
-            CaseSensitive: caseSensitive,
-            Extended: extended,
-        }
-        filters = append(filters, excludeFilter)
-    }
+	if exclude != "" {
+		excludeFilter := fswatch.Filter{
+			Text:          exclude,
+			FilterType:    fswatch.FilterExclude,
+			CaseSensitive: caseSensitive,
+			Extended:      extended,
+		}
+		filters = append(filters, excludeFilter)
+	}
 	return filters
 }
 
@@ -146,9 +146,9 @@ func parseMonitorType(monitorType string) fswatch.MonitorType {
 	case "kqueue":
 		return fswatch.KqueueMonitor
 	case "inotify":
-        return fswatch.InotifyMonitor
-    case "windows":
-        return fswatch.WindowsMonitor
+		return fswatch.InotifyMonitor
+	case "windows":
+		return fswatch.WindowsMonitor
 	case "poll":
 		return fswatch.PollMonitor
 	case "fen":
@@ -159,7 +159,7 @@ func parseMonitorType(monitorType string) fswatch.MonitorType {
 }
 
 func parseEventTypes() []fswatch.EventType {
-	return []fswatch.EventType {
+	return []fswatch.EventType{
 		fswatch.Created,
 		fswatch.Updated,
 		fswatch.Renamed,
@@ -169,15 +169,15 @@ func parseEventTypes() []fswatch.EventType {
 
 func parseAbsPath(path string) (string, error) {
 	absDir, err := filepath.Abs(path)
-    if err != nil {
-        logger.Error("path could not be watched", zap.String("path", path), zap.Error(err))
-        return "", err
-    }
+	if err != nil {
+		logger.Error("path could not be watched", zap.String("path", path), zap.Error(err))
+		return "", err
+	}
 	return absDir, nil
 }
 
 func (watchOpt *watchOpt) allowReload(fileName string) bool {
-	if(!watchOpt.isActive){
+	if !watchOpt.isActive {
 		return false
 	}
 	if watchOpt.wildCardPattern == "" {
