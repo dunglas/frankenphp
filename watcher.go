@@ -51,6 +51,7 @@ func createSession(watchOpt *watchOpt, workerOpts []workerOpt) (*fswatch.Session
 		fswatch.WithFilters(watchOpt.filters),
 	}
 	handleFileEvent := registerFileEvent(watchOpt, workerOpts)
+	logger.Debug("starting watcher session", zap.Strings("dirs", watchOpt.dirs))
 	return fswatch.NewSession(watchOpt.dirs, handleFileEvent, opts...)
 }
 
