@@ -8,6 +8,7 @@ import (
 )
 
 var (
+	// TODO: combine session and watchOpt into a struct
 	watchSessions       []*fswatch.Session
 	// we block reloading until workers have stopped
 	blockReloading      atomic.Bool

@@ -100,6 +100,7 @@ func startWorkers(fileName string, nbWorkers int, env PreparedEnv) error {
 				// TODO: make the max restart configurable
 				if _, ok := workersRequestChans.Load(absFileName); ok {
 					if fc.exitStatus == 0 {
+						// TODO: the watcher will still sometimes get stuck if errors are thrown in the worker file
 						workersReadyWG.Add(1)
 						if c := l.Check(zapcore.InfoLevel, "restarting"); c != nil {
 							c.Write(zap.String("worker", absFileName))
