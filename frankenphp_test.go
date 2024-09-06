@@ -35,7 +35,7 @@ import (
 
 type testOptions struct {
 	workerScript        string
-	watch               string
+	watchOptions        []frankenphp.WatchOption
 	nbWorkers           int
 	env                 map[string]string
 	nbParrallelRequests int
@@ -63,8 +63,8 @@ func runTest(t *testing.T, test func(func(http.ResponseWriter, *http.Request), *
 	if opts.workerScript != "" {
 		initOpts = append(initOpts, frankenphp.WithWorkers(testDataDir+opts.workerScript, opts.nbWorkers, opts.env))
 	}
-	if opts.watch != "" {
-		initOpts = append(initOpts, frankenphp.WithFileWatcher(opts.watch))
+	if len(opts.watchOptions) != 0 {
+		initOpts = append(initOpts, frankenphp.WithFileWatcher(opts.watchOptions...))
 	}
 	initOpts = append(initOpts, opts.initOpts...)
 

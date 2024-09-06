@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"testing"
 	"time"
+	"github.com/dunglas/frankenphp"
 )
 
 // we have to wait a few milliseconds for the watcher debounce to take effect
@@ -16,35 +17,64 @@ const pollingTime = 150
 const minTimesToPollForChanges = 5
 const maxTimesToPollForChanges = 100 // we will poll a maximum of 100x150ms = 15s
 
-func TestWorkerShouldReloadOnMatchingPattern(t *testing.T) {
+func TestWorkersShouldReloadOnMatchingPattern(t *testing.T) {
 	const filePattern = "./testdata/**/*.txt"
+	watchOptions := []frankenphp.WatchOption{frankenphp.WithWatcherShortForm(filePattern)}
 
 	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
-		// first we verify that the worker is working correctly
-		body := fetchBody("GET", "http://example.com/worker-with-watcher.php", handler)
-		assert.Equal(t, "requests:1", body)
-
-		// now we verify that updating a .txt file does not cause a reload
 		requestBodyHasReset := pollForWorkerReset(t, handler, maxTimesToPollForChanges)
-
 		assert.True(t, requestBodyHasReset)
-	}, &testOptions{nbParrallelRequests: 1, nbWorkers: 1, workerScript: "worker-with-watcher.php", watch: filePattern})
+	}, &testOptions{nbParrallelRequests: 1, nbWorkers: 1, workerScript: "worker-with-watcher.php", watchOptions: watchOptions})
 }
 
-func TestWorkerShouldNotReloadOnNonMatchingPattern(t *testing.T) {
+func TestWorkersShouldNotReloadOnExcludingPattern(t *testing.T) {
 	const filePattern = "./testdata/**/*.php"
+	watchOptions := []frankenphp.WatchOption{frankenphp.WithWatcherShortForm(filePattern)}
 
 	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
-		// first we verify that the worker is working correctly
-		body := fetchBody("GET", "http://example.com/worker-with-watcher.php", handler)
-		assert.Equal(t, "requests:1", body)
-
-		// now we verify that updating a .json file does not cause a reload
 		requestBodyHasReset := pollForWorkerReset(t, handler, minTimesToPollForChanges)
-
 		assert.False(t, requestBodyHasReset)
+	}, &testOptions{nbParrallelRequests: 1, nbWorkers: 1, workerScript: "worker-with-watcher.php", watchOptions: watchOptions})
+}
 
-	}, &testOptions{nbParrallelRequests: 1, nbWorkers: 1, workerScript: "worker-with-watcher.php", watch: filePattern})
+func TestWorkersReloadOnMatchingIncludedRegex(t *testing.T) {
+	const include = "\\.txt$"
+	watchOptions := []frankenphp.WatchOption{
+		frankenphp.WithWatcherDirs([]string{"./testdata"}),
+		frankenphp.WithWatcherRecursion(true),
+		frankenphp.WithWatcherFilters(include, "", true, false),
+	}
+
+	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
+		requestBodyHasReset := pollForWorkerReset(t, handler, maxTimesToPollForChanges)
+		assert.True(t, requestBodyHasReset)
+	}, &testOptions{nbParrallelRequests: 1, nbWorkers: 1, workerScript: "worker-with-watcher.php", watchOptions: watchOptions})
+}
+
+func TestWorkersDoNotReloadOnExcludingRegex(t *testing.T) {
+	const exclude ="\\.txt$"
+	watchOptions := []frankenphp.WatchOption{
+		frankenphp.WithWatcherDirs([]string{"./testdata"}),
+		frankenphp.WithWatcherRecursion(true),
+		frankenphp.WithWatcherFilters("", exclude, false, false),
+	}
+
+	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
+		requestBodyHasReset := pollForWorkerReset(t, handler, minTimesToPollForChanges)
+		assert.False(t, requestBodyHasReset)
+	}, &testOptions{nbParrallelRequests: 1, nbWorkers: 1, workerScript: "worker-with-watcher.php", watchOptions: watchOptions})
+}
+
+func TestWorkerShouldReloadUsingPolling(t *testing.T) {
+	watchOptions := []frankenphp.WatchOption{
+		frankenphp.WithWatcherDirs([]string{"./testdata/files"}),
+		frankenphp.WithWatcherMonitorType("poll"),
+	}
+
+	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
+		requestBodyHasReset := pollForWorkerReset(t, handler, maxTimesToPollForChanges)
+		assert.True(t, requestBodyHasReset)
+	}, &testOptions{nbParrallelRequests: 1, nbWorkers: 1, workerScript: "worker-with-watcher.php", watchOptions: watchOptions})
 }
 
 func fetchBody(method string, url string, handler func(http.ResponseWriter, *http.Request)) string {
@@ -58,6 +88,11 @@ func fetchBody(method string, url string, handler func(http.ResponseWriter, *htt
 }
 
 func pollForWorkerReset(t *testing.T, handler func(http.ResponseWriter, *http.Request), limit int) bool {
+	// first we make an initial request to start the request counter
+	body := fetchBody("GET", "http://example.com/worker-with-watcher.php", handler)
+    assert.Equal(t, "requests:1", body)
+
+	// now we spam file updates and check if the request counter resets
 	for i := 0; i < limit; i++ {
 		updateTestFile("./testdata/files/test.txt", "updated", t)
 		time.Sleep(pollingTime * time.Millisecond)
