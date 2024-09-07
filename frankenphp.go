@@ -348,6 +348,7 @@ func Shutdown() {
 	stopWorkers()
 	close(done)
 	shutdownWG.Wait()
+	metrics.Shutdown()
 	requestChan = nil
 
 	// Always reset the WaitGroup to ensure we're in a clean state
