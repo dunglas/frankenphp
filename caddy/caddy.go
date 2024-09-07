@@ -134,7 +134,7 @@ func (f *FrankenPHPApp) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 
 				f.NumThreads = v
 			case "watch":
-				if err:= parseWatchDirective(f, d); err != nil {
+				if err := parseWatchDirective(f, d); err != nil {
 					return err
 				}
 			case "worker":

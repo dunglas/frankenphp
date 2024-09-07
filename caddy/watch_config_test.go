@@ -2,9 +2,9 @@ package caddy_test
 
 import (
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
-	"testing"
-	"github.com/stretchr/testify/assert"
 	"github.com/dunglas/frankenphp/caddy"
+	"github.com/stretchr/testify/assert"
+	"testing"
 )
 
 func TestParsingARecursiveShortForm(t *testing.T) {

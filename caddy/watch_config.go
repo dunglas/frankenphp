@@ -1,9 +1,9 @@
 package caddy
 
 import (
-	"strconv"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/dunglas/frankenphp"
+	"strconv"
 )
 
 type watchConfig struct {
@@ -12,7 +12,7 @@ type watchConfig struct {
 	// Determines whether the watcher should be recursive.
 	Recursive bool `json:"recursive,omitempty"`
 	// Determines whether the watcher should follow symlinks.
-    FollowSymlinks bool `json:"follow_symlinks,omitempty"`
+	FollowSymlinks bool `json:"follow_symlinks,omitempty"`
 	// Determines whether the regex should be case sensitive.
 	CaseSensitive bool `json:"case_sensitive,omitempty"`
 	// Determines whether the regex should be extended.
@@ -34,25 +34,25 @@ type watchConfig struct {
 func applyWatchConfig(opts []frankenphp.Option, watchConfig watchConfig) []frankenphp.Option {
 	if watchConfig.IsShortForm {
 		return append(opts, frankenphp.WithFileWatcher(
-            frankenphp.WithWatcherShortForm(watchConfig.Dirs[0]),
-            frankenphp.WithWatcherMonitorType(watchConfig.MonitorType),
+			frankenphp.WithWatcherShortForm(watchConfig.Dirs[0]),
+			frankenphp.WithWatcherMonitorType(watchConfig.MonitorType),
 		))
 	}
 	return append(opts, frankenphp.WithFileWatcher(
-        frankenphp.WithWatcherDirs(watchConfig.Dirs),
-        frankenphp.WithWatcherRecursion(watchConfig.Recursive),
-        frankenphp.WithWatcherSymlinks(watchConfig.FollowSymlinks),
-        frankenphp.WithWatcherFilters(watchConfig.IncludeFiles, watchConfig.ExcludeFiles, watchConfig.CaseSensitive, watchConfig.ExtendedRegex),
-        frankenphp.WithWatcherLatency(watchConfig.Latency),
-        frankenphp.WithWatcherMonitorType(watchConfig.MonitorType),
-        frankenphp.WithWildcardPattern(watchConfig.WildcardPattern),
-    ))
+		frankenphp.WithWatcherDirs(watchConfig.Dirs),
+		frankenphp.WithWatcherRecursion(watchConfig.Recursive),
+		frankenphp.WithWatcherSymlinks(watchConfig.FollowSymlinks),
+		frankenphp.WithWatcherFilters(watchConfig.IncludeFiles, watchConfig.ExcludeFiles, watchConfig.CaseSensitive, watchConfig.ExtendedRegex),
+		frankenphp.WithWatcherLatency(watchConfig.Latency),
+		frankenphp.WithWatcherMonitorType(watchConfig.MonitorType),
+		frankenphp.WithWildcardPattern(watchConfig.WildcardPattern),
+	))
 }
 
 func parseWatchDirective(f *FrankenPHPApp, d *caddyfile.Dispenser) error {
 	watchConfig := watchConfig{
 		Recursive: true,
-		Latency: 150,
+		Latency:   150,
 	}
 	if d.NextArg() {
 		watchConfig.Dirs = append(watchConfig.Dirs, d.Val())
@@ -60,49 +60,49 @@ func parseWatchDirective(f *FrankenPHPApp, d *caddyfile.Dispenser) error {
 	}
 
 	if d.NextArg() {
-        if err := verifyMonitorType(d.Val(), d); err != nil {
-            return err
-        }
-        watchConfig.MonitorType = d.Val()
-    }
+		if err := verifyMonitorType(d.Val(), d); err != nil {
+			return err
+		}
+		watchConfig.MonitorType = d.Val()
+	}
 
 	for d.NextBlock(1) {
-        v := d.Val()
-        switch v {
+		v := d.Val()
+		switch v {
 		case "dir", "directory", "path":
-            if !d.NextArg() {
-                return d.ArgErr()
-            }
-            watchConfig.Dirs = append(watchConfig.Dirs, d.Val())
-        case "recursive":
-            if !d.NextArg() {
-                watchConfig.Recursive = true
-                continue
-            }
-            v, err := strconv.ParseBool(d.Val())
-            if err != nil {
-                return err
-            }
-            watchConfig.Recursive = v
-        case "follow_symlinks", "symlinks":
-            if !d.NextArg() {
-                watchConfig.FollowSymlinks = true
-                continue
-            }
-            v, err := strconv.ParseBool(d.Val())
-            if err != nil {
-                return err
-            }
-            watchConfig.FollowSymlinks = v
-        case "latency":
-            if !d.NextArg() {
-                return d.ArgErr()
-            }
-            v, err := strconv.Atoi(d.Val())
-            if err != nil {
-                return err
-            }
-            watchConfig.Latency = v
+			if !d.NextArg() {
+				return d.ArgErr()
+			}
+			watchConfig.Dirs = append(watchConfig.Dirs, d.Val())
+		case "recursive":
+			if !d.NextArg() {
+				watchConfig.Recursive = true
+				continue
+			}
+			v, err := strconv.ParseBool(d.Val())
+			if err != nil {
+				return err
+			}
+			watchConfig.Recursive = v
+		case "follow_symlinks", "symlinks":
+			if !d.NextArg() {
+				watchConfig.FollowSymlinks = true
+				continue
+			}
+			v, err := strconv.ParseBool(d.Val())
+			if err != nil {
+				return err
+			}
+			watchConfig.FollowSymlinks = v
+		case "latency":
+			if !d.NextArg() {
+				return d.ArgErr()
+			}
+			v, err := strconv.Atoi(d.Val())
+			if err != nil {
+				return err
+			}
+			watchConfig.Latency = v
 		case "include", "include_files":
 			if !d.NextArg() {
 				return d.ArgErr()
@@ -150,8 +150,8 @@ func parseWatchDirective(f *FrankenPHPApp, d *caddyfile.Dispenser) error {
 		default:
 			return d.Errf("unknown watcher subdirective '%s'", v)
 		}
-    }
-	if(len(watchConfig.Dirs) == 0) {
+	}
+	if len(watchConfig.Dirs) == 0 {
 		return d.Err("The 'dir' argument must be specified for the watch directive")
 	}
 	f.Watch = append(f.Watch, watchConfig)
@@ -160,9 +160,9 @@ func parseWatchDirective(f *FrankenPHPApp, d *caddyfile.Dispenser) error {
 
 func verifyMonitorType(monitorType string, d *caddyfile.Dispenser) error {
 	switch monitorType {
-        case "default", "system", "fsevents", "kqueue", "inotify", "windows", "poll", "fen":
-            return nil
-        default:
-            return d.Errf("unknown watcher monitor type '%s'", monitorType)
-    }
+	case "default", "system", "fsevents", "kqueue", "inotify", "windows", "poll", "fen":
+		return nil
+	default:
+		return d.Errf("unknown watcher monitor type '%s'", monitorType)
+	}
 }

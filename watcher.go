@@ -11,7 +11,7 @@ type watcher struct {
 	sessions   []*fswatch.Session
 	watchOpts  []*watchOpt
 	workerOpts []workerOpt
-	trigger	   chan struct{}
+	trigger    chan struct{}
 	stop       chan struct{}
 }
 
@@ -100,21 +100,21 @@ func startSession(session *fswatch.Session) {
 
 func stopSession(session *fswatch.Session) {
 	if err := session.Stop(); err != nil {
-        logger.Error("failed to stop watcher", zap.Error(err))
-    }
-    if err := session.Destroy(); err != nil {
-        logger.Error("failed to destroy watcher", zap.Error(err))
-    }
+		logger.Error("failed to stop watcher", zap.Error(err))
+	}
+	if err := session.Destroy(); err != nil {
+		logger.Error("failed to destroy watcher", zap.Error(err))
+	}
 }
 
 func registerEventHandler(watchOpt *watchOpt, triggerWatcher chan struct{}) func([]fswatch.Event) {
 	return func(events []fswatch.Event) {
 		for _, event := range events {
-			if watchOpt.allowReload(event.Path){
+			if watchOpt.allowReload(event.Path) {
 				logger.Debug("filesystem change detected", zap.String("path", event.Path))
-                triggerWatcher <- struct{}{}
-                break
-            }
+				triggerWatcher <- struct{}{}
+				break
+			}
 		}
 	}
 }
@@ -124,15 +124,15 @@ func listenForFileEvents(trigger chan struct{}, stop chan struct{}) {
 	timer.Stop()
 	defer timer.Stop()
 	for {
-	    select {
-	        case <-stop:
-	            break
-	        case <-trigger:
-	            timer.Reset(debounceDuration)
-	        case <-timer.C:
-				timer.Stop()
-	            scheduleWorkerReload()
-	    }
+		select {
+		case <-stop:
+			break
+		case <-trigger:
+			timer.Reset(debounceDuration)
+		case <-timer.C:
+			timer.Stop()
+			scheduleWorkerReload()
+		}
 	}
 }
 
