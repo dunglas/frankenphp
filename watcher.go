@@ -4,20 +4,23 @@ import (
 	fswatch "github.com/dunglas/go-fswatch"
 	"go.uber.org/zap"
 	"sync"
-	"sync/atomic"
+	"time"
 )
 
 type watcher struct {
 	sessions   []*fswatch.Session
 	watchOpts  []*watchOpt
 	workerOpts []workerOpt
+	trigger	   chan struct{}
+	stop       chan struct{}
 }
+
+// duration to wait before reloading workers after a file change
+const debounceDuration = 100 * time.Millisecond
 
 var (
 	// the currently active file watcher
 	activeWatcher *watcher
-	// reloading is blocked if a reload is queued
-	blockReloading atomic.Bool
 	// when stopping the watcher we need to wait for reloading to finish
 	reloadWaitGroup sync.WaitGroup
 )
@@ -32,7 +35,6 @@ func initWatcher(watchOpts []watchOpt, workerOpts []workerOpt) error {
 		return err
 	}
 	reloadWaitGroup = sync.WaitGroup{}
-	blockReloading.Store(false)
 
 	return nil
 }
@@ -42,7 +44,6 @@ func drainWatcher() {
 		return
 	}
 	logger.Info("stopping watcher...")
-	blockReloading.Store(true)
 	activeWatcher.stopWatching()
 	reloadWaitGroup.Wait()
 	activeWatcher = nil
@@ -51,8 +52,10 @@ func drainWatcher() {
 func (w *watcher) startWatching(watchOpts []watchOpt) error {
 	w.sessions = make([]*fswatch.Session, len(watchOpts))
 	w.watchOpts = make([]*watchOpt, len(watchOpts))
+	w.trigger = make(chan struct{})
+	w.stop = make(chan struct{})
 	for i, watchOpt := range watchOpts {
-		session, err := createSession(&watchOpt)
+		session, err := createSession(&watchOpt, w.trigger)
 		if err != nil {
 			logger.Error("unable to watch dirs", zap.Strings("dirs", watchOpt.dirs))
 			return err
@@ -61,22 +64,19 @@ func (w *watcher) startWatching(watchOpts []watchOpt) error {
 		w.sessions[i] = session
 		go startSession(session)
 	}
+	go listenForFileEvents(w.trigger, w.stop)
 	return nil
 }
 
 func (w *watcher) stopWatching() {
+	close(w.stop)
 	for i, session := range w.sessions {
 		w.watchOpts[i].isActive = false
-		if err := session.Stop(); err != nil {
-			logger.Error("failed to stop watcher", zap.Error(err))
-		}
-		if err := session.Destroy(); err != nil {
-			logger.Error("failed to destroy watcher", zap.Error(err))
-		}
+		stopSession(session)
 	}
 }
 
-func createSession(watchOpt *watchOpt) (*fswatch.Session, error) {
+func createSession(watchOpt *watchOpt, triggerWatcher chan struct{}) (*fswatch.Session, error) {
 	opts := []fswatch.Option{
 		fswatch.WithRecursive(watchOpt.isRecursive),
 		fswatch.WithFollowSymlinks(watchOpt.followSymlinks),
@@ -85,7 +85,7 @@ func createSession(watchOpt *watchOpt) (*fswatch.Session, error) {
 		fswatch.WithMonitorType((fswatch.MonitorType)(watchOpt.monitorType)),
 		fswatch.WithFilters(watchOpt.filters),
 	}
-	handleFileEvent := registerEventHandler(watchOpt)
+	handleFileEvent := registerEventHandler(watchOpt, triggerWatcher)
 	logger.Debug("starting watcher session", zap.Strings("dirs", watchOpt.dirs))
 	return fswatch.NewSession(watchOpt.dirs, handleFileEvent, opts...)
 }
@@ -98,30 +98,47 @@ func startSession(session *fswatch.Session) {
 	}
 }
 
-func registerEventHandler(watchOpt *watchOpt) func([]fswatch.Event) {
+func stopSession(session *fswatch.Session) {
+	if err := session.Stop(); err != nil {
+        logger.Error("failed to stop watcher", zap.Error(err))
+    }
+    if err := session.Destroy(); err != nil {
+        logger.Error("failed to destroy watcher", zap.Error(err))
+    }
+}
+
+func registerEventHandler(watchOpt *watchOpt, triggerWatcher chan struct{}) func([]fswatch.Event) {
 	return func(events []fswatch.Event) {
 		for _, event := range events {
-			if handleFileEvent(event, watchOpt) {
-				break
-			}
+			if watchOpt.allowReload(event.Path){
+				logger.Debug("filesystem change detected", zap.String("path", event.Path))
+                triggerWatcher <- struct{}{}
+                break
+            }
 		}
 	}
 }
 
-func handleFileEvent(event fswatch.Event, watchOpt *watchOpt) bool {
-	if !watchOpt.allowReload(event.Path) || !blockReloading.CompareAndSwap(false, true) {
-		return false
+func listenForFileEvents(trigger chan struct{}, stop chan struct{}) {
+	timer := time.NewTimer(debounceDuration)
+	timer.Stop()
+	defer timer.Stop()
+	for {
+	    select {
+	        case <-stop:
+	            break
+	        case <-trigger:
+	            timer.Reset(debounceDuration)
+	        case <-timer.C:
+				timer.Stop()
+	            scheduleWorkerReload()
+	    }
 	}
-	logger.Info("filesystem change detected, restarting workers...", zap.String("path", event.Path))
-	go scheduleWorkerReload()
-
-	return true
 }
 
 func scheduleWorkerReload() {
-	reloadWaitGroup.Wait()
+	logger.Info("filesystem change detected, restarting workers...")
 	reloadWaitGroup.Add(1)
-	blockReloading.Store(false)
 	restartWorkers(activeWatcher.workerOpts)
 	reloadWaitGroup.Done()
 }
