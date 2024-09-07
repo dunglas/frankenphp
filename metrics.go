@@ -3,7 +3,7 @@ package frankenphp
 import (
 	"github.com/prometheus/client_golang/prometheus"
 	"path/filepath"
-	"strings"
+	"regexp"
 	"sync"
 	"time"
 )
@@ -160,11 +160,8 @@ func (m *PrometheusMetrics) StartWorkerRequest(name string) {
 }
 
 func getWorkerNameForMetrics(name string) string {
-	// todo: replace with more efficient method
-	name = strings.ReplaceAll(name, ".php", "")
-	name = strings.ReplaceAll(name, "/", "_")
-	name = strings.ReplaceAll(name, ".", "")
-	name = strings.ReplaceAll(name, "-", "_")
+	name = regexp.MustCompile(`\W`).ReplaceAllString(name, "_")
+
 	return name
 }
 
