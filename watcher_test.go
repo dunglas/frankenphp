@@ -13,9 +13,11 @@ import (
 )
 
 // we have to wait a few milliseconds for the watcher debounce to take effect
-const pollingTime = 150
-const minTimesToPollForChanges = 5
-const maxTimesToPollForChanges = 100 // we will poll a maximum of 100x150ms = 15s
+const pollingTime = 250
+// in tests checking for no reload: we will poll 3x250ms = 0.75s
+const minTimesToPollForChanges = 3
+// in tests checking for a reload: we will poll a maximum of 60x200ms = 12s
+const maxTimesToPollForChanges = 60
 
 func TestWorkersShouldReloadOnMatchingPattern(t *testing.T) {
 	const filePattern = "./testdata/**/*.txt"

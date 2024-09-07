@@ -16,7 +16,7 @@ type watcher struct {
 }
 
 // duration to wait before reloading workers after a file change
-const debounceDuration = 100 * time.Millisecond
+const debounceDuration = 150 * time.Millisecond
 
 var (
 	// the currently active file watcher
