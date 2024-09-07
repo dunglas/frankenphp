@@ -166,14 +166,14 @@ You can also add multiple `watch` directives and use simple wildcard patterns, t
 #### Watcher Longform
 
 It's also possible to pass a more verbose config, that uses fswatch's native regular expressions, which
-allows for more fine-grained control over what files are watched:
+allow more fine-grained control over what files are watched:
 
 ```caddyfile
 {
     frankenphp {
         watch {
-            dir /path/to/folder1      # required: directory to watch
-            dir /path/to/folder2      # multiple directories can be watched
+            path /path/to/folder1     # required: directory to watch
+            path /path/to/folder2     # multiple directories can be watched
             recursive true            # watch subdirectories (default: true)
             follow_symlinks false     # weather to follow symlinks (default: false)
             exclude \.log$            # regex to exclude files (example: those ending in .log)
@@ -192,9 +192,11 @@ allows for more fine-grained control over what files are watched:
 
 - ``include`` will only apply to excluded files
 - If ``include`` is defined, exclude will default to '\.', excluding all directories and files containing a dot
-- ``exclude`` currently does not work properly on [some linux systems](https://github.com/emcrisostomo/fswatch/issues/247)
- since it sometimes excludes the watched directory itself
-- directories can also be relative (to where the frankenphp process was started from)
+- Excluding all files with ``exclude`` currently does not work properly on [some linux systems](https://github.com/emcrisostomo/fswatch/issues/247)
+- When watching a lot of files (10.000+), you might need to increase the limit of open files allowed by your system.
+  The watcher will fail with an error message if the limit is reached. It's also possible to fall back to the 
+  `poll` monitor type, which consumes more CPU but should work on any system.
+- Directories can also be relative (to where the frankenphp process was started from)
 - Be wary about watching files that are created at runtime (like logs), since they might cause unwanted worker restarts.
 
 The file watcher is based on [fswatch](https://github.com/emcrisostomo/fswatch).
