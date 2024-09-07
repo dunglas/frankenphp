@@ -11,6 +11,7 @@ import (
 	"runtime/cgo"
 	"sync"
 	"time"
+	"sync/atomic"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -20,6 +21,7 @@ var (
 	workersRequestChans sync.Map // map[fileName]chan *http.Request
 	workersReadyWG      sync.WaitGroup
 	workerShutdownWG    sync.WaitGroup
+	workersAreReady     atomic.Bool
 	workersDone         chan interface{}
 )
 
@@ -48,6 +50,7 @@ func startWorkers(fileName string, nbWorkers int, env PreparedEnv) error {
 	workersRequestChans.Store(absFileName, make(chan *http.Request))
 	shutdownWG.Add(nbWorkers)
 	workerShutdownWG.Add(nbWorkers)
+	workersAreReady.Store(false)
 	workersReadyWG.Add(nbWorkers)
 
 	var (
@@ -100,8 +103,6 @@ func startWorkers(fileName string, nbWorkers int, env PreparedEnv) error {
 				// TODO: make the max restart configurable
 				if _, ok := workersRequestChans.Load(absFileName); ok {
 					if fc.exitStatus == 0 {
-						// TODO: the watcher will still sometimes get stuck if errors are thrown in the worker file
-						workersReadyWG.Add(1)
 						if c := l.Check(zapcore.InfoLevel, "restarting"); c != nil {
 							c.Write(zap.String("worker", absFileName))
 						}
@@ -125,6 +126,7 @@ func startWorkers(fileName string, nbWorkers int, env PreparedEnv) error {
 	}
 
 	workersReadyWG.Wait()
+	workersAreReady.Store(true)
 	m.Lock()
 	defer m.Unlock()
 
@@ -147,9 +149,6 @@ func stopWorkers() {
 func drainWorkers() {
 	stopWorkers()
 	workerShutdownWG.Wait()
-	// Always reset the WaitGroup to ensure we're in a clean state
-	workersReadyWG = sync.WaitGroup{}
-	workerShutdownWG = sync.WaitGroup{}
 }
 
 func restartWorkers(workerOpts []workerOpt) {
@@ -163,7 +162,9 @@ func restartWorkers(workerOpts []workerOpt) {
 
 //export go_frankenphp_worker_ready
 func go_frankenphp_worker_ready() {
-	workersReadyWG.Done()
+	if(!workersAreReady.Load()) {
+		workersReadyWG.Done()
+	}
 }
 
 //export go_frankenphp_worker_handle_request_start
