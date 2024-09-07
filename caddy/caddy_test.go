@@ -271,3 +271,35 @@ func TestPHPServerDirectiveDisableFileServer(t *testing.T) {
 	tester.AssertGetResponse("http://localhost:9080", http.StatusOK, "I am by birth a Genevese (i not set)")
 	tester.AssertGetResponse("http://localhost:9080/hello.txt", http.StatusNotFound, "Not found")
 }
+
+func TestWorkerWithSleepingWatcher(t *testing.T) {
+	tester := caddytest.NewTester(t)
+	tester.InitServer(`
+		{
+			skip_install_trust
+			admin localhost:2999
+			http_port 9080
+			https_port 9443
+
+			frankenphp {
+				worker ../testdata/worker-with-watcher.php 1
+				watch {
+					path .
+					include \.txt$
+					recursive
+					monitor default
+					latency 100
+				}
+			}
+		}
+
+		localhost:9080 {
+			root * ../testdata
+			rewrite * worker-with-watcher.php
+			php
+		}
+		`, "caddyfile")
+
+	tester.AssertGetResponse("http://localhost:9080", http.StatusOK, "requests:1")
+	tester.AssertGetResponse("http://localhost:9080", http.StatusOK, "requests:2")
+}
