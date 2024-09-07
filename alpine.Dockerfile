@@ -134,8 +134,7 @@ FROM common AS runner
 ENV GODEBUG=cgocheck=0
 
 COPY --from=builder /usr/local/lib/libfswatch.so* /usr/local/lib/
-COPY --from=builder /usr/local/bin/fswatch /usr/local/bin/fswatch
-RUN apk add libstdc++ #required for fswatch to work
+RUN apk add --no-cache libstdc++ #required for fswatch to work
 
 COPY --from=builder /usr/local/bin/frankenphp /usr/local/bin/frankenphp
 RUN setcap cap_net_bind_service=+ep /usr/local/bin/frankenphp && \
