@@ -73,7 +73,7 @@ var (
 	loggerMu sync.RWMutex
 	logger   *zap.Logger
 
-	metrics Metrics = NullMetrics{}
+	metrics Metrics = nullMetrics{}
 )
 
 type syslogLevel int

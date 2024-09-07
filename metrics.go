@@ -26,30 +26,30 @@ type Metrics interface {
 	StartWorkerRequest(name string)
 }
 
-type NullMetrics struct{}
+type nullMetrics struct{}
 
-func (n NullMetrics) StartWorker(name string) {
+func (n nullMetrics) StartWorker(name string) {
 }
 
-func (n NullMetrics) StopWorker(name string) {
+func (n nullMetrics) StopWorker(name string) {
 }
 
-func (n NullMetrics) TotalWorkers(name string, num int) {
+func (n nullMetrics) TotalWorkers(name string, num int) {
 }
 
-func (n NullMetrics) TotalThreads(num int) {
+func (n nullMetrics) TotalThreads(num int) {
 }
 
-func (n NullMetrics) StartRequest() {
+func (n nullMetrics) StartRequest() {
 }
 
-func (n NullMetrics) StopRequest() {
+func (n nullMetrics) StopRequest() {
 }
 
-func (n NullMetrics) StopWorkerRequest(name string, duration time.Duration) {
+func (n nullMetrics) StopWorkerRequest(name string, duration time.Duration) {
 }
 
-func (n NullMetrics) StartWorkerRequest(name string) {
+func (n nullMetrics) StartWorkerRequest(name string) {
 }
 
 type PrometheusMetrics struct {
