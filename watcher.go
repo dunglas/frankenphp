@@ -59,7 +59,13 @@ func (w *watcher) startWatching(watchOpts []watchOpt) error {
         }
 		w.watchOpts[i] = &watchOpt
         w.sessions[i] = session
-        go session.Start()
+        go func() {
+            err := session.Start()
+            if err != nil {
+            	logger.Error("failed to start watcher", zap.Error(err))
+            	logger.Warn("make sure you are not reaching your system's max number of open files")
+			}
+        }()
     }
 	return nil
 }
