@@ -73,7 +73,8 @@ func (w *watcher) stopWatching() {
         }
 	}
 	// mandatory grace period between stopping and destroying the watcher
-    time.Sleep(50 * time.Millisecond)
+    // TODO: what is a good value here? fswatch sleeps for 3s in tests...
+    time.Sleep(100 * time.Millisecond)
     for _, session := range w.sessions {
         if err := session.Destroy(); err != nil {
             logger.Error("failed to stop watcher", zap.Error(err))
