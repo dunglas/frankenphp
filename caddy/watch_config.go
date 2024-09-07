@@ -84,7 +84,7 @@ func parseWatchDirective(f *FrankenPHPApp, d *caddyfile.Dispenser) error {
                 return err
             }
             watchConfig.Recursive = v
-        case "follow_symlinks":
+        case "follow_symlinks", "symlinks":
             if !d.NextArg() {
                 watchConfig.FollowSymlinks = true
                 continue
