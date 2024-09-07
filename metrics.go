@@ -8,6 +8,9 @@ import (
 	"time"
 )
 
+var metricsNameRegex = regexp.MustCompile(`\W+`)
+var metricsNameFixRegex = regexp.MustCompile(`^_+|_+$`)
+
 type Metrics interface {
 	// StartWorker Collects started workers
 	StartWorker(name string)
@@ -228,8 +231,8 @@ func (m *PrometheusMetrics) Shutdown() {
 }
 
 func getWorkerNameForMetrics(name string) string {
-	name = regexp.MustCompile(`\W+`).ReplaceAllString(name, "_")
-	name = regexp.MustCompile(`^_+|_+$`).ReplaceAllString(name, "")
+	name = metricsNameRegex.ReplaceAllString(name, "_")
+	name = metricsNameFixRegex.ReplaceAllString(name, "")
 
 	return name
 }
