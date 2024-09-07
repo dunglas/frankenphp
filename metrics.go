@@ -89,35 +89,43 @@ func (m *PrometheusMetrics) TotalWorkers(name string, num int) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	m.totalWorkers[name] = prometheus.NewGauge(prometheus.GaugeOpts{
-		Namespace: "frankenphp",
-		Subsystem: getWorkerNameForMetrics(name),
-		Name:      "total_workers",
-		Help:      "Total number of PHP workers for this worker",
-	})
-	m.registry.MustRegister(m.totalWorkers[name])
+	if _, ok := m.totalWorkers[name]; !ok {
+		m.totalWorkers[name] = prometheus.NewGauge(prometheus.GaugeOpts{
+			Namespace: "frankenphp",
+			Subsystem: getWorkerNameForMetrics(name),
+			Name:      "total_workers",
+			Help:      "Total number of PHP workers for this worker",
+		})
+		m.registry.MustRegister(m.totalWorkers[name])
+	}
 
-	m.busyWorkers[name] = prometheus.NewGauge(prometheus.GaugeOpts{
-		Namespace: "frankenphp",
-		Subsystem: getWorkerNameForMetrics(name),
-		Name:      "busy_workers",
-		Help:      "Number of busy PHP workers for this worker",
-	})
-	m.registry.MustRegister(m.busyWorkers[name])
+	if _, ok := m.busyWorkers[name]; !ok {
+		m.busyWorkers[name] = prometheus.NewGauge(prometheus.GaugeOpts{
+			Namespace: "frankenphp",
+			Subsystem: getWorkerNameForMetrics(name),
+			Name:      "busy_workers",
+			Help:      "Number of busy PHP workers for this worker",
+		})
+		m.registry.MustRegister(m.busyWorkers[name])
+	}
 
-	m.workerRequestTime[name] = prometheus.NewCounter(prometheus.CounterOpts{
-		Namespace: "frankenphp",
-		Subsystem: getWorkerNameForMetrics(name),
-		Name:      "worker_request_time",
-	})
-	m.registry.MustRegister(m.workerRequestTime[name])
+	if _, ok := m.workerRequestTime[name]; !ok {
+		m.workerRequestTime[name] = prometheus.NewCounter(prometheus.CounterOpts{
+			Namespace: "frankenphp",
+			Subsystem: getWorkerNameForMetrics(name),
+			Name:      "worker_request_time",
+		})
+		m.registry.MustRegister(m.workerRequestTime[name])
+	}
 
-	m.workerRequestCount[name] = prometheus.NewCounter(prometheus.CounterOpts{
-		Namespace: "frankenphp",
-		Subsystem: getWorkerNameForMetrics(name),
-		Name:      "worker_request_count",
-	})
-	m.registry.MustRegister(m.workerRequestCount[name])
+	if _, ok := m.workerRequestCount[name]; !ok {
+		m.workerRequestCount[name] = prometheus.NewCounter(prometheus.CounterOpts{
+			Namespace: "frankenphp",
+			Subsystem: getWorkerNameForMetrics(name),
+			Name:      "worker_request_count",
+		})
+		m.registry.MustRegister(m.workerRequestCount[name])
+	}
 }
 
 func (m *PrometheusMetrics) TotalThreads(num int) {
@@ -152,9 +160,11 @@ func (m *PrometheusMetrics) StartWorkerRequest(name string) {
 }
 
 func getWorkerNameForMetrics(name string) string {
+	// todo: replace with more efficient method
 	name = strings.ReplaceAll(name, ".php", "")
 	name = strings.ReplaceAll(name, "/", "_")
 	name = strings.ReplaceAll(name, ".", "")
+	name = strings.ReplaceAll(name, "-", "_")
 	return name
 }
 
