@@ -14,7 +14,6 @@ type watchOpt struct {
 	dirs            []string
 	isRecursive     bool
 	followSymlinks  bool
-	isActive        bool
 	latency         float64
 	wildCardPattern string
 	filters         []fswatch.Filter
@@ -24,7 +23,6 @@ type watchOpt struct {
 
 func getDefaultWatchOpt() watchOpt {
 	return watchOpt{
-		isActive:    true,
 		isRecursive: true,
 		latency:     0.15,
 		monitorType: fswatch.SystemDefaultMonitor,
@@ -185,9 +183,6 @@ func parseAbsPath(path string) (string, error) {
 }
 
 func (watchOpt *watchOpt) allowReload(fileName string) bool {
-	if !watchOpt.isActive {
-		return false
-	}
 	if watchOpt.wildCardPattern == "" {
 		return true
 	}

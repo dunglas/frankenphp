@@ -9,7 +9,6 @@ import (
 
 type watcher struct {
 	sessions   []*fswatch.Session
-	watchOpts  []*watchOpt
 	workerOpts []workerOpt
 	trigger    chan struct{}
 	stop       chan struct{}
@@ -51,7 +50,6 @@ func drainWatcher() {
 
 func (w *watcher) startWatching(watchOpts []watchOpt) error {
 	w.sessions = make([]*fswatch.Session, len(watchOpts))
-	w.watchOpts = make([]*watchOpt, len(watchOpts))
 	w.trigger = make(chan struct{})
 	w.stop = make(chan struct{})
 	for i, watchOpt := range watchOpts {
@@ -60,7 +58,6 @@ func (w *watcher) startWatching(watchOpts []watchOpt) error {
 			logger.Error("unable to watch dirs", zap.Strings("dirs", watchOpt.dirs))
 			return err
 		}
-		w.watchOpts[i] = &watchOpt
 		w.sessions[i] = session
 		go startSession(session)
 	}
@@ -70,10 +67,18 @@ func (w *watcher) startWatching(watchOpts []watchOpt) error {
 
 func (w *watcher) stopWatching() {
 	close(w.stop)
-	for i, session := range w.sessions {
-		w.watchOpts[i].isActive = false
-		stopSession(session)
+	for _, session := range w.sessions {
+		if err := session.Stop(); err != nil {
+        	logger.Error("failed to stop watcher", zap.Error(err))
+        }
 	}
+	// mandatory grace period between stopping and destroying the watcher
+    time.Sleep(50 * time.Millisecond)
+    for _, session := range w.sessions {
+        if err := session.Destroy(); err != nil {
+            logger.Error("failed to stop watcher", zap.Error(err))
+        }
+    }
 }
 
 func createSession(watchOpt *watchOpt, triggerWatcher chan struct{}) (*fswatch.Session, error) {
@@ -95,15 +100,6 @@ func startSession(session *fswatch.Session) {
 	if err != nil {
 		logger.Error("failed to start watcher", zap.Error(err))
 		logger.Warn("make sure you are not reaching your system's max number of open files")
-	}
-}
-
-func stopSession(session *fswatch.Session) {
-	if err := session.Stop(); err != nil {
-		logger.Error("failed to stop watcher", zap.Error(err))
-	}
-	if err := session.Destroy(); err != nil {
-		logger.Error("failed to destroy watcher", zap.Error(err))
 	}
 }
 

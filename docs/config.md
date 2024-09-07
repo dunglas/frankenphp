@@ -194,7 +194,7 @@ allow more fine-grained control over what files are watched:
 - If ``include`` is defined, exclude will default to '\.', excluding all directories and files containing a dot
 - Excluding all files with ``exclude`` currently does not work properly on [some linux systems](https://github.com/emcrisostomo/fswatch/issues/247)
 - When watching a lot of files (10.000+), you might need to increase the limit of open files allowed by your system.
-  The watcher will fail with an error message if the limit is reached. It's also possible to fall back to the 
+  The watcher will fail with an error message if the limit is reached. It's also possible to fall back to the
   `poll` monitor type, which consumes more CPU but should work on any system.
 - Directories can also be relative (to where the frankenphp process was started from)
 - Be wary about watching files that are created at runtime (like logs), since they might cause unwanted worker restarts.
