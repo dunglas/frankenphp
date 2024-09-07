@@ -59,13 +59,7 @@ func (w *watcher) startWatching(watchOpts []watchOpt) error {
 		}
 		w.watchOpts[i] = &watchOpt
 		w.sessions[i] = session
-		go func() {
-			err := session.Start()
-			if err != nil {
-				logger.Error("failed to start watcher", zap.Error(err))
-				logger.Warn("make sure you are not reaching your system's max number of open files")
-			}
-		}()
+		go startSession(session)
 	}
 	return nil
 }
@@ -91,12 +85,20 @@ func createSession(watchOpt *watchOpt) (*fswatch.Session, error) {
 		fswatch.WithMonitorType((fswatch.MonitorType)(watchOpt.monitorType)),
 		fswatch.WithFilters(watchOpt.filters),
 	}
-	handleFileEvent := registerFileEvent(watchOpt)
+	handleFileEvent := registerEventHandler(watchOpt)
 	logger.Debug("starting watcher session", zap.Strings("dirs", watchOpt.dirs))
 	return fswatch.NewSession(watchOpt.dirs, handleFileEvent, opts...)
 }
 
-func registerFileEvent(watchOpt *watchOpt) func([]fswatch.Event) {
+func startSession(session *fswatch.Session) {
+	err := session.Start()
+	if err != nil {
+		logger.Error("failed to start watcher", zap.Error(err))
+		logger.Warn("make sure you are not reaching your system's max number of open files")
+	}
+}
+
+func registerEventHandler(watchOpt *watchOpt) func([]fswatch.Event) {
 	return func(events []fswatch.Event) {
 		for _, event := range events {
 			if handleFileEvent(event, watchOpt) {
@@ -111,14 +113,15 @@ func handleFileEvent(event fswatch.Event, watchOpt *watchOpt) bool {
 		return false
 	}
 	logger.Info("filesystem change detected, restarting workers...", zap.String("path", event.Path))
-	go triggerWorkerReload()
+	go scheduleWorkerReload()
 
 	return true
 }
 
-func triggerWorkerReload() {
+func scheduleWorkerReload() {
+	reloadWaitGroup.Wait()
 	reloadWaitGroup.Add(1)
+	blockReloading.Store(false)
 	restartWorkers(activeWatcher.workerOpts)
 	reloadWaitGroup.Done()
-	blockReloading.Store(false)
 }
