@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/testutil"
+	"github.com/stretchr/testify/require"
 	"net/http"
 	"runtime"
 	"strings"
@@ -368,9 +369,7 @@ func TestMetrics(t *testing.T) {
 	frankenphp_busy_threads 1
 	`
 
-	if err := testutil.GatherAndCompare(prometheus.DefaultGatherer, strings.NewReader(expectedMetrics), "frankenphp_total_threads", "frankenphp_busy_threads"); err != nil {
-		t.Errorf("unexpected metrics: %v", err)
-	}
+	require.NoError(t, testutil.GatherAndCompare(prometheus.DefaultGatherer, strings.NewReader(expectedMetrics), "frankenphp_total_threads", "frankenphp_busy_threads"))
 }
 
 func TestWorkerMetrics(t *testing.T) {
@@ -446,15 +445,14 @@ func TestWorkerMetrics(t *testing.T) {
 	frankenphp_testdata_index_php_worker_request_count 10
 	`
 
-	if err := testutil.GatherAndCompare(
-		prometheus.DefaultGatherer,
-		strings.NewReader(expectedMetrics),
-		"frankenphp_total_threads",
-		"frankenphp_busy_threads",
-		"frankenphp_testdata_index_php_busy_workers",
-		"frankenphp_testdata_index_php_total_workers",
-		"frankenphp_testdata_index_php_worker_request_count",
-	); err != nil {
-		t.Errorf("unexpected metrics: %v", err)
-	}
+	require.NoError(t,
+		testutil.GatherAndCompare(
+			prometheus.DefaultGatherer,
+			strings.NewReader(expectedMetrics),
+			"frankenphp_total_threads",
+			"frankenphp_busy_threads",
+			"frankenphp_testdata_index_php_busy_workers",
+			"frankenphp_testdata_index_php_total_workers",
+			"frankenphp_testdata_index_php_worker_request_count",
+		))
 }
