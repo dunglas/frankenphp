@@ -355,7 +355,7 @@ func TestMetrics(t *testing.T) {
 		t.Fatalf("failed to read metrics: %v", err)
 	}
 
-	cpus := fmt.Sprintf("%d", runtime.NumCPU())
+	cpus := fmt.Sprintf("%d", runtime.GOMAXPROCS(0))
 
 	// Check metrics
 	expectedMetrics := `
@@ -421,7 +421,7 @@ func TestWorkerMetrics(t *testing.T) {
 		t.Fatalf("failed to read metrics: %v", err)
 	}
 
-	cpus := fmt.Sprintf("%d", runtime.NumCPU())
+	cpus := fmt.Sprintf("%d", runtime.GOMAXPROCS(0))
 
 	// Check metrics
 	expectedMetrics := `
