@@ -73,6 +73,17 @@ RUN apk update; \
 		xz ; \
 	ln -sf /usr/bin/php83 /usr/bin/php
 
+# install fswatch (necessary for file watching)
+ARG FSWATCH_VERSION
+WORKDIR /usr/local/src/fswatch
+RUN curl -L https://github.com/emcrisostomo/fswatch/releases/download/$FSWATCH_VERSION/fswatch-$FSWATCH_VERSION.tar.gz | tar xz
+WORKDIR /usr/local/src/fswatch/fswatch-$FSWATCH_VERSION
+RUN ./configure && \
+	make -j"$(nproc)" && \
+	make install && \
+	ldconfig /usr/local/lib && \
+	fswatch --version
+
 # FIXME: temporary workaround for https://github.com/golang/go/issues/68285
 WORKDIR /
 RUN git clone https://go.googlesource.com/go goroot
