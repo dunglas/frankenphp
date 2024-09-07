@@ -2,6 +2,7 @@ package frankenphp
 
 import (
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/stretchr/testify/require"
 	"sync"
 	"testing"
 	"time"
@@ -55,9 +56,8 @@ func TestPrometheusMetrics_TotalWorkers(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			m.TotalWorkers(tt.worker, tt.num)
-			if _, ok := m.totalWorkers[tt.worker]; !ok {
-				t.Fatalf("expected totalWorkers to be registered")
-			}
+			_, ok := m.totalWorkers[tt.worker]
+			require.True(t, ok)
 		})
 	}
 }
@@ -67,9 +67,8 @@ func TestPrometheusMetrics_StopWorkerRequest(t *testing.T) {
 	m.StopWorkerRequest("test_worker", 2*time.Second)
 
 	name := "test_worker"
-	if _, ok := m.workerRequestTime[name]; ok {
-		t.Fatalf("expected workerRequestTime to not be nil")
-	}
+	_, ok := m.workerRequestTime[name]
+	require.False(t, ok)
 }
 
 func TestPrometheusMetrics_StartWorkerRequest(t *testing.T) {
@@ -77,7 +76,6 @@ func TestPrometheusMetrics_StartWorkerRequest(t *testing.T) {
 	m.StartWorkerRequest("test_worker")
 
 	name := "test_worker"
-	if _, ok := m.busyWorkers[name]; ok {
-		t.Fatalf("expected busyWorkers to not be nil")
-	}
+	_, ok := m.workerRequestCount[name]
+	require.False(t, ok)
 }
