@@ -26,7 +26,7 @@ var (
 )
 
 func initWatcher(watchOpts []watchOpt, workerOpts []workerOpt) error {
-	if len(watchOpts) == 0 || len(workerOpts) == 0 {
+	if len(watchOpts) == 0 {
 		return nil
 	}
 	activeWatcher = &watcher{workerOpts: workerOpts}
