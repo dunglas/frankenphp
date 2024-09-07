@@ -38,9 +38,9 @@ func initWatcher(watchOpts []watchOpt, workerOpts []workerOpt) error {
 }
 
 func drainWatcher() {
-	if(activeWatcher == nil) {
-        return
-    }
+	if activeWatcher == nil {
+		return
+	}
 	logger.Info("stopping watcher...")
 	blockReloading.Store(true)
 	activeWatcher.stopWatching()
@@ -52,34 +52,34 @@ func (w *watcher) startWatching(watchOpts []watchOpt) error {
 	w.sessions = make([]*fswatch.Session, len(watchOpts))
 	w.watchOpts = make([]*watchOpt, len(watchOpts))
 	for i, watchOpt := range watchOpts {
-        session, err := createSession(&watchOpt)
-        if err != nil {
-            logger.Error("unable to watch dirs", zap.Strings("dirs", watchOpt.dirs))
-            return err
-        }
+		session, err := createSession(&watchOpt)
+		if err != nil {
+			logger.Error("unable to watch dirs", zap.Strings("dirs", watchOpt.dirs))
+			return err
+		}
 		w.watchOpts[i] = &watchOpt
-        w.sessions[i] = session
-        go func() {
-            err := session.Start()
-            if err != nil {
-            	logger.Error("failed to start watcher", zap.Error(err))
-            	logger.Warn("make sure you are not reaching your system's max number of open files")
+		w.sessions[i] = session
+		go func() {
+			err := session.Start()
+			if err != nil {
+				logger.Error("failed to start watcher", zap.Error(err))
+				logger.Warn("make sure you are not reaching your system's max number of open files")
 			}
-        }()
-    }
+		}()
+	}
 	return nil
 }
 
 func (w *watcher) stopWatching() {
 	for i, session := range w.sessions {
-        w.watchOpts[i].isActive = false
-        if err := session.Stop(); err != nil {
-            logger.Error("failed to stop watcher", zap.Error(err))
-        }
-        if err := session.Destroy(); err != nil {
-            logger.Error("failed to destroy watcher", zap.Error(err))
-        }
-    }
+		w.watchOpts[i].isActive = false
+		if err := session.Stop(); err != nil {
+			logger.Error("failed to stop watcher", zap.Error(err))
+		}
+		if err := session.Destroy(); err != nil {
+			logger.Error("failed to destroy watcher", zap.Error(err))
+		}
+	}
 }
 
 func createSession(watchOpt *watchOpt) (*fswatch.Session, error) {

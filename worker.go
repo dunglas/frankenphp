@@ -10,8 +10,8 @@ import (
 	"path/filepath"
 	"runtime/cgo"
 	"sync"
-	"time"
 	"sync/atomic"
+	"time"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -162,7 +162,7 @@ func restartWorkers(workerOpts []workerOpt) {
 
 //export go_frankenphp_worker_ready
 func go_frankenphp_worker_ready() {
-	if(!workersAreReady.Load()) {
+	if !workersAreReady.Load() {
 		workersReadyWG.Done()
 	}
 }
