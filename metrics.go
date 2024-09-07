@@ -24,6 +24,7 @@ type Metrics interface {
 	// StopWorkerRequest Collects stopped worker requests
 	StopWorkerRequest(name string, duration time.Duration)
 	StartWorkerRequest(name string)
+	RenameWorker(oldName, newName string)
 }
 
 type nullMetrics struct{}
@@ -52,6 +53,9 @@ func (n nullMetrics) StopWorkerRequest(name string, duration time.Duration) {
 func (n nullMetrics) StartWorkerRequest(name string) {
 }
 
+func (n nullMetrics) RenameWorker(oldName, newName string) {
+}
+
 type PrometheusMetrics struct {
 	registry           prometheus.Registerer
 	totalThreads       prometheus.Counter
@@ -70,7 +74,6 @@ func (m *PrometheusMetrics) StartWorker(name string) {
 	if _, ok := m.totalWorkers[name]; !ok {
 		return
 	}
-	name = sanitizeWorkerName(name)
 	m.totalWorkers[name].Inc()
 }
 
@@ -81,7 +84,6 @@ func (m *PrometheusMetrics) StopWorker(name string) {
 	if _, ok := m.totalWorkers[name]; !ok {
 		return
 	}
-	name = sanitizeWorkerName(name)
 	m.totalWorkers[name].Dec()
 }
 
@@ -89,10 +91,12 @@ func (m *PrometheusMetrics) TotalWorkers(name string, num int) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
+	subsystem := getWorkerNameForMetrics(name)
+
 	if _, ok := m.totalWorkers[name]; !ok {
 		m.totalWorkers[name] = prometheus.NewGauge(prometheus.GaugeOpts{
 			Namespace: "frankenphp",
-			Subsystem: getWorkerNameForMetrics(name),
+			Subsystem: subsystem,
 			Name:      "total_workers",
 			Help:      "Total number of PHP workers for this worker",
 		})
@@ -102,7 +106,7 @@ func (m *PrometheusMetrics) TotalWorkers(name string, num int) {
 	if _, ok := m.busyWorkers[name]; !ok {
 		m.busyWorkers[name] = prometheus.NewGauge(prometheus.GaugeOpts{
 			Namespace: "frankenphp",
-			Subsystem: getWorkerNameForMetrics(name),
+			Subsystem: subsystem,
 			Name:      "busy_workers",
 			Help:      "Number of busy PHP workers for this worker",
 		})
@@ -112,7 +116,7 @@ func (m *PrometheusMetrics) TotalWorkers(name string, num int) {
 	if _, ok := m.workerRequestTime[name]; !ok {
 		m.workerRequestTime[name] = prometheus.NewCounter(prometheus.CounterOpts{
 			Namespace: "frankenphp",
-			Subsystem: getWorkerNameForMetrics(name),
+			Subsystem: subsystem,
 			Name:      "worker_request_time",
 		})
 		m.registry.MustRegister(m.workerRequestTime[name])
@@ -121,7 +125,7 @@ func (m *PrometheusMetrics) TotalWorkers(name string, num int) {
 	if _, ok := m.workerRequestCount[name]; !ok {
 		m.workerRequestCount[name] = prometheus.NewCounter(prometheus.CounterOpts{
 			Namespace: "frankenphp",
-			Subsystem: getWorkerNameForMetrics(name),
+			Subsystem: subsystem,
 			Name:      "worker_request_count",
 		})
 		m.registry.MustRegister(m.workerRequestCount[name])
@@ -141,7 +145,6 @@ func (m *PrometheusMetrics) StopRequest() {
 }
 
 func (m *PrometheusMetrics) StopWorkerRequest(name string, duration time.Duration) {
-	name = sanitizeWorkerName(name)
 	if _, ok := m.workerRequestTime[name]; !ok {
 		return
 	}
@@ -152,15 +155,40 @@ func (m *PrometheusMetrics) StopWorkerRequest(name string, duration time.Duratio
 }
 
 func (m *PrometheusMetrics) StartWorkerRequest(name string) {
-	name = sanitizeWorkerName(name)
 	if _, ok := m.busyWorkers[name]; !ok {
 		return
 	}
 	m.busyWorkers[name].Inc()
 }
 
+func (m *PrometheusMetrics) RenameWorker(oldName, newName string) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if _, ok := m.totalWorkers[oldName]; ok {
+		m.totalWorkers[newName] = m.totalWorkers[oldName]
+		delete(m.totalWorkers, oldName)
+	}
+
+	if _, ok := m.busyWorkers[oldName]; ok {
+		m.busyWorkers[newName] = m.busyWorkers[oldName]
+		delete(m.busyWorkers, oldName)
+	}
+
+	if _, ok := m.workerRequestTime[oldName]; ok {
+		m.workerRequestTime[newName] = m.workerRequestTime[oldName]
+		delete(m.workerRequestTime, oldName)
+	}
+
+	if _, ok := m.workerRequestCount[oldName]; ok {
+		m.workerRequestCount[newName] = m.workerRequestCount[oldName]
+		delete(m.workerRequestCount, oldName)
+	}
+}
+
 func getWorkerNameForMetrics(name string) string {
-	name = regexp.MustCompile(`\W`).ReplaceAllString(name, "_")
+	name = regexp.MustCompile(`\W+`).ReplaceAllString(name, "_")
+	name = regexp.MustCompile(`^_+|_+$`).ReplaceAllString(name, "")
 
 	return name
 }

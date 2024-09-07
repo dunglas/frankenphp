@@ -13,6 +13,7 @@ require (
 	github.com/dunglas/frankenphp v1.2.5
 	github.com/dunglas/mercure/caddy v0.16.3
 	github.com/dunglas/vulcain/caddy v1.0.5
+	github.com/prometheus/client_golang v1.20.2
 	github.com/spf13/cobra v1.8.1
 	go.uber.org/zap v1.27.0
 )
@@ -97,6 +98,7 @@ require (
 	github.com/kevburnsjr/skipfilter v0.0.1 // indirect
 	github.com/klauspost/compress v1.17.9 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.8 // indirect
+	github.com/kylelemons/godebug v1.1.0 // indirect
 	github.com/libdns/libdns v0.2.2 // indirect
 	github.com/magiconair/properties v1.8.7 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
@@ -119,7 +121,6 @@ require (
 	github.com/perimeterx/marshmallow v1.1.5 // indirect
 	github.com/pires/go-proxyproto v0.7.0 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
-	github.com/prometheus/client_golang v1.20.2 // indirect
 	github.com/prometheus/client_model v0.6.1 // indirect
 	github.com/prometheus/common v0.55.0 // indirect
 	github.com/prometheus/procfs v0.15.1 // indirect

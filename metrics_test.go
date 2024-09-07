@@ -19,6 +19,7 @@ func TestGetWorkerNameForMetrics(t *testing.T) {
 		{"worker name", "worker_name"},
 		{"worker/name", "worker_name"},
 		{"worker.name", "worker_name"},
+		{"////worker////name...//worker", "worker_name_worker"},
 	}
 
 	for _, test := range tests {
