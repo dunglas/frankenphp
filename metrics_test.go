@@ -66,7 +66,7 @@ func TestPrometheusMetrics_StopWorkerRequest(t *testing.T) {
 	m := createPrometheusMetrics()
 	m.StopWorkerRequest("test_worker", 2*time.Second)
 
-	name := sanitizeWorkerName("test_worker")
+	name := "test_worker"
 	if _, ok := m.workerRequestTime[name]; ok {
 		t.Fatalf("expected workerRequestTime to not be nil")
 	}
@@ -76,7 +76,7 @@ func TestPrometheusMetrics_StartWorkerRequest(t *testing.T) {
 	m := createPrometheusMetrics()
 	m.StartWorkerRequest("test_worker")
 
-	name := sanitizeWorkerName("test_worker")
+	name := "test_worker"
 	if _, ok := m.busyWorkers[name]; ok {
 		t.Fatalf("expected busyWorkers to not be nil")
 	}

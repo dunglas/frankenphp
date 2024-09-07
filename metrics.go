@@ -2,7 +2,6 @@ package frankenphp
 
 import (
 	"github.com/prometheus/client_golang/prometheus"
-	"path/filepath"
 	"regexp"
 	"sync"
 	"time"
@@ -235,10 +234,6 @@ func getWorkerNameForMetrics(name string) string {
 	name = metricsNameFixRegex.ReplaceAllString(name, "")
 
 	return name
-}
-
-func sanitizeWorkerName(name string) string {
-	return filepath.Base(name)
 }
 
 func NewPrometheusMetrics(registry prometheus.Registerer) *PrometheusMetrics {
