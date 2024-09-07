@@ -171,18 +171,22 @@ func (m *PrometheusMetrics) RenameWorker(oldName, newName string) {
 
 	if _, ok := m.totalWorkers[oldName]; ok {
 		m.totalWorkers[newName] = m.totalWorkers[oldName]
+		delete(m.totalWorkers, oldName)
 	}
 
 	if _, ok := m.busyWorkers[oldName]; ok {
 		m.busyWorkers[newName] = m.busyWorkers[oldName]
+		delete(m.busyWorkers, oldName)
 	}
 
 	if _, ok := m.workerRequestTime[oldName]; ok {
 		m.workerRequestTime[newName] = m.workerRequestTime[oldName]
+		delete(m.workerRequestTime, oldName)
 	}
 
 	if _, ok := m.workerRequestCount[oldName]; ok {
 		m.workerRequestCount[newName] = m.workerRequestCount[oldName]
+		delete(m.workerRequestCount, oldName)
 	}
 }
 
