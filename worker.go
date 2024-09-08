@@ -37,8 +37,6 @@ func startWorkers(fileName string, nbWorkers int, env PreparedEnv) error {
 		return fmt.Errorf("workers %q: %w", fileName, err)
 	}
 
-	metrics.RenameWorker(fileName, absFileName)
-
 	if _, ok := workersRequestChans.Load(absFileName); ok {
 		return fmt.Errorf("workers %q: already started", absFileName)
 	}

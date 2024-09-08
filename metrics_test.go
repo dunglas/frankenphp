@@ -56,7 +56,8 @@ func TestPrometheusMetrics_TotalWorkers(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			m.TotalWorkers(tt.worker, tt.num)
-			_, ok := m.totalWorkers[tt.worker]
+			actualName, _ := m.getIdentity(tt.worker)
+			_, ok := m.totalWorkers[actualName]
 			require.True(t, ok)
 		})
 	}
