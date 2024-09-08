@@ -368,7 +368,7 @@ func TestMetrics(t *testing.T) {
 
 	# HELP frankenphp_busy_threads Number of busy PHP threads
 	# TYPE frankenphp_busy_threads gauge
-	frankenphp_busy_threads 1
+	frankenphp_busy_threads 0
 	`
 
 	require.NoError(t, testutil.GatherAndCompare(prometheus.DefaultGatherer, strings.NewReader(expectedMetrics), "frankenphp_total_threads", "frankenphp_busy_threads"))

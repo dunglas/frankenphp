@@ -109,8 +109,11 @@ func (f *FrankenPHPApp) Start() error {
 	return nil
 }
 
-func (*FrankenPHPApp) Stop() error {
+func (f *FrankenPHPApp) Stop() error {
 	caddy.Log().Info("FrankenPHP stopped 🐘")
+	// reset configuration so it doesn't bleed into later tests
+	f.Workers = nil
+	f.NumThreads = 0
 
 	return nil
 }
