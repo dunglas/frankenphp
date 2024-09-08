@@ -246,6 +246,39 @@ func Config() PHPConfig {
 	}
 }
 
+// MaxThreads is the maximum number of threads that can be started, it is set by frankenphp.Init and should be considered read-only.
+var MaxThreads int
+
+func calculateMaxThreads(opt *opt) error {
+	maxProcs := runtime.GOMAXPROCS(0) * 2
+
+	var numWorkers int
+	for i, w := range opt.workers {
+		if w.num <= 0 {
+			// https://github.com/dunglas/frankenphp/issues/126
+			opt.workers[i].num = maxProcs
+		}
+		metrics.TotalWorkers(w.fileName, w.num)
+
+		numWorkers += opt.workers[i].num
+	}
+
+	if opt.numThreads <= 0 {
+		if numWorkers >= maxProcs {
+			// Start at least as many threads as workers, and keep a free thread to handle requests in non-worker mode
+			opt.numThreads = numWorkers + 1
+		} else {
+			opt.numThreads = maxProcs
+		}
+	} else if opt.numThreads <= numWorkers {
+		return NotEnoughThreads
+	}
+
+	metrics.TotalThreads(opt.numThreads)
+	MaxThreads = opt.numThreads
+	return nil
+}
+
 // Init starts the PHP runtime and the configured workers.
 func Init(options ...Option) error {
 	if requestChan != nil {
@@ -274,35 +307,14 @@ func Init(options ...Option) error {
 		loggerMu.Unlock()
 	}
 
-	maxProcs := runtime.GOMAXPROCS(0)
-
 	if opt.metrics != nil {
 		metrics = opt.metrics
 	}
 
-	var numWorkers int
-	for i, w := range opt.workers {
-		if w.num <= 0 {
-			// https://github.com/dunglas/frankenphp/issues/126
-			opt.workers[i].num = maxProcs * 2
-		}
-		metrics.TotalWorkers(w.fileName, w.num)
-
-		numWorkers += opt.workers[i].num
+	err := calculateMaxThreads(opt)
+	if err != nil {
+		return err
 	}
-
-	if opt.numThreads <= 0 {
-		if numWorkers >= maxProcs {
-			// Start at least as many threads as workers, and keep a free thread to handle requests in non-worker mode
-			opt.numThreads = numWorkers + 1
-		} else {
-			opt.numThreads = maxProcs
-		}
-	} else if opt.numThreads <= numWorkers {
-		return NotEnoughThreads
-	}
-
-	metrics.TotalThreads(opt.numThreads)
 
 	config := Config()
 
