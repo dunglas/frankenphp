@@ -146,9 +146,8 @@ development environments.
 }
 ```
 
-The configuration above will watch the `/path/to/app` directory recursively.
-
-#### Watcher Shortform
+The configuration above will watch the `/path/to/app` directory recursively. 
+If any file changes, the worker will be restarted.
 
 You can also add multiple `watch` directives and use simple wildcard patterns, the following is valid:
 
@@ -156,50 +155,37 @@ You can also add multiple `watch` directives and use simple wildcard patterns, t
 {
     frankenphp {
         watch /path/to/folder1             # watches all subdirectories
-        watch /path/to/folder2/*.php       # watches only php files in the app directory
-        watch /path/to/folder3/**/*.php    # watches only php files in the app directory and subdirectories
-        watch /path/to/folder4 poll        # watches all subdirectories with the 'poll' monitor type
+        watch /path/to/folder2/*.php       # watches files ending in .php in the /path/to/folder2 directory
+        watch /path/to/folder3/**/*.php    # watches files ending in .php in the /path/to/folder3 directory and subdirectories
     }
 }
 ```
 
-#### Watcher Longform
-
-It's also possible to pass a more verbose config, that uses fswatch's native regular expressions, which
-allow more fine-grained control over what files are watched:
+Multiple directories can also be watched in one block:
 
 ```caddyfile
 {
     frankenphp {
         watch {
-            path /path/to/folder1     # required: directory to watch
-            path /path/to/folder2     # multiple directories can be watched
-            recursive true            # watch subdirectories (default: true)
-            follow_symlinks false     # weather to follow symlinks (default: false)
-            exclude \.log$            # regex to exclude files (example: those ending in .log)
-            include \system.log$      # regex to include excluded files (example: those ending in system.log)
-            case_sensitive false      # use case sensitive regex (default: false)
-            extended_regex false      # use extended regex (default: false)
-            pattern *.php             # only include files matching a wildcard pattern (example: those ending in .php)
-            monitor_type default      # allowed: "default", "fsevents", "kqueue", "inotify", "windows", "poll", "fen"
-            delay 150                 # delay of triggering file change events in ms
+            dir /path/to/folder1
+            dir /path/to/folder2
+            dir /path/to/folder3
+            recursive true
+            pattern *.php
         }
     }
 }
 ```
 
 #### Some notes
-
-- ``include`` will only apply to excluded files
-- If ``include`` is defined, exclude will default to '\.', excluding all directories and files containing a dot
-- Excluding all files with ``exclude`` currently does not work properly on [some linux systems](https://github.com/emcrisostomo/fswatch/issues/247)
-- When watching a lot of files (10.000+), you might need to increase the limit of open files allowed by your system.
-  The watcher will fail with an error message if the limit is reached. It's also possible to fall back to the
-  `poll` monitor type, which consumes more CPU but should work on any system.
 - Directories can also be relative (to where the frankenphp process was started from)
-- Be wary about watching files that are created at runtime (like logs), since they might cause unwanted worker restarts.
+- The `/**/` pattern signifies recursive watching
+- If the last part of the pattern contains the characters `*`, `?`, `[`, `\` or `.`, it will be matched against the
+  shell [filename pattern](https://pkg.go.dev/path/filepath#Match)
+- The watcher will ignore symlinks
+- Be wary about watching files that are created at runtime (like logs) since they might cause unwanted worker restarts.
 
-The file watcher is based on [fswatch](https://github.com/emcrisostomo/fswatch).
+The file watcher is based on [e-dant/watcher](https://github.com/e-dant/watcher).
 
 ### Full Duplex (HTTP/1)
 

@@ -1,17 +1,25 @@
 package frankenphp
 
+// #cgo LDFLAGS: -lwatcher-c-0.11.0
+// #cgo CFLAGS: -Wall -Werror
+// #include <stdint.h>
+// #include <stdlib.h>
+// #include "watcher.h"
+import "C"
 import (
-	fswatch "github.com/dunglas/go-fswatch"
+
 	"go.uber.org/zap"
 	"sync"
 	"time"
+	"runtime/cgo"
+	"unsafe"
+	"errors"
 )
 
 type watcher struct {
-	sessions   []*fswatch.Session
+	sessions   []unsafe.Pointer
 	workerOpts []workerOpt
-	trigger    chan struct{}
-	stop       chan struct{}
+	watchOpts []watchOpt
 }
 
 // duration to wait before reloading workers after a file change
@@ -22,6 +30,8 @@ var (
 	activeWatcher *watcher
 	// when stopping the watcher we need to wait for reloading to finish
 	reloadWaitGroup sync.WaitGroup
+	triggerWatcher  chan struct{}
+	stopWatcher    chan struct{}
 )
 
 func initWatcher(watchOpts []watchOpt, workerOpts []workerOpt) error {
@@ -48,83 +58,66 @@ func drainWatcher() {
 	activeWatcher = nil
 }
 
+func startWatchOpt(watchOpt *watchOpt) (unsafe.Pointer, error) {
+	handle := cgo.NewHandle(watchOpt)
+	cPathTranslated := (*C.char)(C.CString(watchOpt.dirs[0]))
+    watchSession := C.start_new_watcher(cPathTranslated, C.uintptr_t(handle))
+    if(watchSession == C.NULL){
+    	logger.Error("couldn't start watching", zap.Strings("dirs", watchOpt.dirs))
+    	return nil, errors.New("couldn't start watching")
+    }
+	return watchSession, nil
+}
+
+func stopWatchSession(session unsafe.Pointer){
+	success := C.stop_watcher(session)
+	if(success == 0){
+		logger.Error("couldn't stop watching")
+	}
+}
+
+//export go_handle_event
+func go_handle_event(path *C.char, eventType C.int, pathType C.int, handle C.uintptr_t) {
+	watchOpt := cgo.Handle(handle).Value().(*watchOpt)
+	if watchOpt.allowReload(C.GoString(path), int(eventType), int(pathType)) {
+		logger.Debug("valid file change detected", zap.String("path",  C.GoString(path)))
+		triggerWatcher <- struct{}{}
+	}
+}
+
 func (w *watcher) startWatching(watchOpts []watchOpt) error {
-	w.sessions = make([]*fswatch.Session, len(watchOpts))
-	w.trigger = make(chan struct{})
-	w.stop = make(chan struct{})
-	for i, watchOpt := range watchOpts {
-		session, err := createSession(&watchOpt, w.trigger)
+	w.sessions = make([]unsafe.Pointer, len(watchOpts))
+	w.watchOpts = watchOpts
+	triggerWatcher = make(chan struct{})
+	stopWatcher = make(chan struct{})
+	for i, watchOpt := range w.watchOpts {
+		session, err := startWatchOpt(&watchOpt)
 		if err != nil {
 			logger.Error("unable to watch dirs", zap.Strings("dirs", watchOpt.dirs))
 			return err
 		}
 		w.sessions[i] = session
-		go startSession(session)
 	}
-	go listenForFileEvents(w.trigger, w.stop)
+	go listenForFileEvents()
 	return nil
 }
 
 func (w *watcher) stopWatching() {
-	close(w.stop)
+	close(stopWatcher)
 	for _, session := range w.sessions {
-		if err := session.Stop(); err != nil {
-        	logger.Error("failed to stop watcher", zap.Error(err))
-        }
-	}
-	// mandatory grace period between stopping and destroying the watcher
-    // TODO: what is a good value here? fswatch sleeps for 3s in tests...
-    time.Sleep(100 * time.Millisecond)
-    for _, session := range w.sessions {
-        if err := session.Destroy(); err != nil {
-            logger.Error("failed to stop watcher", zap.Error(err))
-        }
-    }
-}
-
-func createSession(watchOpt *watchOpt, triggerWatcher chan struct{}) (*fswatch.Session, error) {
-	opts := []fswatch.Option{
-		fswatch.WithRecursive(watchOpt.isRecursive),
-		fswatch.WithFollowSymlinks(watchOpt.followSymlinks),
-		fswatch.WithEventTypeFilters(watchOpt.eventTypes),
-		fswatch.WithLatency(watchOpt.latency),
-		fswatch.WithMonitorType((fswatch.MonitorType)(watchOpt.monitorType)),
-		fswatch.WithFilters(watchOpt.filters),
-	}
-	handleFileEvent := registerEventHandler(watchOpt, triggerWatcher)
-	logger.Debug("starting watcher session", zap.Strings("dirs", watchOpt.dirs))
-	return fswatch.NewSession(watchOpt.dirs, handleFileEvent, opts...)
-}
-
-func startSession(session *fswatch.Session) {
-	err := session.Start()
-	if err != nil {
-		logger.Error("failed to start watcher", zap.Error(err))
-		logger.Warn("make sure you are not reaching your system's max number of open files")
+		stopWatchSession(session)
 	}
 }
 
-func registerEventHandler(watchOpt *watchOpt, triggerWatcher chan struct{}) func([]fswatch.Event) {
-	return func(events []fswatch.Event) {
-		for _, event := range events {
-			if watchOpt.allowReload(event.Path) {
-				logger.Debug("filesystem change detected", zap.String("path", event.Path))
-				triggerWatcher <- struct{}{}
-				break
-			}
-		}
-	}
-}
-
-func listenForFileEvents(trigger chan struct{}, stop chan struct{}) {
+func listenForFileEvents() {
 	timer := time.NewTimer(debounceDuration)
 	timer.Stop()
 	defer timer.Stop()
 	for {
 		select {
-		case <-stop:
+		case <-stopWatcher:
 			break
-		case <-trigger:
+		case <-triggerWatcher:
 			timer.Reset(debounceDuration)
 		case <-timer.C:
 			timer.Stop()
