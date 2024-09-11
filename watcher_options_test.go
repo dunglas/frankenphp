@@ -41,104 +41,104 @@ func TestAllowReloadOnMatchingPattern(t *testing.T) {
 		WithWatcherPattern("*.php"),
 	)
 
-	assert.True(t, watchOpt.allowReload(fileName, 0 , 0))
+	assert.True(t, watchOpt.allowReload(fileName, 0, 0))
 }
 
 func TestAllowReloadOnExactMatch(t *testing.T) {
 	const fileName = "/some/path/watch-me.php"
 	watchOpt := createWithOptions(
-        t,
-        WithWatcherDirs([]string{"/some/path"}),
-        WithWatcherPattern("watch-me.php"),
-    )
+		t,
+		WithWatcherDirs([]string{"/some/path"}),
+		WithWatcherPattern("watch-me.php"),
+	)
 
-	assert.True(t, watchOpt.allowReload(fileName, 0 , 0))
+	assert.True(t, watchOpt.allowReload(fileName, 0, 0))
 }
 
 func TestDisallowOnDifferentFilename(t *testing.T) {
 	const fileName = "/some/path/watch-me.php"
 	watchOpt := createWithOptions(
-        t,
-        WithWatcherDirs([]string{"/some/path"}),
-        WithWatcherPattern("dont-watch.php"),
-    )
+		t,
+		WithWatcherDirs([]string{"/some/path"}),
+		WithWatcherPattern("dont-watch.php"),
+	)
 
-	assert.False(t, watchOpt.allowReload(fileName, 0 , 0))
+	assert.False(t, watchOpt.allowReload(fileName, 0, 0))
 }
 
 func TestAllowReloadOnRecursiveDirectory(t *testing.T) {
 	const fileName = "/some/path/watch-me.php"
 	watchOpt := createWithOptions(
-        t,
-        WithWatcherDirs([]string{"/some"}),
-        WithWatcherRecursion(true),
-        WithWatcherPattern("*.php"),
-    )
+		t,
+		WithWatcherDirs([]string{"/some"}),
+		WithWatcherRecursion(true),
+		WithWatcherPattern("*.php"),
+	)
 
-	assert.True(t, watchOpt.allowReload(fileName, 0 , 0))
+	assert.True(t, watchOpt.allowReload(fileName, 0, 0))
 }
 
 func TestAllowReloadWithRecursionAndNoPattern(t *testing.T) {
 	const fileName = "/some/path/watch-me.php"
 	watchOpt := createWithOptions(
-        t,
-        WithWatcherDirs([]string{"/some"}),
-        WithWatcherRecursion(true),
-    )
+		t,
+		WithWatcherDirs([]string{"/some"}),
+		WithWatcherRecursion(true),
+	)
 
-	assert.True(t, watchOpt.allowReload(fileName, 0 , 0))
+	assert.True(t, watchOpt.allowReload(fileName, 0, 0))
 }
 
 func TestDisallowOnDifferentPatterns(t *testing.T) {
 	const fileName = "/some/path/watch-me.php"
 	watchOpt := createWithOptions(
-        t,
-        WithWatcherDirs([]string{"/some"}),
-        WithWatcherRecursion(true),
-        WithWatcherPattern(".txt"),
-    )
+		t,
+		WithWatcherDirs([]string{"/some"}),
+		WithWatcherRecursion(true),
+		WithWatcherPattern(".txt"),
+	)
 
-	assert.False(t, watchOpt.allowReload(fileName, 0 , 0))
+	assert.False(t, watchOpt.allowReload(fileName, 0, 0))
 }
 
 func TestDisallowOnMissingRecursion(t *testing.T) {
 	const fileName = "/some/path/watch-me.php"
 	watchOpt := createWithOptions(
-        t,
-        WithWatcherDirs([]string{"/some"}),
-        WithWatcherRecursion(false),
-        WithWatcherPattern(".php"),
-    )
+		t,
+		WithWatcherDirs([]string{"/some"}),
+		WithWatcherRecursion(false),
+		WithWatcherPattern(".php"),
+	)
 
-	assert.False(t, watchOpt.allowReload(fileName, 0 , 0))
+	assert.False(t, watchOpt.allowReload(fileName, 0, 0))
 }
 
 func TestDisallowOnEventTypeBiggerThan3(t *testing.T) {
 	const fileName = "/some/path/watch-me.php"
 	const eventType = 4
 	watchOpt := createWithOptions(
-        t,
-        WithWatcherDirs([]string{"/some/path"}),
-        WithWatcherPattern("watch-me.php"),
-    )
+		t,
+		WithWatcherDirs([]string{"/some/path"}),
+		WithWatcherPattern("watch-me.php"),
+	)
 
-	assert.False(t, watchOpt.allowReload(fileName, eventType , 0))
+	assert.False(t, watchOpt.allowReload(fileName, eventType, 0))
 }
 
 func TestDisallowOnPathTypeBiggerThan2(t *testing.T) {
 	const fileName = "/some/path/watch-me.php"
 	const pathType = 3
 	watchOpt := createWithOptions(
-        t,
-        WithWatcherDirs([]string{"/some/path"}),
-        WithWatcherPattern("watch-me.php"),
-    )
+		t,
+		WithWatcherDirs([]string{"/some/path"}),
+		WithWatcherPattern("watch-me.php"),
+	)
 
-	assert.False(t, watchOpt.allowReload(fileName, 0 , pathType))
+	assert.False(t, watchOpt.allowReload(fileName, 0, pathType))
 }
 
 func createWithOptions(t *testing.T, applyOptions ...WatchOption) watchOpt {
-	watchOpt :=watchOpt{}
+	watchOpt := watchOpt{}
 
 	for _, applyOption := range applyOptions {
 		err := applyOption(&watchOpt)

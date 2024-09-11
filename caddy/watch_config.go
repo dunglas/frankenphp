@@ -3,8 +3,8 @@ package caddy
 import (
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/dunglas/frankenphp"
-	"strings"
 	"path/filepath"
+	"strings"
 )
 
 type watchConfig struct {
@@ -26,8 +26,8 @@ func applyWatchConfig(opts []frankenphp.Option, watchConfig watchConfig) []frank
 
 func parseWatchDirective(f *FrankenPHPApp, d *caddyfile.Dispenser) error {
 	if !d.NextArg() {
-        return d.Err("The 'watch' directive must be followed by a path")
-    }
+		return d.Err("The 'watch' directive must be followed by a path")
+	}
 	f.Watch = append(f.Watch, parseFullPattern(d.Val()))
 
 	return nil
@@ -55,4 +55,3 @@ func parseFullPattern(filePattern string) watchConfig {
 
 	return watchConfig
 }
-

@@ -36,10 +36,10 @@ func TestWorkersShouldReloadOnMatchingPattern(t *testing.T) {
 
 func TestWorkersShouldNotReloadOnExcludingPattern(t *testing.T) {
 	watchOptions := []frankenphp.WatchOption{
-        frankenphp.WithWatcherDirs([]string{"./testdata"}),
-        frankenphp.WithWatcherPattern("*.php"),
-        frankenphp.WithWatcherRecursion(true),
-    }
+		frankenphp.WithWatcherDirs([]string{"./testdata"}),
+		frankenphp.WithWatcherPattern("*.php"),
+		frankenphp.WithWatcherRecursion(true),
+	}
 
 	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
 		requestBodyHasReset := pollForWorkerReset(t, handler, minTimesToPollForChanges)

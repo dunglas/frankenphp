@@ -7,21 +7,20 @@ package frankenphp
 // #include "watcher.h"
 import "C"
 import (
-
+	"errors"
 	"go.uber.org/zap"
+	"runtime/cgo"
 	"sync"
 	"time"
-	"runtime/cgo"
 	"unsafe"
-	"errors"
 )
 
 type watcher struct {
 	sessions   []unsafe.Pointer
 	workerOpts []workerOpt
-	watchOpts []watchOpt
-	trigger chan struct{}
-	stop chan struct{}
+	watchOpts  []watchOpt
+	trigger    chan struct{}
+	stop       chan struct{}
 }
 
 // duration to wait before reloading workers after a file change
@@ -86,17 +85,17 @@ func (w *watcher) stopWatching() {
 func startSession(watchOpt *watchOpt) (unsafe.Pointer, error) {
 	handle := cgo.NewHandle(watchOpt)
 	cPathTranslated := (*C.char)(C.CString(watchOpt.dirs[0]))
-    watchSession := C.start_new_watcher(cPathTranslated, C.uintptr_t(handle))
-    if(watchSession == C.NULL){
-    	logger.Error("couldn't start watching", zap.Strings("dirs", watchOpt.dirs))
-    	return nil, errors.New("couldn't start watching")
-    }
+	watchSession := C.start_new_watcher(cPathTranslated, C.uintptr_t(handle))
+	if watchSession == C.NULL {
+		logger.Error("couldn't start watching", zap.Strings("dirs", watchOpt.dirs))
+		return nil, errors.New("couldn't start watching")
+	}
 	return watchSession, nil
 }
 
-func stopSession(session unsafe.Pointer){
+func stopSession(session unsafe.Pointer) {
 	success := C.stop_watcher(session)
-	if(success == 1){
+	if success == 1 {
 		logger.Error("couldn't stop watching")
 	}
 }
@@ -105,7 +104,7 @@ func stopSession(session unsafe.Pointer){
 func go_handle_event(path *C.char, eventType C.int, pathType C.int, handle C.uintptr_t) {
 	watchOpt := cgo.Handle(handle).Value().(*watchOpt)
 	if watchOpt.allowReload(C.GoString(path), int(eventType), int(pathType)) {
-		logger.Debug("valid file change detected", zap.String("path",  C.GoString(path)))
+		logger.Debug("valid file change detected", zap.String("path", C.GoString(path)))
 		watchOpt.trigger <- struct{}{}
 	}
 }

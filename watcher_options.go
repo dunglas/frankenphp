@@ -8,10 +8,10 @@ import (
 type WatchOption func(o *watchOpt) error
 
 type watchOpt struct {
-	dirs            []string
-	isRecursive     bool
-	pattern         string
-	trigger         chan struct{}
+	dirs        []string
+	isRecursive bool
+	pattern     string
+	trigger     chan struct{}
 }
 
 func WithWatcherDirs(dirs []string) WatchOption {
@@ -51,7 +51,7 @@ func parseAbsPath(path string) (string, error) {
 }
 
 func (watchOpt *watchOpt) allowReload(fileName string, eventType int, pathType int) bool {
-	if(!isValidEventType(eventType) || !isValidPathType(pathType)) {
+	if !isValidEventType(eventType) || !isValidPathType(pathType) {
 		return false
 	}
 	if watchOpt.pattern == "" {
@@ -63,15 +63,15 @@ func (watchOpt *watchOpt) allowReload(fileName string, eventType int, pathType i
 		logger.Error("failed to match filename", zap.String("file", fileName), zap.Error(err))
 		return false
 	}
-	if(watchOpt.isRecursive){
+	if watchOpt.isRecursive {
 		return patternMatches
 	}
 	fileNameDir := filepath.Dir(fileName)
-    for _, dir := range watchOpt.dirs {
-        if dir == fileNameDir {
-            return patternMatches
-        }
-    }
+	for _, dir := range watchOpt.dirs {
+		if dir == fileNameDir {
+			return patternMatches
+		}
+	}
 	return false
 }
 
@@ -84,7 +84,6 @@ func isValidEventType(eventType int) bool {
 func isValidPathType(eventType int) bool {
 	return eventType <= 2
 }
-
 
 func isValidPath(fileName string) bool {
 	return fileName != ""
