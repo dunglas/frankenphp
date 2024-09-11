@@ -146,7 +146,7 @@ development environments.
 }
 ```
 
-The configuration above will watch the `/path/to/app` directory recursively. 
+The configuration above will watch the `/path/to/app` directory recursively.
 If any file changes, the worker will be restarted.
 
 You can also add multiple `watch` directives and use simple wildcard patterns, the following is valid:
@@ -178,6 +178,7 @@ Multiple directories can also be watched in one block:
 ```
 
 #### Some notes
+
 - Directories can also be relative (to where the frankenphp process was started from)
 - The `/**/` pattern signifies recursive watching
 - If the last part of the pattern contains the characters `*`, `?`, `[`, `\` or `.`, it will be matched against the
