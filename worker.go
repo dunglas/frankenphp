@@ -158,6 +158,7 @@ func restartWorkers(workerOpts []workerOpt) {
 		panic(err)
 	}
 	logger.Info("workers restarted successfully")
+	//TODO: Clear op_cache here at some point
 }
 
 //export go_frankenphp_worker_ready
