@@ -4,10 +4,14 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
+
+	mercureModule "github.com/dunglas/mercure/caddy"
+	"go.uber.org/zap/zapcore"
 
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig"
@@ -18,7 +22,6 @@ import (
 	"github.com/caddyserver/caddy/v2/modules/caddyhttp/rewrite"
 	"github.com/caddyserver/certmagic"
 	"github.com/dunglas/frankenphp"
-	"go.uber.org/zap"
 
 	"github.com/spf13/cobra"
 )
@@ -26,7 +29,7 @@ import (
 func init() {
 	caddycmd.RegisterCommand(caddycmd.Command{
 		Name:  "php-server",
-		Usage: "[--domain <example.com>] [--root <path>] [--listen <addr>] [--worker /path/to/worker.php<,nb-workers>] [--access-log] [--debug] [--no-compress]",
+		Usage: "[--domain <example.com>] [--root <path>] [--listen <addr>] [--worker /path/to/worker.php<,nb-workers>] [--access-log] [--debug] [--no-compress] [--mercure]",
 		Short: "Spins up a production-ready PHP server",
 		Long: `
 A simple but production-ready PHP server. Useful for quick deployments,
@@ -47,7 +50,8 @@ For more advanced use cases, see https://github.com/dunglas/frankenphp/blob/main
 			cmd.Flags().StringArrayP("worker", "w", []string{}, "Worker script")
 			cmd.Flags().BoolP("access-log", "a", false, "Enable the access log")
 			cmd.Flags().BoolP("debug", "v", false, "Enable verbose debug logs")
-			cmd.Flags().BoolP("no-compress", "", false, "Disable Zstandard and Gzip compression")
+			cmd.Flags().BoolP("mercure", "m", false, "Enable the built-in Mercure.rocks hub")
+			cmd.Flags().BoolP("no-compress", "", false, "Disable Zstandard, Brotli and Gzip compression")
 			cmd.RunE = caddycmd.WrapCommandFuncForCobra(cmdPHPServer)
 		},
 	})
@@ -63,6 +67,7 @@ func cmdPHPServer(fs caddycmd.Flags) (int, error) {
 	accessLog := fs.Bool("access-log")
 	debug := fs.Bool("debug")
 	compress := !fs.Bool("no-compress")
+	mercure := fs.Bool("mercure")
 
 	workers, err := fs.GetStringArray("worker")
 	if err != nil {
@@ -88,6 +93,27 @@ func cmdPHPServer(fs caddycmd.Flags) (int, error) {
 	}
 
 	if frankenphp.EmbeddedAppPath != "" {
+		if _, err := os.Stat(filepath.Join(frankenphp.EmbeddedAppPath, "php.ini")); err == nil {
+			iniScanDir := os.Getenv("PHP_INI_SCAN_DIR")
+
+			if err := os.Setenv("PHP_INI_SCAN_DIR", iniScanDir+":"+frankenphp.EmbeddedAppPath); err != nil {
+				return caddy.ExitCodeFailedStartup, err
+			}
+		}
+
+		if _, err := os.Stat(filepath.Join(frankenphp.EmbeddedAppPath, "Caddyfile")); err == nil {
+			config, _, err := caddycmd.LoadConfig(filepath.Join(frankenphp.EmbeddedAppPath, "Caddyfile"), "")
+			if err != nil {
+				return caddy.ExitCodeFailedStartup, err
+			}
+
+			if err = caddy.Load(config, true); err != nil {
+				return caddy.ExitCodeFailedStartup, err
+			}
+
+			select {}
+		}
+
 		if root == "" {
 			root = filepath.Join(frankenphp.EmbeddedAppPath, defaultDocumentRoot)
 		} else if filepath.IsLocal(root) {
@@ -99,9 +125,11 @@ func cmdPHPServer(fs caddycmd.Flags) (int, error) {
 	extensions := []string{"php"}
 	tryFiles := []string{"{http.request.uri.path}", "{http.request.uri.path}/" + indexFile, indexFile}
 
+	rrs := true
 	phpHandler := FrankenPHPModule{
-		Root:      root,
-		SplitPath: extensions,
+		Root:               root,
+		SplitPath:          extensions,
+		ResolveRootSymlink: &rrs,
 	}
 
 	// route to redirect to canonical path if index PHP file
@@ -175,6 +203,11 @@ func cmdPHPServer(fs caddycmd.Flags) (int, error) {
 			return caddy.ExitCodeFailedStartup, err
 		}
 
+		br, err := caddy.GetModule("http.encoders.br")
+		if err != nil {
+			return caddy.ExitCodeFailedStartup, err
+		}
+
 		zstd, err := caddy.GetModule("http.encoders.zstd")
 		if err != nil {
 			return caddy.ExitCodeFailedStartup, err
@@ -185,13 +218,47 @@ func cmdPHPServer(fs caddycmd.Flags) (int, error) {
 			HandlersRaw: []json.RawMessage{caddyconfig.JSONModuleObject(encode.Encode{
 				EncodingsRaw: caddy.ModuleMap{
 					"zstd": caddyconfig.JSON(zstd.New(), nil),
+					"br":   caddyconfig.JSON(br.New(), nil),
 					"gzip": caddyconfig.JSON(gzip.New(), nil),
 				},
-				Prefer: []string{"zstd", "gzip"},
+				Prefer: []string{"zstd", "br", "gzip"},
 			}, "handler", "encode", nil)},
 		}
 
 		subroute.Routes = append(caddyhttp.RouteList{encodeRoute}, subroute.Routes...)
+	}
+
+	if mercure {
+		mercurePublisherJwtKey := os.Getenv("MERCURE_PUBLISHER_JWT_KEY")
+		if mercurePublisherJwtKey == "" {
+			panic(`The "MERCURE_PUBLISHER_JWT_KEY" environment variable must be set to use the Mercure.rocks hub`)
+		}
+
+		mercureSubscriberJwtKey := os.Getenv("MERCURE_SUBSCRIBER_JWT_KEY")
+		if mercureSubscriberJwtKey == "" {
+			panic(`The "MERCURE_SUBSCRIBER_JWT_KEY" environment variable must be set to use the Mercure.rocks hub`)
+		}
+
+		mercureRoute := caddyhttp.Route{
+			HandlersRaw: []json.RawMessage{caddyconfig.JSONModuleObject(
+				mercureModule.Mercure{
+					PublisherJWT: mercureModule.JWTConfig{
+						Alg: os.Getenv("MERCURE_PUBLISHER_JWT_ALG"),
+						Key: mercurePublisherJwtKey,
+					},
+					SubscriberJWT: mercureModule.JWTConfig{
+						Alg: os.Getenv("MERCURE_SUBSCRIBER_JWT_ALG"),
+						Key: mercureSubscriberJwtKey,
+					},
+				},
+				"handler",
+				"mercure",
+				nil,
+			),
+			},
+		}
+
+		subroute.Routes = append(caddyhttp.RouteList{mercureRoute}, subroute.Routes...)
 	}
 
 	route := caddyhttp.Route{
@@ -246,7 +313,7 @@ func cmdPHPServer(fs caddycmd.Flags) (int, error) {
 		cfg.Logging = &caddy.Logging{
 			Logs: map[string]*caddy.CustomLog{
 				"default": {
-					BaseLog: caddy.BaseLog{Level: zap.DebugLevel.CapitalString()},
+					BaseLog: caddy.BaseLog{Level: zapcore.DebugLevel.CapitalString()},
 				},
 			},
 		}

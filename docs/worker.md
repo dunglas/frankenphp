@@ -11,9 +11,9 @@ Set the value of the `FRANKENPHP_CONFIG` environment variable to `worker /path/t
 
 ```console
 docker run \
-    -e APP_RUNTIME=Runtime\\FrankenPhpSymfony\\Runtime \
+    -e FRANKENPHP_CONFIG="worker /app/path/to/your/worker/script.php" \
     -v $PWD:/app \
-    -p 80:80 -p 443:443 \
+    -p 80:80 -p 443:443 -p 443:443/udp \
     dunglas/frankenphp
 ```
 
@@ -24,6 +24,9 @@ Use the `--worker` option of the `php-server` command to serve the content of th
 ```console
 ./frankenphp php-server --worker /path/to/your/worker/script.php
 ```
+
+If your PHP app is [embeded in the binary](embed.md), you can add a custom `Caddyfile` in the root directory of the app.
+It will be used automatically.
 
 ## Symfony Runtime
 
@@ -41,13 +44,13 @@ docker run \
     -e FRANKENPHP_CONFIG="worker ./public/index.php" \
     -e APP_RUNTIME=Runtime\\FrankenPhpSymfony\\Runtime \
     -v $PWD:/app \
-    -p 80:80 -p 443:443 \
+    -p 80:80 -p 443:443 -p 443:443/udp \
     dunglas/frankenphp
 ```
 
 ## Laravel Octane
 
-See [this Pull Request](https://github.com/laravel/octane/pull/764).
+See [the dedicated documentation](laravel.md#laravel-octane).
 
 ## Custom Apps
 
@@ -66,21 +69,25 @@ require __DIR__.'/vendor/autoload.php';
 $myApp = new \App\Kernel();
 $myApp->boot();
 
-$nbRequests = 0;
-do {
-    $handler = static function () use ($myApp) {
-        // Called when a request is received,
-        // superglobals, php://input and the like are reset
-        echo $myApp->handle($_GET, $_POST, $_COOKIE, $_FILES, $_SERVER);
-    };
-    $running = \frankenphp_handle_request($handler);
+// Handler outside the loop for better performance (doing less work)
+$handler = static function () use ($myApp) {
+    // Called when a request is received,
+    // superglobals, php://input and the like are reset
+    echo $myApp->handle($_GET, $_POST, $_COOKIE, $_FILES, $_SERVER);
+};
+
+$maxRequests = (int)($_SERVER['MAX_REQUESTS'] ?? 0);
+for ($nbRequests = 0; !$maxRequests || $nbRequests < $maxRequests; ++$nbRequests) {
+    $keepRunning = \frankenphp_handle_request($handler);
 
     // Do something after sending the HTTP response
     $myApp->terminate();
 
     // Call the garbage collector to reduce the chances of it being triggered in the middle of a page generation
     gc_collect_cycles();
-} while ($running && !(isset($_SERVER['MAX_REQUESTS']) && ++$nbRequests >= $_SERVER['MAX_REQUESTS']));
+
+    if (!$keepRunning) break;
+}
 
 // Cleanup
 $myApp->shutdown();
@@ -92,18 +99,18 @@ Then, start your app and use the `FRANKENPHP_CONFIG` environment variable to con
 docker run \
     -e FRANKENPHP_CONFIG="worker ./public/index.php" \
     -v $PWD:/app \
-    -p 80:80 -p 443:443 \
+    -p 80:80 -p 443:443 -p 443:443/udp \
     dunglas/frankenphp
 ```
 
-By default, one worker per CPU is started.
+By default, 2 workers per CPU are started.
 You can also configure the number of workers to start:
 
 ```console
 docker run \
     -e FRANKENPHP_CONFIG="worker ./public/index.php 42" \
     -v $PWD:/app \
-    -p 80:80 -p 443:443 \
+    -p 80:80 -p 443:443 -p 443:443/udp \
     dunglas/frankenphp
 ```
 
@@ -113,3 +120,26 @@ As PHP was not originally designed for long-running processes, there are still m
 A workaround to using this type of code in worker mode is to restart the worker script after processing a certain number of requests:
 
 The previous worker snippet allows configuring a maximum number of request to handle by setting an environment variable named `MAX_REQUESTS`.
+
+## Superglobals Behavior
+
+[PHP superglobals](https://www.php.net/manual/en/language.variables.superglobals.php) (`$_SERVER`, `$_ENV`, `$_GET`...)
+behave as follows:
+
+* before the first call to `frankenphp_handle_request()`, superglobals contain values bound to the worker script itself
+* during and after the call to `frankenphp_handle_request()`, superglobals contain values generated from the processed HTTP request, each call to `frankenphp_handle_request()` changes the superglobals values
+
+To access the superglobals of the worker script inside the callback, you must copy them and import the copy in the scope of the callback:
+
+```php
+<?php
+// Copy worker's $_SERVER superglobal before the first call to frankenphp_handle_request()
+$workerServer = $_SERVER;
+
+$handler = static function () use ($workerServer) {
+    var_dump($_SERVER); // Request-bound $_SERVER
+    var_dump($workerServer); // $_SERVER of the worker script
+};
+
+// ...
+```

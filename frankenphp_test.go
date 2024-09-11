@@ -1,10 +1,16 @@
+// In all tests, headers added to requests are copied on the heap using strings.Clone.
+// This was originally a workaround for https://github.com/golang/go/issues/65286#issuecomment-1920087884 (fixed in Go 1.22),
+// but this allows to catch panics occuring in real life but not when the string is in the internal binary memory.
+
 package frankenphp_test
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
 	"log"
+	"mime/multipart"
 	"net/http"
 	"net/http/cookiejar"
 	"net/http/httptest"
@@ -22,6 +28,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 	"go.uber.org/zap/zaptest"
 	"go.uber.org/zap/zaptest/observer"
 )
@@ -128,8 +135,8 @@ func TestServerVariable_worker(t *testing.T) {
 func testServerVariable(t *testing.T, opts *testOptions) {
 	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
 		req := httptest.NewRequest("POST", fmt.Sprintf("http://example.com/server-variable.php/baz/bat?foo=a&bar=b&i=%d#hash", i), strings.NewReader("foo"))
-		req.SetBasicAuth("kevin", "password")
-		req.Header.Add("Content-Type", "text/plain")
+		req.SetBasicAuth(strings.Clone("kevin"), strings.Clone("password"))
+		req.Header.Add(strings.Clone("Content-Type"), strings.Clone("text/plain"))
 		w := httptest.NewRecorder()
 		handler(w, req)
 
@@ -171,13 +178,14 @@ func TestPathInfo_worker(t *testing.T) {
 	testPathInfo(t, &testOptions{workerScript: "server-variable.php"})
 }
 func testPathInfo(t *testing.T, opts *testOptions) {
+	cwd, _ := os.Getwd()
+	testDataDir := cwd + strings.Clone("/testdata/")
+	path := strings.Clone("/server-variable.php/pathinfo")
+
 	runTest(t, func(_ func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
 		handler := func(w http.ResponseWriter, r *http.Request) {
-			cwd, _ := os.Getwd()
-			testDataDir := cwd + "/testdata/"
-
 			requestURI := r.URL.RequestURI()
-			r.URL.Path = "/server-variable.php/pathinfo"
+			r.URL.Path = path
 
 			rewriteRequest, err := frankenphp.NewRequestWithContext(r,
 				frankenphp.WithRequestDocumentRoot(testDataDir, false),
@@ -226,6 +234,33 @@ func testHeaders(t *testing.T, opts *testOptions) {
 	}, opts)
 }
 
+func TestResponseHeaders_module(t *testing.T) { testResponseHeaders(t, nil) }
+func TestResponseHeaders_worker(t *testing.T) {
+	testResponseHeaders(t, &testOptions{workerScript: "response-headers.php"})
+}
+func testResponseHeaders(t *testing.T, opts *testOptions) {
+	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
+		req := httptest.NewRequest("GET", fmt.Sprintf("http://example.com/response-headers.php?i=%d", i), nil)
+		w := httptest.NewRecorder()
+		handler(w, req)
+
+		resp := w.Result()
+		body, _ := io.ReadAll(resp.Body)
+
+		if i%3 != 0 {
+			assert.Equal(t, i+100, resp.StatusCode)
+		} else {
+			assert.Equal(t, 200, resp.StatusCode)
+		}
+
+		assert.Contains(t, string(body), "'X-Powered-By' => 'PH")
+		assert.Contains(t, string(body), "'Foo' => 'bar',")
+		assert.Contains(t, string(body), "'Foo2' => 'bar2',")
+		assert.Contains(t, string(body), fmt.Sprintf("'I' => '%d',", i))
+		assert.NotContains(t, string(body), "Invalid")
+	}, opts)
+}
+
 func TestInput_module(t *testing.T) { testInput(t, nil) }
 func TestInput_worker(t *testing.T) { testInput(t, &testOptions{workerScript: "input.php"}) }
 func testInput(t *testing.T, opts *testOptions) {
@@ -250,7 +285,7 @@ func testPostSuperGlobals(t *testing.T, opts *testOptions) {
 	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
 		formData := url.Values{"baz": {"bat"}, "i": {fmt.Sprintf("%d", i)}}
 		req := httptest.NewRequest("POST", fmt.Sprintf("http://example.com/super-globals.php?foo=bar&iG=%d", i), strings.NewReader(formData.Encode()))
-		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		req.Header.Set("Content-Type", strings.Clone("application/x-www-form-urlencoded"))
 		w := httptest.NewRecorder()
 		handler(w, req)
 
@@ -376,7 +411,7 @@ func TestLog_worker(t *testing.T) {
 	testLog(t, &testOptions{workerScript: "log.php"})
 }
 func testLog(t *testing.T, opts *testOptions) {
-	logger, logs := observer.New(zap.InfoLevel)
+	logger, logs := observer.New(zapcore.InfoLevel)
 	opts.logger = zap.New(logger)
 
 	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
@@ -396,7 +431,7 @@ func TestConnectionAbort_worker(t *testing.T) {
 func testConnectionAbort(t *testing.T, opts *testOptions) {
 	testFinish := func(finish string) {
 		t.Run(fmt.Sprintf("finish=%s", finish), func(t *testing.T) {
-			logger, logs := observer.New(zap.InfoLevel)
+			logger, logs := observer.New(zapcore.InfoLevel)
 			opts.logger = zap.New(logger)
 
 			runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
@@ -514,7 +549,7 @@ func testLargeRequest(t *testing.T, opts *testOptions) {
 		req := httptest.NewRequest(
 			"POST",
 			fmt.Sprintf("http://example.com/large-request.php?i=%d", i),
-			strings.NewReader(strings.Repeat("f", 1_048_576)),
+			strings.NewReader(strings.Repeat("f", 6_048_576)),
 		)
 		w := httptest.NewRecorder()
 		handler(w, req)
@@ -522,7 +557,7 @@ func testLargeRequest(t *testing.T, opts *testOptions) {
 		resp := w.Result()
 		body, _ := io.ReadAll(resp.Body)
 
-		assert.Contains(t, string(body), fmt.Sprintf("Request body size: 1048576 (%d)", i))
+		assert.Contains(t, string(body), fmt.Sprintf("Request body size: 6048576 (%d)", i))
 	}, opts)
 }
 
@@ -550,6 +585,54 @@ func testFiberNoCgo(t *testing.T, opts *testOptions) {
 		body, _ := io.ReadAll(resp.Body)
 
 		assert.Equal(t, string(body), fmt.Sprintf("Fiber %d", i))
+	}, opts)
+}
+
+func TestRequestHeaders_module(t *testing.T) { testRequestHeaders(t, &testOptions{}) }
+func TestRequestHeaders_worker(t *testing.T) {
+	testRequestHeaders(t, &testOptions{workerScript: "request-headers.php"})
+}
+func testRequestHeaders(t *testing.T, opts *testOptions) {
+	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
+		req := httptest.NewRequest("GET", fmt.Sprintf("http://example.com/request-headers.php?i=%d", i), nil)
+		req.Header.Add(strings.Clone("Content-Type"), strings.Clone("text/plain"))
+		req.Header.Add(strings.Clone("Frankenphp-I"), strings.Clone(strconv.Itoa(i)))
+
+		w := httptest.NewRecorder()
+		handler(w, req)
+
+		resp := w.Result()
+		body, _ := io.ReadAll(resp.Body)
+
+		assert.Contains(t, string(body), "[Content-Type] => text/plain")
+		assert.Contains(t, string(body), fmt.Sprintf("[Frankenphp-I] => %d", i))
+	}, opts)
+}
+
+func TestFileUpload_module(t *testing.T) { testFileUpload(t, &testOptions{}) }
+func TestFileUpload_worker(t *testing.T) {
+	testFileUpload(t, &testOptions{workerScript: "file-upload.php"})
+}
+func testFileUpload(t *testing.T, opts *testOptions) {
+	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
+		requestBody := &bytes.Buffer{}
+		writer := multipart.NewWriter(requestBody)
+		part, _ := writer.CreateFormFile("file", "foo.txt")
+		_, err := part.Write([]byte("bar"))
+		require.NoError(t, err)
+
+		writer.Close()
+
+		req := httptest.NewRequest("POST", "http://example.com/file-upload.php", requestBody)
+		req.Header.Add("Content-Type", writer.FormDataContentType())
+
+		w := httptest.NewRecorder()
+		handler(w, req)
+
+		resp := w.Result()
+		body, _ := io.ReadAll(resp.Body)
+
+		assert.Contains(t, string(body), "Upload OK")
 	}, opts)
 }
 
@@ -623,6 +706,7 @@ func BenchmarkHelloWorld(b *testing.B) {
 	req := httptest.NewRequest("GET", "http://example.com/index.php", nil)
 	w := httptest.NewRecorder()
 
+	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		handler(w, req)
 	}
@@ -688,8 +772,79 @@ func BenchmarkEcho(b *testing.B) {
 	req := httptest.NewRequest("POST", "http://example.com/echo.php", r)
 	w := httptest.NewRecorder()
 
+	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		r.Reset(body)
+		handler(w, req)
+	}
+}
+
+func BenchmarkServerSuperGlobal(b *testing.B) {
+	if err := frankenphp.Init(frankenphp.WithLogger(zap.NewNop())); err != nil {
+		panic(err)
+	}
+	defer frankenphp.Shutdown()
+	cwd, _ := os.Getwd()
+	testDataDir := cwd + "/testdata/"
+
+	// Mimicks headers of a request sent by Firefox to GitHub
+	headers := http.Header{}
+	headers.Add(strings.Clone("Accept"), strings.Clone("text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8"))
+	headers.Add(strings.Clone("Accept-Encoding"), strings.Clone("gzip, deflate, br"))
+	headers.Add(strings.Clone("Accept-Language"), strings.Clone("fr,fr-FR;q=0.8,en-US;q=0.5,en;q=0.3"))
+	headers.Add(strings.Clone("Cache-Control"), strings.Clone("no-cache"))
+	headers.Add(strings.Clone("Connection"), strings.Clone("keep-alive"))
+	headers.Add(strings.Clone("Cookie"), strings.Clone("user_session=myrandomuuid; __Host-user_session_same_site=myotherrandomuuid; dotcom_user=dunglas; logged_in=yes; _foo=barbarbarbarbarbar; _device_id=anotherrandomuuid; color_mode=foobarfoobarfoobarfoobarfoobarfoobarfoobarfoobarfoobarfoobarfoobarfoobarfoobarfoobarfoobarfoobarfoobarfoobarfoobarfoobarfoobarfoobarfoobarfoobar; preferred_color_mode=light; tz=Europe%2FParis; has_recent_activity=1"))
+	headers.Add(strings.Clone("DNT"), strings.Clone("1"))
+	headers.Add(strings.Clone("Host"), strings.Clone("example.com"))
+	headers.Add(strings.Clone("Pragma"), strings.Clone("no-cache"))
+	headers.Add(strings.Clone("Sec-Fetch-Dest"), strings.Clone("document"))
+	headers.Add(strings.Clone("Sec-Fetch-Mode"), strings.Clone("navigate"))
+	headers.Add(strings.Clone("Sec-Fetch-Site"), strings.Clone("cross-site"))
+	headers.Add(strings.Clone("Sec-GPC"), strings.Clone("1"))
+	headers.Add(strings.Clone("Upgrade-Insecure-Requests"), strings.Clone("1"))
+	headers.Add(strings.Clone("User-Agent"), strings.Clone("Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:122.0) Gecko/20100101 Firefox/122.0"))
+
+	// Env vars available in a typical Docker container
+	env := map[string]string{
+		"HOSTNAME":        "a88e81aa22e4",
+		"PHP_INI_DIR":     "/usr/local/etc/php",
+		"HOME":            "/root",
+		"GODEBUG":         "cgocheck=0",
+		"PHP_LDFLAGS":     "-Wl,-O1 -pie",
+		"PHP_CFLAGS":      "-fstack-protector-strong -fpic -fpie -O2 -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64",
+		"PHP_VERSION":     "8.3.2",
+		"GPG_KEYS":        "1198C0117593497A5EC5C199286AF1F9897469DC C28D937575603EB4ABB725861C0779DC5C0A9DE4 AFD8691FDAEDF03BDF6E460563F15A9B715376CA",
+		"PHP_CPPFLAGS":    "-fstack-protector-strong -fpic -fpie -O2 -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64",
+		"PHP_ASC_URL":     "https://www.php.net/distributions/php-8.3.2.tar.xz.asc",
+		"PHP_URL":         "https://www.php.net/distributions/php-8.3.2.tar.xz",
+		"PATH":            "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+		"XDG_CONFIG_HOME": "/config",
+		"XDG_DATA_HOME":   "/data",
+		"PHPIZE_DEPS":     "autoconf dpkg-dev file g++ gcc libc-dev make pkg-config re2c",
+		"PWD":             "/app",
+		"PHP_SHA256":      "4ffa3e44afc9c590e28dc0d2d31fc61f0139f8b335f11880a121b9f9b9f0634e",
+	}
+
+	preparedEnv := frankenphp.PrepareEnv(env)
+
+	handler := func(w http.ResponseWriter, r *http.Request) {
+		req, err := frankenphp.NewRequestWithContext(r, frankenphp.WithRequestDocumentRoot(testDataDir, false), frankenphp.WithRequestPreparedEnv(preparedEnv))
+		if err != nil {
+			panic(err)
+		}
+
+		r.Header = headers
+		if err := frankenphp.ServeHTTP(w, req); err != nil {
+			panic(err)
+		}
+	}
+
+	req := httptest.NewRequest("GET", "http://example.com/server-variable.php", nil)
+	w := httptest.NewRecorder()
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
 		handler(w, req)
 	}
 }

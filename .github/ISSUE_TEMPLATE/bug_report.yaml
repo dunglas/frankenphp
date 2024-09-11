@@ -1,0 +1,89 @@
+---
+name: Bug Report
+description: File a bug report
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out this bug report!
+        Before submitting a bug, please double-check that your problem [is not
+        a known issue](https://frankenphp.dev/docs/known-issues/)
+        (especially if you use XDebug or Tideways), and that is has not
+        [already been reported](https://github.com/dunglas/frankenphp/issues).
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: |
+        Tell us what you do, what you get and what you expected.
+        Provide us with some step-by-step instructions to reproduce the issue.
+    validations:
+      required: true
+  - type: dropdown
+    id: build
+    attributes:
+      label: Build Type
+      description: What build of FrankenPHP do you use?
+      options:
+        - Docker (Debian Bookworm)
+        - Docker (Alpine)
+        - Official static build
+        - Standalone binary
+        - Custom (tell us more in the description)
+      default: 0
+    validations:
+      required: true
+  - type: dropdown
+    id: worker
+    attributes:
+      label: Worker Mode
+      description: Does the problem happen only when using the worker mode?
+      options:
+        - "Yes"
+        - "No"
+      default: 0
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating System
+      description: What operating system are you executing FrankenPHP with?
+      options:
+        - GNU/Linux
+        - macOS
+        - Other (tell us more in the description)
+      default: 0
+    validations:
+      required: true
+  - type: dropdown
+    id: arch
+    attributes:
+      label: CPU Architecture
+      description: What CPU architecture are you using?
+      options:
+        - x86_64
+        - Apple Silicon
+        - x86
+        - aarch64
+        - Other (tell us more in the description)
+      default: 0
+  - type: textarea
+    id: php
+    attributes:
+      label: PHP configuration
+      description: |
+        Please copy and paste the output of the `phpinfo()` function.
+      render: shell
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant log output
+      description: |
+        Please copy and paste any relevant log output.
+        This will be automatically formatted into code,
+        so no need for backticks.
+      render: shell

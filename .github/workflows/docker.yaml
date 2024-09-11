@@ -1,53 +1,75 @@
 ---
 name: Build Docker images
+concurrency:
+  cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.ref }}
 on:
   pull_request:
     branches:
       - main
+    paths-ignore:
+      - 'docs/**'
   push:
     branches:
       - main
     tags:
       - v*.*.*
   workflow_dispatch:
-    inputs: {}
+    inputs:
+      #checkov:skip=CKV_GHA_7
+      version:
+        description: 'FrankenPHP version'
+        required: false
+        type: string
   schedule:
     - cron:  '0 4 * * *'
+permissions:
+  contents: read
+env:
+  IMAGE_NAME: ${{ (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.version) || startsWith(github.ref, 'refs/tags/')) && 'dunglas/frankenphp' || 'dunglas/frankenphp-dev' }}
 jobs:
   prepare:
     runs-on: ubuntu-latest
     outputs:
       # Push if it's a scheduled job, a tag, or if we're committing to the main branch
-      push: ${{ toJson(github.event_name == 'schedule' || startsWith(github.ref, 'refs/tags/') || (github.ref == 'refs/heads/main' && github.event_name != 'pull_request')) }}
+      push: ${{ (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.version) || startsWith(github.ref, 'refs/tags/') || (github.ref == 'refs/heads/main' && github.event_name != 'pull_request')) && true || false }}
       variants: ${{ steps.matrix.outputs.variants }}
       platforms: ${{ steps.matrix.outputs.platforms }}
       metadata: ${{ steps.matrix.outputs.metadata }}
       php_version: ${{ steps.check.outputs.php_version }}
+      php82_version: ${{ steps.check.outputs.php82_version }}
+      php83_version: ${{ steps.check.outputs.php83_version }}
       skip: ${{ steps.check.outputs.skip }}
-      ref: ${{ steps.check.outputs.ref }}
+      ref: ${{ steps.check.outputs.ref || (github.event_name == 'workflow_dispatch' && inputs.version) || '' }}
     steps:
       -
         name: Check PHP versions
         id: check
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           PHP_82_LATEST=$(skopeo inspect docker://docker.io/library/php:8.2 --override-os linux --override-arch amd64 | jq -r '.Env[] | select(test("^PHP_VERSION=")) | sub("^PHP_VERSION="; "")')
           PHP_83_LATEST=$(skopeo inspect docker://docker.io/library/php:8.3 --override-os linux --override-arch amd64 | jq -r '.Env[] | select(test("^PHP_VERSION=")) | sub("^PHP_VERSION="; "")')
-          echo php_version="${PHP_83_LATEST},${PHP_82_LATEST}" >> "${GITHUB_OUTPUT}"
-          
+          {
+            echo php_version="${PHP_83_LATEST},${PHP_82_LATEST}"
+            echo php82_version="${PHP_82_LATEST//./-}"
+            echo php83_version="${PHP_83_LATEST//./-}"
+          } >> "${GITHUB_OUTPUT}"
+
           # Check if the Docker images must be rebuilt
           if [[ "${GITHUB_EVENT_NAME}" != "schedule"  ]]; then
               echo skip=false >> "${GITHUB_OUTPUT}"
               exit 0
           fi
-          
+
           FRANKENPHP_82_LATEST=$(skopeo inspect docker://docker.io/dunglas/frankenphp:latest-php8.2 --override-os linux --override-arch amd64 | jq -r '.Env[] | select(test("^PHP_VERSION=")) | sub("^PHP_VERSION="; "")')
           FRANKENPHP_83_LATEST=$(skopeo inspect docker://docker.io/dunglas/frankenphp:latest-php8.3 --override-os linux --override-arch amd64 | jq -r '.Env[] | select(test("^PHP_VERSION=")) | sub("^PHP_VERSION="; "")')
-          
+
           if [[ "${FRANKENPHP_82_LATEST}" == "${PHP_82_LATEST}" ]] && [[ "${FRANKENPHP_83_LATEST}" == "${PHP_83_LATEST}" ]]; then
               echo skip=true >> "${GITHUB_OUTPUT}"
               exit 0
           fi
-          
+
           {
             echo ref="$(gh release view --repo dunglas/frankenphp --json tagName --jq '.tagName')"
             echo skip=false
@@ -59,9 +81,8 @@ jobs:
           ref: ${{ steps.check.outputs.ref }}
       -
         name: Set up Docker Buildx
+        if: ${{ !fromJson(steps.check.outputs.skip) }}
         uses: docker/setup-buildx-action@v3
-        with:
-          version: latest
       -
         name: Create variants matrix
         if: ${{ !fromJson(steps.check.outputs.skip) }}
@@ -75,7 +96,7 @@ jobs:
           } >> "${GITHUB_OUTPUT}"
         env:
           SHA: ${{ github.sha }}
-          VERSION: ${{ (github.ref_type == 'tag' && github.ref_name) || steps.check.outputs.ref || github.sha }}
+          VERSION: ${{ (github.ref_type == 'tag' && github.ref_name) || steps.check.outputs.ref || 'dev' }}
           PHP_VERSION: ${{ steps.check.outputs.php_version }}
   build:
     runs-on: ubuntu-latest
@@ -88,13 +109,24 @@ jobs:
         variant: ${{ fromJson(needs.prepare.outputs.variants) }}
         platform: ${{ fromJson(needs.prepare.outputs.platforms) }}
         include:
-          - race: ""
+          -
+            race: ""
             qemu: true
-          - platform: linux/amd64
+          -
+            platform: linux/amd64
             qemu: false
             race: "-race" # The Go race detector is only supported on amd64
-          - platform: linux/386
+          -
+            platform: linux/386
             qemu: false
+        exclude:
+          # arm/v6 is only available for Alpine: https://github.com/docker-library/golang/issues/502
+          -
+            variant: php-${{ needs.prepare.outputs.php82_version }}-bookworm
+            platform: linux/arm/v6
+          -
+            variant: php-${{ needs.prepare.outputs.php83_version }}-bookworm
+            platform: linux/arm/v6
     steps:
       -
         uses: actions/checkout@v4
@@ -111,7 +143,6 @@ jobs:
         uses: docker/setup-buildx-action@v3
         with:
           platforms: ${{ matrix.platform }}
-          version: latest
       -
         name: Login to DockerHub
         if: fromJson(needs.prepare.outputs.push)
@@ -122,7 +153,7 @@ jobs:
       -
         name: Build
         id: build
-        uses: docker/bake-action@v4
+        uses: docker/bake-action@v5
         with:
           pull: true
           load: ${{ !fromJson(needs.prepare.outputs.push) }}
@@ -133,13 +164,13 @@ jobs:
           set: |
             *.tags=
             *.platform=${{ matrix.platform }}
-            *.cache-from=type=gha,scope=${{ github.ref }}-${{ matrix.platform }}
+            *.cache-from=type=gha,scope=${{ needs.prepare.outputs.ref || github.ref }}-${{ matrix.platform }}
             *.cache-from=type=gha,scope=refs/heads/main-${{ matrix.platform }}
-            *.cache-to=type=gha,scope=${{ github.ref }}-${{ matrix.platform }}
-            ${{ fromJson(needs.prepare.outputs.push) && '*.output=type=image,name=dunglas/frankenphp,push-by-digest=true,name-canonical=true,push=true' || '' }}
+            *.cache-to=type=gha,scope=${{ needs.prepare.outputs.ref || github.ref }}-${{ matrix.platform }},ignore-error=true
+            ${{ fromJson(needs.prepare.outputs.push) && format('*.output=type=image,name={0},push-by-digest=true,name-canonical=true,push=true', env.IMAGE_NAME) || '' }}
         env:
           SHA: ${{ github.sha }}
-          VERSION: ${{ github.ref_type == 'tag' && github.ref_name  || needs.prepare.outputs.ref || github.sha }}
+          VERSION: ${{ (github.ref_type == 'tag' && github.ref_name) || needs.prepare.outputs.ref || 'dev' }}
           PHP_VERSION: ${{ needs.prepare.outputs.php_version }}
       -
         # Workaround for https://github.com/actions/runner/pull/2477#issuecomment-1501003600
@@ -148,12 +179,10 @@ jobs:
         run: |
           mkdir -p /tmp/metadata/builder /tmp/metadata/runner
 
-          # shellcheck disable=SC2086
-          builderDigest=$(jq -r '."builder-${{ matrix.variant }}"."containerimage.digest"' <<< ${METADATA})
+          builderDigest=$(jq -r '."builder-${{ matrix.variant }}"."containerimage.digest"' <<< "${METADATA}")
           touch "/tmp/metadata/builder/${builderDigest#sha256:}"
 
-          # shellcheck disable=SC2086
-          runnerDigest=$(jq -r '."runner-${{ matrix.variant }}"."containerimage.digest"' <<< ${METADATA})
+          runnerDigest=$(jq -r '."runner-${{ matrix.variant }}"."containerimage.digest"' <<< "${METADATA}")
           touch "/tmp/metadata/runner/${runnerDigest#sha256:}"
         env:
           METADATA: ${{ steps.build.outputs.metadata }}
@@ -177,8 +206,7 @@ jobs:
           retention-days: 1
       -
         name: Run tests
-        if: '!matrix.qemu'
-        continue-on-error: ${{ fromJson(needs.prepare.outputs.push) }}
+        if: ${{ !matrix.qemu && !fromJson(needs.prepare.outputs.push) }}
         run: |
           docker run --platform=${{ matrix.platform }} --rm \
             "$(jq -r '."builder-${{ matrix.variant }}"."containerimage.config.digest"' <<< "${METADATA}")" \
@@ -207,8 +235,6 @@ jobs:
       -
         name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-        with:
-          version: latest
       -
         name: Login to DockerHub
         uses: docker/login-action@v3
@@ -219,9 +245,10 @@ jobs:
         name: Create manifest list and push
         working-directory: /tmp/metadata
         run: |
+          set -x
           # shellcheck disable=SC2046,SC2086
           docker buildx imagetools create $(jq -cr '.target."${{ matrix.target }}-${{ matrix.variant }}".tags | map("-t " + .) | join(" ")' <<< ${METADATA}) \
-            $(printf 'dunglas/frankenphp@sha256:%s ' *)
+            $(printf "${IMAGE_NAME}@sha256:%s " *)
         env:
           METADATA: ${{ needs.prepare.outputs.metadata }}
       -

@@ -5,31 +5,22 @@
 		#worker /path/to/your/worker.php
 		{$FRANKENPHP_CONFIG}
 	}
-
-	# https://caddyserver.com/docs/caddyfile/directives#sorting-algorithm
-	order mercure after encode
-	order vulcain after reverse_proxy
-	order php_server before file_server
-	order php before file_server
 }
 
 {$CADDY_EXTRA_CONFIG}
 
 {$SERVER_NAME:localhost} {
-	log {
-		# Redact the authorization query parameter that can be set by Mercure
-		format filter {
-			wrap console
-			fields {
-				uri query {
-					replace authorization REDACTED
-				}
-			}
-		}
-	}
+	#log {
+	#	# Redact the authorization query parameter that can be set by Mercure
+	#	format filter {
+	#		request>uri query {
+	#			replace authorization REDACTED
+	#		}
+	#	}
+	#}
 
 	root * public/
-	encode zstd gzip
+	encode zstd br gzip
 
 	# Uncomment the following lines to enable Mercure and Vulcain modules
 	#mercure {

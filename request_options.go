@@ -36,6 +36,16 @@ func WithRequestDocumentRoot(documentRoot string, resolveSymlink bool) RequestOp
 	}
 }
 
+// WithRequestResolvedDocumentRoot is similar to WithRequestDocumentRoot
+// but doesn't does any checks or resolving on the path to improve performance.
+func WithRequestResolvedDocumentRoot(documentRoot string) RequestOption {
+	return func(o *FrankenPHPContext) error {
+		o.documentRoot = documentRoot
+
+		return nil
+	}
+}
+
 // The path in the URL will be split into two, with the first piece ending
 // with the value of SplitPath. The first piece will be assumed as the
 // actual resource (CGI script) name, and the second piece will be set to
@@ -52,9 +62,24 @@ func WithRequestSplitPath(splitPath []string) RequestOption {
 	}
 }
 
-// WithEnv set CGI-like environment variables that will be available in $_SERVER.
+type PreparedEnv = map[string]string
+
+func PrepareEnv(env map[string]string) PreparedEnv {
+	preparedEnv := make(PreparedEnv, len(env))
+	for k, v := range env {
+		preparedEnv[k+"\x00"] = v
+	}
+
+	return preparedEnv
+}
+
+// WithRequestEnv set CGI-like environment variables that will be available in $_SERVER.
 // Values set with WithEnv always have priority over automatically populated values.
 func WithRequestEnv(env map[string]string) RequestOption {
+	return WithRequestPreparedEnv(PrepareEnv(env))
+}
+
+func WithRequestPreparedEnv(env PreparedEnv) RequestOption {
 	return func(o *FrankenPHPContext) error {
 		o.env = env
 
@@ -62,7 +87,7 @@ func WithRequestEnv(env map[string]string) RequestOption {
 	}
 }
 
-// WithLogger sets the logger associated with the current request
+// WithRequestLogger sets the logger associated with the current request
 func WithRequestLogger(logger *zap.Logger) RequestOption {
 	return func(o *FrankenPHPContext) error {
 		o.logger = logger

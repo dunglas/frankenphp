@@ -8,7 +8,7 @@ Build the dev Docker image:
 
 ```console
 docker build -t frankenphp-dev -f dev.Dockerfile .
-docker run --cap-add=SYS_PTRACE --security-opt seccomp=unconfined -p 8080:8080 -p 443:443 -v $PWD:/go/src/app -it frankenphp-dev
+docker run --cap-add=SYS_PTRACE --security-opt seccomp=unconfined -p 8080:8080 -p 443:443 -p 443:443/udp -v $PWD:/go/src/app -it frankenphp-dev
 ```
 
 The image contains the usual development tools (Go, GDB, Valgrind, Neovim...).  
@@ -19,7 +19,6 @@ If docker version is lower than 23.0, build is failed by dockerignore [pattern i
  !testdata/*.php
  !testdata/*.txt
 +!caddy
-+!C-Thread-Pool
 +!internal
 ```
 
@@ -105,6 +104,32 @@ Build FrankenPHP images from scratch for arm64 & amd64 and push to Docker Hub:
 docker buildx bake -f docker-bake.hcl --pull --no-cache --push
 ```
 
+## Debugging Segmentation Faults With Static Builds
+
+1. Download the debug version of the FrankenPHP binary from GitHub or create your custom static build including debug symbols:
+
+    ```console
+    docker buildx bake \
+        --load \
+        --set static-builder.args.DEBUG_SYMBOLS=1 \
+        --set "static-builder.platform=linux/amd64" \
+        static-builder
+    docker cp $(docker create --name static-builder dunglas/frankenphp:static-builder):/go/src/app/dist/frankenphp-linux-$(uname -m) frankenphp
+    ```
+
+2. Replace your current version of `frankenphp` by the debug FrankenPHP executable
+3. Start FrankenPHP as usual (alternatively, you can directly start FrankenPHP with GDB: `gdb --args ./frankenphp run`)
+4. Attach to the process with GDB:
+
+    ```console
+    gdb -p `pidof frankenphp`
+    ```
+
+5. If necessary, type `continue` in the GDB shell
+6. Make FrankenPHP crash
+7. Type `bt` in the GDB shell
+8. Copy the output
+
 ## Debugging Segmentation Faults in GitHub Actions
 
 1. Open `.github/workflows/tests.yml`
@@ -175,3 +200,17 @@ docker buildx bake -f docker-bake.hcl --pull --no-cache --push
 apk add strace util-linux gdb
 strace -e 'trace=!futex,epoll_ctl,epoll_pwait,tgkill,rt_sigreturn' -p 1
 ```
+
+## Translating the Documentation
+
+To translate the documentation and the site in a new language,
+follow these steps:
+
+1. Create a new directory named with the language's 2-character ISO code in this repository's `docs/` directory
+2. Copy all the `.md` files in the root of the `docs/` directory into the new directory (always use the English version as source for translation, as it's always up to date)
+3. Copy the `README.md` and `CONTRIBUTING.md` files from the root directory to the new directory
+4. Translate the content of the files, but don't change the filenames, also don't translates strings starting with `> [!` (it's special markup for GitHub)
+5. Create a Pull Request with the translations
+6. In the [site repository](https://github.com/dunglas/frankenphp-website/tree/main), copy and translate the translation files in the `content/`, `data/` and `i18n/` directories
+7. Translate the values in the created YAML file
+8. Open a Pull Request on the site repository

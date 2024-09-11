@@ -1,15 +1,18 @@
 # syntax=docker/dockerfile:1
+#checkov:skip=CKV_DOCKER_2
+#checkov:skip=CKV_DOCKER_3
+#checkov:skip=CKV_DOCKER_7
 FROM php-base AS common
 
 WORKDIR /app
 
 RUN apt-get update && \
-    apt-get -y --no-install-recommends install \
-        mailcap \
-        libcap2-bin \
-    && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+	apt-get -y --no-install-recommends install \
+		mailcap \
+		libcap2-bin \
+	&& \
+	apt-get clean && \
+	rm -rf /var/lib/apt/lists/*
 
 RUN set -eux; \
 	mkdir -p \
@@ -27,8 +30,8 @@ CMD ["--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile"]
 HEALTHCHECK CMD curl -f http://localhost:2019/metrics || exit 1
 
 # See https://caddyserver.com/docs/conventions#file-locations for details
-ENV XDG_CONFIG_HOME /config
-ENV XDG_DATA_HOME /data
+ENV XDG_CONFIG_HOME=/config
+ENV XDG_DATA_HOME=/data
 
 EXPOSE 80
 EXPOSE 443
@@ -50,22 +53,23 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 COPY --from=golang-base /usr/local/go /usr/local/go
 
-ENV PATH /usr/local/go/bin:$PATH
+ENV PATH=/usr/local/go/bin:$PATH
 
 # This is required to link the FrankenPHP binary to the PHP binary
 RUN apt-get update && \
-    apt-get -y --no-install-recommends install \
-    libargon2-dev \
-    libcurl4-openssl-dev \
-    libonig-dev \
-    libreadline-dev \
-    libsodium-dev \
-    libsqlite3-dev \
-    libssl-dev \
-    libxml2-dev \
-    zlib1g-dev \
-    && \
-    apt-get clean
+	apt-get -y --no-install-recommends install \
+	libargon2-dev \
+	libbrotli-dev \
+	libcurl4-openssl-dev \
+	libonig-dev \
+	libreadline-dev \
+	libsodium-dev \
+	libsqlite3-dev \
+	libssl-dev \
+	libxml2-dev \
+	zlib1g-dev \
+	&& \
+	apt-get clean
 
 WORKDIR /go/src/app
 
@@ -79,19 +83,19 @@ RUN go mod graph | awk '{if ($1 !~ "@") print $2}' | xargs go get
 WORKDIR /go/src/app
 COPY --link *.* ./
 COPY --link caddy caddy
-COPY --link C-Thread-Pool C-Thread-Pool
 COPY --link internal internal
 COPY --link testdata testdata
 
-# todo: automate this?
-# see https://github.com/docker-library/php/blob/master/8.2/bookworm/zts/Dockerfile#L57-L59 for PHP values
-ENV CGO_LDFLAGS="-lssl -lcrypto -lreadline -largon2 -lcurl -lonig -lz $PHP_LDFLAGS" CGO_CFLAGS="-DFRANKENPHP_VERSION=$FRANKENPHP_VERSION $PHP_CFLAGS" CGO_CPPFLAGS=$PHP_CPPFLAGS
+# See https://github.com/docker-library/php/blob/master/8.3/bookworm/zts/Dockerfile#L57-L59 for PHP values
+ENV CGO_CFLAGS="-DFRANKENPHP_VERSION=$FRANKENPHP_VERSION $PHP_CFLAGS"
+ENV CGO_CPPFLAGS=$PHP_CPPFLAGS
+ENV CGO_LDFLAGS="-lssl -lcrypto -lreadline -largon2 -lcurl -lonig -lz $PHP_LDFLAGS"
 
 WORKDIR /go/src/app/caddy/frankenphp
 RUN GOBIN=/usr/local/bin go install -ldflags "-w -s -X 'github.com/caddyserver/caddy/v2.CustomVersion=FrankenPHP $FRANKENPHP_VERSION PHP $PHP_VERSION Caddy'" && \
-    setcap cap_net_bind_service=+ep /usr/local/bin/frankenphp && \
-    cp Caddyfile /etc/caddy/Caddyfile && \
-    frankenphp version
+	setcap cap_net_bind_service=+ep /usr/local/bin/frankenphp && \
+	cp Caddyfile /etc/caddy/Caddyfile && \
+	frankenphp version
 
 WORKDIR /go/src/app
 

@@ -7,18 +7,22 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strconv"
 	"strings"
 	"testing"
 
 	"github.com/dunglas/frankenphp"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
+	"go.uber.org/zap/zaptest/observer"
 )
 
 func TestWorker(t *testing.T) {
 	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
 		formData := url.Values{"baz": {"bat"}}
 		req := httptest.NewRequest("POST", "http://example.com/worker.php?foo=bar", strings.NewReader(formData.Encode()))
-		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		req.Header.Set("Content-Type", strings.Clone("application/x-www-form-urlencoded"))
 		w := httptest.NewRecorder()
 		handler(w, req)
 
@@ -29,7 +33,7 @@ func TestWorker(t *testing.T) {
 
 		formData2 := url.Values{"baz2": {"bat2"}}
 		req2 := httptest.NewRequest("POST", "http://example.com/worker.php?foo2=bar2", strings.NewReader(formData2.Encode()))
-		req2.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		req2.Header.Set("Content-Type", strings.Clone("application/x-www-form-urlencoded"))
 
 		w2 := httptest.NewRecorder()
 		handler(w2, req2)
@@ -77,7 +81,7 @@ func TestCannotCallHandleRequestInNonWorkerMode(t *testing.T) {
 
 func TestWorkerEnv(t *testing.T) {
 	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
-		req := httptest.NewRequest("GET", fmt.Sprintf("http://example.com/env.php?i=%d", i), nil)
+		req := httptest.NewRequest("GET", fmt.Sprintf("http://example.com/worker-env.php?i=%d", i), nil)
 		w := httptest.NewRecorder()
 		handler(w, req)
 
@@ -85,7 +89,30 @@ func TestWorkerEnv(t *testing.T) {
 		body, _ := io.ReadAll(resp.Body)
 
 		assert.Equal(t, fmt.Sprintf("bar%d", i), string(body))
-	}, &testOptions{workerScript: "env.php", nbWorkers: 1, env: map[string]string{"FOO": "bar"}, nbParrallelRequests: 10})
+	}, &testOptions{workerScript: "worker-env.php", nbWorkers: 1, env: map[string]string{"FOO": "bar"}, nbParrallelRequests: 10})
+}
+
+func TestWorkerGetOpt(t *testing.T) {
+	observer, logs := observer.New(zapcore.InfoLevel)
+	logger := zap.New(observer)
+
+	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
+		req := httptest.NewRequest("GET", fmt.Sprintf("http://example.com/worker-getopt.php?i=%d", i), nil)
+		req.Header.Add("Request", strconv.Itoa(i))
+		w := httptest.NewRecorder()
+
+		handler(w, req)
+
+		resp := w.Result()
+		body, _ := io.ReadAll(resp.Body)
+
+		assert.Contains(t, string(body), fmt.Sprintf("[HTTP_REQUEST] => %d", i))
+		assert.Contains(t, string(body), fmt.Sprintf("[REQUEST_URI] => /worker-getopt.php?i=%d", i))
+	}, &testOptions{logger: logger, workerScript: "worker-getopt.php", env: map[string]string{"FOO": "bar"}})
+
+	for _, log := range logs.FilterFieldKey("exit_status").All() {
+		assert.Failf(t, "unexpected exit status", "exit status: %d", log.ContextMap()["exit_status"])
+	}
 }
 
 func ExampleServeHTTP_workers() {

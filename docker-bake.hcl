@@ -11,13 +11,13 @@ variable "PHP_VERSION" {
 }
 
 variable "GO_VERSION" {
-    default = "1.21"
+    default = "1.22"
 }
 
 variable "SHA" {}
 
 variable "LATEST" {
-    default = false
+    default = true
 }
 
 variable "CACHE" {
@@ -31,14 +31,14 @@ variable DEFAULT_PHP_VERSION {
 function "tag" {
     params = [version, os, php-version, tgt]
     result = [
-        version != "" ? format("%s:%s%s-php%s-%s", IMAGE_NAME, version, tgt == "builder" ? "-builder" : "", php-version, os) : "",
-        php-version == DEFAULT_PHP_VERSION && os == "bookworm"  && version != "" ? format("%s:%s%s", IMAGE_NAME, version, tgt == "builder" ? "-builder" : "") : "",
-        php-version == DEFAULT_PHP_VERSION && version != "" ? format("%s:%s%s-%s", IMAGE_NAME, version, tgt == "builder" ? "-builder" : "", os) : "",
-        php-version == DEFAULT_PHP_VERSION && version == "latest" ? format("%s:%s%s", IMAGE_NAME, os, tgt == "builder" ? "-builder" : "") : "",
-        os == "bookworm" && version != "" ? format("%s:%s%s-php%s", IMAGE_NAME, version, tgt == "builder" ? "-builder" : "", php-version) : "",
+        version == "" ? "" : "${IMAGE_NAME}:${trimprefix("${version}${tgt == "builder" ? "-builder" : ""}-php${php-version}-${os}", "latest-")}",
+        php-version == DEFAULT_PHP_VERSION && os == "bookworm" && version != "" ? "${IMAGE_NAME}:${trimprefix("${version}${tgt == "builder" ? "-builder" : ""}", "latest-")}" : "",
+        php-version == DEFAULT_PHP_VERSION && version != "" ? "${IMAGE_NAME}:${trimprefix("${version}${tgt == "builder" ? "-builder" : ""}-${os}", "latest-")}" : "",
+        os == "bookworm" && version != "" ? "${IMAGE_NAME}:${trimprefix("${version}${tgt == "builder" ? "-builder" : ""}-php${php-version}", "latest-")}" : "",
     ]
 }
 
+# cleanTag ensures that the tag is a valid Docker tag
 # cleanTag ensures that the tag is a valid Docker tag
 # see https://github.com/distribution/distribution/blob/v2.8.2/reference/regexp.go#L37
 function "clean_tag" {
@@ -60,7 +60,7 @@ function "_semver" {
 
 function "__semver" {
     params = [v]
-    result = v == {} ? [clean_tag(VERSION)] : v.prerelease == null ? ["latest", v.major, "${v.major}.${v.minor}", "${v.major}.${v.minor}.${v.patch}"] : ["${v.major}.${v.minor}.${v.patch}-${v.prerelease}"]
+    result = v == {} ? [clean_tag(VERSION)] : v.prerelease == null ? [v.major, "${v.major}.${v.minor}", "${v.major}.${v.minor}.${v.patch}"] : ["${v.major}.${v.minor}.${v.patch}-${v.prerelease}"]
 }
 
 function "php_version" {
@@ -87,18 +87,25 @@ target "default" {
     dockerfile = os == "alpine" ? "alpine.Dockerfile" : "Dockerfile"
     context = "./"
     target = tgt
-    platforms = [
+    # arm/v6 is only available for Alpine: https://github.com/docker-library/golang/issues/502
+    platforms = os == "alpine" ? [
         "linux/amd64",
         "linux/386",
-        "linux/arm/v6",
+        # FIXME: armv6 doesn't build in GitHub actions because we use a custom Go build
+        #"linux/arm/v6",
         "linux/arm/v7",
         "linux/arm64",
+    ] : [
+        "linux/amd64",
+        "linux/386",
+        "linux/arm/v7",
+        "linux/arm64"
     ]
     tags = distinct(flatten(
         [for pv in php_version(php-version) : flatten([
             LATEST ? tag("latest", os, pv, tgt) : [],
-            tag(SHA == "" ? "" : "sha-${substr(SHA, 0, 7)}", os, pv, tgt),
-            [for v in semver(VERSION) : tag(v, os, pv, tgt)]
+            tag(SHA == "" || VERSION != "dev" ? "" : "sha-${substr(SHA, 0, 7)}", os, pv, tgt),
+            VERSION == "dev" ? [] : [for v in semver(VERSION) : tag(v, os, pv, tgt)]
         ])
     ]))
     labels = {
@@ -117,11 +124,15 @@ target "static-builder" {
     }
     dockerfile = "static-builder.Dockerfile"
     context = "./"
+    platforms = [
+        "linux/amd64",
+        "linux/arm64",
+    ]
     tags = distinct(flatten([
         LATEST ? "${IMAGE_NAME}:static-builder" : "",
-        SHA == "" ? "" : "${IMAGE_NAME}:static-builder-sha-${substr(SHA, 0, 7)}",
-        [for v in semver(VERSION) : "${IMAGE_NAME}:static-builder-${v}"]
-    ])) 
+        SHA == "" || VERSION != "dev" ? "" : "${IMAGE_NAME}:static-builder-sha-${substr(SHA, 0, 7)}",
+        VERSION == "dev" ? [] : [for v in semver(VERSION) : "${IMAGE_NAME}:static-builder-${v}"]
+    ]))
     labels = {
         "org.opencontainers.image.created" = "${timestamp()}"
         "org.opencontainers.image.version" = VERSION

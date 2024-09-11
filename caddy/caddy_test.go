@@ -120,7 +120,7 @@ func TestEnv(t *testing.T) {
 
 			frankenphp {
 				worker {
-					file ../testdata/env.php
+					file ../testdata/worker-env.php
 					num 1
 					env FOO bar
 				}
@@ -137,7 +137,124 @@ func TestEnv(t *testing.T) {
 		}
 		`, "caddyfile")
 
-	tester.AssertGetResponse("http://localhost:9080/env.php", http.StatusOK, "bazbar")
+	tester.AssertGetResponse("http://localhost:9080/worker-env.php", http.StatusOK, "bazbar")
+}
+
+func TestJsonEnv(t *testing.T) {
+	tester := caddytest.NewTester(t)
+	tester.InitServer(`
+		{
+		"admin": {
+			"listen": "localhost:2999"
+		},
+		"apps": {
+			"frankenphp": {
+			"workers": [
+				{
+				"env": {
+					"FOO": "bar"
+				},
+				"file_name": "../testdata/worker-env.php",
+				"num": 1
+				}
+			]
+			},
+			"http": {
+			"http_port": 9080,
+			"https_port": 9443,
+			"servers": {
+				"srv0": {
+				"listen": [
+					":9080"
+				],
+				"routes": [
+					{
+					"handle": [
+						{
+						"handler": "subroute",
+						"routes": [
+							{
+							"handle": [
+								{
+								"handler": "subroute",
+								"routes": [
+									{
+									"handle": [
+										{
+										"env": {
+											"FOO": "baz"
+										},
+										"handler": "php",
+										"root": "../testdata"
+										}
+									]
+									}
+								]
+								}
+							]
+							}
+						]
+						}
+					],
+					"match": [
+						{
+						"host": [
+							"localhost"
+						]
+						}
+					],
+					"terminal": true
+					}
+				]
+				}
+			}
+			},
+			"pki": {
+			"certificate_authorities": {
+				"local": {
+				"install_trust": false
+				}
+			}
+			}
+		}
+		}
+		`, "json")
+
+	tester.AssertGetResponse("http://localhost:9080/worker-env.php", http.StatusOK, "bazbar")
+}
+
+func TestCustomCaddyVariablesInEnv(t *testing.T) {
+	tester := caddytest.NewTester(t)
+	tester.InitServer(`
+		{
+			skip_install_trust
+			admin localhost:2999
+			http_port 9080
+			https_port 9443
+
+			frankenphp {
+				worker {
+					file ../testdata/worker-env.php
+					num 1
+					env FOO world
+				}
+			}
+		}
+
+		localhost:9080 {
+			route {
+				map 1 {my_customvar} {
+					default "hello "
+				}
+				php {
+					root ../testdata
+					env FOO {my_customvar}
+				}
+			}
+		}
+		`, "caddyfile")
+
+	tester.AssertGetResponse("http://localhost:9080/worker-env.php", http.StatusOK, "hello world")
 }
 
 func TestPHPServerDirective(t *testing.T) {
@@ -150,7 +267,6 @@ func TestPHPServerDirective(t *testing.T) {
 			https_port 9443
 
 			frankenphp
-			order php_server before reverse_proxy
 		}
 
 		localhost:9080 {

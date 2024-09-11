@@ -12,6 +12,7 @@ import (
 	"sync"
 
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 var (
@@ -30,7 +31,7 @@ func initWorkers(opt []workerOpt) error {
 	return nil
 }
 
-func startWorkers(fileName string, nbWorkers int, env map[string]string) error {
+func startWorkers(fileName string, nbWorkers int, env PreparedEnv) error {
 	absFileName, err := filepath.Abs(fileName)
 	if err != nil {
 		return fmt.Errorf("workers %q: %w", fileName, err)
@@ -49,6 +50,12 @@ func startWorkers(fileName string, nbWorkers int, env map[string]string) error {
 		errs []error
 	)
 
+	if env == nil {
+		env = make(PreparedEnv, 1)
+	}
+
+	env["FRANKENPHP_WORKER\x00"] = "1"
+
 	l := getLogger()
 	for i := 0; i < nbWorkers; i++ {
 		go func() {
@@ -62,13 +69,16 @@ func startWorkers(fileName string, nbWorkers int, env map[string]string) error {
 				r, err = NewRequestWithContext(
 					r,
 					WithRequestDocumentRoot(filepath.Dir(absFileName), false),
-					WithRequestEnv(env),
+					WithRequestPreparedEnv(env),
 				)
 				if err != nil {
 					panic(err)
 				}
 
-				l.Debug("starting", zap.String("worker", absFileName))
+				if c := l.Check(zapcore.DebugLevel, "starting"); c != nil {
+					c.Write(zap.String("worker", absFileName), zap.Int("num", nbWorkers))
+				}
+
 				if err := ServeHTTP(nil, r); err != nil {
 					panic(err)
 				}
@@ -85,9 +95,13 @@ func startWorkers(fileName string, nbWorkers int, env map[string]string) error {
 				if _, ok := workersRequestChans.Load(absFileName); ok {
 					workersReadyWG.Add(1)
 					if fc.exitStatus == 0 {
-						l.Info("restarting", zap.String("worker", absFileName))
+						if c := l.Check(zapcore.InfoLevel, "restarting"); c != nil {
+							c.Write(zap.String("worker", absFileName))
+						}
 					} else {
-						l.Error("unexpected termination, restarting", zap.String("worker", absFileName), zap.Int("exit_status", int(fc.exitStatus)))
+						if c := l.Check(zapcore.ErrorLevel, "unexpected termination, restarting"); c != nil {
+							c.Write(zap.String("worker", absFileName), zap.Int("exit_status", int(fc.exitStatus)))
+						}
 					}
 				} else {
 					break
@@ -95,7 +109,9 @@ func startWorkers(fileName string, nbWorkers int, env map[string]string) error {
 			}
 
 			// TODO: check if the termination is expected
-			l.Debug("terminated", zap.String("worker", absFileName))
+			if c := l.Check(zapcore.DebugLevel, "terminated"); c != nil {
+				c.Write(zap.String("worker", absFileName))
+			}
 		}()
 	}
 
@@ -135,26 +151,35 @@ func go_frankenphp_worker_handle_request_start(mrh C.uintptr_t) C.uintptr_t {
 	}
 
 	rc := v.(chan *http.Request)
-
 	l := getLogger()
 
-	l.Debug("waiting for request", zap.String("worker", fc.scriptFilename))
+	if c := l.Check(zapcore.DebugLevel, "waiting for request"); c != nil {
+		c.Write(zap.String("worker", fc.scriptFilename))
+	}
 
 	var r *http.Request
 	select {
 	case <-done:
-		l.Debug("shutting down", zap.String("worker", fc.scriptFilename))
+		if c := l.Check(zapcore.DebugLevel, "shutting down"); c != nil {
+			c.Write(zap.String("worker", fc.scriptFilename))
+		}
 
 		return 0
 	case r = <-rc:
 	}
 
 	fc.currentWorkerRequest = cgo.NewHandle(r)
+	r.Context().Value(handleKey).(*handleList).AddHandle(fc.currentWorkerRequest)
 
-	l.Debug("request handling started", zap.String("worker", fc.scriptFilename), zap.String("url", r.RequestURI))
+	if c := l.Check(zapcore.DebugLevel, "request handling started"); c != nil {
+		c.Write(zap.String("worker", fc.scriptFilename), zap.String("url", r.RequestURI))
+	}
+
 	if err := updateServerContext(r, false, mrh); err != nil {
 		// Unexpected error
-		l.Debug("unexpected error", zap.String("worker", fc.scriptFilename), zap.String("url", r.RequestURI), zap.Error(err))
+		if c := l.Check(zapcore.DebugLevel, "unexpected error"); c != nil {
+			c.Write(zap.String("worker", fc.scriptFilename), zap.String("url", r.RequestURI), zap.Error(err))
+		}
 
 		return 0
 	}
@@ -169,19 +194,20 @@ func go_frankenphp_finish_request(mrh, rh C.uintptr_t, deleteHandle bool) {
 	fc := r.Context().Value(contextKey).(*FrankenPHPContext)
 
 	if deleteHandle {
-		rHandle.Delete()
-
+		r.Context().Value(handleKey).(*handleList).FreeAll()
 		cgo.Handle(mrh).Value().(*http.Request).Context().Value(contextKey).(*FrankenPHPContext).currentWorkerRequest = 0
 	}
 
 	maybeCloseContext(fc)
 
-	var fields []zap.Field
-	if mrh == 0 {
-		fields = append(fields, zap.String("worker", fc.scriptFilename), zap.String("url", r.RequestURI))
-	} else {
-		fields = append(fields, zap.String("url", r.RequestURI))
-	}
+	if c := fc.logger.Check(zapcore.DebugLevel, "request handling finished"); c != nil {
+		var fields []zap.Field
+		if mrh == 0 {
+			fields = append(fields, zap.String("worker", fc.scriptFilename), zap.String("url", r.RequestURI))
+		} else {
+			fields = append(fields, zap.String("url", r.RequestURI))
+		}
 
-	fc.logger.Debug("request handling finished", fields...)
+		c.Write(fields...)
+	}
 }

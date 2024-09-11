@@ -6,7 +6,7 @@ FrankenPHP is a modern application server for PHP built on top of the [Caddy](ht
 
 FrankenPHP gives superpowers to your PHP apps thanks to its stunning features: [*Early Hints*](https://frankenphp.dev/docs/early-hints/), [worker mode](https://frankenphp.dev/docs/worker/), [real-time capabilities](https://frankenphp.dev/docs/mercure/), automatic HTTPS, HTTP/2, and HTTP/3 support...
 
-FrankenPHP works with any PHP app and makes your Symfony projects faster than ever thanks to the provided integration with the worker mode (Laravel Octane support coming).
+FrankenPHP works with any PHP app and makes your Laravel and Symfony projects faster than ever thanks to their official integrations with the worker mode.
 
 FrankenPHP can also be used as a standalone Go library to embed PHP in any app using `net/http`.
 
@@ -20,7 +20,7 @@ FrankenPHP can also be used as a standalone Go library to embed PHP in any app u
 
 ```console
 docker run -v $PWD:/app/public \
-    -p 80:80 -p 443:443 \
+    -p 80:80 -p 443:443 -p 443:443/udp \
     dunglas/frankenphp
 ```
 
@@ -28,7 +28,8 @@ Go to `https://localhost`, and enjoy!
 
 > [!TIP]
 >
-> Do not attempt to use `https://127.0.0.1`. Use `localhost` and accept the self-signed certificate. Caddy has an automatic TLS handling that auto-trusts some local-based hostnames like `localhost`, but it does not apply to IP addresses. More details [on Caddy's "automatic https" docs](https://caddyserver.com/docs/automatic-https#hostname-requirements).
+> Do not attempt to use `https://127.0.0.1`. Use `https://localhost` and accept the self-signed certificate.
+> Use the [`SERVER_NAME` environment variable](docs/config.md#environment-variables) to change the domain to use.
 
 ### Standalone Binary
 
@@ -54,9 +55,12 @@ You can also run command-line scripts with:
 * [Real-time](https://frankenphp.dev/docs/mercure/)
 * [Configuration](https://frankenphp.dev/docs/config/)
 * [Docker images](https://frankenphp.dev/docs/docker/)
+* [Deploy in production](https://frankenphp.dev/docs/production/)
+* [Performance optimization](https://frankenphp.dev/docs/performance/)
 * [Create **standalone**, self-executable PHP apps](https://frankenphp.dev/docs/embed/)
 * [Create static binaries](https://frankenphp.dev/docs/static/)
 * [Compile from sources](https://frankenphp.dev/docs/compile/)
+* [Laravel integration](https://frankenphp.dev/docs/laravel/)
 * [Known issues](https://frankenphp.dev/docs/known-issues/)
 * [Demo app (Symfony) and benchmarks](https://github.com/dunglas/frankenphp-demo)
 * [Go library documentation](https://pkg.go.dev/github.com/dunglas/frankenphp)
@@ -68,6 +72,7 @@ You can also run command-line scripts with:
 * [API Platform](https://api-platform.com/docs/distribution/)
 * [Laravel](https://frankenphp.dev/docs/laravel/)
 * [Sulu](https://sulu.io/blog/running-sulu-with-frankenphp)
-* [WordPress](https://github.com/dunglas/frankenphp-wordpress)
+* [WordPress](https://github.com/StephenMiracle/frankenwp)
 * [Drupal](https://github.com/dunglas/frankenphp-drupal)
 * [Joomla](https://github.com/alexandreelise/frankenphp-joomla)
+* [TYPO3](https://github.com/ochorocho/franken-typo3)

@@ -6,9 +6,11 @@ package caddy
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"path/filepath"
 	"strconv"
+	"strings"
 
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig"
@@ -26,9 +28,14 @@ const defaultDocumentRoot = "public"
 func init() {
 	caddy.RegisterModule(FrankenPHPApp{})
 	caddy.RegisterModule(FrankenPHPModule{})
+
 	httpcaddyfile.RegisterGlobalOption("frankenphp", parseGlobalOption)
+
 	httpcaddyfile.RegisterHandlerDirective("php", parseCaddyfile)
+	httpcaddyfile.RegisterDirectiveOrder("php", "before", "file_server")
+
 	httpcaddyfile.RegisterDirective("php_server", parsePhpServer)
+	httpcaddyfile.RegisterDirectiveOrder("php_server", "before", "file_server")
 }
 
 type mainPHPinterpreterKeyType int
@@ -203,10 +210,14 @@ type FrankenPHPModule struct {
 	// SplitPath sets the substrings for splitting the URI into two parts. The first matching substring will be used to split the "path info" from the path. The first piece is suffixed with the matching substring and will be assumed as the actual resource (CGI script) name. The second piece will be set to PATH_INFO for the CGI script to use. Default: `.php`.
 	SplitPath []string `json:"split_path,omitempty"`
 	// ResolveRootSymlink enables resolving the `root` directory to its actual value by evaluating a symbolic link, if one exists.
-	ResolveRootSymlink bool `json:"resolve_root_symlink,omitempty"`
+	ResolveRootSymlink *bool `json:"resolve_root_symlink,omitempty"`
 	// Env sets an extra environment variable to the given value. Can be specified more than once for multiple environment variables.
-	Env    map[string]string `json:"env,omitempty"`
-	logger *zap.Logger
+	Env map[string]string `json:"env,omitempty"`
+
+	resolvedDocumentRoot        string
+	preparedEnv                 frankenphp.PreparedEnv
+	preparedEnvNeedsReplacement bool
+	logger                      *zap.Logger
 }
 
 // CaddyModule returns the Caddy module information.
@@ -225,8 +236,9 @@ func (f *FrankenPHPModule) Provision(ctx caddy.Context) error {
 		if frankenphp.EmbeddedAppPath == "" {
 			f.Root = "{http.vars.root}"
 		} else {
+			rrs := false
 			f.Root = filepath.Join(frankenphp.EmbeddedAppPath, defaultDocumentRoot)
-			f.ResolveRootSymlink = false
+			f.ResolveRootSymlink = &rrs
 		}
 	} else {
 		if frankenphp.EmbeddedAppPath != "" && filepath.IsLocal(f.Root) {
@@ -238,7 +250,46 @@ func (f *FrankenPHPModule) Provision(ctx caddy.Context) error {
 		f.SplitPath = []string{".php"}
 	}
 
+	if f.ResolveRootSymlink == nil {
+		rrs := true
+		f.ResolveRootSymlink = &rrs
+	}
+
+	if !needReplacement(f.Root) {
+		root, err := filepath.Abs(f.Root)
+		if err != nil {
+			return fmt.Errorf("unable to make the root path absolute: %w", err)
+		}
+		f.resolvedDocumentRoot = root
+
+		if *f.ResolveRootSymlink {
+			root, err := filepath.EvalSymlinks(root)
+			if err != nil {
+				return fmt.Errorf("unable to resolve root symlink: %w", err)
+			}
+
+			f.resolvedDocumentRoot = root
+		}
+	}
+
+	if f.preparedEnv == nil {
+		f.preparedEnv = frankenphp.PrepareEnv(f.Env)
+
+		for _, e := range f.preparedEnv {
+			if needReplacement(e) {
+				f.preparedEnvNeedsReplacement = true
+
+				break
+			}
+		}
+	}
+
 	return nil
+}
+
+// needReplacement checks if a string contains placeholders.
+func needReplacement(s string) bool {
+	return strings.Contains(s, "{") || strings.Contains(s, "}")
 }
 
 // ServeHTTP implements caddyhttp.MiddlewareHandler.
@@ -247,19 +298,28 @@ func (f FrankenPHPModule) ServeHTTP(w http.ResponseWriter, r *http.Request, _ ca
 	origReq := r.Context().Value(caddyhttp.OriginalRequestCtxKey).(http.Request)
 	repl := r.Context().Value(caddy.ReplacerCtxKey).(*caddy.Replacer)
 
-	documentRoot := repl.ReplaceKnown(f.Root, "")
+	var documentRootOption frankenphp.RequestOption
+	if f.resolvedDocumentRoot == "" {
+		documentRootOption = frankenphp.WithRequestDocumentRoot(repl.ReplaceKnown(f.Root, ""), *f.ResolveRootSymlink)
+	} else {
+		documentRootOption = frankenphp.WithRequestResolvedDocumentRoot(f.resolvedDocumentRoot)
+	}
 
-	env := make(map[string]string, len(f.Env)+1)
-	env["REQUEST_URI"] = origReq.URL.RequestURI()
-	for k, v := range f.Env {
-		env[k] = repl.ReplaceKnown(v, "")
+	env := make(map[string]string, len(f.preparedEnv)+1)
+	env["REQUEST_URI\x00"] = origReq.URL.RequestURI()
+	for k, v := range f.preparedEnv {
+		if f.preparedEnvNeedsReplacement {
+			env[k] = repl.ReplaceKnown(v, "")
+		} else {
+			env[k] = v
+		}
 	}
 
 	fr, err := frankenphp.NewRequestWithContext(
 		r,
-		frankenphp.WithRequestDocumentRoot(documentRoot, f.ResolveRootSymlink),
+		documentRootOption,
 		frankenphp.WithRequestSplitPath(f.SplitPath),
-		frankenphp.WithRequestEnv(env),
+		frankenphp.WithRequestPreparedEnv(env),
 	)
 
 	if err != nil {
@@ -293,14 +353,25 @@ func (f *FrankenPHPModule) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 				}
 				if f.Env == nil {
 					f.Env = make(map[string]string)
+					f.preparedEnv = make(frankenphp.PreparedEnv)
 				}
 				f.Env[args[0]] = args[1]
+				f.preparedEnv[args[0]+"\x00"] = args[1]
 
 			case "resolve_root_symlink":
+				if !d.NextArg() {
+					continue
+				}
+
+				v, err := strconv.ParseBool(d.Val())
+				if err != nil {
+					return err
+				}
 				if d.NextArg() {
 					return d.ArgErr()
 				}
-				f.ResolveRootSymlink = true
+
+				f.ResolveRootSymlink = &v
 			}
 		}
 	}
@@ -444,7 +515,8 @@ func parsePhpServer(h httpcaddyfile.Helper) ([]httpcaddyfile.ConfigValue, error)
 		if phpsrv.Root == "" {
 			phpsrv.Root = filepath.Join(frankenphp.EmbeddedAppPath, defaultDocumentRoot)
 			fsrv.Root = phpsrv.Root
-			phpsrv.ResolveRootSymlink = false
+			rrs := false
+			phpsrv.ResolveRootSymlink = &rrs
 		} else if filepath.IsLocal(fsrv.Root) {
 			phpsrv.Root = filepath.Join(frankenphp.EmbeddedAppPath, phpsrv.Root)
 			fsrv.Root = phpsrv.Root

@@ -4,23 +4,32 @@ on:
   pull_request:
     branches:
       - main
+    paths-ignore:
+      - 'docs/**'
   push:
     branches:
       - main
+    paths-ignore:
+      - 'docs/**'
+permissions:
+  contents: read
 jobs:
   tests:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        php-versions: ['8.2', '8.3']
+        php-versions: ['8.2', '8.3', '8.4']
+    env:
+      GOEXPERIMENT: cgocheck2
+      GOMAXPROCS: 10
     steps:
       -
         uses: actions/checkout@v4
       -
         uses: actions/setup-go@v5
         with:
-          go-version: '1.21'
+          go-version: '1.22'
           cache-dependency-path: |
             go.sum 
             caddy/go.sum
@@ -33,15 +42,14 @@ jobs:
           tools: none
         env:
           phpts: ts
+          debug: true
       -
         name: Set CGO flags
         run: |
           echo "CGO_CFLAGS=$(php-config --includes)" >> "$GITHUB_ENV"
       -
         name: Build
-        run: go build
-        env:
-          GOEXPERIMENT: cgocheck2
+        run: go build          
       -
         name: Build testcli binary
         working-directory: internal/testcli/
@@ -54,7 +62,19 @@ jobs:
         working-directory: caddy/
         run: go test -race -v ./...
       -
+        name: Build the server
+        working-directory: caddy/frankenphp/
+        run: go build
+      -
+        name: Start the server
+        working-directory: testdata/
+        run: sudo ../caddy/frankenphp/frankenphp start
+      -
+        name: Run integrations tests
+        run: ./reload_test.sh
+      -
         name: Lint Go code
-        uses: golangci/golangci-lint-action@v3
+        uses: golangci/golangci-lint-action@v6
+        if: matrix.php-versions == '8.3'
         with:
           version: latest
