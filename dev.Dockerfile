@@ -41,6 +41,7 @@ RUN apt-get update && \
 	valgrind \
 	neovim \
 	zsh \
+    meson \
 	libtool-bin && \
 	echo 'set auto-load safe-path /' > /root/.gdbinit && \
 	echo '* soft core unlimited' >> /etc/security/limits.conf \
@@ -65,16 +66,14 @@ RUN git clone --branch=PHP-8.3 https://github.com/php/php-src.git . && \
 	echo "opcache.enable=1" >> /usr/local/lib/php.ini && \
 	php --version
 
-# install fswatch (necessary for file watching)
-ARG FSWATCH_VERSION='1.17.1'
-WORKDIR /usr/local/src/fswatch
-RUN curl -L https://github.com/emcrisostomo/fswatch/releases/download/$FSWATCH_VERSION/fswatch-$FSWATCH_VERSION.tar.gz | tar xz
-WORKDIR /usr/local/src/fswatch/fswatch-$FSWATCH_VERSION
-RUN ./configure && \
-	make -j"$(nproc)" && \
-	make install && \
-	ldconfig && \
-	fswatch --version
+# install edant/watcher (necessary for file watching)
+WORKDIR /usr/local/src/watcher
+RUN git clone --branch=next https://github.com/e-dant/watcher .
+WORKDIR /usr/local/src/watcher/watcher-c
+RUN meson build .. && \
+	meson compile -C build && \
+	cp -r build/watcher-c/libwatcher-c* /usr/local/lib/ && \
+	ldconfig
 
 WORKDIR /go/src/app
 COPY . .

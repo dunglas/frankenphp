@@ -68,6 +68,8 @@ RUN apt-get update && \
 	libssl-dev \
 	libxml2-dev \
 	zlib1g-dev \
+    git \
+    meson \
 	&& \
 	apt-get clean
 
@@ -86,17 +88,14 @@ COPY --link caddy caddy
 COPY --link internal internal
 COPY --link testdata testdata
 
-# install fswatch (necessary for file watching)
-ARG FSWATCH_VERSION
-# in the future, we may replace this custom compilation by the installation of https://packages.debian.org/bookworm/fswatch, which provides the library and headers, but the version currently shipped by Debian is too old
-WORKDIR /usr/local/src/fswatch
-RUN curl -L https://github.com/emcrisostomo/fswatch/releases/download/$FSWATCH_VERSION/fswatch-$FSWATCH_VERSION.tar.gz | tar xz
-WORKDIR /usr/local/src/fswatch/fswatch-$FSWATCH_VERSION
-RUN ./configure && \
-	make -j"$(nproc)" && \
-	make install && \
-	ldconfig && \
- 	fswatch --version
+# install edant/watcher (necessary for file watching)
+WORKDIR /usr/local/src/watcher
+RUN git clone --branch=next https://github.com/e-dant/watcher .
+WORKDIR /usr/local/src/watcher/watcher-c
+RUN meson build .. && \
+	meson compile -C build && \
+	cp -r build/watcher-c/libwatcher-c* /usr/local/lib/ && \
+	ldconfig
 
 # See https://github.com/docker-library/php/blob/master/8.3/bookworm/zts/Dockerfile#L57-L59 for PHP values
 ENV CGO_CFLAGS="-DFRANKENPHP_VERSION=$FRANKENPHP_VERSION $PHP_CFLAGS"
@@ -116,7 +115,7 @@ FROM common AS runner
 
 ENV GODEBUG=cgocheck=0
 
-COPY --from=builder /usr/local/lib/libfswatch.so* /usr/local/lib/
+COPY --from=builder /usr/local/lib/libwatcher-c* /usr/local/lib/
 RUN ldconfig
 
 COPY --from=builder /usr/local/bin/frankenphp /usr/local/bin/frankenphp
