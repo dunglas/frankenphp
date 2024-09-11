@@ -22,8 +22,11 @@ const minTimesToPollForChanges = 3
 const maxTimesToPollForChanges = 60
 
 func TestWorkersShouldReloadOnMatchingPattern(t *testing.T) {
-	const filePattern = "./testdata/**/*.txt"
-	watchOptions := []frankenphp.WatchOption{frankenphp.WithWatcherShortForm(filePattern)}
+	watchOptions := []frankenphp.WatchOption{
+		frankenphp.WithWatcherDirs([]string{"./testdata"}),
+		frankenphp.WithWatcherPattern("*.txt"),
+		frankenphp.WithWatcherRecursion(true),
+	}
 
 	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
 		requestBodyHasReset := pollForWorkerReset(t, handler, maxTimesToPollForChanges)
@@ -32,52 +35,15 @@ func TestWorkersShouldReloadOnMatchingPattern(t *testing.T) {
 }
 
 func TestWorkersShouldNotReloadOnExcludingPattern(t *testing.T) {
-	const filePattern = "./testdata/**/*.php"
-	watchOptions := []frankenphp.WatchOption{frankenphp.WithWatcherShortForm(filePattern)}
+	watchOptions := []frankenphp.WatchOption{
+        frankenphp.WithWatcherDirs([]string{"./testdata"}),
+        frankenphp.WithWatcherPattern("*.php"),
+        frankenphp.WithWatcherRecursion(true),
+    }
 
 	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
 		requestBodyHasReset := pollForWorkerReset(t, handler, minTimesToPollForChanges)
 		assert.False(t, requestBodyHasReset)
-	}, &testOptions{nbParrallelRequests: 1, nbWorkers: 1, workerScript: "worker-with-watcher.php", watchOptions: watchOptions})
-}
-
-func TestWorkersReloadOnMatchingIncludedRegex(t *testing.T) {
-	const include = "\\.txt$"
-	watchOptions := []frankenphp.WatchOption{
-		frankenphp.WithWatcherDirs([]string{"./testdata"}),
-		frankenphp.WithWatcherRecursion(true),
-		frankenphp.WithWatcherFilters(include, "", true, false),
-	}
-
-	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
-		requestBodyHasReset := pollForWorkerReset(t, handler, maxTimesToPollForChanges)
-		assert.True(t, requestBodyHasReset)
-	}, &testOptions{nbParrallelRequests: 1, nbWorkers: 1, workerScript: "worker-with-watcher.php", watchOptions: watchOptions})
-}
-
-func TestWorkersDoNotReloadOnExcludingRegex(t *testing.T) {
-	const exclude = "\\.txt$"
-	watchOptions := []frankenphp.WatchOption{
-		frankenphp.WithWatcherDirs([]string{"./testdata"}),
-		frankenphp.WithWatcherRecursion(true),
-		frankenphp.WithWatcherFilters("", exclude, false, false),
-	}
-
-	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
-		requestBodyHasReset := pollForWorkerReset(t, handler, minTimesToPollForChanges)
-		assert.False(t, requestBodyHasReset)
-	}, &testOptions{nbParrallelRequests: 1, nbWorkers: 1, workerScript: "worker-with-watcher.php", watchOptions: watchOptions})
-}
-
-func TestWorkerShouldReloadUsingPolling(t *testing.T) {
-	watchOptions := []frankenphp.WatchOption{
-		frankenphp.WithWatcherDirs([]string{"./testdata/files"}),
-		frankenphp.WithWatcherMonitorType("poll"),
-	}
-
-	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
-		requestBodyHasReset := pollForWorkerReset(t, handler, maxTimesToPollForChanges)
-		assert.True(t, requestBodyHasReset)
 	}, &testOptions{nbParrallelRequests: 1, nbWorkers: 1, workerScript: "worker-with-watcher.php", watchOptions: watchOptions})
 }
 

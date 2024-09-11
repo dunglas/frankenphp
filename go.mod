@@ -7,7 +7,6 @@ toolchain go1.22.6
 retract v1.0.0-rc.1 // Human error
 
 require (
-	github.com/dunglas/go-fswatch v0.0.0-20240820155803-888450fb7f15
 	github.com/maypok86/otter v1.2.2
 	github.com/stretchr/testify v1.9.0
 	go.uber.org/zap v1.27.0

@@ -20,6 +20,8 @@ type watcher struct {
 	sessions   []unsafe.Pointer
 	workerOpts []workerOpt
 	watchOpts []watchOpt
+	trigger chan struct{}
+	stop chan struct{}
 }
 
 // duration to wait before reloading workers after a file change
@@ -28,10 +30,8 @@ const debounceDuration = 150 * time.Millisecond
 var (
 	// the currently active file watcher
 	activeWatcher *watcher
-	// when stopping the watcher we need to wait for reloading to finish
+	// after stopping the watcher we will wait for eventual reloads to finish
 	reloadWaitGroup sync.WaitGroup
-	triggerWatcher  chan struct{}
-	stopWatcher    chan struct{}
 )
 
 func initWatcher(watchOpts []watchOpt, workerOpts []workerOpt) error {
@@ -58,7 +58,32 @@ func drainWatcher() {
 	activeWatcher = nil
 }
 
-func startWatchOpt(watchOpt *watchOpt) (unsafe.Pointer, error) {
+func (w *watcher) startWatching(watchOpts []watchOpt) error {
+	w.trigger = make(chan struct{})
+	w.stop = make(chan struct{})
+	w.sessions = make([]unsafe.Pointer, len(watchOpts))
+	w.watchOpts = watchOpts
+	for i, watchOpt := range w.watchOpts {
+		watchOpt.trigger = w.trigger
+		session, err := startSession(&watchOpt)
+		if err != nil {
+			logger.Error("unable to watch dirs", zap.Strings("dirs", watchOpt.dirs))
+			return err
+		}
+		w.sessions[i] = session
+	}
+	go listenForFileEvents(w.trigger, w.stop)
+	return nil
+}
+
+func (w *watcher) stopWatching() {
+	close(w.stop)
+	for _, session := range w.sessions {
+		stopSession(session)
+	}
+}
+
+func startSession(watchOpt *watchOpt) (unsafe.Pointer, error) {
 	handle := cgo.NewHandle(watchOpt)
 	cPathTranslated := (*C.char)(C.CString(watchOpt.dirs[0]))
     watchSession := C.start_new_watcher(cPathTranslated, C.uintptr_t(handle))
@@ -69,9 +94,9 @@ func startWatchOpt(watchOpt *watchOpt) (unsafe.Pointer, error) {
 	return watchSession, nil
 }
 
-func stopWatchSession(session unsafe.Pointer){
+func stopSession(session unsafe.Pointer){
 	success := C.stop_watcher(session)
-	if(success == 0){
+	if(success == 1){
 		logger.Error("couldn't stop watching")
 	}
 }
@@ -81,35 +106,11 @@ func go_handle_event(path *C.char, eventType C.int, pathType C.int, handle C.uin
 	watchOpt := cgo.Handle(handle).Value().(*watchOpt)
 	if watchOpt.allowReload(C.GoString(path), int(eventType), int(pathType)) {
 		logger.Debug("valid file change detected", zap.String("path",  C.GoString(path)))
-		triggerWatcher <- struct{}{}
+		watchOpt.trigger <- struct{}{}
 	}
 }
 
-func (w *watcher) startWatching(watchOpts []watchOpt) error {
-	w.sessions = make([]unsafe.Pointer, len(watchOpts))
-	w.watchOpts = watchOpts
-	triggerWatcher = make(chan struct{})
-	stopWatcher = make(chan struct{})
-	for i, watchOpt := range w.watchOpts {
-		session, err := startWatchOpt(&watchOpt)
-		if err != nil {
-			logger.Error("unable to watch dirs", zap.Strings("dirs", watchOpt.dirs))
-			return err
-		}
-		w.sessions[i] = session
-	}
-	go listenForFileEvents()
-	return nil
-}
-
-func (w *watcher) stopWatching() {
-	close(stopWatcher)
-	for _, session := range w.sessions {
-		stopWatchSession(session)
-	}
-}
-
-func listenForFileEvents() {
+func listenForFileEvents(triggerWatcher chan struct{}, stopWatcher chan struct{}) {
 	timer := time.NewTimer(debounceDuration)
 	timer.Stop()
 	defer timer.Stop()

@@ -1,216 +1,148 @@
 package frankenphp
 
 import (
-	fswatch "github.com/dunglas/go-fswatch"
 	"github.com/stretchr/testify/assert"
 	"path/filepath"
 	"testing"
 )
 
-func TestSimpleRecursiveWatchOption(t *testing.T) {
-	const shortForm = "/some/path"
+func TestWithRecursion(t *testing.T) {
+	watchOpt := createWithOptions(t, WithWatcherRecursion(true))
 
-	watchOpt := createFromShortForm(shortForm, t)
-
-	assert.Empty(t, watchOpt.wildCardPattern)
-	assert.Equal(t, "/some/path", watchOpt.dirs[0])
 	assert.True(t, watchOpt.isRecursive)
 }
 
-func TestSingleFileWatchOption(t *testing.T) {
-	const shortForm = "/some/path/watch-me.json"
+func TestWithWatcherPattern(t *testing.T) {
+	watchOpt := createWithOptions(t, WithWatcherPattern("*php"))
 
-	watchOpt := createFromShortForm(shortForm, t)
-
-	assert.Equal(t, "watch-me.json", watchOpt.wildCardPattern)
-	assert.Equal(t, "/some/path", watchOpt.dirs[0])
-	assert.False(t, watchOpt.isRecursive)
+	assert.Equal(t, "*php", watchOpt.pattern)
 }
 
-func TestNonRecursivePatternWatchOption(t *testing.T) {
-	const shortForm = "/some/path/*.json"
+func TestWithWatcherDir(t *testing.T) {
+	watchOpt := createWithOptions(t, WithWatcherDirs([]string{"/path/to/app"}))
 
-	watchOpt := createFromShortForm(shortForm, t)
-
-	assert.Equal(t, "*.json", watchOpt.wildCardPattern)
-	assert.Equal(t, "/some/path", watchOpt.dirs[0])
-	assert.False(t, watchOpt.isRecursive)
+	assert.Equal(t, "/path/to/app", watchOpt.dirs[0])
 }
 
-func TestRecursivePatternWatchOption(t *testing.T) {
-	const shortForm = "/some/path/**/*.json"
+func TestWithRelativeWatcherDir(t *testing.T) {
+	absoluteDir, err := filepath.Abs(".")
 
-	watchOpt := createFromShortForm(shortForm, t)
-
-	assert.Equal(t, "*.json", watchOpt.wildCardPattern)
-	assert.Equal(t, "/some/path", watchOpt.dirs[0])
-	assert.True(t, watchOpt.isRecursive)
-}
-
-func TestRelativePathname(t *testing.T) {
-	const shortForm = "../testdata/**/*.txt"
-	absPath, err := filepath.Abs("../testdata")
-
-	watchOpt := createFromShortForm(shortForm, t)
+	watchOpt := createWithOptions(t, WithWatcherDirs([]string{"."}))
 
 	assert.NoError(t, err)
-	assert.Equal(t, "*.txt", watchOpt.wildCardPattern)
-	assert.Equal(t, absPath, watchOpt.dirs[0])
-	assert.True(t, watchOpt.isRecursive)
+	assert.Equal(t, absoluteDir, watchOpt.dirs[0])
 }
 
-func TestCurrentRelativePath(t *testing.T) {
-	const shortForm = "."
-	absPath, err := filepath.Abs(shortForm)
-
-	watchOpt := createFromShortForm(shortForm, t)
-
-	assert.NoError(t, err)
-	assert.Equal(t, "", watchOpt.wildCardPattern)
-	assert.Equal(t, absPath, watchOpt.dirs[0])
-	assert.True(t, watchOpt.isRecursive)
-}
-
-func TestMatchPatternWithoutExtension(t *testing.T) {
-	const shortForm = "/some/path/**/fileName"
-
-	watchOpt := createFromShortForm(shortForm, t)
-
-	assert.Equal(t, "fileName", watchOpt.wildCardPattern)
-	assert.Equal(t, "/some/path", watchOpt.dirs[0])
-	assert.True(t, watchOpt.isRecursive)
-}
-
-func TestAddingTwoFilePaths(t *testing.T) {
-	watchOpt := getDefaultWatchOpt()
-	applyFirstPath := WithWatcherDirs([]string{"/first/path"})
-	applySecondPath := WithWatcherDirs([]string{"/second/path"})
-
-	err1 := applyFirstPath(&watchOpt)
-	err2 := applySecondPath(&watchOpt)
-
-	assert.NoError(t, err1)
-	assert.NoError(t, err2)
-	assert.Equal(t, []string{"/first/path", "/second/path"}, watchOpt.dirs)
-}
-
-func TestAddingAnInclusionFilterWithDefaultForExclusion(t *testing.T) {
-	expectedInclusionFilter := fswatch.Filter{
-		Text:          "\\.php$",
-		FilterType:    fswatch.FilterInclude,
-		CaseSensitive: true,
-		Extended:      true,
-	}
-	expectedExclusionFilter := fswatch.Filter{
-		Text:          "\\.",
-		FilterType:    fswatch.FilterExclude,
-		CaseSensitive: true,
-		Extended:      true,
-	}
-
-	watchOpt := createWithOption(WithWatcherFilters("\\.php$", "", true, true), t)
-
-	assert.Equal(t, []fswatch.Filter{expectedInclusionFilter, expectedExclusionFilter}, watchOpt.filters)
-}
-
-func TestWithExclusionFilter(t *testing.T) {
-	expectedExclusionFilter := fswatch.Filter{
-		Text:          "\\.php$",
-		FilterType:    fswatch.FilterExclude,
-		CaseSensitive: false,
-		Extended:      false,
-	}
-
-	watchOpt := createWithOption(WithWatcherFilters("", "\\.php$", false, false), t)
-
-	assert.Equal(t, []fswatch.Filter{expectedExclusionFilter}, watchOpt.filters)
-}
-
-func TestWithPollMonitor(t *testing.T) {
-	watchOpt := createWithOption(WithWatcherMonitorType("poll"), t)
-
-	assert.Equal(t, (int)(fswatch.PollMonitor), (int)(watchOpt.monitorType))
-}
-
-func TestWithSymlinks(t *testing.T) {
-	watchOpt := createWithOption(WithWatcherSymlinks(true), t)
-
-	assert.True(t, watchOpt.followSymlinks)
-}
-
-func TestWithoutRecursion(t *testing.T) {
-	watchOpt := createWithOption(WithWatcherRecursion(false), t)
-
-	assert.False(t, watchOpt.isRecursive)
-}
-
-func TestWithLatency(t *testing.T) {
-	watchOpt := createWithOption(WithWatcherLatency(500), t)
-
-	assert.Equal(t, 0.5, watchOpt.latency)
-}
-
-func TestWithWildcardPattern(t *testing.T) {
-	watchOpt := createWithOption(WithWildcardPattern("*php"), t)
-
-	assert.Equal(t, "*php", watchOpt.wildCardPattern)
-}
-
-func TestAllowReloadOnMatch(t *testing.T) {
+func TestAllowReloadOnMatchingPattern(t *testing.T) {
 	const fileName = "/some/path/watch-me.php"
-	watchOpt := createFromShortForm("/some/path/**/*.php", t)
+	watchOpt := createWithOptions(
+		t,
+		WithWatcherDirs([]string{"/some/path"}),
+		WithWatcherPattern("*.php"),
+	)
 
-	assert.True(t, watchOpt.allowReload(fileName))
+	assert.True(t, watchOpt.allowReload(fileName, 0 , 0))
 }
 
 func TestAllowReloadOnExactMatch(t *testing.T) {
 	const fileName = "/some/path/watch-me.php"
-	watchOpt := createFromShortForm("/some/path/watch-me.php", t)
+	watchOpt := createWithOptions(
+        t,
+        WithWatcherDirs([]string{"/some/path"}),
+        WithWatcherPattern("watch-me.php"),
+    )
 
-	assert.True(t, watchOpt.allowReload(fileName))
+	assert.True(t, watchOpt.allowReload(fileName, 0 , 0))
 }
 
-func TestDisallowReload(t *testing.T) {
+func TestDisallowOnDifferentFilename(t *testing.T) {
 	const fileName = "/some/path/watch-me.php"
-	watchOpt := createFromShortForm("/some/path/dont-watch.php", t)
+	watchOpt := createWithOptions(
+        t,
+        WithWatcherDirs([]string{"/some/path"}),
+        WithWatcherPattern("dont-watch.php"),
+    )
 
-	assert.False(t, watchOpt.allowReload(fileName))
+	assert.False(t, watchOpt.allowReload(fileName, 0 , 0))
 }
 
 func TestAllowReloadOnRecursiveDirectory(t *testing.T) {
 	const fileName = "/some/path/watch-me.php"
-	watchOpt := createFromShortForm("/some", t)
+	watchOpt := createWithOptions(
+        t,
+        WithWatcherDirs([]string{"/some"}),
+        WithWatcherRecursion(true),
+        WithWatcherPattern("*.php"),
+    )
 
-	assert.True(t, watchOpt.allowReload(fileName))
+	assert.True(t, watchOpt.allowReload(fileName, 0 , 0))
 }
 
-func TestAllowReloadIfOptionIsNotAWildcard(t *testing.T) {
+func TestAllowReloadWithRecursionAndNoPattern(t *testing.T) {
 	const fileName = "/some/path/watch-me.php"
-	watchOpt := getDefaultWatchOpt()
+	watchOpt := createWithOptions(
+        t,
+        WithWatcherDirs([]string{"/some"}),
+        WithWatcherRecursion(true),
+    )
 
-	assert.True(t, watchOpt.allowReload(fileName))
+	assert.True(t, watchOpt.allowReload(fileName, 0 , 0))
 }
 
-func TestDisallowExplicitlySetWildcardPattern(t *testing.T) {
-	const fileName = "/some/path/file.txt"
-	watchOpt := createWithOption(WithWildcardPattern("*php"), t)
+func TestDisallowOnDifferentPatterns(t *testing.T) {
+	const fileName = "/some/path/watch-me.php"
+	watchOpt := createWithOptions(
+        t,
+        WithWatcherDirs([]string{"/some"}),
+        WithWatcherRecursion(true),
+        WithWatcherPattern(".txt"),
+    )
 
-	assert.False(t, watchOpt.allowReload(fileName))
+	assert.False(t, watchOpt.allowReload(fileName, 0 , 0))
 }
 
-func createFromShortForm(shortForm string, t *testing.T) watchOpt {
-	watchOpt := getDefaultWatchOpt()
-	applyOptions := WithWatcherShortForm(shortForm)
-	err := applyOptions(&watchOpt)
-	assert.NoError(t, err)
-	return watchOpt
+func TestDisallowOnMissingRecursion(t *testing.T) {
+	const fileName = "/some/path/watch-me.php"
+	watchOpt := createWithOptions(
+        t,
+        WithWatcherDirs([]string{"/some"}),
+        WithWatcherRecursion(false),
+        WithWatcherPattern(".php"),
+    )
+
+	assert.False(t, watchOpt.allowReload(fileName, 0 , 0))
 }
 
-func createWithOption(applyOptions WatchOption, t *testing.T) watchOpt {
-	watchOpt := getDefaultWatchOpt()
+func TestDisallowOnEventTypeBiggerThan3(t *testing.T) {
+	const fileName = "/some/path/watch-me.php"
+	const eventType = 4
+	watchOpt := createWithOptions(
+        t,
+        WithWatcherDirs([]string{"/some/path"}),
+        WithWatcherPattern("watch-me.php"),
+    )
 
-	err := applyOptions(&watchOpt)
+	assert.False(t, watchOpt.allowReload(fileName, eventType , 0))
+}
 
-	assert.NoError(t, err)
+func TestDisallowOnPathTypeBiggerThan2(t *testing.T) {
+	const fileName = "/some/path/watch-me.php"
+	const pathType = 3
+	watchOpt := createWithOptions(
+        t,
+        WithWatcherDirs([]string{"/some/path"}),
+        WithWatcherPattern("watch-me.php"),
+    )
+
+	assert.False(t, watchOpt.allowReload(fileName, 0 , pathType))
+}
+
+func createWithOptions(t *testing.T, applyOptions ...WatchOption) watchOpt {
+	watchOpt :=watchOpt{}
+
+	for _, applyOption := range applyOptions {
+		err := applyOption(&watchOpt)
+		assert.NoError(t, err)
+	}
 	return watchOpt
 }

@@ -283,13 +283,7 @@ func TestWorkerWithSleepingWatcher(t *testing.T) {
 
 			frankenphp {
 				worker ../testdata/worker-with-watcher.php 1
-				watch {
-					path .
-					include \.txt$
-					recursive
-					monitor default
-					latency 100
-				}
+				watch ./**/*.php
 			}
 		}
 

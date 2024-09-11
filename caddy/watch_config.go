@@ -50,6 +50,7 @@ func parseFullPattern(filePattern string) watchConfig {
 		watchConfig.Pattern = strings.Split(filePattern, "/**/")[1]
 		watchConfig.IsRecursive = true
 	}
+	dirName = strings.TrimRight(dirName, "/")
 	watchConfig.Dirs = []string{dirName}
 
 	return watchConfig

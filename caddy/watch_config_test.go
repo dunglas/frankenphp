@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func TestParsingARecursiveShortForm(t *testing.T) {
+func TestParsingARecursiveDirectory(t *testing.T) {
 	app, err := parseTestConfig(`
 		frankenphp {
 			watch /path
@@ -18,37 +18,55 @@ func TestParsingARecursiveShortForm(t *testing.T) {
 	assert.Equal(t, 1, len(app.Watch))
 	assert.Equal(t, 1, len(app.Watch[0].Dirs))
 	assert.Equal(t, "/path", app.Watch[0].Dirs[0])
-	assert.True(t, app.Watch[0].Recursive)
-	assert.True(t, app.Watch[0].IsShortForm)
+	assert.True(t, app.Watch[0].IsRecursive)
+	assert.Equal(t, "", app.Watch[0].Pattern)
+}
+
+func TestParsingARecursiveDirectoryWithPattern(t *testing.T) {
+	app, err := parseTestConfig(`
+		frankenphp {
+			watch /path/**/*.php
+		}
+	`)
+
+	assert.Nil(t, err)
+	assert.Equal(t, 1, len(app.Watch))
+	assert.Equal(t, "/path", app.Watch[0].Dirs[0])
+	assert.True(t, app.Watch[0].IsRecursive)
+	assert.Equal(t, "*.php", app.Watch[0].Pattern)
+}
+
+func TestParsingNonRecursiveDirectoryWithPattern(t *testing.T) {
+	app, err := parseTestConfig(`
+		frankenphp {
+			watch /path/*.php
+		}
+	`)
+
+	assert.Nil(t, err)
+	assert.Equal(t, 1, len(app.Watch))
+	assert.Equal(t, "/path", app.Watch[0].Dirs[0])
+	assert.False(t, app.Watch[0].IsRecursive)
+	assert.Equal(t, "*.php", app.Watch[0].Pattern)
 }
 
 func TestParseTwoShortForms(t *testing.T) {
 	app, err := parseTestConfig(`
 		frankenphp {
 			watch /path
-			watch /other/path poll
+			watch /other/path/*.php
 		}
 	`)
 
 	assert.Nil(t, err)
 	assert.Equal(t, 2, len(app.Watch))
 	assert.Equal(t, "/path", app.Watch[0].Dirs[0])
-	assert.Equal(t, "", app.Watch[0].MonitorType)
+	assert.Equal(t, "", app.Watch[0].Pattern)
 	assert.Equal(t, "/other/path", app.Watch[1].Dirs[0])
-	assert.Equal(t, "poll", app.Watch[1].MonitorType)
+	assert.Equal(t, "*.php", app.Watch[1].Pattern)
 }
 
-func TestFailOnInvalidMonitorType(t *testing.T) {
-	_, err := parseTestConfig(`
-		frankenphp {
-			watch /path invalid_monitor
-		}
-	`)
-
-	assert.Error(t, err)
-}
-
-func TestFailOnMissingPathInShortForm(t *testing.T) {
+func TestFailOnMissingPath(t *testing.T) {
 	_, err := parseTestConfig(`
 		frankenphp {
 			watch
@@ -56,50 +74,6 @@ func TestFailOnMissingPathInShortForm(t *testing.T) {
 	`)
 
 	assert.Error(t, err)
-}
-
-func TestFailOnMissingPathInLongForm(t *testing.T) {
-	_, err := parseTestConfig(`
-		frankenphp {
-			watch {
-				monitor_type poll
-			}
-		}
-	`)
-
-	assert.Error(t, err)
-}
-
-func TestParseLongFormCorrectly(t *testing.T) {
-	app, err := parseTestConfig(`
-		frankenphp {
-			watch {
-				path /path
-				recursive false
-				symlinks true
-				case_sensitive true
-				extended_regex true
-				include *important.txt
-				exclude *.txt
-				pattern *important.txt
-				monitor_type poll
-				latency 100
-			}
-		}
-	`)
-
-	assert.Nil(t, err)
-	assert.Equal(t, 1, len(app.Watch))
-	assert.Equal(t, "/path", app.Watch[0].Dirs[0])
-	assert.False(t, app.Watch[0].Recursive)
-	assert.True(t, app.Watch[0].FollowSymlinks)
-	assert.True(t, app.Watch[0].CaseSensitive)
-	assert.True(t, app.Watch[0].ExtendedRegex)
-	assert.Equal(t, "*important.txt", app.Watch[0].IncludeFiles)
-	assert.Equal(t, "*.txt", app.Watch[0].ExcludeFiles)
-	assert.Equal(t, "*important.txt", app.Watch[0].WildcardPattern)
-	assert.Equal(t, "poll", app.Watch[0].MonitorType)
-	assert.Equal(t, 100, app.Watch[0].Latency)
 }
 
 func parseTestConfig(config string) (*caddy.FrankenPHPApp, error) {
