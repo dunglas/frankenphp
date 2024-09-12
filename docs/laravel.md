@@ -64,12 +64,14 @@ The `octane:frankenphp` command can take the following options:
 * `--admin-port`: The port the admin server should be available on (default: `2019`)
 * `--workers`: The number of workers that should be available to handle requests (default: `auto`)
 * `--max-requests`: The number of requests to process before reloading the server (default: `500`)
-* `--caddyfile`: The path to the FrankenPHP `Caddyfile` file
+* `--caddyfile`: The path to the FrankenPHP `Caddyfile` file (default: [stubbed Caddyfile in Laravel Octane](https://github.com/laravel/octane/blob/2.x/src/Commands/stubs/Caddyfile))
 * `--https`: Enable HTTPS, HTTP/2, and HTTP/3, and automatically generate and renew certificates
 * `--http-redirect`: Enable HTTP to HTTPS redirection (only enabled if --https is passed)
 * `--watch`: Automatically reload the server when the application is modified
 * `--poll`: Use file system polling while watching in order to watch files over a network
 * `--log-level`: Log messages at or above the specified log level
+
+> Note: When using Laravel Octane environment variables will not be respected in your Caddyfile, instead Laravel Octane will add envrionment variables into the FrankenPHP process based on the above arguments. [See how here](https://github.com/laravel/octane/blob/2.x/src/Commands/StartFrankenPhpCommand.php#L92).
 
 Learn more about [Laravel Octane in its official documentation](https://laravel.com/docs/octane).
 
