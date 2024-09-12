@@ -1,13 +1,13 @@
-package frankenphp
+package watcher
 
 import (
 	"go.uber.org/zap"
 	"path/filepath"
 )
 
-type WatchOption func(o *watchOpt) error
+type WatchOption func(o *WatchOpt) error
 
-type watchOpt struct {
+type WatchOpt struct {
 	dirs        []string
 	isRecursive bool
 	pattern     string
@@ -15,7 +15,7 @@ type watchOpt struct {
 }
 
 func WithWatcherDirs(dirs []string) WatchOption {
-	return func(o *watchOpt) error {
+	return func(o *WatchOpt) error {
 		for _, dir := range dirs {
 			absDir, err := parseAbsPath(dir)
 			if err != nil {
@@ -28,14 +28,14 @@ func WithWatcherDirs(dirs []string) WatchOption {
 }
 
 func WithWatcherRecursion(withRecursion bool) WatchOption {
-	return func(o *watchOpt) error {
+	return func(o *WatchOpt) error {
 		o.isRecursive = withRecursion
 		return nil
 	}
 }
 
 func WithWatcherPattern(pattern string) WatchOption {
-	return func(o *watchOpt) error {
+	return func(o *WatchOpt) error {
 		o.pattern = pattern
 		return nil
 	}
@@ -50,7 +50,7 @@ func parseAbsPath(path string) (string, error) {
 	return absDir, nil
 }
 
-func (watchOpt *watchOpt) allowReload(fileName string, eventType int, pathType int) bool {
+func (watchOpt *WatchOpt) allowReload(fileName string, eventType int, pathType int) bool {
 	if !isValidEventType(eventType) || !isValidPathType(pathType) {
 		return false
 	}

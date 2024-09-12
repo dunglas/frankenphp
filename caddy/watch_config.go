@@ -3,6 +3,7 @@ package caddy
 import (
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/dunglas/frankenphp"
+	"github.com/dunglas/frankenphp/watcher"
 	"path/filepath"
 	"strings"
 )
@@ -18,9 +19,9 @@ type watchConfig struct {
 
 func applyWatchConfig(opts []frankenphp.Option, watchConfig watchConfig) []frankenphp.Option {
 	return append(opts, frankenphp.WithFileWatcher(
-		frankenphp.WithWatcherDirs(watchConfig.Dirs),
-		frankenphp.WithWatcherRecursion(watchConfig.IsRecursive),
-		frankenphp.WithWatcherPattern(watchConfig.Pattern),
+		watcher.WithWatcherDirs(watchConfig.Dirs),
+		watcher.WithWatcherRecursion(watchConfig.IsRecursive),
+		watcher.WithWatcherPattern(watchConfig.Pattern),
 	))
 }
 

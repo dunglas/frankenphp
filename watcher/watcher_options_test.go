@@ -1,4 +1,4 @@
-package frankenphp
+package watcher
 
 import (
 	"github.com/stretchr/testify/assert"
@@ -137,8 +137,8 @@ func TestDisallowOnPathTypeBiggerThan2(t *testing.T) {
 	assert.False(t, watchOpt.allowReload(fileName, 0, pathType))
 }
 
-func createWithOptions(t *testing.T, applyOptions ...WatchOption) watchOpt {
-	watchOpt := watchOpt{}
+func createWithOptions(t *testing.T, applyOptions ...WatchOption) WatchOpt {
+	watchOpt := WatchOpt{}
 
 	for _, applyOption := range applyOptions {
 		err := applyOption(&watchOpt)

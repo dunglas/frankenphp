@@ -1,7 +1,7 @@
 package frankenphp_test
 
 import (
-	"github.com/dunglas/frankenphp"
+	"github.com/dunglas/frankenphp/watcher"
 	"github.com/stretchr/testify/assert"
 	"io"
 	"net/http"
@@ -22,10 +22,10 @@ const minTimesToPollForChanges = 3
 const maxTimesToPollForChanges = 60
 
 func TestWorkersShouldReloadOnMatchingPattern(t *testing.T) {
-	watchOptions := []frankenphp.WatchOption{
-		frankenphp.WithWatcherDirs([]string{"./testdata"}),
-		frankenphp.WithWatcherPattern("*.txt"),
-		frankenphp.WithWatcherRecursion(true),
+	watchOptions := []watcher.WatchOption{
+		watcher.WithWatcherDirs([]string{"./testdata"}),
+		watcher.WithWatcherPattern("*.txt"),
+		watcher.WithWatcherRecursion(true),
 	}
 
 	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
@@ -35,10 +35,10 @@ func TestWorkersShouldReloadOnMatchingPattern(t *testing.T) {
 }
 
 func TestWorkersShouldNotReloadOnExcludingPattern(t *testing.T) {
-	watchOptions := []frankenphp.WatchOption{
-		frankenphp.WithWatcherDirs([]string{"./testdata"}),
-		frankenphp.WithWatcherPattern("*.php"),
-		frankenphp.WithWatcherRecursion(true),
+	watchOptions := []watcher.WatchOption{
+		watcher.WithWatcherDirs([]string{"./testdata"}),
+		watcher.WithWatcherPattern("*.php"),
+		watcher.WithWatcherRecursion(true),
 	}
 
 	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {

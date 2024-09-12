@@ -25,6 +25,7 @@ import (
 	"testing"
 
 	"github.com/dunglas/frankenphp"
+	"github.com/dunglas/frankenphp/watcher"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
@@ -35,7 +36,7 @@ import (
 
 type testOptions struct {
 	workerScript        string
-	watchOptions        []frankenphp.WatchOption
+	watchOptions        []watcher.WatchOption
 	nbWorkers           int
 	env                 map[string]string
 	nbParrallelRequests int

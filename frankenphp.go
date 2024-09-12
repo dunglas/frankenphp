@@ -41,6 +41,7 @@ import (
 	"sync"
 	"unsafe"
 
+	"github.com/dunglas/frankenphp/watcher"
 	"github.com/maypok86/otter"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -320,7 +321,11 @@ func Init(options ...Option) error {
 		return err
 	}
 
-	if err := initWatcher(opt.watch, opt.workers); err != nil {
+	restartWorkers := func() {
+		restartWorkers(opt.workers)
+	}
+
+	if err := watcher.InitWatcher(opt.watch, restartWorkers, getLogger()); err != nil {
 		return err
 	}
 
@@ -338,7 +343,7 @@ func Init(options ...Option) error {
 
 // Shutdown stops the workers and the PHP runtime.
 func Shutdown() {
-	drainWatcher()
+	watcher.DrainWatcher()
 	drainWorkers()
 	drainThreads()
 	requestChan = nil

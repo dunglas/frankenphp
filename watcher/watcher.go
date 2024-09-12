@@ -1,4 +1,4 @@
-package frankenphp
+package watcher
 
 // #cgo LDFLAGS: -lwatcher-c-0.11.0
 // #cgo CFLAGS: -Wall -Werror
@@ -17,8 +17,8 @@ import (
 
 type watcher struct {
 	sessions   []unsafe.Pointer
-	workerOpts []workerOpt
-	watchOpts  []watchOpt
+	callback   func()
+	watchOpts  []WatchOpt
 	trigger    chan struct{}
 	stop       chan struct{}
 }
@@ -31,13 +31,14 @@ var (
 	activeWatcher *watcher
 	// after stopping the watcher we will wait for eventual reloads to finish
 	reloadWaitGroup sync.WaitGroup
+	logger *zap.Logger
 )
 
-func initWatcher(watchOpts []watchOpt, workerOpts []workerOpt) error {
+func InitWatcher(watchOpts []WatchOpt, callback func(), logger *zap.Logger) error {
 	if len(watchOpts) == 0 {
 		return nil
 	}
-	activeWatcher = &watcher{workerOpts: workerOpts}
+	activeWatcher = &watcher{callback: callback}
 	err := activeWatcher.startWatching(watchOpts)
 	if err != nil {
 		return err
@@ -47,17 +48,19 @@ func initWatcher(watchOpts []watchOpt, workerOpts []workerOpt) error {
 	return nil
 }
 
-func drainWatcher() {
+func DrainWatcher() {
 	if activeWatcher == nil {
 		return
 	}
-	logger.Info("stopping watcher...")
+	if logger != nil {
+		logger.Info("stopping watcher...")
+	}
 	activeWatcher.stopWatching()
 	reloadWaitGroup.Wait()
 	activeWatcher = nil
 }
 
-func (w *watcher) startWatching(watchOpts []watchOpt) error {
+func (w *watcher) startWatching(watchOpts []WatchOpt) error {
 	w.trigger = make(chan struct{})
 	w.stop = make(chan struct{})
 	w.sessions = make([]unsafe.Pointer, len(watchOpts))
@@ -66,7 +69,6 @@ func (w *watcher) startWatching(watchOpts []watchOpt) error {
 		watchOpt.trigger = w.trigger
 		session, err := startSession(&watchOpt)
 		if err != nil {
-			logger.Error("unable to watch dirs", zap.Strings("dirs", watchOpt.dirs))
 			return err
 		}
 		w.sessions[i] = session
@@ -82,29 +84,30 @@ func (w *watcher) stopWatching() {
 	}
 }
 
-func startSession(watchOpt *watchOpt) (unsafe.Pointer, error) {
+func startSession(watchOpt *WatchOpt) (unsafe.Pointer, error) {
 	handle := cgo.NewHandle(watchOpt)
 	cPathTranslated := (*C.char)(C.CString(watchOpt.dirs[0]))
 	watchSession := C.start_new_watcher(cPathTranslated, C.uintptr_t(handle))
-	if watchSession == C.NULL {
-		logger.Error("couldn't start watching", zap.Strings("dirs", watchOpt.dirs))
-		return nil, errors.New("couldn't start watching")
+	if watchSession != C.NULL {
+		return watchSession, nil
 	}
-	return watchSession, nil
+	if logger != nil {
+        logger.Error("couldn't start watching", zap.Strings("dirs", watchOpt.dirs))
+    }
+    return nil, errors.New("couldn't start watching")
 }
 
 func stopSession(session unsafe.Pointer) {
 	success := C.stop_watcher(session)
-	if success == 1 {
+	if success == 1 && logger != nil {
 		logger.Error("couldn't stop watching")
 	}
 }
 
 //export go_handle_event
 func go_handle_event(path *C.char, eventType C.int, pathType C.int, handle C.uintptr_t) {
-	watchOpt := cgo.Handle(handle).Value().(*watchOpt)
+	watchOpt := cgo.Handle(handle).Value().(*WatchOpt)
 	if watchOpt.allowReload(C.GoString(path), int(eventType), int(pathType)) {
-		logger.Debug("valid file change detected", zap.String("path", C.GoString(path)))
 		watchOpt.trigger <- struct{}{}
 	}
 }
@@ -127,8 +130,10 @@ func listenForFileEvents(triggerWatcher chan struct{}, stopWatcher chan struct{}
 }
 
 func scheduleWorkerReload() {
-	logger.Info("filesystem change detected, restarting workers...")
+	if logger != nil {
+		logger.Info("filesystem change detected, restarting workers...")
+	}
 	reloadWaitGroup.Add(1)
-	restartWorkers(activeWatcher.workerOpts)
+	activeWatcher.callback()
 	reloadWaitGroup.Done()
 }
