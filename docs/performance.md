@@ -5,7 +5,7 @@ However, it is possible to substantially improve performance using an appropriat
 
 ## Number of Threads and Workers
 
-By default, FrankenPHP starts 2 times more threads and workers (in worker mode) than the available numbers of CPU.
+By default, FrankenPHP starts 2 times more threads than the available numbers of CPU.
 
 The appropriate values depend heavily on how your application is written, what it does and your hardware.
 We strongly recommend changing these values.
@@ -21,7 +21,7 @@ To change the number of workers, use the `num` option of the `worker` section of
 A good starting point is to set the number of threads to the number of CPU cores * 2, however, this gets complicated
 when using orchestrations like Kubernetes or cgroups, in general.
 
-However, if your application is heavily i/o bound,
+However, if your application is heavily I/O bound,
 you can usually increase the number of threads to a much higher number, assuming you have enough memory.
 This will largely depend on your application and the hardware/orchestration system you are running on.
 You may need to experiment with different values to find the optimal number.
@@ -101,7 +101,7 @@ you will need to adjust the Go runtime memory limit to ensure you don’t crash 
 
 A quick calculation you can use to determine the optimal memory limit for the Go runtime is:
 
-```
+```pseudocode
 POD_MEMORY_LIMIT = (PHP_MAX_MEMORY * NUM_THREADS) + (NUM_CPU * 100MB)
 GOMEMLIMIT = (NUM_CPU * 1000000000)
 ```
