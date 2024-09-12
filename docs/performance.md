@@ -16,6 +16,22 @@ To find the right values, it's best to run load tests simulating real traffic.
 To configure the number of threads, use the `num_threads` option of the `php_server` and `php` directives.
 To change the number of workers, use the `num` option of the `worker` section of the `frankenphp` directive.
 
+### Rule of Thumb—Threads
+
+A good starting point is to set the number of threads to the number of CPU cores * 2, however, this gets complicated
+when using orchestrations like Kubernetes or cgroups, in general.
+
+However, if your application is heavily i/o bound,
+you can usually increase the number of threads to a much higher number, assuming you have enough memory.
+This will largely depend on your application and the hardware/orchestration system you are running on.
+You may need to experiment with different values to find the optimal number.
+
+#### Cores
+
+FrankenPHP is a multithreaded application,
+and as such,
+running it on less than 2 cores for production workloads is [not recommended](https://github.com/dunglas/frankenphp/discussions/941#discussioncomment-10195431).
+
 ## Worker Mode
 
 Enabling [the worker mode](worker.md) dramatically improves performance,
@@ -38,6 +54,13 @@ This can be achieved by using the Debian Docker images (the default) and [by com
 
 Alternatively, we provide static binaries compiled with [the mimalloc allocator](https://github.com/microsoft/mimalloc), which makes FrankenPHP+musl faster (but still slower than FrankenPHP+glibc).
 
+## Load Balancing
+
+It is recommended to use caddy to load balance between multiple instances of FrankenPHP to ensure high availability,
+performance and reliability.
+Nginx can also be used,
+but it is [not nearly as performant as Caddy](https://www.patrickdap.com/post/benchmarking-is-hard/) without professional tuning.
+
 ## Go Runtime Configuration
 
 FrankenPHP is written in Go.
@@ -51,6 +74,44 @@ If you run FrankenPHP in containers (Docker, Kubernetes, LXC...) and limit the m
 set the `GOMEMLIMIT` environment variable to the available amount of memory.
 
 For more details, [the Go documentation page dedicated to this subject](https://pkg.go.dev/runtime#hdr-Environment_Variables) is a must-read to get the most out of the runtime.
+
+### Rule of Thumb—Memory
+
+When dealing with memory limits (such as in containers),
+this memory limit isn’t shared with the application and thus must be set manually; just like with any other workload.
+
+If you are using Kubernetes, it is usually recommended to set GOMEMLIMIT like so:
+
+```yaml
+env:
+- name: GOMEMLIMIT
+  valueFrom:
+    resourceFieldRef:
+      resource: limits.memory
+```
+
+However, PHP also uses memory separate from the go runtime using the `memory_limit` directive in `php.ini`.
+Thus, a balance is required between the Go runtime and the PHP runtime.
+
+If your application is using the entire available memory (i.e., no memory limit),
+then you can basically skip the remainder of this section,
+as the Go runtime will automatically adjust to the available memory.
+However, if you are using container memory limits,
+you will need to adjust the Go runtime memory limit to ensure you don’t crash from an out-of-memory error.
+
+A quick calculation you can use to determine the optimal memory limit for the Go runtime is:
+
+```
+POD_MEMORY_LIMIT = (PHP_MAX_MEMORY * NUM_THREADS) + (NUM_CPU * 100MB)
+GOMEMLIMIT = (NUM_CPU * 1000000000)
+```
+
+The 100MB is an extremely conservative estimate of the memory
+required for the Go runtime to run FrankenPHP and terminate SSL.
+This value may need to be adjusted based on your specific application.
+
+Thus, if you have 16 threads on an 8-core machine with a 128mb memory limit for PHP,
+then you should allocate ~2.9GB to the container and set `GOMEMLIMIT` to 0.8GB (`8000000000`).
 
 ## `file_server`
 
