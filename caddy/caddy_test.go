@@ -223,6 +223,40 @@ func TestJsonEnv(t *testing.T) {
 	tester.AssertGetResponse("http://localhost:9080/worker-env.php", http.StatusOK, "bazbar")
 }
 
+func TestCustomCaddyVariablesInEnv(t *testing.T) {
+	tester := caddytest.NewTester(t)
+	tester.InitServer(`
+		{
+			skip_install_trust
+			admin localhost:2999
+			http_port 9080
+			https_port 9443
+
+			frankenphp {
+				worker {
+					file ../testdata/worker-env.php
+					num 1
+					env FOO world
+				}
+			}
+		}
+
+		localhost:9080 {
+			route {
+				map 1 {my_customvar} {
+					default "hello "
+				}
+				php {
+					root ../testdata
+					env FOO {my_customvar}
+				}
+			}
+		}
+		`, "caddyfile")
+
+	tester.AssertGetResponse("http://localhost:9080/worker-env.php", http.StatusOK, "hello world")
+}
+
 func TestPHPServerDirective(t *testing.T) {
 	tester := caddytest.NewTester(t)
 	tester.InitServer(`
