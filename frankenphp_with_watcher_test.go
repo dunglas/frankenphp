@@ -22,7 +22,7 @@ const minTimesToPollForChanges = 3
 const maxTimesToPollForChanges = 60
 
 func TestWorkersShouldReloadOnMatchingPattern(t *testing.T) {
-	watchOptions := []watcher.WatchOption{
+	watchOptions := []watcher.WithWatchOption{
 		watcher.WithWatcherDirs([]string{"./testdata"}),
 		watcher.WithWatcherPattern("*.txt"),
 		watcher.WithWatcherRecursion(true),
@@ -35,7 +35,7 @@ func TestWorkersShouldReloadOnMatchingPattern(t *testing.T) {
 }
 
 func TestWorkersShouldNotReloadOnExcludingPattern(t *testing.T) {
-	watchOptions := []watcher.WatchOption{
+	watchOptions := []watcher.WithWatchOption{
 		watcher.WithWatcherDirs([]string{"./testdata"}),
 		watcher.WithWatcherPattern("*.php"),
 		watcher.WithWatcherRecursion(true),

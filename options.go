@@ -43,7 +43,7 @@ func WithWorkers(fileName string, num int, env map[string]string) Option {
 }
 
 // WithFileWatcher configures filesystem watchers.
-func WithFileWatcher(wo ...watcher.WatchOption) Option {
+func WithFileWatcher(wo ...watcher.WithWatchOption) Option {
 	return func(o *opt) error {
 		watchOpt := watcher.WatchOpt{}
 		for _, option := range wo {

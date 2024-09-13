@@ -16,11 +16,11 @@ import (
 )
 
 type watcher struct {
-	sessions   []unsafe.Pointer
-	callback   func()
-	watchOpts  []WatchOpt
-	trigger    chan struct{}
-	stop       chan struct{}
+	sessions  []unsafe.Pointer
+	callback  func()
+	watchOpts []WatchOpt
+	trigger   chan struct{}
+	stop      chan struct{}
 }
 
 // duration to wait before reloading workers after a file change
@@ -31,7 +31,7 @@ var (
 	activeWatcher *watcher
 	// after stopping the watcher we will wait for eventual reloads to finish
 	reloadWaitGroup sync.WaitGroup
-	logger *zap.Logger
+	logger          *zap.Logger
 )
 
 func InitWatcher(watchOpts []WatchOpt, callback func(), logger *zap.Logger) error {
@@ -92,9 +92,9 @@ func startSession(watchOpt *WatchOpt) (unsafe.Pointer, error) {
 		return watchSession, nil
 	}
 	if logger != nil {
-        logger.Error("couldn't start watching", zap.Strings("dirs", watchOpt.dirs))
-    }
-    return nil, errors.New("couldn't start watching")
+		logger.Error("couldn't start watching", zap.Strings("dirs", watchOpt.dirs))
+	}
+	return nil, errors.New("couldn't start watching")
 }
 
 func stopSession(session unsafe.Pointer) {

@@ -36,7 +36,7 @@ import (
 
 type testOptions struct {
 	workerScript        string
-	watchOptions        []watcher.WatchOption
+	watchOptions        []watcher.WithWatchOption
 	nbWorkers           int
 	env                 map[string]string
 	nbParrallelRequests int

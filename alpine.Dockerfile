@@ -70,6 +70,9 @@ RUN apk add --no-cache --virtual .build-deps \
 	readline-dev \
 	sqlite-dev \
 	upx \
+    # Needed for the file watcher
+    meson \
+    libstdc++ \
 	# Needed for the custom Go build
 	git \
 	bash
@@ -103,17 +106,15 @@ COPY --link *.* ./
 COPY --link caddy caddy
 COPY --link internal internal
 COPY --link testdata testdata
+COPY --link watcher watcher
 
-# install fswatch (necessary for file watching)
-ARG FSWATCH_VERSION
-WORKDIR /usr/local/src/fswatch
-RUN curl -L https://github.com/emcrisostomo/fswatch/releases/download/$FSWATCH_VERSION/fswatch-$FSWATCH_VERSION.tar.gz | tar xz
-WORKDIR /usr/local/src/fswatch/fswatch-$FSWATCH_VERSION
-RUN ./configure && \
-	make -j"$(nproc)" && \
-	make install && \
-	ldconfig /usr/local/lib && \
-	fswatch --version
+# install edant/watcher (necessary for file watching)
+WORKDIR /usr/local/src/watcher
+RUN git clone --branch=next https://github.com/e-dant/watcher .
+WORKDIR /usr/local/src/watcher/watcher-c
+RUN meson build .. && \
+	meson compile -C build && \
+	cp -r build/watcher-c/libwatcher-c* /usr/local/lib/
 
 # See https://github.com/docker-library/php/blob/master/8.3/alpine3.20/zts/Dockerfile#L53-L55
 ENV CGO_CFLAGS="-DFRANKENPHP_VERSION=$FRANKENPHP_VERSION $PHP_CFLAGS"
@@ -133,8 +134,9 @@ FROM common AS runner
 
 ENV GODEBUG=cgocheck=0
 
-COPY --from=builder /usr/local/lib/libfswatch.so* /usr/local/lib/
-RUN apk add --no-cache libstdc++ #required for fswatch to work
+# required for watcher to work
+COPY --from=builder /usr/local/lib/libwatcher-c* /usr/local/lib/
+COPY --from=builder /usr/lib/libstdc++* /usr/local/lib/
 
 COPY --from=builder /usr/local/bin/frankenphp /usr/local/bin/frankenphp
 RUN setcap cap_net_bind_service=+ep /usr/local/bin/frankenphp && \

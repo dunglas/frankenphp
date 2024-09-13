@@ -74,6 +74,10 @@ RUN meson build .. && \
 	meson compile -C build && \
 	cp -r build/watcher-c/libwatcher-c* /usr/local/lib/ && \
 	ldconfig
+# TODO: alternatively edant/watcher install with clang++ or cmake? (will create a libwatcher.so):
+# RUN clang++ -o libwatcher.so ./src/watcher-c.cpp -I ./include -I ../include -std=c++17 -O3 -Wall -Wextra -fPIC -shared && \
+#     cp libwatcher.so /usr/local/lib/libwatcher.so && \
+#     ldconfig
 
 WORKDIR /go/src/app
 COPY . .

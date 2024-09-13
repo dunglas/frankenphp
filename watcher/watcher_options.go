@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 )
 
-type WatchOption func(o *WatchOpt) error
+type WithWatchOption func(o *WatchOpt) error
 
 type WatchOpt struct {
 	dirs        []string
@@ -14,7 +14,7 @@ type WatchOpt struct {
 	trigger     chan struct{}
 }
 
-func WithWatcherDirs(dirs []string) WatchOption {
+func WithWatcherDirs(dirs []string) WithWatchOption {
 	return func(o *WatchOpt) error {
 		for _, dir := range dirs {
 			absDir, err := parseAbsPath(dir)
@@ -27,14 +27,14 @@ func WithWatcherDirs(dirs []string) WatchOption {
 	}
 }
 
-func WithWatcherRecursion(withRecursion bool) WatchOption {
+func WithWatcherRecursion(withRecursion bool) WithWatchOption {
 	return func(o *WatchOpt) error {
 		o.isRecursive = withRecursion
 		return nil
 	}
 }
 
-func WithWatcherPattern(pattern string) WatchOption {
+func WithWatcherPattern(pattern string) WithWatchOption {
 	return func(o *WatchOpt) error {
 		o.pattern = pattern
 		return nil

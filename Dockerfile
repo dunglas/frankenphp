@@ -69,6 +69,7 @@ RUN apt-get update && \
 	libxml2-dev \
 	zlib1g-dev \
     git \
+    # needed for the file watcher
     meson \
 	&& \
 	apt-get clean
@@ -87,6 +88,7 @@ COPY --link *.* ./
 COPY --link caddy caddy
 COPY --link internal internal
 COPY --link testdata testdata
+COPY --link watcher watcher
 
 # install edant/watcher (necessary for file watching)
 WORKDIR /usr/local/src/watcher

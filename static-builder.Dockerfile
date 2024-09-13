@@ -52,6 +52,7 @@ RUN apk update; \
 		linux-headers \
 		m4 \
 		make \
+    	meson \
 		pkgconfig \
 		php83 \
 		php83-common \
@@ -73,16 +74,14 @@ RUN apk update; \
 		xz ; \
 	ln -sf /usr/bin/php83 /usr/bin/php
 
-# install fswatch (necessary for file watching)
-ARG FSWATCH_VERSION
-WORKDIR /usr/local/src/fswatch
-RUN curl -L https://github.com/emcrisostomo/fswatch/releases/download/$FSWATCH_VERSION/fswatch-$FSWATCH_VERSION.tar.gz | tar xz
-WORKDIR /usr/local/src/fswatch/fswatch-$FSWATCH_VERSION
-RUN ./configure && \
-	make -j"$(nproc)" && \
-	make install && \
-	ldconfig /usr/local/lib && \
-	fswatch --version
+# install edant/watcher (necessary for file watching)
+WORKDIR /usr/local/src/watcher
+RUN git clone --branch=next https://github.com/e-dant/watcher .
+WORKDIR /usr/local/src/watcher/watcher-c
+RUN meson build .. && \
+	meson compile -C build && \
+	cp -r build/watcher-c/libwatcher-c* /usr/local/lib/ && \
+	ldconfig /usr/local/lib
 
 # FIXME: temporary workaround for https://github.com/golang/go/issues/68285
 WORKDIR /

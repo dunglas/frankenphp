@@ -81,4 +81,3 @@ func parseTestConfig(config string) (*caddy.FrankenPHPApp, error) {
 	err := app.UnmarshalCaddyfile(caddyfile.NewTestDispenser(config))
 	return &app, err
 }
-

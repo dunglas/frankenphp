@@ -137,7 +137,7 @@ func TestDisallowOnPathTypeBiggerThan2(t *testing.T) {
 	assert.False(t, watchOpt.allowReload(fileName, 0, pathType))
 }
 
-func createWithOptions(t *testing.T, applyOptions ...WatchOption) WatchOpt {
+func createWithOptions(t *testing.T, applyOptions ...WithWatchOption) WatchOpt {
 	watchOpt := WatchOpt{}
 
 	for _, applyOption := range applyOptions {
