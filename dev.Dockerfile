@@ -41,7 +41,6 @@ RUN apt-get update && \
 	valgrind \
 	neovim \
 	zsh \
-    meson \
 	libtool-bin && \
 	echo 'set auto-load safe-path /' > /root/.gdbinit && \
 	echo '* soft core unlimited' >> /etc/security/limits.conf \
@@ -72,8 +71,8 @@ WORKDIR /usr/local/src/watcher
 RUN git clone --branch=$EDANT_WATCHER_VERSION https://github.com/e-dant/watcher .
 WORKDIR /usr/local/src/watcher/watcher-c
 RUN gcc -o libwatcher.so ./src/watcher-c.cpp -I ./include -I ../include -std=c++17 -O3 -Wall -Wextra -fPIC -shared && \
-    cp libwatcher.so /usr/local/lib/libwatcher.so && \
-    ldconfig
+	cp libwatcher.so /usr/local/lib/libwatcher.so && \
+	ldconfig /usr/local/lib
 
 WORKDIR /go/src/app
 COPY . .

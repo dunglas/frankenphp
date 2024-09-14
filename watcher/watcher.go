@@ -1,6 +1,6 @@
 package watcher
 
-// #cgo LDFLAGS: -lwatcher-c
+// #cgo LDFLAGS: -lwatcher -lstdc++
 // #cgo CFLAGS: -Wall -Werror
 // #include <stdint.h>
 // #include <stdlib.h>

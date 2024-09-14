@@ -31,10 +31,9 @@ RUN apk add --no-cache \
 	zlib-dev \
 	bison \
 	nss-tools \
-    # file watcher
-    libstdc++ \
-    meson \
-    linux-headers \
+	# file watcher
+	libstdc++ \
+	linux-headers \
 	# Dev tools \
 	git \
 	clang \
@@ -69,10 +68,9 @@ ARG EDANT_WATCHER_VERSION=next
 WORKDIR /usr/local/src/watcher
 RUN git clone --branch=$EDANT_WATCHER_VERSION https://github.com/e-dant/watcher .
 WORKDIR /usr/local/src/watcher/watcher-c
-RUN meson build .. && \
-	meson compile -C build && \
-	cp -r build/watcher-c/libwatcher-c* /usr/local/lib/ && \
-	ldconfig /urs/local/lib
+RUN gcc -o libwatcher.so ./src/watcher-c.cpp -I ./include -I ../include -std=c++17 -O3 -Wall -Wextra -fPIC -shared && \
+	cp libwatcher.so /usr/local/lib/libwatcher.so && \
+	ldconfig /usr/local/lib
 
 WORKDIR /go/src/app
 COPY . .

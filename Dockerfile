@@ -68,9 +68,7 @@ RUN apt-get update && \
 	libssl-dev \
 	libxml2-dev \
 	zlib1g-dev \
-    git \
-    # needed for the file watcher
-    meson \
+	git \
 	&& \
 	apt-get clean
 
@@ -95,10 +93,9 @@ ARG EDANT_WATCHER_VERSION=next
 WORKDIR /usr/local/src/watcher
 RUN git clone --branch=$EDANT_WATCHER_VERSION https://github.com/e-dant/watcher .
 WORKDIR /usr/local/src/watcher/watcher-c
-RUN meson build .. && \
-	meson compile -C build && \
-	cp -r build/watcher-c/libwatcher-c* /usr/local/lib/ && \
-	ldconfig
+RUN gcc -o libwatcher.so ./src/watcher-c.cpp -I ./include -I ../include -std=c++17 -O3 -Wall -Wextra -fPIC -shared && \
+	cp libwatcher.so /usr/local/lib/libwatcher.so && \
+	ldconfig /usr/local/lib
 
 # See https://github.com/docker-library/php/blob/master/8.3/bookworm/zts/Dockerfile#L57-L59 for PHP values
 ENV CGO_CFLAGS="-DFRANKENPHP_VERSION=$FRANKENPHP_VERSION $PHP_CFLAGS"
@@ -119,7 +116,7 @@ FROM common AS runner
 ENV GODEBUG=cgocheck=0
 
 # copy watcher shared library
-COPY --from=builder /usr/local/lib/libwatcher-c* /usr/local/lib/
+COPY --from=builder /usr/local/lib/libwatcher* /usr/local/lib/
 # fix for the file watcher on arm
 RUN apt-get install -y gcc && \
 	apt-get clean && \
