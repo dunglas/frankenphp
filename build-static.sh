@@ -142,7 +142,7 @@ CGO_LDFLAGS="${CGO_LDFLAGS} ${PWD}/buildroot/lib/libbrotlicommon.a ${PWD}/buildr
 git clone --branch="${EDANT_WATCHER_VERSION:-next}" https://github.com/e-dant/watcher watcher
 cd watcher/watcher-c
 gcc -o libwatcher.so ./src/watcher-c.cpp -I ./include -I ../include -std=c++17 -O3 -Wall -Wextra -fPIC -shared
-cp libwatcher.so "${PWD}/buildroot/lib/libwatcher.so"
+cp libwatcher.so "../../buildroot/lib/libwatcher.so"
 CGO_LDFLAGS="${CGO_LDFLAGS} -lstdc++ -lwatcher"
 cd ../../
 
