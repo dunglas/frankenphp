@@ -50,6 +50,7 @@ func parseAbsPath(path string) (string, error) {
 	return absDir, nil
 }
 
+// TODO: support directory patterns
 func (watchOpt *WatchOpt) allowReload(fileName string, eventType int, pathType int) bool {
 	if !isValidEventType(eventType) || !isValidPathType(pathType) {
 		return false

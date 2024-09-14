@@ -133,9 +133,9 @@ php_server [<matcher>] {
 
 ### Watching for File Changes
 
-Since workers won't restart automatically on file changes you can also
-define a number of directories that should be watched. This is useful for
-development environments.
+Since workers won't restart automatically when updating your PHP files, you can also
+define a number of directories that should be watched for file changes.
+This is useful for development environments.
 
 ```caddyfile
 {
@@ -147,32 +147,16 @@ development environments.
 ```
 
 The configuration above will watch the `/path/to/app` directory recursively.
-If any file changes, the worker will be restarted.
+If any file changes, all workers will be restarted.
 
-You can also add multiple `watch` directives and use simple wildcard patterns, the following is valid:
+You can also add multiple `watch` directives and use simple pattern matching for files, the following is valid:
 
 ```caddyfile
 {
     frankenphp {
-        watch /path/to/folder1             # watches all subdirectories
+        watch /path/to/folder1             # watches all files in all subdirectories of /path/to/folder1
         watch /path/to/folder2/*.php       # watches files ending in .php in the /path/to/folder2 directory
         watch /path/to/folder3/**/*.php    # watches files ending in .php in the /path/to/folder3 directory and subdirectories
-    }
-}
-```
-
-Multiple directories can also be watched in one block:
-
-```caddyfile
-{
-    frankenphp {
-        watch {
-            dir /path/to/folder1
-            dir /path/to/folder2
-            dir /path/to/folder3
-            recursive true
-            pattern *.php
-        }
     }
 }
 ```
@@ -180,7 +164,7 @@ Multiple directories can also be watched in one block:
 #### Some notes
 
 - Directories can also be relative (to where the frankenphp process was started from)
-- The `/**/` pattern signifies recursive watching
+- The `/**/` pattern signifies recursive watching and may followed by a filename pattern
 - If the last part of the pattern contains the characters `*`, `?`, `[`, `\` or `.`, it will be matched against the
   shell [filename pattern](https://pkg.go.dev/path/filepath#Match)
 - The watcher will ignore symlinks

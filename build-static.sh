@@ -139,7 +139,7 @@ fi
 CGO_LDFLAGS="${CGO_LDFLAGS} ${PWD}/buildroot/lib/libbrotlicommon.a ${PWD}/buildroot/lib/libbrotlienc.a ${PWD}/buildroot/lib/libbrotlidec.a $(./buildroot/bin/php-config --ldflags || true) $(./buildroot/bin/php-config --libs || true)"
 
 # install edant/watcher for file watching
-git clone --branch="${EDANT_WATCHER_VERSION}" https://github.com/e-dant/watcher watcher
+git clone --branch="${EDANT_WATCHER_VERSION:-next}" https://github.com/e-dant/watcher watcher
 cd watcher/watcher-c
 gcc -o libwatcher.so ./src/watcher-c.cpp -I ./include -I ../include -std=c++17 -O3 -Wall -Wextra -fPIC -shared
 cp libwatcher.so "${PWD}/buildroot/lib/libwatcher.so"
