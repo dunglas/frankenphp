@@ -48,28 +48,28 @@ static const int8_t WTR_WATCHER_PATH_OTHER = 5;
 */
 struct wtr_watcher_event {
   int64_t effect_time;
-  char const* path_name;
-  char const* associated_path_name;
+  char const *path_name;
+  char const *associated_path_name;
   int8_t effect_type;
   int8_t path_type;
 };
 
 /*  Ensure the user's callback can receive
     events and will return nothing. */
-typedef void (* wtr_watcher_callback)(struct wtr_watcher_event event, void* context);
+typedef void (*wtr_watcher_callback)(struct wtr_watcher_event event, void *context);
 
-void* wtr_watcher_open(char const* const path, wtr_watcher_callback callback, void* context);
+void *wtr_watcher_open(char const *const path, wtr_watcher_callback callback, void *context);
 
-bool wtr_watcher_close(void* watcher);
+bool wtr_watcher_close(void *watcher);
 
 /*  The user, or the language we're working with,
     might not prefer a callback-style API.
     We provide a pipe-based API for these cases.
     Instead of forwarding events to a callback,
     we write json-serialized events to a pipe. */
-void* wtr_watcher_open_pipe(char const* const path, int* read_fd, int* write_fd);
+void *wtr_watcher_open_pipe(char const *const path, int *read_fd, int *write_fd);
 
-bool wtr_watcher_close_pipe(void* watcher, int read_fd, int write_fd);
+bool wtr_watcher_close_pipe(void *watcher, int read_fd, int write_fd);
 
 #ifdef __cplusplus
 }
