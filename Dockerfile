@@ -91,8 +91,9 @@ COPY --link testdata testdata
 COPY --link watcher watcher
 
 # install edant/watcher (necessary for file watching)
+ARG EDANT_WATCHER_VERSION=next
 WORKDIR /usr/local/src/watcher
-RUN git clone --branch=next https://github.com/e-dant/watcher .
+RUN git clone --branch=$EDANT_WATCHER_VERSION https://github.com/e-dant/watcher .
 WORKDIR /usr/local/src/watcher/watcher-c
 RUN meson build .. && \
 	meson compile -C build && \
@@ -117,8 +118,12 @@ FROM common AS runner
 
 ENV GODEBUG=cgocheck=0
 
+# copy watcher shared library
 COPY --from=builder /usr/local/lib/libwatcher-c* /usr/local/lib/
-RUN ldconfig
+# fix for the file watcher on arm
+RUN apt-get install -y gcc && \
+	apt-get clean && \
+	ldconfig
 
 COPY --from=builder /usr/local/bin/frankenphp /usr/local/bin/frankenphp
 RUN setcap cap_net_bind_service=+ep /usr/local/bin/frankenphp && \

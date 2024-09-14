@@ -109,8 +109,9 @@ COPY --link testdata testdata
 COPY --link watcher watcher
 
 # install edant/watcher (necessary for file watching)
+ARG EDANT_WATCHER_VERSION=next
 WORKDIR /usr/local/src/watcher
-RUN git clone --branch=next https://github.com/e-dant/watcher .
+RUN git clone --branch=$EDANT_WATCHER_VERSION https://github.com/e-dant/watcher .
 WORKDIR /usr/local/src/watcher/watcher-c
 RUN meson build .. && \
 	meson compile -C build && \
@@ -134,7 +135,7 @@ FROM common AS runner
 
 ENV GODEBUG=cgocheck=0
 
-# required for watcher to work
+# copy watcher shared library
 COPY --from=builder /usr/local/lib/libwatcher-c* /usr/local/lib/
 COPY --from=builder /usr/lib/libstdc++* /usr/local/lib/
 

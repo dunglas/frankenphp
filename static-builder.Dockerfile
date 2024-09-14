@@ -52,7 +52,6 @@ RUN apk update; \
 		linux-headers \
 		m4 \
 		make \
-    	meson \
 		pkgconfig \
 		php83 \
 		php83-common \
@@ -73,15 +72,6 @@ RUN apk update; \
 		wget \
 		xz ; \
 	ln -sf /usr/bin/php83 /usr/bin/php
-
-# install edant/watcher (necessary for file watching)
-WORKDIR /usr/local/src/watcher
-RUN git clone --branch=next https://github.com/e-dant/watcher .
-WORKDIR /usr/local/src/watcher/watcher-c
-RUN meson build .. && \
-	meson compile -C build && \
-	cp -r build/watcher-c/libwatcher-c* /usr/local/lib/ && \
-	ldconfig /usr/local/lib
 
 # FIXME: temporary workaround for https://github.com/golang/go/issues/68285
 WORKDIR /
@@ -113,6 +103,7 @@ RUN go mod graph | awk '{if ($1 !~ "@") print $2}' | xargs go get
 WORKDIR /go/src/app
 COPY *.* ./
 COPY caddy caddy
+COPY watcher watcher
 
 RUN --mount=type=secret,id=github-token GITHUB_TOKEN=$(cat /run/secrets/github-token) ./build-static.sh && \
 	rm -Rf dist/static-php-cli/source/*

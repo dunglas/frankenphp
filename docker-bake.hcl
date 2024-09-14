@@ -14,8 +14,8 @@ variable "GO_VERSION" {
     default = "1.22"
 }
 
-variable FSWATCH_VERSION {
-	default = "1.17.1"
+variable EDANT_WATCHER_VERSION {
+	default = "next"
 }
 
 variable "SHA" {}
@@ -119,7 +119,7 @@ target "default" {
     }
     args = {
         FRANKENPHP_VERSION = VERSION
-        FSWATCH_VERSION = FSWATCH_VERSION
+        EDANT_WATCHER_VERSION = EDANT_WATCHER_VERSION
     }
 }
 
@@ -145,7 +145,7 @@ target "static-builder" {
     }
     args = {
         FRANKENPHP_VERSION = VERSION
-        FSWATCH_VERSION = FSWATCH_VERSION
+        EDANT_WATCHER_VERSION = EDANT_WATCHER_VERSION
     }
     secret = ["id=github-token,env=GITHUB_TOKEN"]
 }
