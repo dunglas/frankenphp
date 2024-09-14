@@ -118,7 +118,7 @@ ENV GODEBUG=cgocheck=0
 # copy watcher shared library
 COPY --from=builder /usr/local/lib/libwatcher* /usr/local/lib/
 # fix for the file watcher on arm
-RUN apt-get install -y gcc && \
+RUN apt-get install -y --no-install-recommends gcc && \
 	apt-get clean && \
 	ldconfig
 

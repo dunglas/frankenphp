@@ -56,9 +56,11 @@ struct wtr_watcher_event {
 
 /*  Ensure the user's callback can receive
     events and will return nothing. */
-typedef void (*wtr_watcher_callback)(struct wtr_watcher_event event, void *context);
+typedef void (*wtr_watcher_callback)(struct wtr_watcher_event event,
+                                     void *context);
 
-void *wtr_watcher_open(char const *const path, wtr_watcher_callback callback, void *context);
+void *wtr_watcher_open(char const *const path, wtr_watcher_callback callback,
+                       void *context);
 
 bool wtr_watcher_close(void *watcher);
 
@@ -67,7 +69,8 @@ bool wtr_watcher_close(void *watcher);
     We provide a pipe-based API for these cases.
     Instead of forwarding events to a callback,
     we write json-serialized events to a pipe. */
-void *wtr_watcher_open_pipe(char const *const path, int *read_fd, int *write_fd);
+void *wtr_watcher_open_pipe(char const *const path, int *read_fd,
+                            int *write_fd);
 
 bool wtr_watcher_close_pipe(void *watcher, int read_fd, int write_fd);
 
