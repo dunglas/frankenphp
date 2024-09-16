@@ -30,6 +30,7 @@ jobs:
       USE_ZEND_ALLOC: 0
       LIBRARY_PATH: ${{ github.workspace }}/php/target/lib
       LD_LIBRARY_PATH: ${{ github.workspace }}/php/target/lib
+      EDANT_WATCHER_VERSION: next
     steps:
       -
         name: Remove local PHP
@@ -95,6 +96,18 @@ jobs:
       -
         name: Add PHP to the PATH
         run: echo "$(pwd)/php/target/bin" >> "$GITHUB_PATH"
+      - uses: actions/checkout@v4
+        name: Checkout watcher
+        with:
+          repository: e-dant/watcher
+          ref: ${{ env.EDANT_WATCHER_VERSION }}
+          path: 'edant/watcher'
+      - name: Compile edant/watcher
+        run: |
+          cd edant/watcher/watcher-c/
+          gcc -o libwatcher.so ./src/watcher-c.cpp -I ./include -I ../include -std=c++17 -O3 -Wall -Wextra -fPIC -shared
+          cp libwatcher.so /usr/local/lib/libwatcher.so
+          ldconfig
       -
         name: Set Set CGO flags
         run: |
