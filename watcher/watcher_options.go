@@ -86,6 +86,3 @@ func isValidPathType(eventType int) bool {
 	return eventType <= 2
 }
 
-func isValidPath(fileName string) bool {
-	return fileName != ""
-}
