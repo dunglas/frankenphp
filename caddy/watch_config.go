@@ -10,7 +10,7 @@ import (
 
 type watchConfig struct {
 	// FileName sets the path to the worker script.
-	Dirs []string `json:"dir,omitempty"`
+	Dir string `json:"dir,omitempty"`
 	// Whether to watch the directory recursively
 	IsRecursive bool `json:"recursive,omitempty"`
 	// The shell filename pattern to match against
@@ -19,7 +19,7 @@ type watchConfig struct {
 
 func applyWatchConfig(opts []frankenphp.Option, watchConfig watchConfig) []frankenphp.Option {
 	return append(opts, frankenphp.WithFileWatcher(
-		watcher.WithWatcherDirs(watchConfig.Dirs),
+		watcher.WithWatcherDir(watchConfig.Dir),
 		watcher.WithWatcherRecursion(watchConfig.IsRecursive),
 		watcher.WithWatcherPattern(watchConfig.Pattern),
 	))
@@ -51,8 +51,7 @@ func parseFullPattern(filePattern string) watchConfig {
 		watchConfig.Pattern = strings.Split(filePattern, "/**/")[1]
 		watchConfig.IsRecursive = true
 	}
-	dirName = strings.TrimRight(dirName, "/")
-	watchConfig.Dirs = []string{dirName}
+	watchConfig.Dir = strings.TrimRight(dirName, "/")
 
 	return watchConfig
 }

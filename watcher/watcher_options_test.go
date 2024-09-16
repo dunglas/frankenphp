@@ -19,25 +19,25 @@ func TestWithWatcherPattern(t *testing.T) {
 }
 
 func TestWithWatcherDir(t *testing.T) {
-	watchOpt := createWithOptions(t, WithWatcherDirs([]string{"/path/to/app"}))
+	watchOpt := createWithOptions(t, WithWatcherDir("/path/to/app"))
 
-	assert.Equal(t, "/path/to/app", watchOpt.dirs[0])
+	assert.Equal(t, "/path/to/app", watchOpt.dir)
 }
 
 func TestWithRelativeWatcherDir(t *testing.T) {
 	absoluteDir, err := filepath.Abs(".")
 
-	watchOpt := createWithOptions(t, WithWatcherDirs([]string{"."}))
+	watchOpt := createWithOptions(t, WithWatcherDir("."))
 
 	assert.NoError(t, err)
-	assert.Equal(t, absoluteDir, watchOpt.dirs[0])
+	assert.Equal(t, absoluteDir, watchOpt.dir)
 }
 
 func TestAllowReloadOnMatchingPattern(t *testing.T) {
 	const fileName = "/some/path/watch-me.php"
 	watchOpt := createWithOptions(
 		t,
-		WithWatcherDirs([]string{"/some/path"}),
+		WithWatcherDir("/some/path"),
 		WithWatcherPattern("*.php"),
 	)
 
@@ -48,7 +48,7 @@ func TestAllowReloadOnExactMatch(t *testing.T) {
 	const fileName = "/some/path/watch-me.php"
 	watchOpt := createWithOptions(
 		t,
-		WithWatcherDirs([]string{"/some/path"}),
+		WithWatcherDir("/some/path"),
 		WithWatcherPattern("watch-me.php"),
 	)
 
@@ -59,7 +59,7 @@ func TestDisallowOnDifferentFilename(t *testing.T) {
 	const fileName = "/some/path/watch-me.php"
 	watchOpt := createWithOptions(
 		t,
-		WithWatcherDirs([]string{"/some/path"}),
+		WithWatcherDir("/some/path"),
 		WithWatcherPattern("dont-watch.php"),
 	)
 
@@ -70,7 +70,7 @@ func TestAllowReloadOnRecursiveDirectory(t *testing.T) {
 	const fileName = "/some/path/watch-me.php"
 	watchOpt := createWithOptions(
 		t,
-		WithWatcherDirs([]string{"/some"}),
+		WithWatcherDir("/some"),
 		WithWatcherRecursion(true),
 		WithWatcherPattern("*.php"),
 	)
@@ -82,7 +82,7 @@ func TestAllowReloadWithRecursionAndNoPattern(t *testing.T) {
 	const fileName = "/some/path/watch-me.php"
 	watchOpt := createWithOptions(
 		t,
-		WithWatcherDirs([]string{"/some"}),
+		WithWatcherDir("/some"),
 		WithWatcherRecursion(true),
 	)
 
@@ -93,9 +93,9 @@ func TestDisallowOnDifferentPatterns(t *testing.T) {
 	const fileName = "/some/path/watch-me.php"
 	watchOpt := createWithOptions(
 		t,
-		WithWatcherDirs([]string{"/some"}),
+		WithWatcherDir("/some"),
 		WithWatcherRecursion(true),
-		WithWatcherPattern(".txt"),
+		WithWatcherPattern("*.txt"),
 	)
 
 	assert.False(t, watchOpt.allowReload(fileName, 0, 0))
@@ -105,9 +105,9 @@ func TestDisallowOnMissingRecursion(t *testing.T) {
 	const fileName = "/some/path/watch-me.php"
 	watchOpt := createWithOptions(
 		t,
-		WithWatcherDirs([]string{"/some"}),
+		WithWatcherDir("/some"),
 		WithWatcherRecursion(false),
-		WithWatcherPattern(".php"),
+		WithWatcherPattern("*.php"),
 	)
 
 	assert.False(t, watchOpt.allowReload(fileName, 0, 0))
@@ -118,7 +118,7 @@ func TestDisallowOnEventTypeBiggerThan3(t *testing.T) {
 	const eventType = 4
 	watchOpt := createWithOptions(
 		t,
-		WithWatcherDirs([]string{"/some/path"}),
+		WithWatcherDir("/some/path"),
 		WithWatcherPattern("watch-me.php"),
 	)
 
@@ -130,7 +130,7 @@ func TestDisallowOnPathTypeBiggerThan2(t *testing.T) {
 	const pathType = 3
 	watchOpt := createWithOptions(
 		t,
-		WithWatcherDirs([]string{"/some/path"}),
+		WithWatcherDir("/some/path"),
 		WithWatcherPattern("watch-me.php"),
 	)
 

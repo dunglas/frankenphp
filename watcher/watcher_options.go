@@ -8,21 +8,20 @@ import (
 type WithWatchOption func(o *WatchOpt) error
 
 type WatchOpt struct {
-	dirs        []string
+	dir         string
 	isRecursive bool
 	pattern     string
 	trigger     chan struct{}
 }
 
-func WithWatcherDirs(dirs []string) WithWatchOption {
+func WithWatcherDir(dir string) WithWatchOption {
 	return func(o *WatchOpt) error {
-		for _, dir := range dirs {
-			absDir, err := parseAbsPath(dir)
-			if err != nil {
-				return err
-			}
-			o.dirs = append(o.dirs, absDir)
+		absDir, err := filepath.Abs(dir)
+		if err != nil {
+			logger.Error("dir for watching is invalid", zap.String("dir", dir))
+			return err
 		}
+		o.dir = absDir
 		return nil
 	}
 }
@@ -41,39 +40,15 @@ func WithWatcherPattern(pattern string) WithWatchOption {
 	}
 }
 
-func parseAbsPath(path string) (string, error) {
-	absDir, err := filepath.Abs(path)
-	if err != nil {
-		logger.Error("path could not be watched", zap.String("path", path), zap.Error(err))
-		return "", err
-	}
-	return absDir, nil
-}
-
 // TODO: support directory patterns
 func (watchOpt *WatchOpt) allowReload(fileName string, eventType int, pathType int) bool {
 	if !isValidEventType(eventType) || !isValidPathType(pathType) {
 		return false
 	}
-	if watchOpt.pattern == "" {
-		return true
-	}
-	baseName := filepath.Base(fileName)
-	patternMatches, err := filepath.Match(watchOpt.pattern, baseName)
-	if err != nil {
-		logger.Error("failed to match filename", zap.String("file", fileName), zap.Error(err))
-		return false
-	}
 	if watchOpt.isRecursive {
-		return patternMatches
+		return isValidRecursivePattern(fileName, watchOpt.pattern)
 	}
-	fileNameDir := filepath.Dir(fileName)
-	for _, dir := range watchOpt.dirs {
-		if dir == fileNameDir {
-			return patternMatches
-		}
-	}
-	return false
+	return isValidNonRecursivePattern(fileName, watchOpt.pattern, watchOpt.dir)
 }
 
 // 0:rename,1:modify,2:create,3:destroy,4:owner,5:other,
@@ -86,3 +61,25 @@ func isValidPathType(eventType int) bool {
 	return eventType <= 2
 }
 
+func isValidRecursivePattern(fileName string, pattern string) bool {
+	if pattern == "" {
+		return true
+	}
+	baseName := filepath.Base(fileName)
+	patternMatches, err := filepath.Match(pattern, baseName)
+	if err != nil {
+		logger.Error("failed to match filename", zap.String("file", fileName), zap.Error(err))
+		return false
+	}
+
+	return patternMatches
+}
+
+func isValidNonRecursivePattern(fileName string, pattern string, dir string) bool {
+	fileNameDir := filepath.Dir(fileName)
+	if dir == fileNameDir {
+		return isValidRecursivePattern(fileName, pattern)
+	}
+
+	return false
+}
