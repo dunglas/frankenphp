@@ -141,13 +141,13 @@ This is useful for development environments.
 {
     frankenphp {
         worker /path/to/app/public/worker.php
-        watch /path/to/app
+        watch /path/to/app/**/*.php
     }
 }
 ```
 
 The configuration above will watch the `/path/to/app` directory recursively.
-If any file changes, all workers will be restarted.
+If any .php file changes, all workers will be restarted.
 
 You can also add multiple `watch` directives and use simple pattern matching for files, the following is valid:
 
@@ -163,9 +163,9 @@ You can also add multiple `watch` directives and use simple pattern matching for
 
 #### Some notes
 
-- Directories can also be relative (to where the frankenphp process was started from)
-- The `/**/` pattern signifies recursive watching and may followed by a filename pattern
-- If the last part of the pattern contains the characters `*`, `?`, `[`, `\` or `.`, it will be matched against the
+- Directories can also be relative (to where the frankenphp process is started from)
+- The `/**/` pattern signifies recursive watching and may be followed by a filename pattern
+- If the last part of the `watch` directive contains any of the characters `*`, `?`, `[`, `\` or `.`, it will be matched against the
   shell [filename pattern](https://pkg.go.dev/path/filepath#Match)
 - The watcher will ignore symlinks
 - Be wary about watching files that are created at runtime (like logs) since they might cause unwanted worker restarts.

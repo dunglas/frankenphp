@@ -56,4 +56,6 @@ void frankenphp_register_bulk_variables(go_string known_variables[27],
 
 int frankenphp_execute_script_cli(char *script, int argc, char **argv);
 
+int frankenphp_execute_php_code(const char *php_code);
+
 #endif

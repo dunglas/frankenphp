@@ -158,7 +158,6 @@ func restartWorkers(workerOpts []workerOpt) {
 		panic(err)
 	}
 	logger.Info("workers restarted successfully")
-	//TODO: Clear op_cache here at some point
 }
 
 //export go_frankenphp_worker_ready
@@ -192,6 +191,8 @@ func go_frankenphp_worker_handle_request_start(mrh C.uintptr_t) C.uintptr_t {
 		if c := l.Check(zapcore.DebugLevel, "shutting down"); c != nil {
 			c.Write(zap.String("worker", fc.scriptFilename))
 		}
+		// TODO: should opcache_reset be conditional?
+		resetOpCache()
 
 		return 0
 	case r = <-rc:
@@ -238,5 +239,14 @@ func go_frankenphp_finish_request(mrh, rh C.uintptr_t, deleteHandle bool) {
 		}
 
 		c.Write(fields...)
+	}
+}
+
+func resetOpCache() {
+	failure := C.frankenphp_execute_php_code(C.CString("function_exists('opcache_reset') && opcache_reset();"))
+	if failure == 1 {
+		logger.Error("failed to reset opcache")
+	} else {
+		logger.Debug("opcache reset")
 	}
 }
