@@ -22,6 +22,10 @@ const minTimesToPollForChanges = 3
 const maxTimesToPollForChanges = 60
 
 func TestWorkersShouldReloadOnMatchingPattern(t *testing.T) {
+	if isRunningInMsanMode() {
+		t.Skip("Skipping watcher tests in memory sanitizer mode")
+		return
+	}
 	watchOptions := []watcher.WithWatchOption{
 		watcher.WithWatcherDir("./testdata"),
 		watcher.WithWatcherPattern("*.txt"),
@@ -35,6 +39,10 @@ func TestWorkersShouldReloadOnMatchingPattern(t *testing.T) {
 }
 
 func TestWorkersShouldNotReloadOnExcludingPattern(t *testing.T) {
+	if isRunningInMsanMode() {
+		t.Skip("Skipping watcher tests in memory sanitizer mode")
+		return
+	}
 	watchOptions := []watcher.WithWatchOption{
 		watcher.WithWatcherDir("./testdata"),
 		watcher.WithWatcherPattern("*.php"),
@@ -55,6 +63,11 @@ func fetchBody(method string, url string, handler func(http.ResponseWriter, *htt
 	body, _ := io.ReadAll(resp.Body)
 
 	return string(body)
+}
+
+func isRunningInMsanMode() bool {
+	cflags := os.Getenv("CFLAGS")
+	return strings.Contains(cflags, "-fsanitize=memory")
 }
 
 func pollForWorkerReset(t *testing.T, handler func(http.ResponseWriter, *http.Request), limit int) bool {

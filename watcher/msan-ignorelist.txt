@@ -1,1 +1,0 @@
-src:/usr/local/lib/libwatcher*
