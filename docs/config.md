@@ -164,10 +164,10 @@ You can also add multiple `watch` directives and use simple pattern matching for
 #### Some notes
 
 - Directories can also be relative (to where the frankenphp process is started from)
-- The `/**/` pattern signifies recursive watching and may be followed by a filename pattern
+- The `**/` pattern signifies recursive watching and may be followed by a filename pattern
 - If the last part of the `watch` directive contains any of the characters `*`, `?`, `[`, `\` or `.`, it will be matched against the
   shell [filename pattern](https://pkg.go.dev/path/filepath#Match)
-- The watcher will ignore symlinks
+- The watcher will not follow symlinks
 - Be wary about watching files that are created at runtime (like logs) since they might cause unwanted worker restarts.
 
 The file watcher is based on [e-dant/watcher](https://github.com/e-dant/watcher).

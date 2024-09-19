@@ -13,20 +13,22 @@ func TestParseRecursiveDirectoryWithoutPattern(t *testing.T) {
 			watch /path1
 			watch /path2/
 			watch /path3/**/
+			watch /**/
+			watch **/
 		}
 	`)
 
 	assert.NoError(t, err)
-	assert.Len(t, app.Watch, 3)
+	assert.Len(t, app.Watch, 5)
 	assert.Equal(t, "/path1", app.Watch[0].Dir)
 	assert.Equal(t, "/path2", app.Watch[1].Dir)
 	assert.Equal(t, "/path3", app.Watch[2].Dir)
-	assert.True(t, app.Watch[0].IsRecursive)
-	assert.True(t, app.Watch[1].IsRecursive)
-	assert.True(t, app.Watch[2].IsRecursive)
-	assert.Equal(t, "", app.Watch[0].Pattern)
-	assert.Equal(t, "", app.Watch[1].Pattern)
-	assert.Equal(t, "", app.Watch[2].Pattern)
+	assert.Equal(t, "/", app.Watch[3].Dir)
+	assert.Equal(t, "", app.Watch[4].Dir)
+	for _, w := range app.Watch {
+		assert.True(t, w.IsRecursive)
+		assert.Equal(t, "", w.Pattern)
+	}
 }
 
 func TestParseRecursiveDirectoryWithPattern(t *testing.T) {
