@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"testing"
 	"time"
+	"strings"
 )
 
 // we have to wait a few milliseconds for the watcher debounce to take effect

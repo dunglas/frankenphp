@@ -243,10 +243,10 @@ func go_frankenphp_finish_request(mrh, rh C.uintptr_t, deleteHandle bool) {
 }
 
 func resetOpCache() {
-	failure := C.frankenphp_execute_php_code(C.CString("function_exists('opcache_reset') && opcache_reset();"))
-	if failure == 1 {
-		logger.Error("failed to reset opcache")
+	success := C.frankenphp_execute_php_function(C.CString("opcache_reset"))
+	if success == 1 {
+		logger.Debug("opcache_reset successful")
 	} else {
-		logger.Debug("opcache reset")
+		logger.Error("opcache_reset failed")
 	}
 }

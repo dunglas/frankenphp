@@ -1,7 +1,6 @@
 #include <SAPI.h>
 #include <Zend/zend_alloc.h>
 #include <Zend/zend_exceptions.h>
-#include <Zend/zend_execute.h>
 #include <Zend/zend_interfaces.h>
 #include <Zend/zend_types.h>
 #include <errno.h>
@@ -1057,12 +1056,21 @@ int frankenphp_execute_script_cli(char *script, int argc, char **argv) {
   return (intptr_t)exit_status;
 }
 
-int frankenphp_execute_php_code(const char *php_code) {
-  int ret = 0;
+int frankenphp_execute_php_function(const char *php_function) {
+  zval retval = {0};
+  zend_fcall_info fci = {0};
+  zend_fcall_info_cache fci_cache = {0};
+  zend_string *func_name =
+      zend_string_init(php_function, strlen(php_function), 0);
+  ZVAL_STR(&fci.function_name, func_name);
+  fci.size = sizeof fci;
+  fci.retval = &retval;
+  int success = 0;
 
-  zend_try { ret = zend_eval_string(php_code, NULL, (char *)""); }
-  zend_catch {}
+  zend_try { success = zend_call_function(&fci, &fci_cache) == SUCCESS; }
   zend_end_try();
 
-  return ret == FAILURE;
+  zend_string_release(func_name);
+
+  return success;
 }
