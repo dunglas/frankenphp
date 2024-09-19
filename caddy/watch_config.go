@@ -9,7 +9,7 @@ import (
 )
 
 type watchConfig struct {
-	// FileName sets the path to the worker script.
+	// Directory that should be watched for changes
 	Dir string `json:"dir,omitempty"`
 	// Whether to watch the directory recursively
 	IsRecursive bool `json:"recursive,omitempty"`

@@ -16,9 +16,8 @@ func TestParseRecursiveDirectoryWithoutPattern(t *testing.T) {
 		}
 	`)
 
-	assert.Nil(t, err)
-	assert.Equal(t, 3, len(app.Watch))
-
+	assert.NoError(t, err)
+	assert.Len(t, app.Watch, 3)
 	assert.Equal(t, "/path1", app.Watch[0].Dir)
 	assert.Equal(t, "/path2", app.Watch[1].Dir)
 	assert.Equal(t, "/path3", app.Watch[2].Dir)
@@ -33,15 +32,15 @@ func TestParseRecursiveDirectoryWithoutPattern(t *testing.T) {
 func TestParseRecursiveDirectoryWithPattern(t *testing.T) {
 	app, err := parseTestConfig(`
 		frankenphp {
-			watch /path/**/*.php
-			watch /path/**/filename
+			watch /path1/**/*.php
+			watch /path2/**/filename
 		}
 	`)
 
-	assert.Nil(t, err)
-	assert.Equal(t, 2, len(app.Watch))
-	assert.Equal(t, "/path", app.Watch[0].Dir)
-	assert.Equal(t, "/path", app.Watch[1].Dir)
+	assert.NoError(t, err)
+	assert.Len(t, app.Watch, 2)
+	assert.Equal(t, "/path1", app.Watch[0].Dir)
+	assert.Equal(t, "/path2", app.Watch[1].Dir)
 	assert.True(t, app.Watch[0].IsRecursive)
 	assert.True(t, app.Watch[1].IsRecursive)
 	assert.Equal(t, "*.php", app.Watch[0].Pattern)
@@ -56,8 +55,8 @@ func TestParseNonRecursiveDirectoryWithPattern(t *testing.T) {
 		}
 	`)
 
-	assert.Nil(t, err)
-	assert.Equal(t, 2, len(app.Watch))
+	assert.NoError(t, err)
+	assert.Len(t, app.Watch, 2)
 	assert.Equal(t, "/path1", app.Watch[0].Dir)
 	assert.Equal(t, "/path2", app.Watch[1].Dir)
 	assert.False(t, app.Watch[0].IsRecursive)
