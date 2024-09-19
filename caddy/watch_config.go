@@ -1,7 +1,6 @@
 package caddy
 
 import (
-	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/dunglas/frankenphp"
 	"github.com/dunglas/frankenphp/watcher"
 	"path/filepath"
@@ -25,18 +24,17 @@ func applyWatchConfig(opts []frankenphp.Option, watchConfig watchConfig) []frank
 	))
 }
 
-func parseWatchDirective(f *FrankenPHPApp, d *caddyfile.Dispenser) error {
-	if !d.NextArg() {
-		return d.Err("The 'watch' directive must be followed by a path")
+func parseWatchConfigs(filePatterns []string) []watchConfig {
+	watchConfigs := []watchConfig{}
+	for _, filePattern := range filePatterns {
+		watchConfigs = append(watchConfigs, parseWatchConfig(filePattern))
 	}
-	f.Watch = append(f.Watch, parseFullPattern(d.Val()))
-
-	return nil
+	return watchConfigs
 }
 
 // TODO: better path validation?
 // for the one line short-form in the caddy config, aka: 'watch /path/*pattern'
-func parseFullPattern(filePattern string) watchConfig {
+func parseWatchConfig(filePattern string) watchConfig {
 	watchConfig := watchConfig{IsRecursive: true}
 	dirName := filePattern
 	splitDirName, baseName := filepath.Split(filePattern)

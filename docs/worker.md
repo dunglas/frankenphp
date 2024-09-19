@@ -25,8 +25,15 @@ Use the `--worker` option of the `php-server` command to serve the content of th
 ./frankenphp php-server --worker /path/to/your/worker/script.php
 ```
 
-If your PHP app is [embeded in the binary](embed.md), you can add a custom `Caddyfile` in the root directory of the app.
+If your PHP app is [embedded in the binary](embed.md), you can add a custom `Caddyfile` in the root directory of the app.
 It will be used automatically.
+
+It's also possible to [restart the worker on file changes](config.md#watching-for-file-changes) with the `--watch` option.
+The following command will trigger a restart if any file ending in `.php` in the `/path/to/your/app/` directory or subdirectories is modified:
+
+```console
+./frankenphp php-server --worker /path/to/your/worker/script.php --watch "/path/to/your/app/**/*.php"
+```
 
 ## Symfony Runtime
 

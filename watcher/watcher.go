@@ -91,6 +91,7 @@ func startSession(watchOpt *WatchOpt) (unsafe.Pointer, error) {
 	cPathTranslated := (*C.char)(C.CString(watchOpt.dir))
 	watchSession := C.start_new_watcher(cPathTranslated, C.uintptr_t(handle))
 	if watchSession != C.NULL {
+		logger.Debug("watching", zap.String("dir", watchOpt.dir), zap.String("pattern", watchOpt.pattern))
 		return watchSession, nil
 	}
 	logger.Error("couldn't start watching", zap.String("dir", watchOpt.dir))
