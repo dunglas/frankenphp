@@ -136,7 +136,7 @@ ENV GODEBUG=cgocheck=0
 
 # copy watcher shared library (libgcc and libstdc++ are needed for the watcher)
 COPY --from=builder /usr/local/lib/libwatcher* /usr/local/lib/
-RUN apk add --no-cache libgcc libstdc++ && \
+RUN apk add --no-cache libstdc++ && \
 	ldconfig /usr/local/lib
 
 COPY --from=builder /usr/local/bin/frankenphp /usr/local/bin/frankenphp
