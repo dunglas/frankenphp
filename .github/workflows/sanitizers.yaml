@@ -23,7 +23,7 @@ jobs:
       matrix:
         sanitizer: ['asan', 'msan']
     env:
-      CFLAGS: -g -O0 -fsanitize=${{ matrix.sanitizer == 'asan' && 'address' || 'memory' }}  -DZEND_TRACK_ARENA_ALLOC
+      CFLAGS: -g -O0 -fsanitize=${{ matrix.sanitizer == 'asan' && 'address' || 'memory' }} -fsanitize-ignorelist=./watcher/msan-ignorelist.txt -DZEND_TRACK_ARENA_ALLOC
       LDFLAGS: -fsanitize=${{ matrix.sanitizer == 'asan' && 'address' || 'memory' }}
       CC: clang
       CXX: clang++
