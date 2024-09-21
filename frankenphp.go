@@ -50,10 +50,8 @@ import (
 )
 
 type contextKeyStruct struct{}
-type handleKeyStruct struct{}
 
 var contextKey = contextKeyStruct{}
-var handleKey = handleKeyStruct{}
 
 var (
 	InvalidRequestError         = errors.New("not a FrankenPHP request")
@@ -127,7 +125,6 @@ type FrankenPHPContext struct {
 	exitStatus     C.int
 
 	done                 chan interface{}
-	currentWorkerRequest cgo.Handle
 }
 
 func clientHasClosed(r *http.Request) bool {
@@ -191,7 +188,6 @@ func NewRequestWithContext(r *http.Request, opts ...RequestOption) (*http.Reques
 	fc.scriptFilename = sanitizedPathJoin(fc.documentRoot, fc.scriptName)
 
 	c := context.WithValue(r.Context(), contextKey, fc)
-	c = context.WithValue(c, handleKey, Handles())
 
 	return r.WithContext(c), nil
 }
@@ -364,6 +360,7 @@ func go_shutdown() {
 func drainThreads() {
 	close(done)
 	shutdownWG.Wait()
+	phpThreads = sync.Map{}
 }
 
 func getLogger() *zap.Logger {
@@ -373,7 +370,7 @@ func getLogger() *zap.Logger {
 	return logger
 }
 
-func updateServerContext(request *http.Request, create bool, mrh C.uintptr_t) error {
+func updateServerContext(request *http.Request, create bool, isWorkerRequest bool) error {
 	fc, ok := FromContext(request.Context())
 	if !ok {
 		return InvalidRequestError
@@ -416,20 +413,10 @@ func updateServerContext(request *http.Request, create bool, mrh C.uintptr_t) er
 
 	cRequestUri := C.CString(request.URL.RequestURI())
 
-	var rh cgo.Handle
-	if fc.responseWriter == nil {
-		h := cgo.NewHandle(request)
-		request.Context().Value(handleKey).(*handleList).AddHandle(h)
-		mrh = C.uintptr_t(h)
-	} else {
-		rh = cgo.NewHandle(request)
-		request.Context().Value(handleKey).(*handleList).AddHandle(rh)
-	}
-
 	ret := C.frankenphp_update_server_context(
 		C.bool(create),
-		C.uintptr_t(rh),
-		mrh,
+		C.bool(isWorkerRequest),
+		C.bool(fc.responseWriter == nil),
 
 		cMethod,
 		cQueryString,
@@ -479,14 +466,14 @@ func ServeHTTP(responseWriter http.ResponseWriter, request *http.Request) error 
 }
 
 //export go_handle_request
-func go_handle_request() bool {
+func go_handle_request(threadId int) bool {
 	select {
 	case <-done:
 		return false
 
 	case r := <-requestChan:
-		h := cgo.NewHandle(r)
-		r.Context().Value(handleKey).(*handleList).AddHandle(h)
+		thread := getPHPThread(threadId)
+		thread.setMainRequest(r)
 
 		fc, ok := FromContext(r.Context())
 		if !ok {
@@ -494,10 +481,10 @@ func go_handle_request() bool {
 		}
 		defer func() {
 			maybeCloseContext(fc)
-			r.Context().Value(handleKey).(*handleList).FreeAll()
+			thread.setMainRequest(nil)
 		}()
 
-		if err := updateServerContext(r, true, 0); err != nil {
+		if err := updateServerContext(r, true, false); err != nil {
 			panic(err)
 		}
 
@@ -518,8 +505,8 @@ func maybeCloseContext(fc *FrankenPHPContext) {
 }
 
 //export go_ub_write
-func go_ub_write(rh C.uintptr_t, cBuf *C.char, length C.int) (C.size_t, C.bool) {
-	r := cgo.Handle(rh).Value().(*http.Request)
+func go_ub_write(threadId int, cBuf *C.char, length C.int) (C.size_t, C.bool) {
+	r := getPHPThread(threadId).getActiveRequest()
 	fc, _ := FromContext(r.Context())
 
 	var writer io.Writer
@@ -557,8 +544,8 @@ var headerKeyCache = func() otter.Cache[string, string] {
 }()
 
 //export go_register_variables
-func go_register_variables(rh C.uintptr_t, trackVarsArray *C.zval) {
-	r := cgo.Handle(rh).Value().(*http.Request)
+func go_register_variables(threadId int, trackVarsArray *C.zval) {
+	r := getPHPThread(threadId).getActiveRequest()
 	fc := r.Context().Value(contextKey).(*FrankenPHPContext)
 
 	p := &runtime.Pinner{}
@@ -625,10 +612,12 @@ func go_register_variables(rh C.uintptr_t, trackVarsArray *C.zval) {
 }
 
 //export go_apache_request_headers
-func go_apache_request_headers(rh, mrh C.uintptr_t) (*C.go_string, C.size_t, C.uintptr_t) {
-	if rh == 0 {
+func go_apache_request_headers(threadId int, isStartingWorkers bool) (*C.go_string, C.size_t, C.uintptr_t) {
+	thread := getPHPThread(threadId)
+
+	if isStartingWorkers {
 		// worker mode, not handling a request
-		mr := cgo.Handle(mrh).Value().(*http.Request)
+		mr := thread.getMainRequest()
 		mfc := mr.Context().Value(contextKey).(*FrankenPHPContext)
 
 		if c := mfc.logger.Check(zapcore.DebugLevel, "apache_request_headers() called in non-HTTP context"); c != nil {
@@ -637,7 +626,7 @@ func go_apache_request_headers(rh, mrh C.uintptr_t) (*C.go_string, C.size_t, C.u
 
 		return nil, 0, 0
 	}
-	r := cgo.Handle(rh).Value().(*http.Request)
+	r := thread.getActiveRequest()
 
 	pinner := &runtime.Pinner{}
 	pinnerHandle := C.uintptr_t(cgo.NewHandle(pinner))
@@ -691,8 +680,8 @@ func addHeader(fc *FrankenPHPContext, cString *C.char, length C.int) {
 }
 
 //export go_write_headers
-func go_write_headers(rh C.uintptr_t, status C.int, headers *C.zend_llist) {
-	r := cgo.Handle(rh).Value().(*http.Request)
+func go_write_headers(threadId int, status C.int, headers *C.zend_llist) {
+	r := getPHPThread(threadId).getActiveRequest()
 	fc := r.Context().Value(contextKey).(*FrankenPHPContext)
 
 	if fc.responseWriter == nil {
@@ -719,8 +708,8 @@ func go_write_headers(rh C.uintptr_t, status C.int, headers *C.zend_llist) {
 }
 
 //export go_sapi_flush
-func go_sapi_flush(rh C.uintptr_t) bool {
-	r := cgo.Handle(rh).Value().(*http.Request)
+func go_sapi_flush(threadId int) bool {
+	r := getPHPThread(threadId).getActiveRequest()
 	fc := r.Context().Value(contextKey).(*FrankenPHPContext)
 
 	if fc.responseWriter == nil || clientHasClosed(r) {
@@ -737,8 +726,8 @@ func go_sapi_flush(rh C.uintptr_t) bool {
 }
 
 //export go_read_post
-func go_read_post(rh C.uintptr_t, cBuf *C.char, countBytes C.size_t) (readBytes C.size_t) {
-	r := cgo.Handle(rh).Value().(*http.Request)
+func go_read_post(threadId int, cBuf *C.char, countBytes C.size_t) (readBytes C.size_t) {
+	r := getPHPThread(threadId).getActiveRequest()
 
 	p := unsafe.Slice((*byte)(unsafe.Pointer(cBuf)), countBytes)
 	var err error
@@ -752,8 +741,8 @@ func go_read_post(rh C.uintptr_t, cBuf *C.char, countBytes C.size_t) (readBytes 
 }
 
 //export go_read_cookies
-func go_read_cookies(rh C.uintptr_t) *C.char {
-	r := cgo.Handle(rh).Value().(*http.Request)
+func go_read_cookies(threadId int) *C.char {
+	r := getPHPThread(threadId).getActiveRequest()
 
 	cookies := r.Cookies()
 	if len(cookies) == 0 {

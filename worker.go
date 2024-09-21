@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"net/http"
 	"path/filepath"
-	"runtime/cgo"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -93,12 +92,6 @@ func startWorkers(fileName string, nbWorkers int, env PreparedEnv) error {
 				}
 
 				fc := r.Context().Value(contextKey).(*FrankenPHPContext)
-				if fc.currentWorkerRequest != 0 {
-					// Terminate the pending HTTP request handled by the worker
-					maybeCloseContext(fc.currentWorkerRequest.Value().(*http.Request).Context().Value(contextKey).(*FrankenPHPContext))
-					fc.currentWorkerRequest.Delete()
-					fc.currentWorkerRequest = 0
-				}
 
 				// TODO: make the max restart configurable
 				if _, ok := workersRequestChans.Load(absFileName); ok {
@@ -168,14 +161,15 @@ func go_frankenphp_worker_ready() {
 }
 
 //export go_frankenphp_worker_handle_request_start
-func go_frankenphp_worker_handle_request_start(mrh C.uintptr_t) C.uintptr_t {
-	mainRequest := cgo.Handle(mrh).Value().(*http.Request)
+func go_frankenphp_worker_handle_request_start(threadId int) C.bool {
+	thread := getPHPThread(threadId)
+	mainRequest := thread.getMainRequest()
 	fc := mainRequest.Context().Value(contextKey).(*FrankenPHPContext)
 
 	v, ok := workersRequestChans.Load(fc.scriptFilename)
 	if !ok {
 		// Probably shutting down
-		return 0
+		return C.bool(false)
 	}
 
 	rc := v.(chan *http.Request)
@@ -194,45 +188,42 @@ func go_frankenphp_worker_handle_request_start(mrh C.uintptr_t) C.uintptr_t {
 		// TODO: should opcache_reset be conditional?
 		resetOpCache()
 
-		return 0
+		return C.bool(false)
 	case r = <-rc:
 	}
 
-	fc.currentWorkerRequest = cgo.NewHandle(r)
-	r.Context().Value(handleKey).(*handleList).AddHandle(fc.currentWorkerRequest)
+	thread.setWorkerRequest(r)
 
 	if c := l.Check(zapcore.DebugLevel, "request handling started"); c != nil {
 		c.Write(zap.String("worker", fc.scriptFilename), zap.String("url", r.RequestURI))
 	}
 
-	if err := updateServerContext(r, false, mrh); err != nil {
+	if err := updateServerContext(r, false, true); err != nil {
 		// Unexpected error
 		if c := l.Check(zapcore.DebugLevel, "unexpected error"); c != nil {
 			c.Write(zap.String("worker", fc.scriptFilename), zap.String("url", r.RequestURI), zap.Error(err))
 		}
 
-		return 0
+		return C.bool(false)
 	}
-
-	return C.uintptr_t(fc.currentWorkerRequest)
+	return C.bool(true)
 }
 
 //export go_frankenphp_finish_request
-func go_frankenphp_finish_request(mrh, rh C.uintptr_t, deleteHandle bool) {
-	rHandle := cgo.Handle(rh)
-	r := rHandle.Value().(*http.Request)
+func go_frankenphp_finish_request(threadId int, isWorkerRequest bool) {
+	thread := getPHPThread(threadId)
+	r := thread.getActiveRequest()
 	fc := r.Context().Value(contextKey).(*FrankenPHPContext)
 
-	if deleteHandle {
-		r.Context().Value(handleKey).(*handleList).FreeAll()
-		cgo.Handle(mrh).Value().(*http.Request).Context().Value(contextKey).(*FrankenPHPContext).currentWorkerRequest = 0
+	if isWorkerRequest {
+		thread.setWorkerRequest(nil)
 	}
 
 	maybeCloseContext(fc)
 
 	if c := fc.logger.Check(zapcore.DebugLevel, "request handling finished"); c != nil {
 		var fields []zap.Field
-		if mrh == 0 {
+		if isWorkerRequest {
 			fields = append(fields, zap.String("worker", fc.scriptFilename), zap.String("url", r.RequestURI))
 		} else {
 			fields = append(fields, zap.String("url", r.RequestURI))

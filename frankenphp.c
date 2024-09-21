@@ -69,8 +69,9 @@ frankenphp_config frankenphp_get_config() {
 }
 
 typedef struct frankenphp_server_context {
-  uintptr_t current_request;
-  uintptr_t main_request;
+  bool is_worker_request;
+  bool has_active_request;
+  bool is_starting_worker;
   bool worker_ready;
   char *cookie_data;
   bool finished;
@@ -230,9 +231,8 @@ PHP_FUNCTION(frankenphp_finish_request) { /* {{{ */
   php_output_end_all();
   php_header();
 
-  if (ctx->current_request != 0) {
-    go_frankenphp_finish_request(ctx->main_request, ctx->current_request,
-                                 false);
+  if (ctx->has_active_request) {
+    go_frankenphp_finish_request(pthread_self(), false);
   }
 
   ctx->finished = true;
@@ -248,7 +248,7 @@ PHP_FUNCTION(frankenphp_request_headers) {
 
   frankenphp_server_context *ctx = SG(server_context);
   struct go_apache_request_headers_return headers =
-      go_apache_request_headers(ctx->current_request, ctx->main_request);
+      go_apache_request_headers(pthread_self(), ctx->is_starting_worker);
 
   array_init_size(return_value, headers.r1);
 
@@ -326,7 +326,7 @@ PHP_FUNCTION(frankenphp_handle_request) {
 
   frankenphp_server_context *ctx = SG(server_context);
 
-  if (ctx->main_request == 0) {
+  if (!ctx->is_starting_worker && !ctx->is_worker_request) {
     /* not a worker, throw an error */
     zend_throw_exception(
         spl_ce_RuntimeException,
@@ -349,8 +349,8 @@ PHP_FUNCTION(frankenphp_handle_request) {
   zend_unset_timeout();
 #endif
 
-  uintptr_t request =
-      go_frankenphp_worker_handle_request_start(ctx->main_request);
+  bool request =
+      go_frankenphp_worker_handle_request_start(pthread_self());
   if (frankenphp_worker_request_startup() == FAILURE
       /* Shutting down */
       || !request) {
@@ -383,8 +383,8 @@ PHP_FUNCTION(frankenphp_handle_request) {
   }
 
   frankenphp_worker_request_shutdown();
-  ctx->current_request = 0;
-  go_frankenphp_finish_request(ctx->main_request, request, true);
+  ctx->has_active_request = false;
+  go_frankenphp_finish_request(pthread_self(), true);
 
   RETURN_TRUE;
 }
@@ -425,7 +425,7 @@ static zend_module_entry frankenphp_module = {
 static void frankenphp_request_shutdown() {
   frankenphp_server_context *ctx = SG(server_context);
 
-  if (ctx->main_request && ctx->current_request) {
+  if (!ctx->is_starting_worker) {
     frankenphp_destroy_super_globals();
   }
 
@@ -436,7 +436,7 @@ static void frankenphp_request_shutdown() {
 }
 
 int frankenphp_update_server_context(
-    bool create, uintptr_t current_request, uintptr_t main_request,
+    bool create, bool is_worker_request, bool is_starting_worker,
 
     const char *request_method, char *query_string, zend_long content_length,
     char *path_translated, char *request_uri, const char *content_type,
@@ -458,8 +458,9 @@ int frankenphp_update_server_context(
   // It is not reset by zend engine, set it to 200.
   SG(sapi_headers).http_response_code = 200;
 
-  ctx->main_request = main_request;
-  ctx->current_request = current_request;
+  ctx->is_worker_request = is_worker_request;
+  ctx->has_active_request = !is_starting_worker;
+  ctx->is_starting_worker = is_starting_worker;
 
   SG(request_info).auth_password = auth_password;
   SG(request_info).auth_user = auth_user;
@@ -493,7 +494,7 @@ static size_t frankenphp_ub_write(const char *str, size_t str_length) {
   }
 
   struct go_ub_write_return result = go_ub_write(
-      ctx->current_request ? ctx->current_request : ctx->main_request,
+      pthread_self(),
       (char *)str, str_length);
 
   if (result.r1) {
@@ -511,7 +512,7 @@ static int frankenphp_send_headers(sapi_headers_struct *sapi_headers) {
   int status;
   frankenphp_server_context *ctx = SG(server_context);
 
-  if (ctx->current_request == 0) {
+  if (!ctx->has_active_request) {
     return SAPI_HEADER_SEND_FAILED;
   }
 
@@ -525,7 +526,7 @@ static int frankenphp_send_headers(sapi_headers_struct *sapi_headers) {
     }
   }
 
-  go_write_headers(ctx->current_request, status, &sapi_headers->headers);
+  go_write_headers(pthread_self(), status, &sapi_headers->headers);
 
   return SAPI_HEADER_SENT_SUCCESSFULLY;
 }
@@ -533,7 +534,7 @@ static int frankenphp_send_headers(sapi_headers_struct *sapi_headers) {
 static void frankenphp_sapi_flush(void *server_context) {
   frankenphp_server_context *ctx = (frankenphp_server_context *)server_context;
 
-  if (ctx && ctx->current_request != 0 && go_sapi_flush(ctx->current_request)) {
+  if (ctx && ctx->has_active_request && go_sapi_flush(pthread_self())) {
     php_handle_aborted_connection();
   }
 }
@@ -541,19 +542,19 @@ static void frankenphp_sapi_flush(void *server_context) {
 static size_t frankenphp_read_post(char *buffer, size_t count_bytes) {
   frankenphp_server_context *ctx = SG(server_context);
 
-  return ctx->current_request
-             ? go_read_post(ctx->current_request, buffer, count_bytes)
+  return ctx->has_active_request
+             ? go_read_post(pthread_self(), buffer, count_bytes)
              : 0;
 }
 
 static char *frankenphp_read_cookies(void) {
   frankenphp_server_context *ctx = SG(server_context);
 
-  if (ctx->current_request == 0) {
+  if (!ctx->has_active_request) {
     return "";
   }
 
-  ctx->cookie_data = go_read_cookies(ctx->current_request);
+  ctx->cookie_data = go_read_cookies(pthread_self());
 
   return ctx->cookie_data;
 }
@@ -663,15 +664,13 @@ void frankenphp_register_bulk_variables(go_string known_variables[27],
 
 static void frankenphp_register_variables(zval *track_vars_array) {
   /* https://www.php.net/manual/en/reserved.variables.server.php */
-  frankenphp_server_context *ctx = SG(server_context);
 
   /* In CGI mode, we consider the environment to be a part of the server
    * variables
    */
   php_import_environment_variables(track_vars_array);
 
-  go_register_variables(ctx->current_request ? ctx->current_request
-                                             : ctx->main_request,
+  go_register_variables(pthread_self(),
                         track_vars_array);
 }
 
@@ -743,7 +742,7 @@ static void *php_thread(void *arg) {
 
   local_ctx = malloc(sizeof(frankenphp_server_context));
 
-  while (go_handle_request()) {
+  while (go_handle_request(pthread_self())) {
   }
 
 #ifdef ZTS
