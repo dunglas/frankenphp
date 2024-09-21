@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"sync"
 	"go.uber.org/zap"
+	"runtime"
 )
 
 var phpThreads sync.Map
@@ -12,13 +13,14 @@ type PHPThread struct {
 	threadId int
 	mainRequest *http.Request
 	workerRequest *http.Request
+	pinner *runtime.Pinner
 }
 
 func getPHPThread(threadId int) *PHPThread {
 	if thread, ok := phpThreads.Load(threadId); ok {
 		return thread.(*PHPThread)
 	}
-	thread := &PHPThread{threadId: threadId}
+	thread := &PHPThread{threadId: threadId, pinner: &runtime.Pinner{}}
 	phpThreads.Store(threadId, thread)
 	logger.Debug("new php thread registered", zap.Int("threadId", threadId))
 	return thread

@@ -35,7 +35,6 @@ import (
 	"net/http"
 	"os"
 	"runtime"
-	"runtime/cgo"
 	"strconv"
 	"strings"
 	"sync"
@@ -545,10 +544,11 @@ var headerKeyCache = func() otter.Cache[string, string] {
 
 //export go_register_variables
 func go_register_variables(threadId int, trackVarsArray *C.zval) {
-	r := getPHPThread(threadId).getActiveRequest()
+	thread := getPHPThread(threadId)
+	r := thread.getActiveRequest()
 	fc := r.Context().Value(contextKey).(*FrankenPHPContext)
 
-	p := &runtime.Pinner{}
+	p := thread.pinner
 
 	dynamicVariables := make([]C.php_variable, len(fc.env)+len(r.Header))
 
@@ -612,7 +612,7 @@ func go_register_variables(threadId int, trackVarsArray *C.zval) {
 }
 
 //export go_apache_request_headers
-func go_apache_request_headers(threadId int, isStartingWorkers bool) (*C.go_string, C.size_t, C.uintptr_t) {
+func go_apache_request_headers(threadId int, isStartingWorkers bool) (*C.go_string, C.size_t) {
 	thread := getPHPThread(threadId)
 
 	if isStartingWorkers {
@@ -624,12 +624,11 @@ func go_apache_request_headers(threadId int, isStartingWorkers bool) (*C.go_stri
 			c.Write(zap.String("worker", mfc.scriptFilename))
 		}
 
-		return nil, 0, 0
+		return nil, 0
 	}
 	r := thread.getActiveRequest()
 
-	pinner := &runtime.Pinner{}
-	pinnerHandle := C.uintptr_t(cgo.NewHandle(pinner))
+	pinner := thread.pinner
 
 	headers := make([]C.go_string, 0, len(r.Header)*2)
 
@@ -651,19 +650,12 @@ func go_apache_request_headers(threadId int, isStartingWorkers bool) (*C.go_stri
 	sd := unsafe.SliceData(headers)
 	pinner.Pin(sd)
 
-	return sd, C.size_t(len(r.Header)), pinnerHandle
+	return sd, C.size_t(len(r.Header))
 }
 
 //export go_apache_request_cleanup
-func go_apache_request_cleanup(rh C.uintptr_t) {
-	if rh == 0 {
-		return
-	}
-
-	h := cgo.Handle(rh)
-	p := h.Value().(*runtime.Pinner)
-	p.Unpin()
-	h.Delete()
+func go_apache_request_cleanup(threadId int) {
+	getPHPThread(threadId).pinner.Unpin()
 }
 
 func addHeader(fc *FrankenPHPContext, cString *C.char, length C.int) {
