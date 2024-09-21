@@ -68,12 +68,18 @@ func startWorkers(fileName string, nbWorkers int, env PreparedEnv) error {
 			defer shutdownWG.Done()
 			backoff := minBackoff
 			failureCount := 0
+			backingOffLock := sync.RWMutex{}
 			for {
 				// if the worker can stay up longer than backoff*2, it is probably an application error
 				upFunc := sync.Once{}
 				go func() {
-					time.Sleep(backoff * 2)
+					backingOffLock.RLock()
+					wait := backoff * 2
+					backingOffLock.RUnlock()
+					time.Sleep(wait)
 					upFunc.Do(func() {
+						backingOffLock.Lock()
+						defer backingOffLock.Unlock()
 						// if we come back to a stable state, reset the failure count
 						if backoff == minBackoff {
 							failureCount = 0
@@ -133,6 +139,8 @@ func startWorkers(fileName string, nbWorkers int, env PreparedEnv) error {
 						}
 
 						upFunc.Do(func() {
+							backingOffLock.Lock()
+							defer backingOffLock.Unlock()
 							// if we end up here, the worker has not been up for backoff*2
 							// this is probably due to a syntax error or another fatal error
 							if failureCount >= maxConsecutiveFailures {
@@ -142,9 +150,14 @@ func startWorkers(fileName string, nbWorkers int, env PreparedEnv) error {
 								failureCount += 1
 							}
 						})
-						time.Sleep(backoff)
+						backingOffLock.RLock()
+						wait := backoff
+						backingOffLock.RUnlock()
+						time.Sleep(wait)
+						backingOffLock.Lock()
 						backoff *= 2
 						backoff = min(backoff, maxBackoff)
+						backingOffLock.Unlock()
 					}
 				} else {
 					break
