@@ -59,9 +59,9 @@ func startWorkers(fileName string, nbWorkers int, env PreparedEnv) error {
 
 	l := getLogger()
 
-	maxBackoff := 16 * time.Second
-	minBackoff := 100 * time.Millisecond
-	maxConsecutiveFailures := 3
+	const maxBackoff = 16 * time.Second
+	const minBackoff = 100 * time.Millisecond
+	const maxConsecutiveFailures = 3
 
 	for i := 0; i < nbWorkers; i++ {
 		go func() {
@@ -144,8 +144,7 @@ func startWorkers(fileName string, nbWorkers int, env PreparedEnv) error {
 							// if we end up here, the worker has not been up for backoff*2
 							// this is probably due to a syntax error or another fatal error
 							if failureCount >= maxConsecutiveFailures {
-								logger.Fatal("Worker had too many consecutive unexpected terminations", zap.String("worker", absFileName))
-								panic("Too many consecutive failures")
+								panic(fmt.Errorf("workers %q: too many consecutive failures", absFileName))
 							} else {
 								failureCount += 1
 							}
