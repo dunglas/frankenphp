@@ -21,7 +21,7 @@ var (
 	workersReadyWG      sync.WaitGroup
 )
 
-// TODO: start all the worker in parallell to reduce the boot time
+// TODO: start all the worker in parallel to reduce the boot time
 func initWorkers(opt []workerOpt) error {
 	for _, w := range opt {
 		if err := startWorkers(w.fileName, w.num, w.env); err != nil {

@@ -121,6 +121,14 @@ A workaround to using this type of code in worker mode is to restart the worker 
 
 The previous worker snippet allows configuring a maximum number of request to handle by setting an environment variable named `MAX_REQUESTS`.
 
+### Worker failures
+
+If a worker script crashes with a non-zero exit code, FrankenPHP will restart it with an exponential backoff strategy.
+If the worker script stays up longer than the last backoff * 2,
+it will not penalize the worker script and restart it again.
+However, if the worker script continues to fail with a non-zero exit code in a short period of time
+(for example, having a typo in a script), FrankenPHP will crash with the error: `too many consecutive failures`.
+
 ## Superglobals Behavior
 
 [PHP superglobals](https://www.php.net/manual/en/language.variables.superglobals.php) (`$_SERVER`, `$_ENV`, `$_GET`...)
