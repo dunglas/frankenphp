@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"runtime/cgo"
 	"sync"
+	"time"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -57,10 +58,34 @@ func startWorkers(fileName string, nbWorkers int, env PreparedEnv) error {
 	env["FRANKENPHP_WORKER\x00"] = "1"
 
 	l := getLogger()
+
+	maxBackoff := 16 * time.Second
+	minBackoff := 100 * time.Millisecond
+	maxConsecutiveFailures := 3
+
 	for i := 0; i < nbWorkers; i++ {
 		go func() {
 			defer shutdownWG.Done()
+			backoff := minBackoff
+			failureCount := 0
 			for {
+				// if the worker can stay up longer than backoff*2, it is probably an application error
+				upFunc := sync.Once{}
+				go func() {
+					time.Sleep(backoff * 2)
+					upFunc.Do(func() {
+						// if we come back to a stable state, reset the failure count
+						if backoff == minBackoff {
+							failureCount = 0
+						}
+
+						// earn back the backoff over time
+						if failureCount > 0 {
+							backoff = max(backoff/2, 100*time.Millisecond)
+						}
+					})
+				}()
+
 				// Create main dummy request
 				r, err := http.NewRequest(http.MethodGet, filepath.Base(absFileName), nil)
 
@@ -104,8 +129,22 @@ func startWorkers(fileName string, nbWorkers int, env PreparedEnv) error {
 						}
 					} else {
 						if c := l.Check(zapcore.ErrorLevel, "unexpected termination, restarting"); c != nil {
-							c.Write(zap.String("worker", absFileName), zap.Int("exit_status", int(fc.exitStatus)))
+							c.Write(zap.String("worker", absFileName), zap.Int("failure_count", failureCount), zap.Int("exit_status", int(fc.exitStatus)), zap.Duration("waiting", backoff))
 						}
+
+						upFunc.Do(func() {
+							// if we end up here, the worker has not been up for backoff*2
+							// this is probably due to a syntax error or another fatal error
+							if failureCount >= maxConsecutiveFailures {
+								logger.Fatal("Worker had too many consecutive unexpected terminations", zap.String("worker", absFileName))
+								panic("Too many consecutive failures")
+							} else {
+								failureCount += 1
+							}
+						})
+						time.Sleep(backoff)
+						backoff *= 2
+						backoff = min(backoff, maxBackoff)
 					}
 				} else {
 					break
