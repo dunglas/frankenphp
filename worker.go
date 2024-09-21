@@ -138,6 +138,12 @@ func startWorkers(fileName string, nbWorkers int, env PreparedEnv) error {
 						if c := l.Check(zapcore.InfoLevel, "restarting"); c != nil {
 							c.Write(zap.String("worker", absFileName))
 						}
+
+						// a normal restart resets the backoff and failure count
+						backingOffLock.Lock()
+						backoff = minBackoff
+						failureCount = 0
+						backingOffLock.Unlock()
 					} else {
 						if c := l.Check(zapcore.ErrorLevel, "unexpected termination, restarting"); c != nil {
 							c.Write(zap.String("worker", absFileName), zap.Int("failure_count", failureCount), zap.Int("exit_status", int(fc.exitStatus)), zap.Duration("waiting", backoff))
