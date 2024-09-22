@@ -161,8 +161,8 @@ func go_frankenphp_worker_ready() {
 }
 
 //export go_frankenphp_worker_handle_request_start
-func go_frankenphp_worker_handle_request_start(threadId int) C.bool {
-	thread := getPHPThread(threadId)
+func go_frankenphp_worker_handle_request_start(threadIndex int) C.bool {
+	thread := getPHPThread(threadIndex)
 	mainRequest := thread.getMainRequest()
 	fc := mainRequest.Context().Value(contextKey).(*FrankenPHPContext)
 
@@ -210,8 +210,8 @@ func go_frankenphp_worker_handle_request_start(threadId int) C.bool {
 }
 
 //export go_frankenphp_finish_request
-func go_frankenphp_finish_request(threadId int, isWorkerRequest bool) {
-	thread := getPHPThread(threadId)
+func go_frankenphp_finish_request(threadIndex int, isWorkerRequest bool) {
+	thread := getPHPThread(threadIndex)
 	r := thread.getActiveRequest()
 	fc := r.Context().Value(contextKey).(*FrankenPHPContext)
 

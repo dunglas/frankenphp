@@ -2,28 +2,30 @@ package frankenphp
 
 import (
 	"net/http"
-	"sync"
-	"go.uber.org/zap"
 	"runtime"
 )
 
-var phpThreads sync.Map
+var phpThreads []*PHPThread
 
 type PHPThread struct {
-	threadId int
+	threadIndex int
 	mainRequest *http.Request
 	workerRequest *http.Request
 	pinner *runtime.Pinner
 }
 
-func getPHPThread(threadId int) *PHPThread {
-	if thread, ok := phpThreads.Load(threadId); ok {
-		return thread.(*PHPThread)
+func initializePhpThreads(numThreads int) {
+	phpThreads = make([]*PHPThread, numThreads)
+	for i := 0; i < numThreads; i++ {
+		phpThreads[i] = &PHPThread{threadIndex: i, pinner: &runtime.Pinner{}}
 	}
-	thread := &PHPThread{threadId: threadId, pinner: &runtime.Pinner{}}
-	phpThreads.Store(threadId, thread)
-	logger.Debug("new php thread registered", zap.Int("threadId", threadId))
-	return thread
+}
+
+func getPHPThread(threadIndex int) *PHPThread {
+	if(threadIndex >= 0 && threadIndex < len(phpThreads)) {
+		return phpThreads[threadIndex]
+	}
+	panic("no such thread")
 }
 
 func (thread *PHPThread) setMainRequest(request *http.Request) {

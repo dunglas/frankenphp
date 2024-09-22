@@ -78,6 +78,7 @@ typedef struct frankenphp_server_context {
 } frankenphp_server_context;
 
 __thread frankenphp_server_context *local_ctx = NULL;
+__thread int thread_index;
 
 static void frankenphp_free_request_context() {
   frankenphp_server_context *ctx = SG(server_context);
@@ -232,7 +233,7 @@ PHP_FUNCTION(frankenphp_finish_request) { /* {{{ */
   php_header();
 
   if (ctx->has_active_request) {
-    go_frankenphp_finish_request(pthread_self(), false);
+    go_frankenphp_finish_request(thread_index, false);
   }
 
   ctx->finished = true;
@@ -248,7 +249,7 @@ PHP_FUNCTION(frankenphp_request_headers) {
 
   frankenphp_server_context *ctx = SG(server_context);
   struct go_apache_request_headers_return headers =
-      go_apache_request_headers(pthread_self(), ctx->is_starting_worker);
+      go_apache_request_headers(thread_index, ctx->is_starting_worker);
 
   array_init_size(return_value, headers.r1);
 
@@ -259,7 +260,7 @@ PHP_FUNCTION(frankenphp_request_headers) {
     add_assoc_stringl_ex(return_value, key.data, key.len, val.data, val.len);
   }
 
-  go_apache_request_cleanup(pthread_self());
+  go_apache_request_cleanup(thread_index);
 }
 /* }}} */
 
@@ -350,7 +351,7 @@ PHP_FUNCTION(frankenphp_handle_request) {
 #endif
 
   bool request =
-      go_frankenphp_worker_handle_request_start(pthread_self());
+      go_frankenphp_worker_handle_request_start(thread_index);
   if (frankenphp_worker_request_startup() == FAILURE
       /* Shutting down */
       || !request) {
@@ -384,7 +385,7 @@ PHP_FUNCTION(frankenphp_handle_request) {
 
   frankenphp_worker_request_shutdown();
   ctx->has_active_request = false;
-  go_frankenphp_finish_request(pthread_self(), true);
+  go_frankenphp_finish_request(thread_index, true);
 
   RETURN_TRUE;
 }
@@ -494,7 +495,7 @@ static size_t frankenphp_ub_write(const char *str, size_t str_length) {
   }
 
   struct go_ub_write_return result = go_ub_write(
-      pthread_self(),
+      thread_index,
       (char *)str, str_length);
 
   if (result.r1) {
@@ -526,7 +527,7 @@ static int frankenphp_send_headers(sapi_headers_struct *sapi_headers) {
     }
   }
 
-  go_write_headers(pthread_self(), status, &sapi_headers->headers);
+  go_write_headers(thread_index, status, &sapi_headers->headers);
 
   return SAPI_HEADER_SENT_SUCCESSFULLY;
 }
@@ -534,7 +535,7 @@ static int frankenphp_send_headers(sapi_headers_struct *sapi_headers) {
 static void frankenphp_sapi_flush(void *server_context) {
   frankenphp_server_context *ctx = (frankenphp_server_context *)server_context;
 
-  if (ctx && ctx->has_active_request && go_sapi_flush(pthread_self())) {
+  if (ctx && ctx->has_active_request && go_sapi_flush(thread_index)) {
     php_handle_aborted_connection();
   }
 }
@@ -543,7 +544,7 @@ static size_t frankenphp_read_post(char *buffer, size_t count_bytes) {
   frankenphp_server_context *ctx = SG(server_context);
 
   return ctx->has_active_request
-             ? go_read_post(pthread_self(), buffer, count_bytes)
+             ? go_read_post(thread_index, buffer, count_bytes)
              : 0;
 }
 
@@ -554,7 +555,7 @@ static char *frankenphp_read_cookies(void) {
     return "";
   }
 
-  ctx->cookie_data = go_read_cookies(pthread_self());
+  ctx->cookie_data = go_read_cookies(thread_index);
 
   return ctx->cookie_data;
 }
@@ -670,7 +671,7 @@ static void frankenphp_register_variables(zval *track_vars_array) {
    */
   php_import_environment_variables(track_vars_array);
 
-  go_register_variables(pthread_self(),
+  go_register_variables(thread_index,
                         track_vars_array);
 }
 
@@ -730,6 +731,7 @@ static void set_thread_name(char *thread_name) {
 static void *php_thread(void *arg) {
   char thread_name[16] = {0};
   snprintf(thread_name, 16, "php-%" PRIxPTR, (uintptr_t)arg);
+  thread_index = (int)(uintptr_t)arg;
   set_thread_name(thread_name);
 
 #ifdef ZTS
@@ -742,7 +744,7 @@ static void *php_thread(void *arg) {
 
   local_ctx = malloc(sizeof(frankenphp_server_context));
 
-  while (go_handle_request(pthread_self())) {
+  while (go_handle_request(thread_index)) {
   }
 
 #ifdef ZTS
