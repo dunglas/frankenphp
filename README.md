@@ -69,7 +69,7 @@ You can also run command-line scripts with:
 ## Examples and Skeletons
 
 * [Symfony](https://github.com/dunglas/symfony-docker)
-* [API Platform](https://api-platform.com/docs/distribution/)
+* [API Platform](https://api-platform.com/)
 * [Laravel](https://frankenphp.dev/docs/laravel/)
 * [Sulu](https://sulu.io/blog/running-sulu-with-frankenphp)
 * [WordPress](https://github.com/StephenMiracle/frankenwp)
