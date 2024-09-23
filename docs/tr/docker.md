@@ -97,9 +97,9 @@ FrankenPHP ile kolayca geliştirme yapmak için, uygulamanın kaynak kodunu içe
 docker run -v $PWD:/app/public -p 80:80 -p 443:443 -p 443:443/udp --tty my-php-app
 ```
 
-> ![İPUCU]
+> [!TIP]
 >
-> `--tty' seçeneği JSON günlükleri yerine insan tarafından okunabilir güzel günlüklere sahip olmayı sağlar.
+> `--tty` seçeneği JSON günlükleri yerine insan tarafından okunabilir güzel günlüklere sahip olmayı sağlar.
 
 Docker Compose ile:
 
