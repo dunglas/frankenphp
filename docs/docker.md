@@ -103,7 +103,7 @@ To develop easily with FrankenPHP, mount the directory from your host containing
 docker run -v $PWD:/app/public -p 80:80 -p 443:443 -p 443:443/udp --tty my-php-app
 ```
 
-> ![TIP]
+> [!TIP]
 >
 > The `--tty` option allows to have nice human-readable logs instead of JSON logs.
 

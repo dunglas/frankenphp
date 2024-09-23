@@ -90,7 +90,7 @@ docker run \
     dunglas/frankenphp
 ```
 
-> ![CAUTION]
+> [!CAUTION]
 >
 > Assurez-vous de remplacer `172.17.0.3` par l'IP qui sera attribuée à votre conteneur.
 
