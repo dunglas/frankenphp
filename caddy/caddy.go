@@ -135,7 +135,7 @@ func (f *FrankenPHPApp) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 				f.NumThreads = v
 			case "watch":
 				if !d.NextArg() {
-					return d.Err("The 'watch' directive must be followed by a path")
+					return d.Err(`The "watch" directive must be followed by a path`)
 				}
 				f.Watch = append(f.Watch, parseWatchConfig(d.Val()))
 			case "worker":
