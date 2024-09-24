@@ -156,7 +156,8 @@ As the static binary doesn't bundle TLS certificates, you need to point OpenSSL 
 Inspect the output of [`openssl_get_cert_locations()`](https://www.php.net/manual/en/function.openssl-get-cert-locations.php),
 to find where CA certificates must be installed and store them at this location.
 
-> ![WARNING]
+> [!WARNING]
+>
 > Web and CLI contexts may have different settings.
 > Be sure to run `openssl_get_cert_locations()` in the proper context.
 

@@ -173,7 +173,7 @@ Then, to start FrankenPHP in worker mode through Octane, run:
 PATH="$PWD:$PATH" ./frankenphp php-cli artisan octane:frankenphp
 ```
 
-> ![CAUTION]
+> [!CAUTION]
 >
 > For the command to work, the standalone binary **must** be named `frankenphp`
 > because Octane needs a program named `frankenphp` available in the path.

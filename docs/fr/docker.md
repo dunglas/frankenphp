@@ -96,7 +96,7 @@ Pour développer facilement avec FrankenPHP, montez le répertoire de l'hôte co
 docker run -v $PWD:/app/public -p 80:80 -p 443:443 -p 443:443/udp --tty my-php-app
 ```
 
-> ![TIP]
+> [!TIP]
 >
 > L'option --tty permet d'avoir des logs lisibles par un humain au lieu de logs JSON.
 
