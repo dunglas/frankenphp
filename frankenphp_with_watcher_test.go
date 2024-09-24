@@ -42,6 +42,7 @@ func TestWorkersShouldReloadOnMatchingPattern(t *testing.T) {
 func TestWorkersShouldNotReloadOnExcludingPattern(t *testing.T) {
 	if isRunningInMsanMode() {
 		t.Skip("Skipping watcher tests in memory sanitizer mode")
+
 		return
 	}
 	watchOptions := []watcher.WithWatchOption{
