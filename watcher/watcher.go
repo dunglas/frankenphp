@@ -88,8 +88,9 @@ func (w *watcher) stopWatching() {
 
 func startSession(watchOpt *WatchOpt) (unsafe.Pointer, error) {
 	handle := cgo.NewHandle(watchOpt)
-	cPathTranslated := (*C.char)(C.CString(watchOpt.dir))
-	watchSession := C.start_new_watcher(cPathTranslated, C.uintptr_t(handle))
+	cDir := C.CString(watchOpt.dir)
+	defer C.free(unsafe.Pointer(cDir))
+	watchSession := C.start_new_watcher(cDir, C.uintptr_t(handle))
 	if watchSession != C.NULL {
 		logger.Debug("watching", zap.String("dir", watchOpt.dir), zap.String("pattern", watchOpt.pattern))
 		return watchSession, nil

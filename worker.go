@@ -192,7 +192,7 @@ func go_frankenphp_worker_handle_request_start(mrh C.uintptr_t) C.uintptr_t {
 			c.Write(zap.String("worker", fc.scriptFilename))
 		}
 		// TODO: should opcache_reset be conditional?
-		resetOpCache()
+		executePhpFunction("opcache_reset")
 
 		return 0
 	case r = <-rc:
@@ -239,14 +239,5 @@ func go_frankenphp_finish_request(mrh, rh C.uintptr_t, deleteHandle bool) {
 		}
 
 		c.Write(fields...)
-	}
-}
-
-func resetOpCache() {
-	success := C.frankenphp_execute_php_function(C.CString("opcache_reset"))
-	if success == 1 {
-		logger.Debug("opcache_reset successful")
-	} else {
-		logger.Error("opcache_reset failed")
 	}
 }

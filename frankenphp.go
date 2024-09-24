@@ -829,3 +829,15 @@ func freeArgs(argv []*C.char) {
 		C.free(unsafe.Pointer(arg))
 	}
 }
+
+func executePhpFunction(functionName string) {
+	cFunctionName := C.CString(functionName)
+	defer C.free(unsafe.Pointer(cFunctionName))
+
+	success := C.frankenphp_execute_php_function(C.CString(functionName))
+	if success == 1 {
+		logger.Debug("php function call successful", zap.String("function", functionName))
+	} else {
+		logger.Error("php function call failed", zap.String("function", functionName))
+	}
+}
