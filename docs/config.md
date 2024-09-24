@@ -147,7 +147,7 @@ This is useful for development environments.
 ```
 
 The configuration above will watch the `/path/to/app` directory recursively.
-If any .php file changes, all workers will be restarted.
+If any `.php` file changes, all workers will be restarted.
 
 You can also add multiple `watch` directives and use simple pattern matching for files, the following is valid:
 
