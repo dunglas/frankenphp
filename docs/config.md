@@ -161,7 +161,7 @@ You can also add multiple `watch` directives and use simple pattern matching for
 }
 ```
 
-#### Some notes
+#### Advanced Watchers Configuration
 
 * Directories can also be relative (to where the frankenphp process is started from)
 * The `**/` pattern signifies recursive watching and may be followed by a filename pattern
