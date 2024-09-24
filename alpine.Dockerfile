@@ -75,7 +75,7 @@ RUN apk add --no-cache --virtual .build-deps \
 	openssl-dev \
 	readline-dev \
 	sqlite-dev \
-	upx \
+	upx
 
 # FIXME: temporary workaround for https://github.com/golang/go/issues/68285
 WORKDIR /
