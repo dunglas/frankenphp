@@ -96,7 +96,8 @@ jobs:
       -
         name: Add PHP to the PATH
         run: echo "$(pwd)/php/target/bin" >> "$GITHUB_PATH"
-      - uses: actions/checkout@v4
+      -
+        uses: actions/checkout@v4
         name: Checkout watcher
         with:
           repository: e-dant/watcher
