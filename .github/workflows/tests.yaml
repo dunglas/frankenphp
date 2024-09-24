@@ -44,7 +44,8 @@ jobs:
         env:
           phpts: ts
           debug: true
-      - uses: actions/checkout@v4
+      -
+        uses: actions/checkout@v4
         name: Checkout watcher
         with:
           repository: e-dant/watcher
