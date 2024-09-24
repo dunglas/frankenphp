@@ -103,7 +103,8 @@ jobs:
           repository: e-dant/watcher
           ref: ${{ env.EDANT_WATCHER_VERSION }}
           path: 'edant/watcher'
-      - name: Compile edant/watcher
+      -
+        name: Compile edant/watcher
         run: |
           cd edant/watcher/watcher-c/
           clang -o libwatcher.so ./src/watcher-c.cpp -I ./include -I ../include -std=c++17 -Wall -Wextra -fPIC -shared ${{ matrix.sanitizer == 'msan' && '-fsanitize=memory -fno-omit-frame-pointer -fno-optimize-sibling-calls' || '' }}
