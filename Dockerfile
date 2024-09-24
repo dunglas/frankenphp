@@ -68,7 +68,6 @@ RUN apt-get update && \
 	libssl-dev \
 	libxml2-dev \
 	zlib1g-dev \
-	git \
 	&& \
 	apt-get clean
 
@@ -91,8 +90,8 @@ COPY --link watcher watcher
 # install edant/watcher (necessary for file watching)
 ARG EDANT_WATCHER_VERSION=next
 WORKDIR /usr/local/src/watcher
-RUN git clone --branch=$EDANT_WATCHER_VERSION https://github.com/e-dant/watcher .
-WORKDIR /usr/local/src/watcher/watcher-c
+RUN curl -L https://github.com/e-dant/watcher/archive/refs/heads/$EDANT_WATCHER_VERSION.tar.gz | tar xz
+WORKDIR /usr/local/src/watcher/watcher-c/watcher-$EDANT_WATCHER_VERSION
 RUN gcc -o libwatcher.so ./src/watcher-c.cpp -I ./include -I ../include -std=c++17 -O3 -Wall -Wextra -fPIC -shared && \
 	cp libwatcher.so /usr/local/lib/libwatcher.so && \
 	ldconfig /usr/local/lib
