@@ -56,7 +56,7 @@ func DrainWatcher() {
 	if activeWatcher == nil {
 		return
 	}
-	logger.Info("stopping watcher...")
+	logger.Debug("stopping watcher")
 	activeWatcher.stopWatching()
 	reloadWaitGroup.Wait()
 	activeWatcher = nil
