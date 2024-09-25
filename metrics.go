@@ -12,20 +12,21 @@ var metricsNameRegex = regexp.MustCompile(`\W+`)
 var metricsNameFixRegex = regexp.MustCompile(`^_+|_+$`)
 
 type Metrics interface {
-	// StartWorker Collects started workers
+	// StartWorker collects started workers
 	StartWorker(name string)
-	// StopWorker Collects stopped workers
+	// StopWorker collects stopped workers
 	StopWorker(name string)
-	// TotalWorkers Collects expected workers
+	// TotalWorkers collects expected workers
 	TotalWorkers(name string, num int)
-	// TotalThreads Collects total threads
+	// TotalThreads collects total threads
 	TotalThreads(num int)
-	// StartRequest Collects started requests
+	// StartRequest collects started requests
 	StartRequest()
-	// StopRequest Collects stopped requests
+	// StopRequest collects stopped requests
 	StopRequest()
-	// StopWorkerRequest Collects stopped worker requests
+	// StopWorkerRequest collects stopped worker requests
 	StopWorkerRequest(name string, duration time.Duration)
+	// StartWorkerRequest collects started worker requests
 	StartWorkerRequest(name string)
 	Shutdown()
 }

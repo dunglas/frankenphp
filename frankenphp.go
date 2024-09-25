@@ -276,6 +276,7 @@ func calculateMaxThreads(opt *opt) error {
 
 	metrics.TotalThreads(opt.numThreads)
 	MaxThreads = opt.numThreads
+
 	return nil
 }
 
@@ -475,7 +476,7 @@ func ServeHTTP(responseWriter http.ResponseWriter, request *http.Request) error 
 	fc.responseWriter = responseWriter
 	fc.startedAt = time.Now()
 
-	isWorker := nil == fc.responseWriter
+	isWorker := fc.responseWriter == nil
 	isWorkerRequest := false
 
 	rc := requestChan
