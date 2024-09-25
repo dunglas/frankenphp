@@ -121,7 +121,7 @@ A workaround to using this type of code in worker mode is to restart the worker 
 
 The previous worker snippet allows configuring a maximum number of request to handle by setting an environment variable named `MAX_REQUESTS`.
 
-### Worker failures
+### Worker Failures
 
 If a worker script crashes with a non-zero exit code, FrankenPHP will restart it with an exponential backoff strategy.
 If the worker script stays up longer than the last backoff * 2,
