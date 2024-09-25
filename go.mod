@@ -2,8 +2,6 @@ module github.com/dunglas/frankenphp
 
 go 1.21
 
-toolchain go1.22.0
-
 retract v1.0.0-rc.1 // Human error
 
 require (
