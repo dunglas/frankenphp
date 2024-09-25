@@ -4,11 +4,11 @@ $fail = random_int(1, 100) < 10;
 $wait = random_int(1, 5);
 
 sleep($wait);
-if($fail) {
+if ($fail) {
     exit(1);
 }
 
-while(frankenphp_handle_request(function() {
+while (frankenphp_handle_request(function () {
     echo "ok";
 })) {
     $fail = random_int(1, 100) < 10;
