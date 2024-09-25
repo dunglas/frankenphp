@@ -24,7 +24,7 @@ RUN set -eux; \
 	echo '<?php phpinfo();' > /app/public/index.php
 
 COPY --link caddy/frankenphp/Caddyfile /etc/caddy/Caddyfile
-COPY --from=mlocati/php-extension-installer /usr/bin/install-php-extensions /usr/local/bin/
+ADD --chmod=0755 https://github.com/mlocati/docker-php-extension-installer/releases/latest/download/install-php-extensions /usr/local/bin/
 
 CMD ["--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile"]
 HEALTHCHECK CMD curl -f http://localhost:2019/metrics || exit 1
