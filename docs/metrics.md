@@ -1,6 +1,6 @@
 # Metrics
 
-When Caddy metrics are enabled, FrankenPHP exposes the following metrics:
+When [Caddy metrics](https://caddyserver.com/docs/metrics) are enabled, FrankenPHP exposes the following metrics:
 
 - `frankenphp_[worker]_total_workers`: The total number of workers.
 - `frankenphp_[worker]_busy_workers`: The number of workers currently processing a request.
