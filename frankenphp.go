@@ -246,7 +246,7 @@ func Config() PHPConfig {
 	}
 }
 
-// MaxThreads is the maximum number of threads that can be started, it is set by frankenphp.Init and should be considered read-only.
+// MaxThreads is internally used during tests. It is written to, but never read and may go away in the future.
 var MaxThreads int
 
 func calculateMaxThreads(opt *opt) error {
