@@ -14,6 +14,7 @@ type opt struct {
 	numThreads int
 	workers    []workerOpt
 	logger     *zap.Logger
+	metrics    Metrics
 }
 
 type workerOpt struct {
@@ -26,6 +27,14 @@ type workerOpt struct {
 func WithNumThreads(numThreads int) Option {
 	return func(o *opt) error {
 		o.numThreads = numThreads
+
+		return nil
+	}
+}
+
+func WithMetrics(m Metrics) Option {
+	return func(o *opt) error {
+		o.metrics = m
 
 		return nil
 	}
