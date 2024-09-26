@@ -22,12 +22,16 @@ var (
 	workersReadyWG      sync.WaitGroup
 	workerShutdownWG    sync.WaitGroup
 	workersAreReady     atomic.Bool
+	workersAreDone	    atomic.Bool
 	workersDone         chan interface{}
 )
 
 // TODO: start all the worker in parallell to reduce the boot time
 func initWorkers(opt []workerOpt) error {
 	workersDone = make(chan interface{})
+	workersAreReady.Store(false)
+    workersAreDone.Store(false)
+
 	for _, w := range opt {
 		if err := startWorkers(w.fileName, w.num, w.env); err != nil {
 			return err
@@ -43,14 +47,12 @@ func startWorkers(fileName string, nbWorkers int, env PreparedEnv) error {
 		return fmt.Errorf("workers %q: %w", fileName, err)
 	}
 
-	if _, ok := workersRequestChans.Load(absFileName); ok {
-		return fmt.Errorf("workers %q: already started", absFileName)
-	}
+	if _, ok := workersRequestChans.Load(absFileName); !ok {
+        workersRequestChans.Store(absFileName, make(chan *http.Request))
+    }
 
-	workersRequestChans.Store(absFileName, make(chan *http.Request))
 	shutdownWG.Add(nbWorkers)
 	workerShutdownWG.Add(nbWorkers)
-	workersAreReady.Store(false)
 	workersReadyWG.Add(nbWorkers)
 
 	var (
@@ -101,7 +103,7 @@ func startWorkers(fileName string, nbWorkers int, env PreparedEnv) error {
 				}
 
 				// TODO: make the max restart configurable
-				if _, ok := workersRequestChans.Load(absFileName); ok {
+				if !workersAreDone.Load() {
 					if fc.exitStatus == 0 {
 						if c := l.Check(zapcore.InfoLevel, "restarting"); c != nil {
 							c.Write(zap.String("worker", absFileName))
@@ -138,21 +140,19 @@ func startWorkers(fileName string, nbWorkers int, env PreparedEnv) error {
 }
 
 func stopWorkers() {
-	workersRequestChans.Range(func(k, v any) bool {
-		workersRequestChans.Delete(k)
-
-		return true
-	})
+	workersAreDone.Store(true)
 	close(workersDone)
 }
 
 func drainWorkers() {
 	stopWorkers()
 	workerShutdownWG.Wait()
+	workersRequestChans = sync.Map{}
 }
 
 func restartWorkers(workerOpts []workerOpt) {
-	drainWorkers()
+	stopWorkers()
+    workerShutdownWG.Wait()
 	if err := initWorkers(workerOpts); err != nil {
 		logger.Error("failed to restart workers when watching files")
 		panic(err)
