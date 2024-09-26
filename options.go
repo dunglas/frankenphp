@@ -1,7 +1,6 @@
 package frankenphp
 
 import (
-	"github.com/dunglas/frankenphp/watcher"
 	"go.uber.org/zap"
 )
 
@@ -14,7 +13,7 @@ type Option func(h *opt) error
 type opt struct {
 	numThreads int
 	workers    []workerOpt
-	watch      []watcher.WatchOpt
+	watch      []string
 	logger     *zap.Logger
 }
 
@@ -42,16 +41,10 @@ func WithWorkers(fileName string, num int, env map[string]string) Option {
 	}
 }
 
-// WithFileWatcher configures filesystem watchers.
-func WithFileWatcher(wo ...watcher.WithWatchOption) Option {
+// WithFileWatcher adds directories to be watched (shell file pattern).
+func WithFileWatcher(patterns []string) Option {
 	return func(o *opt) error {
-		watchOpt := watcher.WatchOpt{}
-		for _, option := range wo {
-			if err := option(&watchOpt); err != nil {
-				return err
-			}
-		}
-		o.watch = append(o.watch, watchOpt)
+		o.watch = patterns
 
 		return nil
 	}

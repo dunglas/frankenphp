@@ -25,7 +25,6 @@ import (
 	"testing"
 
 	"github.com/dunglas/frankenphp"
-	"github.com/dunglas/frankenphp/watcher"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
@@ -36,7 +35,7 @@ import (
 
 type testOptions struct {
 	workerScript        string
-	watchOptions        []watcher.WithWatchOption
+	watch               []string
 	nbWorkers           int
 	env                 map[string]string
 	nbParrallelRequests int
@@ -64,9 +63,7 @@ func runTest(t *testing.T, test func(func(http.ResponseWriter, *http.Request), *
 	if opts.workerScript != "" {
 		initOpts = append(initOpts, frankenphp.WithWorkers(testDataDir+opts.workerScript, opts.nbWorkers, opts.env))
 	}
-	if len(opts.watchOptions) != 0 {
-		initOpts = append(initOpts, frankenphp.WithFileWatcher(opts.watchOptions...))
-	}
+	initOpts = append(initOpts, frankenphp.WithFileWatcher(opts.watch))
 	initOpts = append(initOpts, opts.initOpts...)
 
 	err := frankenphp.Init(initOpts...)

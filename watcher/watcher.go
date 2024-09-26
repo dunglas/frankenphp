@@ -18,7 +18,6 @@ import (
 type watcher struct {
 	sessions  []C.uintptr_t
 	callback  func()
-	watchOpts []WatchOpt
 	trigger   chan struct{}
 	stop      chan struct{}
 }
@@ -37,8 +36,8 @@ var (
 	UnableToStartWatching       = errors.New("Unable to start the watcher")
 )
 
-func InitWatcher(watchOpts []WatchOpt, callback func(), zapLogger *zap.Logger) error {
-	if len(watchOpts) == 0 {
+func InitWatcher(filePatterns []string, callback func(), zapLogger *zap.Logger) error {
+	if len(filePatterns) == 0 {
 		return nil
 	}
 	if activeWatcher != nil {
@@ -46,7 +45,7 @@ func InitWatcher(watchOpts []WatchOpt, callback func(), zapLogger *zap.Logger) e
 	}
 	logger = zapLogger
 	activeWatcher = &watcher{callback: callback}
-	err := activeWatcher.startWatching(watchOpts)
+	err := activeWatcher.startWatching(filePatterns)
 	if err != nil {
 		return err
 	}
@@ -65,14 +64,17 @@ func DrainWatcher() {
 	activeWatcher = nil
 }
 
-func (w *watcher) startWatching(watchOpts []WatchOpt) error {
+func (w *watcher) startWatching(filePatterns []string) error {
 	w.trigger = make(chan struct{})
 	w.stop = make(chan struct{})
-	w.sessions = make([]C.uintptr_t, len(watchOpts))
-	w.watchOpts = watchOpts
-	for i, watchOpt := range w.watchOpts {
+	w.sessions = make([]C.uintptr_t, len(filePatterns))
+	watchOpts, err :=  parseFilePatterns(filePatterns)
+	if err != nil {
+		return err
+	}
+	for i, watchOpt := range watchOpts {
 		watchOpt.trigger = w.trigger
-		session, err := startSession(&watchOpt)
+		session, err := startSession(watchOpt)
 		if err != nil {
 			return err
 		}
@@ -89,7 +91,7 @@ func (w *watcher) stopWatching() {
 	}
 }
 
-func startSession(watchOpt *WatchOpt) (C.uintptr_t, error) {
+func startSession(watchOpt *watchOpt) (C.uintptr_t, error) {
 	handle := cgo.NewHandle(watchOpt)
 	cDir := C.CString(watchOpt.dir)
 	defer C.free(unsafe.Pointer(cDir))
@@ -112,7 +114,7 @@ func stopSession(session C.uintptr_t) {
 
 //export go_handle_file_watcher_event
 func go_handle_file_watcher_event(path *C.char, eventType C.int, pathType C.int, handle C.uintptr_t) {
-	watchOpt := cgo.Handle(handle).Value().(*WatchOpt)
+	watchOpt := cgo.Handle(handle).Value().(*watchOpt)
 	if watchOpt.allowReload(C.GoString(path), int(eventType), int(pathType)) {
 		watchOpt.trigger <- struct{}{}
 	}

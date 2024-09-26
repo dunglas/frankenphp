@@ -3,45 +3,61 @@ package watcher
 import (
 	"go.uber.org/zap"
 	"path/filepath"
+	"strings"
 )
 
-type WithWatchOption func(o *WatchOpt) error
-
-type WatchOpt struct {
+type watchOpt struct {
 	dir         string
 	isRecursive bool
 	pattern     string
 	trigger     chan struct{}
 }
 
-func WithWatcherDir(dir string) WithWatchOption {
-	return func(o *WatchOpt) error {
-		absDir, err := filepath.Abs(dir)
+func parseFilePatterns(filePatterns []string) ([]*watchOpt, error) {
+	watchOpts := make([]*watchOpt, 0, len(filePatterns))
+	for _, filePattern := range filePatterns {
+		watchOpt, err := parseFilePattern(filePattern)
 		if err != nil {
-			logger.Error("dir for watching is invalid", zap.String("dir", dir))
-			return err
+			return nil, err
 		}
-		o.dir = absDir
-		return nil
+		watchOpts = append(watchOpts, watchOpt)
 	}
+	return watchOpts, nil
 }
 
-func WithWatcherRecursion(withRecursion bool) WithWatchOption {
-	return func(o *WatchOpt) error {
-		o.isRecursive = withRecursion
-		return nil
+// TODO: better path validation?
+// for the one line short-form in the caddy config, aka: 'watch /path/*pattern'
+func parseFilePattern(filePattern string) (*watchOpt, error) {
+	absPattern, err := filepath.Abs(filePattern)
+	if err != nil {
+		return nil, err
 	}
-}
 
-func WithWatcherPattern(pattern string) WithWatchOption {
-	return func(o *WatchOpt) error {
-		o.pattern = pattern
-		return nil
+	var w watchOpt
+	w.isRecursive = true
+	dirName := absPattern
+	splitDirName, baseName := filepath.Split(absPattern)
+	if strings.Contains(absPattern, "**") {
+		split := strings.Split(absPattern, "**")
+        dirName = split[0]
+        w.pattern = strings.TrimLeft(split[1], "/")
+        w.isRecursive = true
+    } else if strings.ContainsAny(baseName, "*.[?\\") {
+		dirName = splitDirName
+		w.pattern = baseName
+		w.isRecursive = false
 	}
+
+	w.dir = dirName
+	if dirName != "/" {
+		w.dir = strings.TrimRight(dirName, "/")
+	}
+
+	return &w, nil
 }
 
 // TODO: support directory patterns
-func (watchOpt *WatchOpt) allowReload(fileName string, eventType int, pathType int) bool {
+func (watchOpt *watchOpt) allowReload(fileName string, eventType int, pathType int) bool {
 	if !isValidEventType(eventType) || !isValidPathType(pathType) {
 		return false
 	}

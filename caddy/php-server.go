@@ -310,7 +310,7 @@ func cmdPHPServer(fs caddycmd.Flags) (int, error) {
 		},
 		AppsRaw: caddy.ModuleMap{
 			"http":       caddyconfig.JSON(httpApp, nil),
-			"frankenphp": caddyconfig.JSON(FrankenPHPApp{Workers: workersOption, Watch: parseWatchConfigs(watch)}, nil),
+			"frankenphp": caddyconfig.JSON(FrankenPHPApp{Workers: workersOption, Watch: watch}, nil),
 		},
 	}
 

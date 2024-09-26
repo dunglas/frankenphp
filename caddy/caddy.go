@@ -67,7 +67,7 @@ type FrankenPHPApp struct {
 	// Workers configures the worker scripts to start.
 	Workers []workerConfig `json:"workers,omitempty"`
 	// Directories to watch for changes
-	Watch []watchConfig `json:"watch,omitempty"`
+	Watch []string `json:"watch,omitempty"`
 }
 
 // CaddyModule returns the Caddy module information.
@@ -86,9 +86,8 @@ func (f *FrankenPHPApp) Start() error {
 	for _, w := range f.Workers {
 		opts = append(opts, frankenphp.WithWorkers(repl.ReplaceKnown(w.FileName, ""), w.Num, w.Env))
 	}
-	for _, watchConfig := range f.Watch {
-		opts = applyWatchConfig(opts, watchConfig)
-	}
+
+	opts = append(opts, frankenphp.WithFileWatcher(f.Watch))
 
 	_, loaded, err := phpInterpreter.LoadOrNew(mainPHPInterpreterKey, func() (caddy.Destructor, error) {
 		if err := frankenphp.Init(opts...); err != nil {
@@ -137,7 +136,7 @@ func (f *FrankenPHPApp) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 				if !d.NextArg() {
 					return d.Err(`The "watch" directive must be followed by a path`)
 				}
-				f.Watch = append(f.Watch, parseWatchConfig(d.Val()))
+				f.Watch = append(f.Watch, d.Val())
 			case "worker":
 				wc := workerConfig{}
 				if d.NextArg() {

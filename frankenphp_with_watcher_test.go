@@ -1,7 +1,6 @@
 package frankenphp_test
 
 import (
-	"github.com/dunglas/frankenphp/watcher"
 	"github.com/stretchr/testify/assert"
 	"io"
 	"net/http"
@@ -27,16 +26,12 @@ func TestWorkersShouldReloadOnMatchingPattern(t *testing.T) {
 		t.Skip("Skipping watcher tests in memory sanitizer mode")
 		return
 	}
-	watchOptions := []watcher.WithWatchOption{
-		watcher.WithWatcherDir("./testdata"),
-		watcher.WithWatcherPattern("*.txt"),
-		watcher.WithWatcherRecursion(true),
-	}
+	watch := []string{"./testdata/**/*.txt"}
 
 	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
 		requestBodyHasReset := pollForWorkerReset(t, handler, maxTimesToPollForChanges)
 		assert.True(t, requestBodyHasReset)
-	}, &testOptions{nbParrallelRequests: 1, nbWorkers: 1, workerScript: "worker-with-watcher.php", watchOptions: watchOptions})
+	}, &testOptions{nbParrallelRequests: 1, nbWorkers: 1, workerScript: "worker-with-watcher.php", watch: watch})
 }
 
 func TestWorkersShouldNotReloadOnExcludingPattern(t *testing.T) {
@@ -45,16 +40,12 @@ func TestWorkersShouldNotReloadOnExcludingPattern(t *testing.T) {
 
 		return
 	}
-	watchOptions := []watcher.WithWatchOption{
-		watcher.WithWatcherDir("./testdata"),
-		watcher.WithWatcherPattern("*.php"),
-		watcher.WithWatcherRecursion(true),
-	}
+	watch := []string{"./testdata/**/*.php"}
 
 	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
 		requestBodyHasReset := pollForWorkerReset(t, handler, minTimesToPollForChanges)
 		assert.False(t, requestBodyHasReset)
-	}, &testOptions{nbParrallelRequests: 1, nbWorkers: 1, workerScript: "worker-with-watcher.php", watchOptions: watchOptions})
+	}, &testOptions{nbParrallelRequests: 1, nbWorkers: 1, workerScript: "worker-with-watcher.php", watch: watch})
 }
 
 func fetchBody(method string, url string, handler func(http.ResponseWriter, *http.Request)) string {
