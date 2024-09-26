@@ -16,7 +16,7 @@ import (
 )
 
 type watcher struct {
-	sessions  []unsafe.Pointer
+	sessions  []C.uintptr_t
 	callback  func()
 	watchOpts []WatchOpt
 	trigger   chan struct{}
@@ -31,7 +31,10 @@ var (
 	activeWatcher *watcher
 	// after stopping the watcher we will wait for eventual reloads to finish
 	reloadWaitGroup sync.WaitGroup
+	// we are passing the logger from the main package to the watcher
 	logger          *zap.Logger
+	AlreadyStartedError         = errors.New("The watcher is already running")
+	UnableToStartWatching       = errors.New("Unable to start the watcher")
 )
 
 func InitWatcher(watchOpts []WatchOpt, callback func(), zapLogger *zap.Logger) error {
@@ -39,7 +42,7 @@ func InitWatcher(watchOpts []WatchOpt, callback func(), zapLogger *zap.Logger) e
 		return nil
 	}
 	if activeWatcher != nil {
-		return errors.New("watcher is already running")
+		return AlreadyStartedError
 	}
 	logger = zapLogger
 	activeWatcher = &watcher{callback: callback}
@@ -65,7 +68,7 @@ func DrainWatcher() {
 func (w *watcher) startWatching(watchOpts []WatchOpt) error {
 	w.trigger = make(chan struct{})
 	w.stop = make(chan struct{})
-	w.sessions = make([]unsafe.Pointer, len(watchOpts))
+	w.sessions = make([]C.uintptr_t, len(watchOpts))
 	w.watchOpts = watchOpts
 	for i, watchOpt := range w.watchOpts {
 		watchOpt.trigger = w.trigger
@@ -86,23 +89,23 @@ func (w *watcher) stopWatching() {
 	}
 }
 
-func startSession(watchOpt *WatchOpt) (unsafe.Pointer, error) {
+func startSession(watchOpt *WatchOpt) (C.uintptr_t, error) {
 	handle := cgo.NewHandle(watchOpt)
 	cDir := C.CString(watchOpt.dir)
 	defer C.free(unsafe.Pointer(cDir))
 	watchSession := C.start_new_watcher(cDir, C.uintptr_t(handle))
-	if watchSession != C.NULL {
+	if watchSession != 0 {
 		logger.Debug("watching", zap.String("dir", watchOpt.dir), zap.String("pattern", watchOpt.pattern))
 		return watchSession, nil
 	}
 	logger.Error("couldn't start watching", zap.String("dir", watchOpt.dir))
 
-	return nil, errors.New("couldn't start watching")
+	return watchSession, UnableToStartWatching
 }
 
-func stopSession(session unsafe.Pointer) {
+func stopSession(session C.uintptr_t) {
 	success := C.stop_watcher(session)
-	if success == 1 {
+	if success == 0 {
 		logger.Error("couldn't stop watching")
 	}
 }
