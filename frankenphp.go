@@ -39,6 +39,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 	"unsafe"
 
 	"github.com/dunglas/frankenphp/watcher"
@@ -72,6 +73,8 @@ var (
 
 	loggerMu sync.RWMutex
 	logger   *zap.Logger
+
+	metrics Metrics = nullMetrics{}
 )
 
 type syslogLevel int
@@ -128,6 +131,7 @@ type FrankenPHPContext struct {
 
 	done                 chan interface{}
 	currentWorkerRequest cgo.Handle
+	startedAt            time.Time
 }
 
 func clientHasClosed(r *http.Request) bool {
@@ -243,6 +247,40 @@ func Config() PHPConfig {
 	}
 }
 
+// MaxThreads is internally used during tests. It is written to, but never read and may go away in the future.
+var MaxThreads int
+
+func calculateMaxThreads(opt *opt) error {
+	maxProcs := runtime.GOMAXPROCS(0) * 2
+
+	var numWorkers int
+	for i, w := range opt.workers {
+		if w.num <= 0 {
+			// https://github.com/dunglas/frankenphp/issues/126
+			opt.workers[i].num = maxProcs
+		}
+		metrics.TotalWorkers(w.fileName, w.num)
+
+		numWorkers += opt.workers[i].num
+	}
+
+	if opt.numThreads <= 0 {
+		if numWorkers >= maxProcs {
+			// Start at least as many threads as workers, and keep a free thread to handle requests in non-worker mode
+			opt.numThreads = numWorkers + 1
+		} else {
+			opt.numThreads = maxProcs
+		}
+	} else if opt.numThreads <= numWorkers {
+		return NotEnoughThreads
+	}
+
+	metrics.TotalThreads(opt.numThreads)
+	MaxThreads = opt.numThreads
+
+	return nil
+}
+
 // Init starts the PHP runtime and the configured workers.
 func Init(options ...Option) error {
 	if requestChan != nil {
@@ -271,27 +309,13 @@ func Init(options ...Option) error {
 		loggerMu.Unlock()
 	}
 
-	maxProcs := runtime.GOMAXPROCS(0)
-
-	var numWorkers int
-	for i, w := range opt.workers {
-		if w.num <= 0 {
-			// https://github.com/dunglas/frankenphp/issues/126
-			opt.workers[i].num = maxProcs * 2
-		}
-
-		numWorkers += opt.workers[i].num
+	if opt.metrics != nil {
+		metrics = opt.metrics
 	}
 
-	if opt.numThreads <= 0 {
-		if numWorkers >= maxProcs {
-			// Start at least as many threads as workers, and keep a free thread to handle requests in non-worker mode
-			opt.numThreads = numWorkers + 1
-		} else {
-			opt.numThreads = maxProcs
-		}
-	} else if opt.numThreads <= numWorkers {
-		return NotEnoughThreads
+	err := calculateMaxThreads(opt)
+	if err != nil {
+		return err
 	}
 
 	config := Config()
@@ -346,6 +370,7 @@ func Shutdown() {
 	watcher.DrainWatcher()
 	drainWorkers()
 	drainThreads()
+	metrics.Shutdown()
 	requestChan = nil
 
 	// Remove the installed app
@@ -460,12 +485,20 @@ func ServeHTTP(responseWriter http.ResponseWriter, request *http.Request) error 
 	}
 
 	fc.responseWriter = responseWriter
+	fc.startedAt = time.Now()
+
+	isWorker := fc.responseWriter == nil
+	isWorkerRequest := false
 
 	rc := requestChan
 	// Detect if a worker is available to handle this request
-	if nil != fc.responseWriter {
+	if !isWorker {
 		if v, ok := workersRequestChans.Load(fc.scriptFilename); ok {
+			isWorkerRequest = true
+			metrics.StartWorkerRequest(fc.scriptFilename)
 			rc = v.(chan *http.Request)
+		} else {
+			metrics.StartRequest()
 		}
 	}
 
@@ -473,6 +506,14 @@ func ServeHTTP(responseWriter http.ResponseWriter, request *http.Request) error 
 	case <-done:
 	case rc <- request:
 		<-fc.done
+	}
+
+	if !isWorker {
+		if isWorkerRequest {
+			metrics.StopWorkerRequest(fc.scriptFilename, time.Since(fc.startedAt))
+		} else {
+			metrics.StopRequest()
+		}
 	}
 
 	return nil

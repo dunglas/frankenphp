@@ -74,6 +74,9 @@ func startWorkers(fileName string, nbWorkers int, env PreparedEnv) error {
 			for {
 				// Create main dummy request
 				r, err := http.NewRequest(http.MethodGet, filepath.Base(absFileName), nil)
+
+				metrics.StartWorker(absFileName)
+
 				if err != nil {
 					panic(err)
 				}
@@ -104,6 +107,7 @@ func startWorkers(fileName string, nbWorkers int, env PreparedEnv) error {
 
 				// TODO: make the max restart configurable
 				if !workersAreDone.Load() {
+					metrics.StopWorker(absFileName)
 					if fc.exitStatus == 0 {
 						if c := l.Check(zapcore.InfoLevel, "restarting"); c != nil {
 							c.Write(zap.String("worker", absFileName))
@@ -128,7 +132,6 @@ func startWorkers(fileName string, nbWorkers int, env PreparedEnv) error {
 	}
 
 	workersReadyWG.Wait()
-	workersAreReady.Store(true)
 	m.Lock()
 	defer m.Unlock()
 
