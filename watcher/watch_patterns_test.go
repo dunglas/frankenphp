@@ -114,12 +114,6 @@ func relativeDir(t *testing.T, relativePath string) string {
 	return dir
 }
 
-func assertAllPattern(t *testing.T, watchPatterns []*watchPattern, pattern string) {
-	for _, w := range watchPatterns {
-		assert.Equal(t, pattern, w.patterns[0])
-	}
-}
-
 func shouldMatch(t *testing.T, pattern string, fileName string) {
 	watchPattern, err := parseFilePattern(pattern)
 	assert.NoError(t, err)

@@ -8,7 +8,6 @@ import (
 
 type watchPattern struct {
 	dir         string
-	isRecursive bool
 	patterns    []string
 	trigger     chan struct{}
 }
@@ -34,7 +33,7 @@ func parseFilePattern(filePattern string) (*watchPattern, error) {
 		return nil, err
 	}
 
-	w := &watchPattern{isRecursive: true, dir: absPattern}
+	w := &watchPattern{dir: absPattern}
 
 	// first we try to split the pattern to determine
 	// where the directory ends and the pattern starts
