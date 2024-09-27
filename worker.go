@@ -132,6 +132,7 @@ func startWorkers(fileName string, nbWorkers int, env PreparedEnv) error {
 	}
 
 	workersReadyWG.Wait()
+	workersAreReady.Store(true)
 	m.Lock()
 	defer m.Unlock()
 
