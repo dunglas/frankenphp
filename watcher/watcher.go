@@ -97,7 +97,7 @@ func startSession(watchOpt *watchOpt) (C.uintptr_t, error) {
 	defer C.free(unsafe.Pointer(cDir))
 	watchSession := C.start_new_watcher(cDir, C.uintptr_t(handle))
 	if watchSession != 0 {
-		logger.Debug("watching", zap.String("dir", watchOpt.dir), zap.String("pattern", watchOpt.pattern))
+		logger.Debug("watching", zap.String("dir", watchOpt.dir), zap.Strings("patterns", watchOpt.patterns))
 		return watchSession, nil
 	}
 	logger.Error("couldn't start watching", zap.String("dir", watchOpt.dir))
