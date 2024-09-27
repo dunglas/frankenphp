@@ -68,13 +68,13 @@ func (w *watcher) startWatching(filePatterns []string) error {
 	w.trigger = make(chan struct{})
 	w.stop = make(chan struct{})
 	w.sessions = make([]C.uintptr_t, len(filePatterns))
-	watchOpts, err := parseFilePatterns(filePatterns)
+	watchPatterns, err := parseFilePatterns(filePatterns)
 	if err != nil {
 		return err
 	}
-	for i, watchOpt := range watchOpts {
-		watchOpt.trigger = w.trigger
-		session, err := startSession(watchOpt)
+	for i, watchPattern := range watchPatterns {
+		watchPattern.trigger = w.trigger
+		session, err := startSession(watchPattern)
 		if err != nil {
 			return err
 		}
@@ -91,16 +91,16 @@ func (w *watcher) stopWatching() {
 	}
 }
 
-func startSession(watchOpt *watchOpt) (C.uintptr_t, error) {
-	handle := cgo.NewHandle(watchOpt)
-	cDir := C.CString(watchOpt.dir)
+func startSession(w *watchPattern) (C.uintptr_t, error) {
+	handle := cgo.NewHandle(w)
+	cDir := C.CString(w.dir)
 	defer C.free(unsafe.Pointer(cDir))
 	watchSession := C.start_new_watcher(cDir, C.uintptr_t(handle))
 	if watchSession != 0 {
-		logger.Debug("watching", zap.String("dir", watchOpt.dir), zap.Strings("patterns", watchOpt.patterns))
+		logger.Debug("watching", zap.String("dir", w.dir), zap.Strings("patterns", w.patterns))
 		return watchSession, nil
 	}
-	logger.Error("couldn't start watching", zap.String("dir", watchOpt.dir))
+	logger.Error("couldn't start watching", zap.String("dir", w.dir))
 
 	return watchSession, UnableToStartWatching
 }
@@ -114,9 +114,9 @@ func stopSession(session C.uintptr_t) {
 
 //export go_handle_file_watcher_event
 func go_handle_file_watcher_event(path *C.char, eventType C.int, pathType C.int, handle C.uintptr_t) {
-	watchOpt := cgo.Handle(handle).Value().(*watchOpt)
-	if watchOpt.allowReload(C.GoString(path), int(eventType), int(pathType)) {
-		watchOpt.trigger <- struct{}{}
+	watchPattern := cgo.Handle(handle).Value().(*watchPattern)
+	if watchPattern.allowReload(C.GoString(path), int(eventType), int(pathType)) {
+		watchPattern.trigger <- struct{}{}
 	}
 }
 

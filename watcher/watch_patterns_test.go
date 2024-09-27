@@ -10,20 +10,20 @@ func TestDisallowOnEventTypeBiggerThan3(t *testing.T) {
 	const fileName = "/some/path/watch-me.php"
 	const eventType = 4
 
-	watchOpt, err := parseFilePattern("/some/path")
+	watchPattern, err := parseFilePattern("/some/path")
 
 	assert.NoError(t, err)
-	assert.False(t, watchOpt.allowReload(fileName, eventType, 0))
+	assert.False(t, watchPattern.allowReload(fileName, eventType, 0))
 }
 
 func TestDisallowOnPathTypeBiggerThan2(t *testing.T) {
 	const fileName = "/some/path/watch-me.php"
 	const pathType = 3
 
-	watchOpt, err := parseFilePattern("/some/path")
+	watchPattern, err := parseFilePattern("/some/path")
 
 	assert.NoError(t, err)
-	assert.False(t, watchOpt.allowReload(fileName, 0, pathType))
+	assert.False(t, watchPattern.allowReload(fileName, 0, pathType))
 }
 
 func TestValidRecursiveDirectories(t *testing.T) {
@@ -114,20 +114,20 @@ func relativeDir(t *testing.T, relativePath string) string {
 	return dir
 }
 
-func assertAllPattern(t *testing.T, watchOpts []*watchOpt, pattern string) {
-	for _, w := range watchOpts {
+func assertAllPattern(t *testing.T, watchPatterns []*watchPattern, pattern string) {
+	for _, w := range watchPatterns {
 		assert.Equal(t, pattern, w.patterns[0])
 	}
 }
 
 func shouldMatch(t *testing.T, pattern string, fileName string) {
-	watchOpt, err := parseFilePattern(pattern)
+	watchPattern, err := parseFilePattern(pattern)
 	assert.NoError(t, err)
-	assert.True(t, watchOpt.allowReload(fileName, 0, 0))
+	assert.True(t, watchPattern.allowReload(fileName, 0, 0))
 }
 
 func shouldNotMatch(t *testing.T, pattern string, fileName string) {
-	watchOpt, err := parseFilePattern(pattern)
+	watchPattern, err := parseFilePattern(pattern)
 	assert.NoError(t, err)
-	assert.False(t, watchOpt.allowReload(fileName, 0, 0))
+	assert.False(t, watchPattern.allowReload(fileName, 0, 0))
 }

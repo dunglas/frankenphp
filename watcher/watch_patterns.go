@@ -6,35 +6,35 @@ import (
 	"strings"
 )
 
-type watchOpt struct {
+type watchPattern struct {
 	dir         string
 	isRecursive bool
 	patterns    []string
 	trigger     chan struct{}
 }
 
-func parseFilePatterns(filePatterns []string) ([]*watchOpt, error) {
-	watchOpts := make([]*watchOpt, 0, len(filePatterns))
+func parseFilePatterns(filePatterns []string) ([]*watchPattern, error) {
+	watchPatterns := make([]*watchPattern, 0, len(filePatterns))
 	for _, filePattern := range filePatterns {
-		watchOpt, err := parseFilePattern(filePattern)
+		watchPattern, err := parseFilePattern(filePattern)
 		if err != nil {
 			return nil, err
 		}
-		watchOpts = append(watchOpts, watchOpt)
+		watchPatterns = append(watchPatterns, watchPattern)
 	}
-	return watchOpts, nil
+	return watchPatterns, nil
 }
 
-// this method prepares the watchOpt struct for a single file pattern (aka /path/*pattern)
+// this method prepares the watchPattern struct for a single file pattern (aka /path/*pattern)
 // TODO: using '/' is more efficient than filepath functions, but does not work on windows
 // if windows is ever supported this needs to be adjusted
-func parseFilePattern(filePattern string) (*watchOpt, error) {
+func parseFilePattern(filePattern string) (*watchPattern, error) {
 	absPattern, err := filepath.Abs(filePattern)
 	if err != nil {
 		return nil, err
 	}
 
-	w := &watchOpt{isRecursive: true, dir: absPattern}
+	w := &watchPattern{isRecursive: true, dir: absPattern}
 
 	// first we try to split the pattern to determine
 	// where the directory ends and the pattern starts
@@ -63,12 +63,12 @@ func parseFilePattern(filePattern string) (*watchOpt, error) {
 	return w, nil
 }
 
-func (watchOpt *watchOpt) allowReload(fileName string, eventType int, pathType int) bool {
+func (watchPattern *watchPattern) allowReload(fileName string, eventType int, pathType int) bool {
 	if !isValidEventType(eventType) || !isValidPathType(pathType) {
 		return false
 	}
 
-	return isValidPattern(fileName, watchOpt.dir, watchOpt.patterns)
+	return isValidPattern(fileName, watchPattern.dir, watchPattern.patterns)
 }
 
 // 0:rename,1:modify,2:create,3:destroy,4:owner,5:other,
