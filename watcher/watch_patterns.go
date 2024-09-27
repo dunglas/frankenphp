@@ -7,9 +7,9 @@ import (
 )
 
 type watchPattern struct {
-	dir         string
-	patterns    []string
-	trigger     chan struct{}
+	dir      string
+	patterns []string
+	trigger  chan struct{}
 }
 
 func parseFilePatterns(filePatterns []string) ([]*watchPattern, error) {
@@ -26,7 +26,6 @@ func parseFilePatterns(filePatterns []string) ([]*watchPattern, error) {
 
 // this method prepares the watchPattern struct for a single file pattern (aka /path/*pattern)
 // TODO: using '/' is more efficient than filepath functions, but does not work on windows
-// if windows is ever supported this needs to be adjusted
 func parseFilePattern(filePattern string) (*watchPattern, error) {
 	absPattern, err := filepath.Abs(filePattern)
 	if err != nil {
@@ -35,22 +34,20 @@ func parseFilePattern(filePattern string) (*watchPattern, error) {
 
 	w := &watchPattern{dir: absPattern}
 
-	// first we try to split the pattern to determine
-	// where the directory ends and the pattern starts
+	// first we split the pattern to determine where the directory ends and the pattern starts
 	splitPattern := strings.Split(absPattern, "/")
 	patternWithoutDir := ""
 	for i, part := range splitPattern {
-		// we found a pattern if it contains a glob character [*?
-		// if it contains a '.' it is also likely a filename
-		// TODO: directories with a '.' in the name are currently not allowed
-		if strings.ContainsAny(part, "[*?.") {
+		// we split the pattern on a glob character [*? or if it is a filename
+		isFilename := i == len(splitPattern)-1 && strings.Contains(part, ".")
+		if isFilename || strings.ContainsAny(part, "[*?") {
 			patternWithoutDir = filepath.Join(splitPattern[i:]...)
 			w.dir = filepath.Join(splitPattern[:i]...)
 			break
 		}
 	}
 
-	// now we split the pattern into multiple patterns according to the supported '**' syntax
+	// now we split the pattern according to the glob '**' syntax
 	w.patterns = strings.Split(patternWithoutDir, "**")
 	for i, pattern := range w.patterns {
 		w.patterns[i] = strings.Trim(pattern, "/")
@@ -81,7 +78,6 @@ func isValidPathType(eventType int) bool {
 }
 
 func isValidPattern(fileName string, dir string, patterns []string) bool {
-
 	// first we remove the dir from the pattern
 	if !strings.HasPrefix(fileName, dir) {
 		return false
@@ -96,7 +92,6 @@ func isValidPattern(fileName string, dir string, patterns []string) bool {
 	return matchPatterns(patterns, fileNameWithoutDir)
 }
 
-// TODO: does this need performance optimization?
 func matchPatterns(patterns []string, fileName string) bool {
 	partsToMatch := strings.Split(fileName, "/")
 	cursor := 0
