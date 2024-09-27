@@ -22,7 +22,7 @@ var (
 	workersReadyWG      sync.WaitGroup
 	workerShutdownWG    sync.WaitGroup
 	workersAreReady     atomic.Bool
-	workersAreDone	    atomic.Bool
+	workersAreDone      atomic.Bool
 	workersDone         chan interface{}
 )
 
@@ -30,7 +30,7 @@ var (
 func initWorkers(opt []workerOpt) error {
 	workersDone = make(chan interface{})
 	workersAreReady.Store(false)
-    workersAreDone.Store(false)
+	workersAreDone.Store(false)
 
 	for _, w := range opt {
 		if err := startWorkers(w.fileName, w.num, w.env); err != nil {
@@ -48,8 +48,8 @@ func startWorkers(fileName string, nbWorkers int, env PreparedEnv) error {
 	}
 
 	if _, ok := workersRequestChans.Load(absFileName); !ok {
-        workersRequestChans.Store(absFileName, make(chan *http.Request))
-    }
+		workersRequestChans.Store(absFileName, make(chan *http.Request))
+	}
 
 	shutdownWG.Add(nbWorkers)
 	workerShutdownWG.Add(nbWorkers)
@@ -152,7 +152,7 @@ func drainWorkers() {
 
 func restartWorkers(workerOpts []workerOpt) {
 	stopWorkers()
-    workerShutdownWG.Wait()
+	workerShutdownWG.Wait()
 	if err := initWorkers(workerOpts); err != nil {
 		logger.Error("failed to restart workers when watching files")
 		panic(err)

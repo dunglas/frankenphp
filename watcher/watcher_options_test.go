@@ -122,13 +122,12 @@ func assertAllPattern(t *testing.T, watchOpts []*watchOpt, pattern string) {
 
 func shouldMatch(t *testing.T, pattern string, fileName string) {
 	watchOpt, err := parseFilePattern(pattern)
-    assert.NoError(t, err)
+	assert.NoError(t, err)
 	assert.True(t, watchOpt.allowReload(fileName, 0, 0))
 }
 
 func shouldNotMatch(t *testing.T, pattern string, fileName string) {
 	watchOpt, err := parseFilePattern(pattern)
-    assert.NoError(t, err)
+	assert.NoError(t, err)
 	assert.False(t, watchOpt.allowReload(fileName, 0, 0))
 }
-

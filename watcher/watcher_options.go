@@ -34,7 +34,7 @@ func parseFilePattern(filePattern string) (*watchOpt, error) {
 		return nil, err
 	}
 
-	w := &watchOpt{isRecursive:true, dir:absPattern}
+	w := &watchOpt{isRecursive: true, dir: absPattern}
 
 	// first we try to split the pattern to determine
 	// where the directory ends and the pattern starts
@@ -87,7 +87,7 @@ func isValidPattern(fileName string, dir string, patterns []string) bool {
 	if !strings.HasPrefix(fileName, dir) {
 		return false
 	}
-	fileNameWithoutDir := strings.TrimLeft(fileName, dir + "/")
+	fileNameWithoutDir := strings.TrimLeft(fileName, dir+"/")
 
 	// if the pattern has size 1 we can match it directly against the filename
 	if len(patterns) == 1 {
@@ -107,24 +107,24 @@ func matchPatterns(patterns []string, fileName string) bool {
 		patternSize := strings.Count(pattern, "/") + 1
 
 		// if we are at the last pattern we will start matching from the end of the filename
-		if(i == len(patterns) - 1) {
+		if i == len(patterns)-1 {
 			cursor = len(partsToMatch) - patternSize
 		}
 
 		// the cursor will move through the fileName until the pattern matches
-        for j := cursor; j < len(partsToMatch); j++ {
-            cursor = j
-        	subPattern := strings.Join(partsToMatch[j:j + patternSize], "/")
-            if matchPattern(pattern, subPattern) {
-                cursor = j + patternSize - 1
-                break
-            }
-            if cursor > len(partsToMatch) - patternSize - 1 {
+		for j := cursor; j < len(partsToMatch); j++ {
+			cursor = j
+			subPattern := strings.Join(partsToMatch[j:j+patternSize], "/")
+			if matchPattern(pattern, subPattern) {
+				cursor = j + patternSize - 1
+				break
+			}
+			if cursor > len(partsToMatch)-patternSize-1 {
 
-                return false
-            }
-        }
-    }
+				return false
+			}
+		}
+	}
 
 	return true
 }
@@ -134,11 +134,10 @@ func matchPattern(pattern string, fileName string) bool {
 		return true
 	}
 	patternMatches, err := filepath.Match(pattern, fileName)
-    if err != nil {
-        logger.Error("failed to match filename", zap.String("file", fileName), zap.Error(err))
-        return false
-    }
+	if err != nil {
+		logger.Error("failed to match filename", zap.String("file", fileName), zap.Error(err))
+		return false
+	}
 
-    return patternMatches
+	return patternMatches
 }
-

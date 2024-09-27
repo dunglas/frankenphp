@@ -7,9 +7,9 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
-	"strings"
 )
 
 // we have to wait a few milliseconds for the watcher debounce to take effect

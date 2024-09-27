@@ -16,10 +16,10 @@ import (
 )
 
 type watcher struct {
-	sessions  []C.uintptr_t
-	callback  func()
-	trigger   chan struct{}
-	stop      chan struct{}
+	sessions []C.uintptr_t
+	callback func()
+	trigger  chan struct{}
+	stop     chan struct{}
 }
 
 // duration to wait before triggering a reload after a file change
@@ -31,9 +31,9 @@ var (
 	// after stopping the watcher we will wait for eventual reloads to finish
 	reloadWaitGroup sync.WaitGroup
 	// we are passing the logger from the main package to the watcher
-	logger          *zap.Logger
-	AlreadyStartedError         = errors.New("The watcher is already running")
-	UnableToStartWatching       = errors.New("Unable to start the watcher")
+	logger                *zap.Logger
+	AlreadyStartedError   = errors.New("The watcher is already running")
+	UnableToStartWatching = errors.New("Unable to start the watcher")
 )
 
 func InitWatcher(filePatterns []string, callback func(), zapLogger *zap.Logger) error {
@@ -68,7 +68,7 @@ func (w *watcher) startWatching(filePatterns []string) error {
 	w.trigger = make(chan struct{})
 	w.stop = make(chan struct{})
 	w.sessions = make([]C.uintptr_t, len(filePatterns))
-	watchOpts, err :=  parseFilePatterns(filePatterns)
+	watchOpts, err := parseFilePatterns(filePatterns)
 	if err != nil {
 		return err
 	}
