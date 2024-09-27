@@ -163,7 +163,7 @@ You can also add multiple `watch` directives and use simple pattern matching for
 
 #### Advanced Watchers Configuration
 
-* Directories can also be relative (to where the frankenphp process is started from)
+* Directories can also be relative (to where the FrankenPHP process is started from)
 * The `**/` pattern signifies recursive watching and may be followed by a filename pattern
 * If the last part of the `watch` directive contains any of the characters `*`, `?`, `[`, `\` or `.`, it will be matched against the
   shell [filename pattern](https://pkg.go.dev/path/filepath#Match)
