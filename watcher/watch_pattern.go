@@ -27,33 +27,35 @@ func parseFilePatterns(filePatterns []string) ([]*watchPattern, error) {
 // this method prepares the watchPattern struct for a single file pattern (aka /path/*pattern)
 // TODO: using '/' is more efficient than filepath functions, but does not work on windows
 func parseFilePattern(filePattern string) (*watchPattern, error) {
+	w := &watchPattern{}
+
+	// first we clean the pattern
 	absPattern, err := filepath.Abs(filePattern)
 	if err != nil {
 		return nil, err
 	}
+	w.dir = absPattern
 
-	w := &watchPattern{dir: absPattern}
-
-	// first we split the pattern to determine where the directory ends and the pattern starts
+	// then we split the pattern to determine where the directory ends and the pattern starts
 	splitPattern := strings.Split(absPattern, "/")
 	patternWithoutDir := ""
 	for i, part := range splitPattern {
-		// we split the pattern on a glob character [*? or if it is a filename
 		isFilename := i == len(splitPattern)-1 && strings.Contains(part, ".")
-		if isFilename || strings.ContainsAny(part, "[*?") {
+		isGlobCharacter := strings.ContainsAny(part, "[*?")
+		if isFilename || isGlobCharacter {
 			patternWithoutDir = filepath.Join(splitPattern[i:]...)
 			w.dir = filepath.Join(splitPattern[:i]...)
 			break
 		}
 	}
 
-	// now we split the pattern according to the glob '**' syntax
+	// now we split the pattern according to the recursive '**' syntax
 	w.patterns = strings.Split(patternWithoutDir, "**")
 	for i, pattern := range w.patterns {
 		w.patterns[i] = strings.Trim(pattern, "/")
 	}
 
-	// remove trailing slash and add leading slash
+	// finally, we remove the trailing slash and add leading slash
 	w.dir = "/" + strings.Trim(w.dir, "/")
 
 	return w, nil
@@ -114,7 +116,6 @@ func matchPatterns(patterns []string, fileName string) bool {
 				break
 			}
 			if cursor > len(partsToMatch)-patternSize-1 {
-
 				return false
 			}
 		}

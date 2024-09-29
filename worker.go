@@ -13,6 +13,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/dunglas/frankenphp/watcher"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -149,9 +150,26 @@ func stopWorkers() {
 }
 
 func drainWorkers() {
+	watcher.DrainWatcher()
 	stopWorkers()
 	workerShutdownWG.Wait()
 	workersRequestChans = sync.Map{}
+}
+
+func restartWorkersOnFileChanges(workerOpts []workerOpt) error {
+	directoriesToWatch := []string{}
+	for _, w := range workerOpts {
+		directoriesToWatch = append(directoriesToWatch, w.watch...)
+	}
+	restartWorkers := func() {
+		restartWorkers(workerOpts)
+	}
+	if err := watcher.InitWatcher(directoriesToWatch, restartWorkers, getLogger()); err != nil {
+
+		return err
+	}
+
+	return nil
 }
 
 func restartWorkers(workerOpts []workerOpt) {

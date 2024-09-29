@@ -95,6 +95,7 @@ func cmdPHPServer(fs caddycmd.Flags) (int, error) {
 
 			workersOption = append(workersOption, workerConfig{FileName: parts[0], Num: num})
 		}
+		workersOption[0].Watch = watch
 	}
 
 	if frankenphp.EmbeddedAppPath != "" {
@@ -310,7 +311,7 @@ func cmdPHPServer(fs caddycmd.Flags) (int, error) {
 		},
 		AppsRaw: caddy.ModuleMap{
 			"http":       caddyconfig.JSON(httpApp, nil),
-			"frankenphp": caddyconfig.JSON(FrankenPHPApp{Workers: workersOption, Watch: watch}, nil),
+			"frankenphp": caddyconfig.JSON(FrankenPHPApp{Workers: workersOption}, nil),
 		},
 	}
 

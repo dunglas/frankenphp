@@ -62,6 +62,8 @@ type workerConfig struct {
 	Num int `json:"num,omitempty"`
 	// Env sets an extra environment variable to the given value. Can be specified more than once for multiple environment variables.
 	Env map[string]string `json:"env,omitempty"`
+	// Directories to watch for file changes
+	Watch []string `json:"watch,omitempty"`
 }
 
 type FrankenPHPApp struct {
@@ -69,8 +71,6 @@ type FrankenPHPApp struct {
 	NumThreads int `json:"num_threads,omitempty"`
 	// Workers configures the worker scripts to start.
 	Workers []workerConfig `json:"workers,omitempty"`
-	// Directories to watch for changes
-	Watch []string `json:"watch,omitempty"`
 }
 
 // CaddyModule returns the Caddy module information.
@@ -87,10 +87,8 @@ func (f *FrankenPHPApp) Start() error {
 
 	opts := []frankenphp.Option{frankenphp.WithNumThreads(f.NumThreads), frankenphp.WithLogger(logger), frankenphp.WithMetrics(metrics)}
 	for _, w := range f.Workers {
-		opts = append(opts, frankenphp.WithWorkers(repl.ReplaceKnown(w.FileName, ""), w.Num, w.Env))
+		opts = append(opts, frankenphp.WithWorkers(repl.ReplaceKnown(w.FileName, ""), w.Num, w.Env, w.Watch))
 	}
-
-	opts = append(opts, frankenphp.WithFileWatcher(f.Watch))
 
 	_, loaded, err := phpInterpreter.LoadOrNew(mainPHPInterpreterKey, func() (caddy.Destructor, error) {
 		if err := frankenphp.Init(opts...); err != nil {
@@ -138,11 +136,6 @@ func (f *FrankenPHPApp) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 				}
 
 				f.NumThreads = v
-			case "watch":
-				if !d.NextArg() {
-					return d.Err(`The "watch" directive must be followed by a path`)
-				}
-				f.Watch = append(f.Watch, d.Val())
 			case "worker":
 				wc := workerConfig{}
 				if d.NextArg() {
@@ -186,6 +179,11 @@ func (f *FrankenPHPApp) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 							wc.Env = make(map[string]string)
 						}
 						wc.Env[args[0]] = args[1]
+					case "watch":
+						if !d.NextArg() {
+							return d.Err(`The "watch" directive must be followed by a path`)
+						}
+						wc.Watch = append(wc.Watch, d.Val())
 					}
 
 					if wc.FileName == "" {

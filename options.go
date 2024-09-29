@@ -13,7 +13,6 @@ type Option func(h *opt) error
 type opt struct {
 	numThreads int
 	workers    []workerOpt
-	watch      []string
 	logger     *zap.Logger
 	metrics    Metrics
 }
@@ -22,6 +21,7 @@ type workerOpt struct {
 	fileName string
 	num      int
 	env      PreparedEnv
+	watch    []string
 }
 
 // WithNumThreads configures the number of PHP threads to start.
@@ -42,18 +42,9 @@ func WithMetrics(m Metrics) Option {
 }
 
 // WithWorkers configures the PHP workers to start.
-func WithWorkers(fileName string, num int, env map[string]string) Option {
+func WithWorkers(fileName string, num int, env map[string]string, watch []string) Option {
 	return func(o *opt) error {
-		o.workers = append(o.workers, workerOpt{fileName, num, PrepareEnv(env)})
-
-		return nil
-	}
-}
-
-// WithFileWatcher adds directories to be watched (shell file pattern).
-func WithFileWatcher(patterns []string) Option {
-	return func(o *opt) error {
-		o.watch = patterns
+		o.workers = append(o.workers, workerOpt{fileName, num, PrepareEnv(env), watch})
 
 		return nil
 	}
