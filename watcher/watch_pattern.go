@@ -62,7 +62,7 @@ func parseFilePattern(filePattern string) (*watchPattern, error) {
 }
 
 func (watchPattern *watchPattern) allowReload(fileName string, eventType int, pathType int) bool {
-	if !isValidEventType(eventType) || !isValidPathType(pathType) {
+	if !isValidEventType(eventType) || !isValidPathType(pathType, fileName) {
 		return false
 	}
 
@@ -75,8 +75,11 @@ func isValidEventType(eventType int) bool {
 }
 
 // 0:dir,1:file,2:hard_link,3:sym_link,4:watcher,5:other,
-func isValidPathType(eventType int) bool {
-	return eventType <= 2
+func isValidPathType(pathType int, fileName string) bool {
+	if pathType == 4 {
+		logger.Debug("special edant/watcher event", zap.String("fileName", fileName))
+	}
+	return pathType <= 2
 }
 
 func isValidPattern(fileName string, dir string, patterns []string) bool {

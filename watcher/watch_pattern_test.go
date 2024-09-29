@@ -46,10 +46,10 @@ func TestValidRecursiveDirectories(t *testing.T) {
 	shouldMatch(t, "/path**", "/path/subpath/file.php")
 	shouldMatch(t, "/path/**", "/path/subpath/file.php")
 	shouldMatch(t, "/path/**/", "/path/subpath/file.php")
-	shouldMatch(t, ".", relativeDir(t, "/file.php"))
-	shouldMatch(t, ".", relativeDir(t, "/subpath/file.php"))
-	shouldMatch(t, "./**", relativeDir(t, "/subpath/file.php"))
-	shouldMatch(t, "..", relativeDir(t, "/subpath/file.php"))
+	shouldMatch(t, ".", relativeDir(t, "file.php"))
+	shouldMatch(t, ".", relativeDir(t, "subpath/file.php"))
+	shouldMatch(t, "./**", relativeDir(t, "subpath/file.php"))
+	shouldMatch(t, "..", relativeDir(t, "subpath/file.php"))
 }
 
 func TestInvalidRecursiveDirectories(t *testing.T) {
@@ -63,16 +63,16 @@ func TestValidNonRecursiveFilePatterns(t *testing.T) {
 	shouldMatch(t, "/path/*.php", "/path/file.php")
 	shouldMatch(t, "/path/?ile.php", "/path/file.php")
 	shouldMatch(t, "/path/file.php", "/path/file.php")
-	shouldMatch(t, "*.php", relativeDir(t, "/file.php"))
-	shouldMatch(t, "./*.php", relativeDir(t, "/file.php"))
+	shouldMatch(t, "*.php", relativeDir(t, "file.php"))
+	shouldMatch(t, "./*.php", relativeDir(t, "file.php"))
 }
 
 func TestInValidNonRecursiveFilePatterns(t *testing.T) {
 	shouldNotMatch(t, "/path/*.txt", "/path/file.php")
 	shouldNotMatch(t, "/path/*.php", "/path/subpath/file.php")
 	shouldNotMatch(t, "/*.php", "/path/file.php")
-	shouldNotMatch(t, "*.txt", relativeDir(t, "/file.php"))
-	shouldNotMatch(t, "*.php", relativeDir(t, "/subpath/file.php"))
+	shouldNotMatch(t, "*.txt", relativeDir(t, "file.php"))
+	shouldNotMatch(t, "*.php", relativeDir(t, "subpath/file.php"))
 }
 
 func TestValidRecursiveFilePatterns(t *testing.T) {
@@ -80,17 +80,16 @@ func TestValidRecursiveFilePatterns(t *testing.T) {
 	shouldMatch(t, "/path/**/*.php", "/path/subpath/file.php")
 	shouldMatch(t, "/path/**/?ile.php", "/path/subpath/file.php")
 	shouldMatch(t, "/path/**/file.php", "/path/subpath/file.php")
-	shouldMatch(t, "**/*.php", relativeDir(t, "/file.php"))
-	shouldMatch(t, "**/*.php", relativeDir(t, "/subpath/file.php"))
-	shouldMatch(t, "./**/*.php", relativeDir(t, "/subpath/file.php"))
+	shouldMatch(t, "**/*.php", relativeDir(t, "file.php"))
+	shouldMatch(t, "**/*.php", relativeDir(t, "subpath/file.php"))
+	shouldMatch(t, "./**/*.php", relativeDir(t, "subpath/file.php"))
 }
 
 func TestInvalidRecursiveFilePatterns(t *testing.T) {
 	shouldNotMatch(t, "/path/**/*.txt", "/path/file.php")
-	shouldNotMatch(t, "/other/**/*.txt", "/path/file.php")
+	shouldNotMatch(t, "/path/**/*.txt", "/other/file.php")
 	shouldNotMatch(t, "/path/**/*.txt", "/path/subpath/file.php")
 	shouldNotMatch(t, "/path/**/?ilm.php", "/path/subpath/file.php")
-	shouldNotMatch(t, "**/*.php", "/other/file.php")
 	shouldNotMatch(t, "**/*.php", "/other/file.php")
 	shouldNotMatch(t, ".**/*.php", "/other/file.php")
 	shouldNotMatch(t, "./**/*.php", "/other/file.php")
@@ -100,6 +99,7 @@ func TestValidDirectoryPatterns(t *testing.T) {
 	shouldMatch(t, "/path/*/*.php", "/path/subpath/file.php")
 	shouldMatch(t, "/path/*/*/*.php", "/path/subpath/subpath/file.php")
 	shouldMatch(t, "/path/?/*.php", "/path/1/file.php")
+	shouldMatch(t, "/path/**/vendor/*.php", "/path/vendor/file.php")
 	shouldMatch(t, "/path/**/vendor/*.php", "/path/subpath/vendor/file.php")
 	shouldMatch(t, "/path/**/vendor/**/*.php", "/path/vendor/file.php")
 	shouldMatch(t, "/path/**/vendor/**/*.php", "/path/subpath/subpath/vendor/subpath/subpath/file.php")
@@ -114,6 +114,7 @@ func TestInvalidDirectoryPatterns(t *testing.T) {
 	shouldNotMatch(t, "/path/*/*/*.php", "/path/subpath/file.php")
 	shouldNotMatch(t, "/path/*/*/*.php", "/path/subpath/subpath/subpath/file.php")
 	shouldNotMatch(t, "/path/**/vendor/*.php", "/path/subpath/vendor/subpath/file.php")
+	shouldNotMatch(t, "/path/**/vendor/*.php", "/path/subpath/file.php")
 	shouldNotMatch(t, "/path/**/vendor/**/*.php", "/path/subpath/file.php")
 	shouldNotMatch(t, "/path/**/vendor/**/*.txt", "/path/subpath/vendor/subpath/file.php")
 	shouldNotMatch(t, "/path/**/vendor/**/*.php", "/path/subpath/subpath/subpath/file.php")
@@ -122,7 +123,7 @@ func TestInvalidDirectoryPatterns(t *testing.T) {
 }
 
 func relativeDir(t *testing.T, relativePath string) string {
-	dir, err := filepath.Abs("." + relativePath)
+	dir, err := filepath.Abs("./" + relativePath)
 	assert.NoError(t, err)
 	return dir
 }
