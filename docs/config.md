@@ -159,7 +159,6 @@ One or multiple `watch` directives followed by a
 * The `**` pattern signifies recursive watching
 * Directories can also be relative (to where the FrankenPHP process is started from)
 * If you have multiple workers defined, all of them will be restarted when a file changes
-* The watcher will currently not follow symlinks
 * Be wary about watching files that are created at runtime (like logs) since they might cause unwanted worker restarts.
 
 The file watcher is based on [e-dant/watcher](https://github.com/e-dant/watcher).
