@@ -210,7 +210,7 @@ func go_frankenphp_worker_ready(mrh C.uintptr_t) {
 	mainRequest := cgo.Handle(mrh).Value().(*http.Request)
 	fc := mainRequest.Context().Value(contextKey).(*FrankenPHPContext)
 	fc.ready = true
-	metrics.ReadyWorker(fc.scriptName)
+	metrics.ReadyWorker(fc.scriptFilename)
 	workersReadyWG.Done()
 }
 
