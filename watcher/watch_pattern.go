@@ -41,7 +41,7 @@ func parseFilePattern(filePattern string) (*watchPattern, error) {
 	patternWithoutDir := ""
 	for i, part := range splitPattern {
 		isFilename := i == len(splitPattern)-1 && strings.Contains(part, ".")
-		isGlobCharacter := strings.ContainsAny(part, "[*?")
+		isGlobCharacter := strings.ContainsAny(part, "[*?{")
 		if isFilename || isGlobCharacter {
 			patternWithoutDir = filepath.Join(splitPattern[i:]...)
 			w.dir = filepath.Join(splitPattern[:i]...)
@@ -91,7 +91,7 @@ func isValidPattern(fileName string, dir string, patterns []string) bool {
 
 	// if the pattern has size 1 we can match it directly against the filename
 	if len(patterns) == 1 {
-		return matchPattern(patterns[0], fileNameWithoutDir)
+		return matchBracketPattern(patterns[0], fileNameWithoutDir)
 	}
 
 	return matchPatterns(patterns, fileNameWithoutDir)
@@ -114,7 +114,7 @@ func matchPatterns(patterns []string, fileName string) bool {
 		for j := cursor; j < len(partsToMatch); j++ {
 			cursor = j
 			subPattern := strings.Join(partsToMatch[j:j+patternSize], "/")
-			if matchPattern(pattern, subPattern) {
+			if matchBracketPattern(pattern, subPattern) {
 				cursor = j + patternSize - 1
 				break
 			}
@@ -125,6 +125,31 @@ func matchPatterns(patterns []string, fileName string) bool {
 	}
 
 	return true
+}
+
+// we also check for the following bracket syntax: /path/*.{php,twig,yaml}
+func matchBracketPattern(pattern string, fileName string) bool {
+	openingBracket := strings.Index(pattern, "{")
+	closingBracket := strings.Index(pattern, "}")
+
+	// if there are no brackets we can match regularly
+	if openingBracket == -1 || closingBracket == -1 {
+		return matchPattern(pattern, fileName)
+	}
+
+	beforeTheBrackets := pattern[:openingBracket]
+	betweenTheBrackets := pattern[openingBracket+1 : closingBracket]
+	afterTheBrackets := pattern[closingBracket+1:]
+
+	// all bracket entries are checked individually, only one needs to match
+	// *.{php,twig,yaml} -> *.php, *.twig, *.yaml
+	for _, pattern := range strings.Split(betweenTheBrackets, ",") {
+		if matchPattern(beforeTheBrackets+pattern+afterTheBrackets, fileName) {
+			return true
+		}
+	}
+
+	return false
 }
 
 func matchPattern(pattern string, fileName string) bool {

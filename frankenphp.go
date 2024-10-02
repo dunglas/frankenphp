@@ -865,14 +865,19 @@ func freeArgs(argv []*C.char) {
 	}
 }
 
-func executePhpFunction(functionName string) {
+func executePHPFunction(functionName string) {
 	cFunctionName := C.CString(functionName)
 	defer C.free(unsafe.Pointer(cFunctionName))
 
-	success := C.frankenphp_execute_php_function(C.CString(functionName))
+	success := C.frankenphp_execute_php_function(cFunctionName)
+
 	if success == 1 {
-		logger.Debug("php function call successful", zap.String("function", functionName))
+		if c := logger.Check(zapcore.DebugLevel, "php function call successful"); c != nil {
+			c.Write(zap.String("function", functionName))
+		}
 	} else {
-		logger.Error("php function call failed", zap.String("function", functionName))
+		if c := logger.Check(zapcore.ErrorLevel, "php function call failed"); c != nil {
+			c.Write(zap.String("function", functionName))
+		}
 	}
 }

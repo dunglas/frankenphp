@@ -213,7 +213,7 @@ func go_frankenphp_worker_handle_request_start(mrh C.uintptr_t) C.uintptr_t {
 		if c := l.Check(zapcore.DebugLevel, "shutting down"); c != nil {
 			c.Write(zap.String("worker", fc.scriptFilename))
 		}
-		executePhpFunction("opcache_reset")
+		executePHPFunction("opcache_reset")
 
 		return 0
 	case r = <-rc:

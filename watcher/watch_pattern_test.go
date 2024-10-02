@@ -122,6 +122,21 @@ func TestInvalidDirectoryPatterns(t *testing.T) {
 	shouldNotMatch(t, "/path*/path*", "/path1/path1/file.php")
 }
 
+func TestValidExtendedPatterns(t *testing.T) {
+	shouldMatch(t, "/path/*.{php}", "/path/file.php")
+	shouldMatch(t, "/path/*.{php,twig}", "/path/file.php")
+	shouldMatch(t, "/path/*.{php,twig}", "/path/file.twig")
+	shouldMatch(t, "/path/**/{file.php,file.twig}", "/path/subpath/file.twig")
+	shouldMatch(t, "/path/{folder1,folder2}/file.php", "/path/folder1/file.php")
+}
+
+func TestInValidExtendedPatterns(t *testing.T) {
+	shouldNotMatch(t, "/path/*.{php}", "/path/file.txt")
+	shouldNotMatch(t, "/path/*.{php,twig}", "/path/file.txt")
+	shouldNotMatch(t, "/path/{file.php,file.twig}", "/path/file.txt")
+	shouldNotMatch(t, "/path/{folder1,folder2}/file.php", "/path/folder3/file.php")
+}
+
 func relativeDir(t *testing.T, relativePath string) string {
 	dir, err := filepath.Abs("./" + relativePath)
 	assert.NoError(t, err)

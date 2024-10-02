@@ -181,8 +181,8 @@ func (f *FrankenPHPApp) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 						wc.Env[args[0]] = args[1]
 					case "watch":
 						if !d.NextArg() {
-							// defaults to watching all PHP files in the current directory
-							wc.Watch = append(wc.Watch, "./**/*.php")
+							// the default if the watch directory is left empty:
+							wc.Watch = append(wc.Watch, "./**/*.{php,yaml,yml,twig,env}")
 						} else {
 							wc.Watch = append(wc.Watch, d.Val())
 						}

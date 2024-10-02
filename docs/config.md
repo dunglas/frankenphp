@@ -150,8 +150,10 @@ This is useful for development environments.
 	}
 }
 ```
-If the watch directory is not specified, it will fall back to `./**/*.php`, which watches all PHP files in the current
-directory and subdirectories. You can instead specify one or more directories via a
+
+If the `watch` directory is not specified, it will fall back to `./**/*.{php,yaml,yml,twig,env}`, 
+which watches all `.php`, `.yaml`, `.yml`, `.twig` and `.env` files in the directory and subdirectories
+where the FrankenPHP process was started. You can instead also specify one or more directories via a
 [shell filename pattern](https://pkg.go.dev/path/filepath#Match):
 
 ```caddyfile
@@ -160,8 +162,9 @@ directory and subdirectories. You can instead specify one or more directories vi
 		worker {
 			file  /path/to/app/public/worker.php
 			watch /path/to/app # watches all files in all subdirectories of /path/to/app
-			watch /path/to/app/*.php # watches files ending in .php in the /path/to/app directory
-			watch /path/to/app/**/*.php # watches files ending in .php in the /path/to/app directory and subdirectories
+			watch /path/to/app/*.php # watches files ending in .php in /path/to/app
+			watch /path/to/app/**/*.php # watches PHP files in /path/to/app and subdirectories
+			watch /path/to/app/**/*.{php,twig} # watches PHP and Twig files in /path/to/app and subdirectories
 		}
 	}
 }
@@ -192,7 +195,7 @@ This is an opt-in configuration that needs to be added to the global options in 
 > [!CAUTION]
 >
 > Enabling this option may cause old HTTP/1.x clients that don't support full-duplex to deadlock.
-This can also be configured using the `CADDY_GLOBAL_OPTIONS` environment config:
+> This can also be configured using the `CADDY_GLOBAL_OPTIONS` environment config:
 
 ```sh
 CADDY_GLOBAL_OPTIONS="servers { enable_full_duplex }"
