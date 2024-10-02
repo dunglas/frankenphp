@@ -181,9 +181,11 @@ func (f *FrankenPHPApp) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 						wc.Env[args[0]] = args[1]
 					case "watch":
 						if !d.NextArg() {
-							return d.Err(`The "watch" directive must be followed by a path`)
+							// defaults to watching all PHP files in the current directory
+							wc.Watch = append(wc.Watch, "./**/*.php")
+						} else {
+							wc.Watch = append(wc.Watch, d.Val())
 						}
-						wc.Watch = append(wc.Watch, d.Val())
 					}
 
 					if wc.FileName == "" {

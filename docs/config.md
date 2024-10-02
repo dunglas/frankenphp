@@ -140,8 +140,19 @@ to your PHP files will not be reflected immediately.
 Workers can instead be restarted on file changes via the `watch` directive.
 This is useful for development environments.
 
-One or multiple `watch` directives followed by a
-[shell filename pattern](https://pkg.go.dev/path/filepath#Match) can be defined like so:
+```caddyfile
+{
+	frankenphp {
+		worker {
+			file  /path/to/app/public/worker.php
+			watch
+		}
+	}
+}
+```
+If the watch directory is not specified, it will fall back to `./**/*.php`, which watches all PHP files in the current
+directory and subdirectories. You can instead specify one or more directories via a
+[shell filename pattern](https://pkg.go.dev/path/filepath#Match):
 
 ```caddyfile
 {
