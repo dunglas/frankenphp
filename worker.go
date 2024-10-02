@@ -132,7 +132,6 @@ func startWorkers(fileName string, nbWorkers int, env PreparedEnv) error {
 						workersReadyWG.Add(1)
 					}
 
-					metrics.StopWorker(absFileName)
 					workersReadyWG.Add(1)
 					if fc.exitStatus == 0 {
 						if c := l.Check(zapcore.InfoLevel, "restarting"); c != nil {
@@ -144,6 +143,7 @@ func startWorkers(fileName string, nbWorkers int, env PreparedEnv) error {
 						backoff = minBackoff
 						failureCount = 0
 						backingOffLock.Unlock()
+						metrics.StopWorker(absFileName, StopReasonRestart)
 					} else {
 						if c := l.Check(zapcore.ErrorLevel, "unexpected termination, restarting"); c != nil {
 							backingOffLock.RLock()
@@ -170,11 +170,14 @@ func startWorkers(fileName string, nbWorkers int, env PreparedEnv) error {
 						backoff *= 2
 						backoff = min(backoff, maxBackoff)
 						backingOffLock.Unlock()
+						metrics.StopWorker(absFileName, StopReasonCrash)
 					}
 				} else {
 					break
 				}
 			}
+
+			metrics.StopWorker(absFileName, StopReasonShutdown)
 
 			// TODO: check if the termination is expected
 			if c := l.Check(zapcore.DebugLevel, "terminated"); c != nil {
@@ -207,6 +210,7 @@ func go_frankenphp_worker_ready(mrh C.uintptr_t) {
 	mainRequest := cgo.Handle(mrh).Value().(*http.Request)
 	fc := mainRequest.Context().Value(contextKey).(*FrankenPHPContext)
 	fc.ready = true
+	metrics.ReadyWorker(fc.scriptName)
 	workersReadyWG.Done()
 }
 

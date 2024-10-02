@@ -263,6 +263,18 @@ func (m *PrometheusMetrics) Shutdown() {
 		m.registry.Unregister(c)
 	}
 
+	for _, c := range m.workerCrashes {
+		m.registry.Unregister(c)
+	}
+
+	for _, c := range m.workerRestarts {
+		m.registry.Unregister(c)
+	}
+
+	for _, g := range m.readyWorkers {
+		m.registry.Unregister(g)
+	}
+
 	m.totalThreads = prometheus.NewCounter(prometheus.CounterOpts{
 		Name: "frankenphp_total_threads",
 		Help: "Total number of PHP threads",
