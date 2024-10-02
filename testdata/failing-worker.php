@@ -1,6 +1,6 @@
 <?php
 
-$fail = random_int(1, 100) < 10;
+$fail = random_int(1, 100) < 1;
 $wait = random_int(1, 5);
 
 sleep($wait);
