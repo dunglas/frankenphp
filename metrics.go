@@ -11,11 +11,21 @@ import (
 var metricsNameRegex = regexp.MustCompile(`\W+`)
 var metricsNameFixRegex = regexp.MustCompile(`^_+|_+$`)
 
+const (
+	StopReasonCrash = iota
+	StopReasonRestart
+	StopReasonShutdown
+)
+
+type StopReason int
+
 type Metrics interface {
 	// StartWorker collects started workers
 	StartWorker(name string)
+	// ReadyWorker collects ready workers
+	ReadyWorker(name string)
 	// StopWorker collects stopped workers
-	StopWorker(name string)
+	StopWorker(name string, reason StopReason)
 	// TotalWorkers collects expected workers
 	TotalWorkers(name string, num int)
 	// TotalThreads collects total threads
@@ -36,7 +46,10 @@ type nullMetrics struct{}
 func (n nullMetrics) StartWorker(name string) {
 }
 
-func (n nullMetrics) StopWorker(name string) {
+func (n nullMetrics) ReadyWorker(name string) {
+}
+
+func (n nullMetrics) StopWorker(name string, reason StopReason) {
 }
 
 func (n nullMetrics) TotalWorkers(name string, num int) {
@@ -66,6 +79,9 @@ type PrometheusMetrics struct {
 	busyThreads        prometheus.Gauge
 	totalWorkers       map[string]prometheus.Gauge
 	busyWorkers        map[string]prometheus.Gauge
+	readyWorkers       map[string]prometheus.Gauge
+	workerCrashes      map[string]prometheus.Counter
+	workerRestarts     map[string]prometheus.Counter
 	workerRequestTime  map[string]prometheus.Counter
 	workerRequestCount map[string]prometheus.Counter
 	mu                 sync.Mutex
@@ -81,7 +97,15 @@ func (m *PrometheusMetrics) StartWorker(name string) {
 	m.totalWorkers[name].Inc()
 }
 
-func (m *PrometheusMetrics) StopWorker(name string) {
+func (m *PrometheusMetrics) ReadyWorker(name string) {
+	if _, ok := m.totalWorkers[name]; !ok {
+		return
+	}
+
+	m.readyWorkers[name].Inc()
+}
+
+func (m *PrometheusMetrics) StopWorker(name string, reason StopReason) {
 	m.busyThreads.Dec()
 
 	// tests do not register workers before starting them
@@ -89,6 +113,15 @@ func (m *PrometheusMetrics) StopWorker(name string) {
 		return
 	}
 	m.totalWorkers[name].Dec()
+	m.readyWorkers[name].Dec()
+
+	if reason == StopReasonCrash {
+		m.workerCrashes[name].Inc()
+	} else if reason == StopReasonRestart {
+		m.workerRestarts[name].Inc()
+	} else if reason == StopReasonShutdown {
+		m.totalWorkers[name].Dec()
+	}
 }
 
 func (m *PrometheusMetrics) getIdentity(name string) (string, error) {
@@ -120,6 +153,36 @@ func (m *PrometheusMetrics) TotalWorkers(name string, num int) {
 			Help:      "Total number of PHP workers for this worker",
 		})
 		m.registry.MustRegister(m.totalWorkers[identity])
+	}
+
+	if _, ok := m.workerCrashes[identity]; !ok {
+		m.workerCrashes[identity] = prometheus.NewCounter(prometheus.CounterOpts{
+			Namespace: "frankenphp",
+			Subsystem: subsystem,
+			Name:      "worker_crashes",
+			Help:      "Number of PHP worker crashes for this worker",
+		})
+		m.registry.MustRegister(m.workerCrashes[identity])
+	}
+
+	if _, ok := m.workerRestarts[identity]; !ok {
+		m.workerRestarts[identity] = prometheus.NewCounter(prometheus.CounterOpts{
+			Namespace: "frankenphp",
+			Subsystem: subsystem,
+			Name:      "worker_restarts",
+			Help:      "Number of PHP worker restarts for this worker",
+		})
+		m.registry.MustRegister(m.workerRestarts[identity])
+	}
+
+	if _, ok := m.readyWorkers[identity]; !ok {
+		m.readyWorkers[identity] = prometheus.NewGauge(prometheus.GaugeOpts{
+			Namespace: "frankenphp",
+			Subsystem: subsystem,
+			Name:      "ready_workers",
+			Help:      "Running workers that have successfully called frankenphp_handle_request at least once",
+		})
+		m.registry.MustRegister(m.readyWorkers[identity])
 	}
 
 	if _, ok := m.busyWorkers[identity]; !ok {
@@ -212,6 +275,9 @@ func (m *PrometheusMetrics) Shutdown() {
 	m.busyWorkers = map[string]prometheus.Gauge{}
 	m.workerRequestTime = map[string]prometheus.Counter{}
 	m.workerRequestCount = map[string]prometheus.Counter{}
+	m.workerRestarts = map[string]prometheus.Counter{}
+	m.workerCrashes = map[string]prometheus.Counter{}
+	m.readyWorkers = map[string]prometheus.Gauge{}
 
 	m.registry.MustRegister(m.totalThreads)
 	m.registry.MustRegister(m.busyThreads)
@@ -243,6 +309,9 @@ func NewPrometheusMetrics(registry prometheus.Registerer) *PrometheusMetrics {
 		busyWorkers:        map[string]prometheus.Gauge{},
 		workerRequestTime:  map[string]prometheus.Counter{},
 		workerRequestCount: map[string]prometheus.Counter{},
+		workerRestarts:     map[string]prometheus.Counter{},
+		workerCrashes:      map[string]prometheus.Counter{},
+		readyWorkers:       map[string]prometheus.Gauge{},
 	}
 
 	m.registry.MustRegister(m.totalThreads)
