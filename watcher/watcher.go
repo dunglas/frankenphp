@@ -108,7 +108,7 @@ func startSession(w *watchPattern) (C.uintptr_t, error) {
 func stopSession(session C.uintptr_t) {
 	success := C.stop_watcher(session)
 	if success == 0 {
-		logger.Error("couldn't stop watching")
+		logger.Warn("couldn't close the watcher")
 	}
 }
 
