@@ -151,7 +151,7 @@ This is useful for development environments.
 }
 ```
 
-If the `watch` directory is not specified, it will fall back to `./**/*.{php,yaml,yml,twig,env}`, 
+If the `watch` directory is not specified, it will fall back to `./**/*.{php,yaml,yml,twig,env}`,
 which watches all `.php`, `.yaml`, `.yml`, `.twig` and `.env` files in the directory and subdirectories
 where the FrankenPHP process was started. You can instead also specify one or more directories via a
 [shell filename pattern](https://pkg.go.dev/path/filepath#Match):
