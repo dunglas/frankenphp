@@ -38,6 +38,9 @@ func createPrometheusMetrics() *PrometheusMetrics {
 		busyWorkers:        make(map[string]prometheus.Gauge),
 		workerRequestTime:  make(map[string]prometheus.Counter),
 		workerRequestCount: make(map[string]prometheus.Counter),
+		workerCrashes:      make(map[string]prometheus.Counter),
+		workerRestarts:     make(map[string]prometheus.Counter),
+		readyWorkers:       make(map[string]prometheus.Gauge),
 		mu:                 sync.Mutex{},
 	}
 }

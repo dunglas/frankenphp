@@ -609,6 +609,18 @@ func testRequestHeaders(t *testing.T, opts *testOptions) {
 	}, opts)
 }
 
+func TestFailingWorker(t *testing.T) {
+	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
+		req := httptest.NewRequest("GET", "http://example.com/failing-worker.php", nil)
+		w := httptest.NewRecorder()
+		handler(w, req)
+
+		resp := w.Result()
+		body, _ := io.ReadAll(resp.Body)
+		assert.Contains(t, string(body), "ok")
+	}, &testOptions{workerScript: "failing-worker.php"})
+}
+
 func TestFileUpload_module(t *testing.T) { testFileUpload(t, &testOptions{}) }
 func TestFileUpload_worker(t *testing.T) {
 	testFileUpload(t, &testOptions{workerScript: "file-upload.php"})
