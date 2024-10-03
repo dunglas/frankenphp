@@ -71,8 +71,6 @@ The `octane:frankenphp` command can take the following options:
 * `--poll`: Use file system polling while watching in order to watch files over a network
 * `--log-level`: Log messages at or above the specified log level
 
-> Note: When using Laravel Octane environment variables will not be respected in your Caddyfile, instead Laravel Octane will add envrionment variables into the FrankenPHP process based on the above arguments. [See how here](https://github.com/laravel/octane/blob/2.x/src/Commands/StartFrankenPhpCommand.php#L92).
-
 Learn more about [Laravel Octane in its official documentation](https://laravel.com/docs/octane).
 
 ## Laravel Apps As Standalone Binaries
