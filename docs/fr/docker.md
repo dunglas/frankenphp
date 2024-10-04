@@ -31,11 +31,11 @@ FROM dunglas/frankenphp
 
 # ajoutez des extensions supplémentaires ici :
 RUN install-php-extensions \
- pdo_mysql \
- gd \
- intl \
- zip \
- opcache
+	pdo_mysql \
+	gd \
+	intl \
+	zip \
+	opcache
 ```
 
 ## Comment installer plus de modules Caddy
@@ -141,12 +141,12 @@ FROM dunglas/frankenphp
 ARG USER=www-data
 
 RUN \
- # Utilisez "adduser -D ${USER}" pour les distributions basées sur Alpine
- useradd -D ${USER}; \
- # Ajouter la capacité supplémentaire de se lier aux ports 80 et 443
- setcap CAP_NET_BIND_SERVICE=+eip /usr/local/bin/frankenphp; \
- # Donner l'accès en écriture à /data/caddy et /config/caddy
- chown -R ${USER}:${USER} /data/caddy && chown -R ${USER}:${USER} /config/caddy
+	# Utilisez "adduser -D ${USER}" pour les distributions basées sur Alpine
+	useradd -D ${USER}; \
+	# Ajouter la capacité supplémentaire de se lier aux ports 80 et 443
+	setcap CAP_NET_BIND_SERVICE=+eip /usr/local/bin/frankenphp; \
+	# Donner l'accès en écriture à /data/caddy et /config/caddy
+	chown -R ${USER}:${USER} /data/caddy && chown -R ${USER}:${USER} /config/caddy
 
 USER ${USER}
 ```
