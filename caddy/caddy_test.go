@@ -445,6 +445,18 @@ func TestWorkerMetrics(t *testing.T) {
 	# HELP frankenphp_testdata_index_php_worker_request_count
 	# TYPE frankenphp_testdata_index_php_worker_request_count counter
 	frankenphp_testdata_index_php_worker_request_count 10
+
+	# HELP frankenphp_testdata_index_php_ready_workers Running workers that have successfully called frankenphp_handle_request at least once
+	# TYPE frankenphp_testdata_index_php_ready_workers gauge
+	frankenphp_testdata_index_php_ready_workers 2
+
+	# HELP frankenphp_testdata_index_php_worker_crashes Number of PHP worker crashes for this worker
+	# TYPE frankenphp_testdata_index_php_worker_crashes counter
+	frankenphp_testdata_index_php_worker_crashes 0
+
+	# HELP frankenphp_testdata_index_php_worker_restarts Number of PHP worker restarts for this worker
+	# TYPE frankenphp_testdata_index_php_worker_restarts counter
+	frankenphp_testdata_index_php_worker_restarts 0
 	`
 
 	require.NoError(t,
@@ -456,6 +468,9 @@ func TestWorkerMetrics(t *testing.T) {
 			"frankenphp_testdata_index_php_busy_workers",
 			"frankenphp_testdata_index_php_total_workers",
 			"frankenphp_testdata_index_php_worker_request_count",
+			"frankenphp_testdata_index_php_worker_crashes",
+			"frankenphp_testdata_index_php_worker_restarts",
+			"frankenphp_testdata_index_php_ready_workers",
 		))
 }
 
@@ -531,6 +546,18 @@ func TestAutoWorkerConfig(t *testing.T) {
 	# HELP frankenphp_testdata_index_php_worker_request_count
 	# TYPE frankenphp_testdata_index_php_worker_request_count counter
 	frankenphp_testdata_index_php_worker_request_count 10
+
+	# HELP frankenphp_testdata_index_php_ready_workers Running workers that have successfully called frankenphp_handle_request at least once
+	# TYPE frankenphp_testdata_index_php_ready_workers gauge
+	frankenphp_testdata_index_php_ready_workers ` + workers + `
+
+	# HELP frankenphp_testdata_index_php_worker_crashes Number of PHP worker crashes for this worker
+	# TYPE frankenphp_testdata_index_php_worker_crashes counter
+	frankenphp_testdata_index_php_worker_crashes 0
+
+	# HELP frankenphp_testdata_index_php_worker_restarts Number of PHP worker restarts for this worker
+	# TYPE frankenphp_testdata_index_php_worker_restarts counter
+	frankenphp_testdata_index_php_worker_restarts 0
 	`
 
 	require.NoError(t,
@@ -542,6 +569,9 @@ func TestAutoWorkerConfig(t *testing.T) {
 			"frankenphp_testdata_index_php_busy_workers",
 			"frankenphp_testdata_index_php_total_workers",
 			"frankenphp_testdata_index_php_worker_request_count",
+			"frankenphp_testdata_index_php_worker_crashes",
+			"frankenphp_testdata_index_php_worker_restarts",
+			"frankenphp_testdata_index_php_ready_workers",
 		))
 }
 

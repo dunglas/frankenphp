@@ -27,7 +27,7 @@ var (
 	workersDone         chan interface{}
 )
 
-// TODO: start all the worker in parallell to reduce the boot time
+// TODO: start all the worker in parallel to reduce the boot time
 func initWorkers(opt []workerOpt) error {
 	workersDone = make(chan interface{})
 	workersAreReady.Store(false)
@@ -68,11 +68,41 @@ func startWorkers(fileName string, nbWorkers int, env PreparedEnv) error {
 	env["FRANKENPHP_WORKER\x00"] = "1"
 
 	l := getLogger()
+
+	const maxBackoff = 16 * time.Second
+	const minBackoff = 100 * time.Millisecond
+	const maxConsecutiveFailures = 3
+
 	for i := 0; i < nbWorkers; i++ {
 		go func() {
 			defer shutdownWG.Done()
 			defer workerShutdownWG.Done()
+			backoff := minBackoff
+			failureCount := 0
+			backingOffLock := sync.RWMutex{}
 			for {
+				// if the worker can stay up longer than backoff*2, it is probably an application error
+				upFunc := sync.Once{}
+				go func() {
+					backingOffLock.RLock()
+					wait := backoff * 2
+					backingOffLock.RUnlock()
+					time.Sleep(wait)
+					upFunc.Do(func() {
+						backingOffLock.Lock()
+						defer backingOffLock.Unlock()
+						// if we come back to a stable state, reset the failure count
+						if backoff == minBackoff {
+							failureCount = 0
+						}
+
+						// earn back the backoff over time
+						if failureCount > 0 {
+							backoff = max(backoff/2, 100*time.Millisecond)
+						}
+					})
+				}()
+
 				// Create main dummy request
 				r, err := http.NewRequest(http.MethodGet, filepath.Base(absFileName), nil)
 
@@ -108,22 +138,56 @@ func startWorkers(fileName string, nbWorkers int, env PreparedEnv) error {
 
 				// TODO: make the max restart configurable
 				if !workersAreDone.Load() {
-					metrics.StopWorker(absFileName)
+					if fc.ready {
+						fc.ready = false
+					}
+
 					if fc.exitStatus == 0 {
 						if c := l.Check(zapcore.InfoLevel, "restarting"); c != nil {
 							c.Write(zap.String("worker", absFileName))
 						}
+
+						// a normal restart resets the backoff and failure count
+						backingOffLock.Lock()
+						backoff = minBackoff
+						failureCount = 0
+						backingOffLock.Unlock()
+						metrics.StopWorker(absFileName, StopReasonRestart)
 					} else {
 						// we will wait a few milliseconds to not overwhelm the logger in case of repeated unexpected terminations
-						time.Sleep(50 * time.Millisecond)
 						if c := l.Check(zapcore.ErrorLevel, "unexpected termination, restarting"); c != nil {
-							c.Write(zap.String("worker", absFileName), zap.Int("exit_status", int(fc.exitStatus)))
+							backingOffLock.RLock()
+							c.Write(zap.String("worker", absFileName), zap.Int("failure_count", failureCount), zap.Int("exit_status", int(fc.exitStatus)), zap.Duration("waiting", backoff))
+							backingOffLock.RUnlock()
 						}
+
+						upFunc.Do(func() {
+							backingOffLock.Lock()
+							defer backingOffLock.Unlock()
+							// if we end up here, the worker has not been up for backoff*2
+							// this is probably due to a syntax error or another fatal error
+							if failureCount >= maxConsecutiveFailures {
+								panic(fmt.Errorf("workers %q: too many consecutive failures", absFileName))
+							} else {
+								failureCount += 1
+							}
+						})
+						backingOffLock.RLock()
+						wait := backoff
+						backingOffLock.RUnlock()
+						time.Sleep(wait)
+						backingOffLock.Lock()
+						backoff *= 2
+						backoff = min(backoff, maxBackoff)
+						backingOffLock.Unlock()
+						metrics.StopWorker(absFileName, StopReasonCrash)
 					}
 				} else {
 					break
 				}
 			}
+
+			metrics.StopWorker(absFileName, StopReasonShutdown)
 
 			// TODO: check if the termination is expected
 			if c := l.Check(zapcore.DebugLevel, "terminated"); c != nil {
@@ -133,7 +197,6 @@ func startWorkers(fileName string, nbWorkers int, env PreparedEnv) error {
 	}
 
 	workersReadyWG.Wait()
-	workersAreReady.Store(true)
 	m.Lock()
 	defer m.Unlock()
 
@@ -183,10 +246,14 @@ func restartWorkers(workerOpts []workerOpt) {
 }
 
 //export go_frankenphp_worker_ready
-func go_frankenphp_worker_ready() {
+func go_frankenphp_worker_ready(mrh C.uintptr_t) {
+	mainRequest := cgo.Handle(mrh).Value().(*http.Request)
+	fc := mainRequest.Context().Value(contextKey).(*FrankenPHPContext)
+	fc.ready = true
+	metrics.ReadyWorker(fc.scriptFilename)
 	if !workersAreReady.Load() {
-		workersReadyWG.Done()
-	}
+        workersReadyWG.Done()
+    }
 }
 
 //export go_frankenphp_worker_handle_request_start

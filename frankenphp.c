@@ -21,6 +21,7 @@
 #if defined(__linux__)
 #include <sys/prctl.h>
 #elif defined(__FreeBSD__) || defined(__OpenBSD__)
+#include <pthread.h>
 #include <pthread_np.h>
 #endif
 
@@ -341,7 +342,7 @@ PHP_FUNCTION(frankenphp_handle_request) {
     ctx->worker_ready = true;
 
     /* Mark the worker as ready to handle requests */
-    go_frankenphp_worker_ready();
+    go_frankenphp_worker_ready(ctx->main_request);
   }
 
 #ifdef ZEND_MAX_EXECUTION_TIMERS
