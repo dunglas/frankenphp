@@ -340,9 +340,6 @@ PHP_FUNCTION(frankenphp_handle_request) {
     frankenphp_worker_request_shutdown();
 
     ctx->worker_ready = true;
-
-    /* Mark the worker as ready to handle requests */
-    go_frankenphp_worker_ready();
   }
 
 #ifdef ZEND_MAX_EXECUTION_TIMERS

@@ -199,21 +199,19 @@ func go_frankenphp_worker_handle_request_start(threadIndex int) C.bool {
 		return C.bool(false)
 	}
 
-	l := getLogger()
-
-	if c := l.Check(zapcore.DebugLevel, "waiting for request"); c != nil {
-		c.Write(zap.String("worker", thread.worker.fileName))
-	}
-
 	// we assign a worker to the thread if it doesn't have one already
     if(thread.worker == nil) {
         assignThreadToWorker(thread)
     }
 
+	if c := logger.Check(zapcore.DebugLevel, "waiting for request"); c != nil {
+		c.Write(zap.String("worker", thread.worker.fileName))
+	}
+
 	var r *http.Request
 	select {
 	case <-workersDone:
-		if c := l.Check(zapcore.DebugLevel, "shutting down"); c != nil {
+		if c := logger.Check(zapcore.DebugLevel, "shutting down"); c != nil {
 			c.Write(zap.String("worker", thread.worker.fileName))
 		}
 		executePHPFunction("opcache_reset")
@@ -224,13 +222,13 @@ func go_frankenphp_worker_handle_request_start(threadIndex int) C.bool {
 
 	thread.setWorkerRequest(r)
 
-	if c := l.Check(zapcore.DebugLevel, "request handling started"); c != nil {
+	if c := logger.Check(zapcore.DebugLevel, "request handling started"); c != nil {
 		c.Write(zap.String("worker", thread.worker.fileName), zap.String("url", r.RequestURI))
 	}
 
 	if err := updateServerContext(r, false, true); err != nil {
 		// Unexpected error
-		if c := l.Check(zapcore.DebugLevel, "unexpected error"); c != nil {
+		if c := logger.Check(zapcore.DebugLevel, "unexpected error"); c != nil {
 			c.Write(zap.String("worker", thread.worker.fileName), zap.String("url", r.RequestURI), zap.Error(err))
 		}
 
