@@ -69,9 +69,9 @@ func startWorkers(fileName string, nbWorkers int, env PreparedEnv) error {
 
 	l := getLogger()
 
-	const maxBackoff = 16 * time.Second
-	const minBackoff = 100 * time.Millisecond
-	const maxConsecutiveFailures = 3
+	const maxBackoff = 10 * time.Millisecond
+	const minBackoff = 1 * time.Second
+	const maxConsecutiveFailures = 60
 
 	for i := 0; i < nbWorkers; i++ {
 		go func() {
@@ -197,6 +197,7 @@ func startWorkers(fileName string, nbWorkers int, env PreparedEnv) error {
 	}
 
 	workersReadyWG.Wait()
+	workersAreReady.Store(true)
 	m.Lock()
 	defer m.Unlock()
 
@@ -252,8 +253,8 @@ func go_frankenphp_worker_ready(mrh C.uintptr_t) {
 	fc.ready = true
 	metrics.ReadyWorker(fc.scriptFilename)
 	if !workersAreReady.Load() {
-        workersReadyWG.Done()
-    }
+		workersReadyWG.Done()
+	}
 }
 
 //export go_frankenphp_worker_handle_request_start
