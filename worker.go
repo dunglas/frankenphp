@@ -208,6 +208,7 @@ func go_frankenphp_worker_handle_request_start(threadIndex int) C.bool {
 		if c := logger.Check(zapcore.DebugLevel, "shutting down"); c != nil {
 			c.Write(zap.String("worker", thread.worker.fileName))
 		}
+		thread.worker = nil
 		executePHPFunction("opcache_reset")
 
 		return C.bool(false)
