@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/prometheus/client_golang/prometheus"
 	"net/http"
 	"path/filepath"
 	"strconv"
@@ -44,6 +45,8 @@ var mainPHPInterpreterKey mainPHPinterpreterKeyType
 
 var phpInterpreter = caddy.NewUsagePool()
 
+var metrics = frankenphp.NewPrometheusMetrics(prometheus.DefaultRegisterer)
+
 type phpInterpreterDestructor struct{}
 
 func (phpInterpreterDestructor) Destruct() error {
@@ -59,6 +62,8 @@ type workerConfig struct {
 	Num int `json:"num,omitempty"`
 	// Env sets an extra environment variable to the given value. Can be specified more than once for multiple environment variables.
 	Env map[string]string `json:"env,omitempty"`
+	// Directories to watch for file changes
+	Watch []string `json:"watch,omitempty"`
 }
 
 type FrankenPHPApp struct {
@@ -66,8 +71,6 @@ type FrankenPHPApp struct {
 	NumThreads int `json:"num_threads,omitempty"`
 	// Workers configures the worker scripts to start.
 	Workers []workerConfig `json:"workers,omitempty"`
-	// Directories to watch for changes
-	Watch []watchConfig `json:"watch,omitempty"`
 }
 
 // CaddyModule returns the Caddy module information.
@@ -82,12 +85,9 @@ func (f *FrankenPHPApp) Start() error {
 	repl := caddy.NewReplacer()
 	logger := caddy.Log()
 
-	opts := []frankenphp.Option{frankenphp.WithNumThreads(f.NumThreads), frankenphp.WithLogger(logger)}
+	opts := []frankenphp.Option{frankenphp.WithNumThreads(f.NumThreads), frankenphp.WithLogger(logger), frankenphp.WithMetrics(metrics)}
 	for _, w := range f.Workers {
-		opts = append(opts, frankenphp.WithWorkers(repl.ReplaceKnown(w.FileName, ""), w.Num, w.Env))
-	}
-	for _, watchConfig := range f.Watch {
-		opts = applyWatchConfig(opts, watchConfig)
+		opts = append(opts, frankenphp.WithWorkers(repl.ReplaceKnown(w.FileName, ""), w.Num, w.Env, w.Watch))
 	}
 
 	_, loaded, err := phpInterpreter.LoadOrNew(mainPHPInterpreterKey, func() (caddy.Destructor, error) {
@@ -111,8 +111,11 @@ func (f *FrankenPHPApp) Start() error {
 	return nil
 }
 
-func (*FrankenPHPApp) Stop() error {
+func (f *FrankenPHPApp) Stop() error {
 	caddy.Log().Info("FrankenPHP stopped 🐘")
+	// reset configuration so it doesn't bleed into later tests
+	f.Workers = nil
+	f.NumThreads = 0
 
 	return nil
 }
@@ -133,11 +136,6 @@ func (f *FrankenPHPApp) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 				}
 
 				f.NumThreads = v
-			case "watch":
-				if !d.NextArg() {
-					return d.Err("The 'watch' directive must be followed by a path")
-				}
-				f.Watch = append(f.Watch, parseWatchConfig(d.Val()))
 			case "worker":
 				wc := workerConfig{}
 				if d.NextArg() {
@@ -181,6 +179,13 @@ func (f *FrankenPHPApp) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 							wc.Env = make(map[string]string)
 						}
 						wc.Env[args[0]] = args[1]
+					case "watch":
+						if !d.NextArg() {
+							// the default if the watch directory is left empty:
+							wc.Watch = append(wc.Watch, "./**/*.{php,yaml,yml,twig,env}")
+						} else {
+							wc.Watch = append(wc.Watch, d.Val())
+						}
 					}
 
 					if wc.FileName == "" {

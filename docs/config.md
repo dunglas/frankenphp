@@ -51,6 +51,7 @@ Optionally, the number of threads to create and [worker scripts](worker.md) to s
 			file <path> # Sets the path to the worker script.
 			num <num> # Sets the number of PHP threads to start, defaults to 2x the number of available CPUs.
 			env <key> <value> # Sets an extra environment variable to the given value. Can be specified more than once for multiple environment variables.
+			watch <path> # Sets the path to watch for file changes. Can be specified more than once for multiple paths.
 		}
 	}
 }
@@ -133,42 +134,46 @@ php_server [<matcher>] {
 
 ### Watching for File Changes
 
-Since workers won't restart automatically when updating your PHP files, you can also
-define a number of directories that should be watched for file changes.
+Since workers only boot your application once and keep it in memory, any changes
+to your PHP files will not be reflected immediately.
+
+Workers can instead be restarted on file changes via the `watch` directive.
 This is useful for development environments.
 
 ```caddyfile
 {
-    frankenphp {
-        worker /path/to/app/public/worker.php
-        watch /path/to/app/**/*.php
-    }
+	frankenphp {
+		worker {
+			file  /path/to/app/public/worker.php
+			watch
+		}
+	}
 }
 ```
 
-The configuration above will watch the `/path/to/app` directory recursively.
-If any .php file changes, all workers will be restarted.
-
-You can also add multiple `watch` directives and use simple pattern matching for files, the following is valid:
+If the `watch` directory is not specified, it will fall back to `./**/*.{php,yaml,yml,twig,env}`,
+which watches all `.php`, `.yaml`, `.yml`, `.twig` and `.env` files in the directory and subdirectories
+where the FrankenPHP process was started. You can instead also specify one or more directories via a
+[shell filename pattern](https://pkg.go.dev/path/filepath#Match):
 
 ```caddyfile
 {
-    frankenphp {
-        watch /path/to/folder1             # watches all files in all subdirectories of /path/to/folder1
-        watch /path/to/folder2/*.php       # watches files ending in .php in the /path/to/folder2 directory
-        watch /path/to/folder3/**/*.php    # watches files ending in .php in the /path/to/folder3 directory and subdirectories
-    }
+	frankenphp {
+		worker {
+			file  /path/to/app/public/worker.php
+			watch /path/to/app # watches all files in all subdirectories of /path/to/app
+			watch /path/to/app/*.php # watches files ending in .php in /path/to/app
+			watch /path/to/app/**/*.php # watches PHP files in /path/to/app and subdirectories
+			watch /path/to/app/**/*.{php,twig} # watches PHP and Twig files in /path/to/app and subdirectories
+		}
+	}
 }
 ```
 
-#### Some notes
-
-- Directories can also be relative (to where the frankenphp process is started from)
-- The `**/` pattern signifies recursive watching and may be followed by a filename pattern
-- If the last part of the `watch` directive contains any of the characters `*`, `?`, `[`, `\` or `.`, it will be matched against the
-  shell [filename pattern](https://pkg.go.dev/path/filepath#Match)
-- The watcher will not follow symlinks
-- Be wary about watching files that are created at runtime (like logs) since they might cause unwanted worker restarts.
+* The `**` pattern signifies recursive watching
+* Directories can also be relative (to where the FrankenPHP process is started from)
+* If you have multiple workers defined, all of them will be restarted when a file changes
+* Be wary about watching files that are created at runtime (like logs) since they might cause unwanted worker restarts.
 
 The file watcher is based on [e-dant/watcher](https://github.com/e-dant/watcher).
 
@@ -190,7 +195,7 @@ This is an opt-in configuration that needs to be added to the global options in 
 > [!CAUTION]
 >
 > Enabling this option may cause old HTTP/1.x clients that don't support full-duplex to deadlock.
-This can also be configured using the `CADDY_GLOBAL_OPTIONS` environment config:
+> This can also be configured using the `CADDY_GLOBAL_OPTIONS` environment config:
 
 ```sh
 CADDY_GLOBAL_OPTIONS="servers { enable_full_duplex }"
@@ -202,9 +207,9 @@ You can find more information about this setting in the [Caddy documentation](ht
 
 The following environment variables can be used to inject Caddy directives in the `Caddyfile` without modifying it:
 
-- `SERVER_NAME`: change [the addresses on which to listen](https://caddyserver.com/docs/caddyfile/concepts#addresses), the provided hostnames will also be used for the generated TLS certificate
-- `CADDY_GLOBAL_OPTIONS`: inject [global options](https://caddyserver.com/docs/caddyfile/options)
-- `FRANKENPHP_CONFIG`: inject config under the `frankenphp` directive
+* `SERVER_NAME`: change [the addresses on which to listen](https://caddyserver.com/docs/caddyfile/concepts#addresses), the provided hostnames will also be used for the generated TLS certificate
+* `CADDY_GLOBAL_OPTIONS`: inject [global options](https://caddyserver.com/docs/caddyfile/options)
+* `FRANKENPHP_CONFIG`: inject config under the `frankenphp` directive
 
 As for FPM and CLI SAPIs, environment variables are exposed by default in the `$_SERVER` superglobal.
 

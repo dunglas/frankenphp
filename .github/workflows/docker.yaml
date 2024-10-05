@@ -164,9 +164,12 @@ jobs:
           set: |
             *.tags=
             *.platform=${{ matrix.platform }}
-            *.cache-from=type=gha,scope=${{ needs.prepare.outputs.ref || github.ref }}-${{ matrix.platform }}
-            *.cache-from=type=gha,scope=refs/heads/main-${{ matrix.platform }}
-            *.cache-to=type=gha,scope=${{ needs.prepare.outputs.ref || github.ref }}-${{ matrix.platform }},ignore-error=true
+            builder-${{ matrix.variant }}.cache-from=type=gha,scope=builder-${{ matrix.variant }}-${{ needs.prepare.outputs.ref || github.ref }}-${{ matrix.platform }}
+            builder-${{ matrix.variant }}.cache-from=type=gha,scope=refs/heads/main-builder-${{ matrix.variant }}-${{ matrix.platform }}
+            builder-${{ matrix.variant }}.cache-to=type=gha,scope=builder-${{ matrix.variant }}-${{ needs.prepare.outputs.ref || github.ref }}-${{ matrix.platform }},ignore-error=true
+            runner-${{ matrix.variant }}.cache-from=type=gha,scope=runner-${{ matrix.variant }}-${{ needs.prepare.outputs.ref || github.ref }}-${{ matrix.platform }}
+            runner-${{ matrix.variant }}.cache-from=type=gha,scope=refs/heads/main-runner-${{ matrix.variant }}-${{ matrix.platform }}
+            runner-${{ matrix.variant }}.cache-to=type=gha,scope=runner-${{ matrix.variant }}-${{ needs.prepare.outputs.ref || github.ref }}-${{ matrix.platform }},ignore-error=true
             ${{ fromJson(needs.prepare.outputs.push) && format('*.output=type=image,name={0},push-by-digest=true,name-canonical=true,push=true', env.IMAGE_NAME) || '' }}
         env:
           SHA: ${{ github.sha }}

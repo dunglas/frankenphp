@@ -12,6 +12,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/dunglas/frankenphp/watcher"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -21,12 +22,16 @@ var (
 	workersReadyWG      sync.WaitGroup
 	workerShutdownWG    sync.WaitGroup
 	workersAreReady     atomic.Bool
+	workersAreDone      atomic.Bool
 	workersDone         chan interface{}
 )
 
 // TODO: start all the worker in parallell to reduce the boot time
 func initWorkers(opt []workerOpt) error {
 	workersDone = make(chan interface{})
+	workersAreReady.Store(false)
+	workersAreDone.Store(false)
+
 	for _, w := range opt {
 		if err := startWorkers(w.fileName, w.num, w.env); err != nil {
 			return err
@@ -42,14 +47,12 @@ func startWorkers(fileName string, nbWorkers int, env PreparedEnv) error {
 		return fmt.Errorf("workers %q: %w", fileName, err)
 	}
 
-	if _, ok := workersRequestChans.Load(absFileName); ok {
-		return fmt.Errorf("workers %q: already started", absFileName)
+	if _, ok := workersRequestChans.Load(absFileName); !ok {
+		workersRequestChans.Store(absFileName, make(chan *http.Request))
 	}
 
-	workersRequestChans.Store(absFileName, make(chan *http.Request))
 	shutdownWG.Add(nbWorkers)
 	workerShutdownWG.Add(nbWorkers)
-	workersAreReady.Store(false)
 	workersReadyWG.Add(nbWorkers)
 
 	var (
@@ -71,6 +74,9 @@ func startWorkers(fileName string, nbWorkers int, env PreparedEnv) error {
 			for {
 				// Create main dummy request
 				r, err := http.NewRequest(http.MethodGet, filepath.Base(absFileName), nil)
+
+				metrics.StartWorker(absFileName)
+
 				if err != nil {
 					panic(err)
 				}
@@ -94,7 +100,8 @@ func startWorkers(fileName string, nbWorkers int, env PreparedEnv) error {
 				fc := r.Context().Value(contextKey).(*FrankenPHPContext)
 
 				// TODO: make the max restart configurable
-				if _, ok := workersRequestChans.Load(absFileName); ok {
+				if !workersAreDone.Load() {
+					metrics.StopWorker(absFileName)
 					if fc.exitStatus == 0 {
 						if c := l.Check(zapcore.InfoLevel, "restarting"); c != nil {
 							c.Write(zap.String("worker", absFileName))
@@ -131,21 +138,36 @@ func startWorkers(fileName string, nbWorkers int, env PreparedEnv) error {
 }
 
 func stopWorkers() {
-	workersRequestChans.Range(func(k, v any) bool {
-		workersRequestChans.Delete(k)
-
-		return true
-	})
+	workersAreDone.Store(true)
 	close(workersDone)
 }
 
 func drainWorkers() {
+	watcher.DrainWatcher()
 	stopWorkers()
 	workerShutdownWG.Wait()
+	workersRequestChans = sync.Map{}
+}
+
+func restartWorkersOnFileChanges(workerOpts []workerOpt) error {
+	directoriesToWatch := []string{}
+	for _, w := range workerOpts {
+		directoriesToWatch = append(directoriesToWatch, w.watch...)
+	}
+	restartWorkers := func() {
+		restartWorkers(workerOpts)
+	}
+	if err := watcher.InitWatcher(directoriesToWatch, restartWorkers, getLogger()); err != nil {
+
+		return err
+	}
+
+	return nil
 }
 
 func restartWorkers(workerOpts []workerOpt) {
-	drainWorkers()
+	stopWorkers()
+	workerShutdownWG.Wait()
 	if err := initWorkers(workerOpts); err != nil {
 		logger.Error("failed to restart workers when watching files")
 		panic(err)
@@ -185,8 +207,7 @@ func go_frankenphp_worker_handle_request_start(threadIndex int) C.bool {
 		if c := l.Check(zapcore.DebugLevel, "shutting down"); c != nil {
 			c.Write(zap.String("worker", fc.scriptFilename))
 		}
-		// TODO: should opcache_reset be conditional?
-		resetOpCache()
+		executePHPFunction("opcache_reset")
 
 		return C.bool(false)
 	case r = <-rc:
@@ -230,14 +251,5 @@ func go_frankenphp_finish_request(threadIndex int, isWorkerRequest bool) {
 		}
 
 		c.Write(fields...)
-	}
-}
-
-func resetOpCache() {
-	success := C.frankenphp_execute_php_function(C.CString("opcache_reset"))
-	if success == 1 {
-		logger.Debug("opcache_reset successful")
-	} else {
-		logger.Error("opcache_reset failed")
 	}
 }

@@ -1,7 +1,6 @@
 package frankenphp
 
 import (
-	"github.com/dunglas/frankenphp/watcher"
 	"go.uber.org/zap"
 )
 
@@ -14,14 +13,15 @@ type Option func(h *opt) error
 type opt struct {
 	numThreads int
 	workers    []workerOpt
-	watch      []watcher.WatchOpt
 	logger     *zap.Logger
+	metrics    Metrics
 }
 
 type workerOpt struct {
 	fileName string
 	num      int
 	env      PreparedEnv
+	watch    []string
 }
 
 // WithNumThreads configures the number of PHP threads to start.
@@ -33,25 +33,18 @@ func WithNumThreads(numThreads int) Option {
 	}
 }
 
-// WithWorkers configures the PHP workers to start.
-func WithWorkers(fileName string, num int, env map[string]string) Option {
+func WithMetrics(m Metrics) Option {
 	return func(o *opt) error {
-		o.workers = append(o.workers, workerOpt{fileName, num, PrepareEnv(env)})
+		o.metrics = m
 
 		return nil
 	}
 }
 
-// WithFileWatcher configures filesystem watchers.
-func WithFileWatcher(wo ...watcher.WithWatchOption) Option {
+// WithWorkers configures the PHP workers to start.
+func WithWorkers(fileName string, num int, env map[string]string, watch []string) Option {
 	return func(o *opt) error {
-		watchOpt := watcher.WatchOpt{}
-		for _, option := range wo {
-			if err := option(&watchOpt); err != nil {
-				return err
-			}
-		}
-		o.watch = append(o.watch, watchOpt)
+		o.workers = append(o.workers, workerOpt{fileName, num, PrepareEnv(env), watch})
 
 		return nil
 	}

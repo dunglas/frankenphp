@@ -38,9 +38,9 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 	"unsafe"
 
-	"github.com/dunglas/frankenphp/watcher"
 	"github.com/maypok86/otter"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -69,6 +69,8 @@ var (
 
 	loggerMu sync.RWMutex
 	logger   *zap.Logger
+
+	metrics Metrics = nullMetrics{}
 )
 
 type syslogLevel int
@@ -124,6 +126,7 @@ type FrankenPHPContext struct {
 	exitStatus     C.int
 
 	done                 chan interface{}
+	startedAt            time.Time
 }
 
 func clientHasClosed(r *http.Request) bool {
@@ -238,6 +241,40 @@ func Config() PHPConfig {
 	}
 }
 
+// MaxThreads is internally used during tests. It is written to, but never read and may go away in the future.
+var MaxThreads int
+
+func calculateMaxThreads(opt *opt) error {
+	maxProcs := runtime.GOMAXPROCS(0) * 2
+
+	var numWorkers int
+	for i, w := range opt.workers {
+		if w.num <= 0 {
+			// https://github.com/dunglas/frankenphp/issues/126
+			opt.workers[i].num = maxProcs
+		}
+		metrics.TotalWorkers(w.fileName, w.num)
+
+		numWorkers += opt.workers[i].num
+	}
+
+	if opt.numThreads <= 0 {
+		if numWorkers >= maxProcs {
+			// Start at least as many threads as workers, and keep a free thread to handle requests in non-worker mode
+			opt.numThreads = numWorkers + 1
+		} else {
+			opt.numThreads = maxProcs
+		}
+	} else if opt.numThreads <= numWorkers {
+		return NotEnoughThreads
+	}
+
+	metrics.TotalThreads(opt.numThreads)
+	MaxThreads = opt.numThreads
+
+	return nil
+}
+
 // Init starts the PHP runtime and the configured workers.
 func Init(options ...Option) error {
 	if requestChan != nil {
@@ -266,27 +303,13 @@ func Init(options ...Option) error {
 		loggerMu.Unlock()
 	}
 
-	maxProcs := runtime.GOMAXPROCS(0)
-
-	var numWorkers int
-	for i, w := range opt.workers {
-		if w.num <= 0 {
-			// https://github.com/dunglas/frankenphp/issues/126
-			opt.workers[i].num = maxProcs * 2
-		}
-
-		numWorkers += opt.workers[i].num
+	if opt.metrics != nil {
+		metrics = opt.metrics
 	}
 
-	if opt.numThreads <= 0 {
-		if numWorkers >= maxProcs {
-			// Start at least as many threads as workers, and keep a free thread to handle requests in non-worker mode
-			opt.numThreads = numWorkers + 1
-		} else {
-			opt.numThreads = maxProcs
-		}
-	} else if opt.numThreads <= numWorkers {
-		return NotEnoughThreads
+	err := calculateMaxThreads(opt)
+	if err != nil {
+		return err
 	}
 
 	config := Config()
@@ -307,7 +330,6 @@ func Init(options ...Option) error {
 	shutdownWG.Add(1)
 	done = make(chan struct{})
 	requestChan = make(chan *http.Request)
-	initializePhpThreads(opt.numThreads)
 
 	if C.frankenphp_init(C.int(opt.numThreads)) != 0 {
 		return MainThreadCreationError
@@ -317,11 +339,7 @@ func Init(options ...Option) error {
 		return err
 	}
 
-	restartWorkers := func() {
-		restartWorkers(opt.workers)
-	}
-
-	if err := watcher.InitWatcher(opt.watch, restartWorkers, getLogger()); err != nil {
+	if err := restartWorkersOnFileChanges(opt.workers); err != nil {
 		return err
 	}
 
@@ -339,9 +357,9 @@ func Init(options ...Option) error {
 
 // Shutdown stops the workers and the PHP runtime.
 func Shutdown() {
-	watcher.DrainWatcher()
 	drainWorkers()
 	drainThreads()
+	metrics.Shutdown()
 	requestChan = nil
 
 	// Remove the installed app
@@ -447,12 +465,20 @@ func ServeHTTP(responseWriter http.ResponseWriter, request *http.Request) error 
 	}
 
 	fc.responseWriter = responseWriter
+	fc.startedAt = time.Now()
+
+	isWorker := fc.responseWriter == nil
+	isWorkerRequest := false
 
 	rc := requestChan
 	// Detect if a worker is available to handle this request
-	if nil != fc.responseWriter {
+	if !isWorker {
 		if v, ok := workersRequestChans.Load(fc.scriptFilename); ok {
+			isWorkerRequest = true
+			metrics.StartWorkerRequest(fc.scriptFilename)
 			rc = v.(chan *http.Request)
+		} else {
+			metrics.StartRequest()
 		}
 	}
 
@@ -460,6 +486,14 @@ func ServeHTTP(responseWriter http.ResponseWriter, request *http.Request) error 
 	case <-done:
 	case rc <- request:
 		<-fc.done
+	}
+
+	if !isWorker {
+		if isWorkerRequest {
+			metrics.StopWorkerRequest(fc.scriptFilename, time.Since(fc.startedAt))
+		} else {
+			metrics.StopRequest()
+		}
 	}
 
 	return nil
@@ -809,5 +843,22 @@ func convertArgs(args []string) (C.int, []*C.char) {
 func freeArgs(argv []*C.char) {
 	for _, arg := range argv {
 		C.free(unsafe.Pointer(arg))
+	}
+}
+
+func executePHPFunction(functionName string) {
+	cFunctionName := C.CString(functionName)
+	defer C.free(unsafe.Pointer(cFunctionName))
+
+	success := C.frankenphp_execute_php_function(cFunctionName)
+
+	if success == 1 {
+		if c := logger.Check(zapcore.DebugLevel, "php function call successful"); c != nil {
+			c.Write(zap.String("function", functionName))
+		}
+	} else {
+		if c := logger.Check(zapcore.ErrorLevel, "php function call failed"); c != nil {
+			c.Write(zap.String("function", functionName))
+		}
 	}
 }
