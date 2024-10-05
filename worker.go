@@ -43,7 +43,9 @@ func initWorkers(opt []workerOpt) error {
 			return err
 		}
 		workersReadyWG.Add(worker.num)
-		go worker.startWorkerThreads()
+		for i := 0; i < worker.num; i++ {
+            go worker.startThread()
+        }
 	}
 
 	workersReadyWG.Wait()
@@ -75,67 +77,59 @@ func newWorker(o workerOpt) (*worker, error) {
     return w, nil
 }
 
-func (worker *worker) startWorkerThreads() {
-	shutdownWG.Add(worker.num)
-	workerShutdownWG.Add(worker.num)
+func (worker *worker) startThread() {
+	workerShutdownWG.Add(1)
+	defer workerShutdownWG.Done()
+	for {
+		// Create main dummy request
+		r, err := http.NewRequest(http.MethodGet, filepath.Base(worker.fileName), nil)
 
-	l := getLogger()
-	for i := 0; i < worker.num; i++ {
-		go func() {
-			defer shutdownWG.Done()
-			defer workerShutdownWG.Done()
-			for {
-				// Create main dummy request
-				r, err := http.NewRequest(http.MethodGet, filepath.Base(worker.fileName), nil)
+		metrics.StartWorker(worker.fileName)
 
-				metrics.StartWorker(worker.fileName)
+		if err != nil {
+			panic(err)
+		}
+		r, err = NewRequestWithContext(
+			r,
+			WithRequestDocumentRoot(filepath.Dir(worker.fileName), false),
+			WithRequestPreparedEnv(worker.env),
+		)
+		if err != nil {
+			panic(err)
+		}
 
-				if err != nil {
-					panic(err)
+		if c := logger.Check(zapcore.DebugLevel, "starting"); c != nil {
+			c.Write(zap.String("worker", worker.fileName), zap.Int("num", worker.num))
+		}
+
+		if err := ServeHTTP(nil, r); err != nil {
+			panic(err)
+		}
+
+		fc := r.Context().Value(contextKey).(*FrankenPHPContext)
+
+		// TODO: make the max restart configurable
+		if !workersAreDone.Load() {
+			metrics.StopWorker(worker.fileName)
+			if fc.exitStatus == 0 {
+				if c := logger.Check(zapcore.InfoLevel, "restarting"); c != nil {
+					c.Write(zap.String("worker", worker.fileName))
 				}
-				r, err = NewRequestWithContext(
-					r,
-					WithRequestDocumentRoot(filepath.Dir(worker.fileName), false),
-					WithRequestPreparedEnv(worker.env),
-				)
-				if err != nil {
-					panic(err)
-				}
-
-				if c := l.Check(zapcore.DebugLevel, "starting"); c != nil {
-					c.Write(zap.String("worker", worker.fileName), zap.Int("num", worker.num))
-				}
-
-				if err := ServeHTTP(nil, r); err != nil {
-					panic(err)
-				}
-
-				fc := r.Context().Value(contextKey).(*FrankenPHPContext)
-
-				// TODO: make the max restart configurable
-				if !workersAreDone.Load() {
-					metrics.StopWorker(worker.fileName)
-					if fc.exitStatus == 0 {
-						if c := l.Check(zapcore.InfoLevel, "restarting"); c != nil {
-							c.Write(zap.String("worker", worker.fileName))
-						}
-					} else {
-						// we will wait a few milliseconds to not overwhelm the logger in case of repeated unexpected terminations
-						time.Sleep(50 * time.Millisecond)
-						if c := l.Check(zapcore.ErrorLevel, "unexpected termination, restarting"); c != nil {
-							c.Write(zap.String("worker", worker.fileName), zap.Int("exit_status", int(fc.exitStatus)))
-						}
-					}
-				} else {
-					break
+			} else {
+				// we will wait a few milliseconds to not overwhelm the logger in case of repeated unexpected terminations
+				time.Sleep(50 * time.Millisecond)
+				if c := logger.Check(zapcore.ErrorLevel, "unexpected termination, restarting"); c != nil {
+					c.Write(zap.String("worker", worker.fileName), zap.Int("exit_status", int(fc.exitStatus)))
 				}
 			}
+		} else {
+			break
+		}
+	}
 
-			// TODO: check if the termination is expected
-			if c := l.Check(zapcore.DebugLevel, "terminated"); c != nil {
-				c.Write(zap.String("worker", worker.fileName))
-			}
-		}()
+	// TODO: check if the termination is expected
+	if c := logger.Check(zapcore.DebugLevel, "terminated"); c != nil {
+		c.Write(zap.String("worker", worker.fileName))
 	}
 }
 
