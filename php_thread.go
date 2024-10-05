@@ -12,6 +12,7 @@ type PHPThread struct {
 	mainRequest *http.Request
 	workerRequest *http.Request
 	pinner *runtime.Pinner
+	worker *worker
 }
 
 func initializePhpThreads(numThreads int) {
@@ -34,13 +35,6 @@ func (thread *PHPThread) setMainRequest(request *http.Request) {
 
 func (thread *PHPThread) setWorkerRequest(request *http.Request) {
 	thread.workerRequest = request
-}
-
-func (thread *PHPThread) getWorkerRequest() *http.Request {
-	if(thread.workerRequest != nil) {
-		return thread.workerRequest
-	}
-	panic("no worker request")
 }
 
 func (thread *PHPThread) getMainRequest() *http.Request {

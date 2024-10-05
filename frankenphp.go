@@ -330,6 +330,7 @@ func Init(options ...Option) error {
 	shutdownWG.Add(1)
 	done = make(chan struct{})
 	requestChan = make(chan *http.Request)
+	initializePhpThreads(opt.numThreads)
 
 	if C.frankenphp_init(C.int(opt.numThreads)) != 0 {
 		return MainThreadCreationError
@@ -473,10 +474,10 @@ func ServeHTTP(responseWriter http.ResponseWriter, request *http.Request) error 
 	rc := requestChan
 	// Detect if a worker is available to handle this request
 	if !isWorker {
-		if v, ok := workersRequestChans.Load(fc.scriptFilename); ok {
+		if worker, ok := workers[fc.scriptFilename]; ok {
 			isWorkerRequest = true
 			metrics.StartWorkerRequest(fc.scriptFilename)
-			rc = v.(chan *http.Request)
+			rc = worker.requestChan
 		} else {
 			metrics.StartRequest()
 		}

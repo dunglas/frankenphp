@@ -4,7 +4,6 @@ package frankenphp
 // #include "frankenphp.h"
 import "C"
 import (
-	"errors"
 	"fmt"
 	"net/http"
 	"path/filepath"
@@ -17,80 +16,94 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
+type worker struct{
+	fileName string
+	num int
+	env PreparedEnv
+	requestChan chan *http.Request
+}
+
 var (
-	workersRequestChans sync.Map // map[fileName]chan *http.Request
 	workersReadyWG      sync.WaitGroup
 	workerShutdownWG    sync.WaitGroup
 	workersAreReady     atomic.Bool
 	workersAreDone      atomic.Bool
 	workersDone         chan interface{}
+	workers 		    map[string]*worker = make(map[string]*worker)
 )
 
-// TODO: start all the worker in parallell to reduce the boot time
 func initWorkers(opt []workerOpt) error {
-	workersDone = make(chan interface{})
 	workersAreReady.Store(false)
 	workersAreDone.Store(false)
+	workersDone = make(chan interface{})
 
-	for _, w := range opt {
-		if err := startWorkers(w.fileName, w.num, w.env); err != nil {
+	for _, o := range opt {
+		worker, err := newWorker(o)
+		if err != nil {
 			return err
 		}
+		workersReadyWG.Add(worker.num)
+		go worker.startWorkerThreads()
 	}
+
+	workersReadyWG.Wait()
+    workersAreReady.Store(true)
 
 	return nil
 }
 
-func startWorkers(fileName string, nbWorkers int, env PreparedEnv) error {
-	absFileName, err := filepath.Abs(fileName)
-	if err != nil {
-		return fmt.Errorf("workers %q: %w", fileName, err)
-	}
+func newWorker(o workerOpt) (*worker, error) {
+	absFileName, err := filepath.Abs(o.fileName)
+    if err != nil {
+        return nil, fmt.Errorf("worker filename is invalid %q: %w", o.fileName, err)
+    }
 
-	if _, ok := workersRequestChans.Load(absFileName); !ok {
-		workersRequestChans.Store(absFileName, make(chan *http.Request))
-	}
+	// if the worker already exists, return it
+	// it's necessary since we don't want to destroy the channels when restarting on file changes
+	if w, ok := workers[absFileName]; ok {
+        return w, nil
+    }
 
-	shutdownWG.Add(nbWorkers)
-	workerShutdownWG.Add(nbWorkers)
-	workersReadyWG.Add(nbWorkers)
+	if o.env == nil {
+        o.env = make(PreparedEnv, 1)
+    }
 
-	var (
-		m    sync.RWMutex
-		errs []error
-	)
+	o.env["FRANKENPHP_WORKER\x00"] = "1"
+	w := &worker{fileName: absFileName, num: o.num, env: o.env, requestChan: make(chan *http.Request)}
+    workers[absFileName] = w
 
-	if env == nil {
-		env = make(PreparedEnv, 1)
-	}
+    return w, nil
+}
 
-	env["FRANKENPHP_WORKER\x00"] = "1"
+func (worker *worker) startWorkerThreads() {
+	shutdownWG.Add(worker.num)
+	workerShutdownWG.Add(worker.num)
 
 	l := getLogger()
-	for i := 0; i < nbWorkers; i++ {
+	for i := 0; i < worker.num; i++ {
 		go func() {
 			defer shutdownWG.Done()
 			defer workerShutdownWG.Done()
 			for {
 				// Create main dummy request
-				r, err := http.NewRequest(http.MethodGet, filepath.Base(absFileName), nil)
+				r, err := http.NewRequest(http.MethodGet, filepath.Base(worker.fileName), nil)
 
-				metrics.StartWorker(absFileName)
+				metrics.StartWorker(worker.fileName)
 
 				if err != nil {
 					panic(err)
 				}
 				r, err = NewRequestWithContext(
 					r,
-					WithRequestDocumentRoot(filepath.Dir(absFileName), false),
-					WithRequestPreparedEnv(env),
+					WithRequestDocumentRoot(filepath.Dir(worker.fileName), false),
+					WithRequestPreparedEnv(worker.env),
 				)
 				if err != nil {
 					panic(err)
 				}
 
 				if c := l.Check(zapcore.DebugLevel, "starting"); c != nil {
-					c.Write(zap.String("worker", absFileName), zap.Int("num", nbWorkers))
+					c.Write(zap.String("worker", worker.fileName), zap.Int("num", worker.num))
 				}
 
 				if err := ServeHTTP(nil, r); err != nil {
@@ -101,16 +114,16 @@ func startWorkers(fileName string, nbWorkers int, env PreparedEnv) error {
 
 				// TODO: make the max restart configurable
 				if !workersAreDone.Load() {
-					metrics.StopWorker(absFileName)
+					metrics.StopWorker(worker.fileName)
 					if fc.exitStatus == 0 {
 						if c := l.Check(zapcore.InfoLevel, "restarting"); c != nil {
-							c.Write(zap.String("worker", absFileName))
+							c.Write(zap.String("worker", worker.fileName))
 						}
 					} else {
 						// we will wait a few milliseconds to not overwhelm the logger in case of repeated unexpected terminations
 						time.Sleep(50 * time.Millisecond)
 						if c := l.Check(zapcore.ErrorLevel, "unexpected termination, restarting"); c != nil {
-							c.Write(zap.String("worker", absFileName), zap.Int("exit_status", int(fc.exitStatus)))
+							c.Write(zap.String("worker", worker.fileName), zap.Int("exit_status", int(fc.exitStatus)))
 						}
 					}
 				} else {
@@ -120,21 +133,10 @@ func startWorkers(fileName string, nbWorkers int, env PreparedEnv) error {
 
 			// TODO: check if the termination is expected
 			if c := l.Check(zapcore.DebugLevel, "terminated"); c != nil {
-				c.Write(zap.String("worker", absFileName))
+				c.Write(zap.String("worker", worker.fileName))
 			}
 		}()
 	}
-
-	workersReadyWG.Wait()
-	workersAreReady.Store(true)
-	m.Lock()
-	defer m.Unlock()
-
-	if len(errs) == 0 {
-		return nil
-	}
-
-	return fmt.Errorf("workers %q: error while starting: %w", fileName, errors.Join(errs...))
 }
 
 func stopWorkers() {
@@ -146,7 +148,7 @@ func drainWorkers() {
 	watcher.DrainWatcher()
 	stopWorkers()
 	workerShutdownWG.Wait()
-	workersRequestChans = sync.Map{}
+	workers = make(map[string]*worker)
 }
 
 func restartWorkersOnFileChanges(workerOpts []workerOpt) error {
@@ -158,7 +160,6 @@ func restartWorkersOnFileChanges(workerOpts []workerOpt) error {
 		restartWorkers(workerOpts)
 	}
 	if err := watcher.InitWatcher(directoriesToWatch, restartWorkers, getLogger()); err != nil {
-
 		return err
 	}
 
@@ -175,54 +176,62 @@ func restartWorkers(workerOpts []workerOpt) {
 	logger.Info("workers restarted successfully")
 }
 
-//export go_frankenphp_worker_ready
-func go_frankenphp_worker_ready() {
-	if !workersAreReady.Load() {
-		workersReadyWG.Done()
-	}
+func assignThreadToWorker(thread *PHPThread) {
+	mainRequest := thread.getMainRequest()
+	fc := mainRequest.Context().Value(contextKey).(*FrankenPHPContext)
+	worker, ok := workers[fc.scriptFilename]
+    if !ok {
+        panic("worker not found for script: "+fc.scriptFilename)
+    }
+    thread.worker = worker
+    if !workersAreReady.Load() {
+        workersReadyWG.Done()
+    }
+    // TODO: we can also store all threads assigned to the worker if needed
 }
 
 //export go_frankenphp_worker_handle_request_start
 func go_frankenphp_worker_handle_request_start(threadIndex int) C.bool {
 	thread := getPHPThread(threadIndex)
-	mainRequest := thread.getMainRequest()
-	fc := mainRequest.Context().Value(contextKey).(*FrankenPHPContext)
 
-	v, ok := workersRequestChans.Load(fc.scriptFilename)
-	if !ok {
-		// Probably shutting down
+	if workersAreDone.Load() {
+		// shutting down
 		return C.bool(false)
 	}
 
-	rc := v.(chan *http.Request)
 	l := getLogger()
 
 	if c := l.Check(zapcore.DebugLevel, "waiting for request"); c != nil {
-		c.Write(zap.String("worker", fc.scriptFilename))
+		c.Write(zap.String("worker", thread.worker.fileName))
 	}
+
+	// we assign a worker to the thread if it doesn't have one already
+    if(thread.worker == nil) {
+        assignThreadToWorker(thread)
+    }
 
 	var r *http.Request
 	select {
 	case <-workersDone:
 		if c := l.Check(zapcore.DebugLevel, "shutting down"); c != nil {
-			c.Write(zap.String("worker", fc.scriptFilename))
+			c.Write(zap.String("worker", thread.worker.fileName))
 		}
 		executePHPFunction("opcache_reset")
 
 		return C.bool(false)
-	case r = <-rc:
+	case r = <-thread.worker.requestChan:
 	}
 
 	thread.setWorkerRequest(r)
 
 	if c := l.Check(zapcore.DebugLevel, "request handling started"); c != nil {
-		c.Write(zap.String("worker", fc.scriptFilename), zap.String("url", r.RequestURI))
+		c.Write(zap.String("worker", thread.worker.fileName), zap.String("url", r.RequestURI))
 	}
 
 	if err := updateServerContext(r, false, true); err != nil {
 		// Unexpected error
 		if c := l.Check(zapcore.DebugLevel, "unexpected error"); c != nil {
-			c.Write(zap.String("worker", fc.scriptFilename), zap.String("url", r.RequestURI), zap.Error(err))
+			c.Write(zap.String("worker", thread.worker.fileName), zap.String("url", r.RequestURI), zap.Error(err))
 		}
 
 		return C.bool(false)
