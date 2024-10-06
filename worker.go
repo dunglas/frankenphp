@@ -5,6 +5,7 @@ package frankenphp
 import "C"
 import (
 	"fmt"
+	"math"
 	"net/http"
 	"path/filepath"
 	"sync"
@@ -22,6 +23,10 @@ type worker struct {
 	env         PreparedEnv
 	requestChan chan *http.Request
 }
+
+const maxWorkerErrorBackoff = 1 * time.Second
+const minWorkerErrorBackoff = 10 * time.Millisecond
+const maxWorkerConsecutiveFailures = 60
 
 var (
 	workersReadyWG   sync.WaitGroup
@@ -44,7 +49,7 @@ func initWorkers(opt []workerOpt) error {
 		}
 		workersReadyWG.Add(worker.num)
 		for i := 0; i < worker.num; i++ {
-			go worker.startThread()
+			go worker.startNewWorkerThread()
 		}
 	}
 
@@ -77,46 +82,20 @@ func newWorker(o workerOpt) (*worker, error) {
 	return w, nil
 }
 
-func (worker *worker) startThread() {
-	const maxBackoff = 1 * time.Second
-	const minBackoff = 10 * time.Millisecond
-	const maxConsecutiveFailures = 60
-	backoff := minBackoff
+func (worker *worker) startNewWorkerThread() {
 	failureCount := 0
-	backingOffLock := sync.RWMutex{}
-
 	workerShutdownWG.Add(1)
 	defer workerShutdownWG.Done()
-	for {
-		upFunc := sync.Once{}
-		go func() {
-			backingOffLock.RLock()
-			wait := backoff * 2
-			backingOffLock.RUnlock()
-			time.Sleep(wait)
-			upFunc.Do(func() {
-				backingOffLock.Lock()
-				defer backingOffLock.Unlock()
-				// if we come back to a stable state, reset the failure count
-				if backoff == minBackoff {
-					failureCount = 0
-				}
 
-				// earn back the backoff over time
-				if failureCount > 0 {
-					backoff = max(backoff/2, 100*time.Millisecond)
-				}
-			})
-		}()
+	for {
+		metrics.StartWorker(worker.fileName)
 
 		// Create main dummy request
 		r, err := http.NewRequest(http.MethodGet, filepath.Base(worker.fileName), nil)
-
-		metrics.StartWorker(worker.fileName)
-
 		if err != nil {
 			panic(err)
 		}
+
 		r, err = NewRequestWithContext(
 			r,
 			WithRequestDocumentRoot(filepath.Dir(worker.fileName), false),
@@ -136,49 +115,40 @@ func (worker *worker) startThread() {
 
 		fc := r.Context().Value(contextKey).(*FrankenPHPContext)
 
-		// if we are done, exit the loop
+		// if we are done, exit the loop that restarts the worker script
 		if workersAreDone.Load() {
 			break
 		}
-		// TODO: make the max restart configurable
+
 		fc.ready = false
+
+		// on exit status 0 we just run the worker script again
 		if fc.exitStatus == 0 {
+			// TODO: make the max restart configurable
 			if c := logger.Check(zapcore.InfoLevel, "restarting"); c != nil {
 				c.Write(zap.String("worker", worker.fileName))
 			}
-			backingOffLock.Lock()
-			backoff = minBackoff
 			failureCount = 0
-			backingOffLock.Unlock()
 			metrics.StopWorker(worker.fileName, StopReasonRestart)
-		} else {
-			// we will wait a few milliseconds to not overwhelm the logger in case of repeated unexpected terminations
-			time.Sleep(50 * time.Millisecond)
-			if c := logger.Check(zapcore.ErrorLevel, "unexpected termination, restarting"); c != nil {
-				c.Write(zap.String("worker", worker.fileName), zap.Int("exit_status", int(fc.exitStatus)))
-			}
-
-			upFunc.Do(func() {
-				backingOffLock.Lock()
-				defer backingOffLock.Unlock()
-				// if we end up here, the worker has not been up for backoff*2
-				// this is probably due to a syntax error or another fatal error
-				if failureCount >= maxConsecutiveFailures {
-					panic(fmt.Errorf("workers %q: too many consecutive failures", worker.fileName))
-				} else {
-					failureCount += 1
-				}
-			})
-			backingOffLock.RLock()
-			wait := backoff
-			backingOffLock.RUnlock()
-			time.Sleep(wait)
-			backingOffLock.Lock()
-			backoff *= 2
-			backoff = min(backoff, maxBackoff)
-			backingOffLock.Unlock()
-			metrics.StopWorker(worker.fileName, StopReasonCrash)
+			continue
 		}
+
+		// on exit status 1 we log the error and apply an exponential backoff when restarting
+		if c := logger.Check(zapcore.ErrorLevel, "unexpected termination, restarting"); c != nil {
+			c.Write(zap.String("worker", worker.fileName), zap.Int("exit_status", int(fc.exitStatus)))
+		}
+
+		// on too may consecutive failures the server crashes
+		if failureCount >= maxWorkerConsecutiveFailures {
+			panic(fmt.Errorf("workers %q: too many consecutive failures", worker.fileName))
+		}
+		sleepTime := time.Duration(math.Pow(2, float64(failureCount))) * minWorkerErrorBackoff
+		if sleepTime > maxWorkerErrorBackoff {
+			sleepTime = maxWorkerErrorBackoff
+		}
+		failureCount++
+		metrics.StopWorker(worker.fileName, StopReasonCrash)
+		time.Sleep(sleepTime)
 	}
 
 	metrics.StopWorker(worker.fileName, StopReasonShutdown)
