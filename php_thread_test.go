@@ -2,8 +2,8 @@ package frankenphp
 
 import (
 	"github.com/stretchr/testify/assert"
-	"testing"
 	"net/http"
+	"testing"
 )
 
 func TestInitializeTwoPhpThreadsWithoutRequests(t *testing.T) {
