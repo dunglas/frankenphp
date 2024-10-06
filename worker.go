@@ -78,8 +78,8 @@ func newWorker(o workerOpt) (*worker, error) {
 }
 
 func (worker *worker) startThread() {
-	const maxBackoff = 10 * time.Millisecond
-	const minBackoff = 1 * time.Second
+	const maxBackoff = 1 * time.Second
+	const minBackoff = 10 * time.Millisecond
 	const maxConsecutiveFailures = 60
 	backoff := minBackoff
 	failureCount := 0
