@@ -16,20 +16,20 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-type worker struct{
-	fileName string
-	num int
-	env PreparedEnv
+type worker struct {
+	fileName    string
+	num         int
+	env         PreparedEnv
 	requestChan chan *http.Request
 }
 
 var (
-	workersReadyWG      sync.WaitGroup
-	workerShutdownWG    sync.WaitGroup
-	workersAreReady     atomic.Bool
-	workersAreDone      atomic.Bool
-	workersDone         chan interface{}
-	workers 		    map[string]*worker = make(map[string]*worker)
+	workersReadyWG   sync.WaitGroup
+	workerShutdownWG sync.WaitGroup
+	workersAreReady  atomic.Bool
+	workersAreDone   atomic.Bool
+	workersDone      chan interface{}
+	workers          map[string]*worker = make(map[string]*worker)
 )
 
 func initWorkers(opt []workerOpt) error {
@@ -44,70 +44,70 @@ func initWorkers(opt []workerOpt) error {
 		}
 		workersReadyWG.Add(worker.num)
 		for i := 0; i < worker.num; i++ {
-            go worker.startThread()
-        }
+			go worker.startThread()
+		}
 	}
 
 	workersReadyWG.Wait()
-    workersAreReady.Store(true)
+	workersAreReady.Store(true)
 
 	return nil
 }
 
 func newWorker(o workerOpt) (*worker, error) {
 	absFileName, err := filepath.Abs(o.fileName)
-    if err != nil {
-        return nil, fmt.Errorf("worker filename is invalid %q: %w", o.fileName, err)
-    }
+	if err != nil {
+		return nil, fmt.Errorf("worker filename is invalid %q: %w", o.fileName, err)
+	}
 
 	// if the worker already exists, return it
 	// it's necessary since we don't want to destroy the channels when restarting on file changes
 	if w, ok := workers[absFileName]; ok {
-        return w, nil
-    }
+		return w, nil
+	}
 
 	if o.env == nil {
-        o.env = make(PreparedEnv, 1)
-    }
+		o.env = make(PreparedEnv, 1)
+	}
 
 	o.env["FRANKENPHP_WORKER\x00"] = "1"
 	w := &worker{fileName: absFileName, num: o.num, env: o.env, requestChan: make(chan *http.Request)}
-    workers[absFileName] = w
+	workers[absFileName] = w
 
-    return w, nil
+	return w, nil
 }
 
 func (worker *worker) startThread() {
 	const maxBackoff = 10 * time.Millisecond
-    const minBackoff = 1 * time.Second
-    const maxConsecutiveFailures = 60
-    backoff := minBackoff
-    failureCount := 0
-    backingOffLock := sync.RWMutex{}
+	const minBackoff = 1 * time.Second
+	const maxConsecutiveFailures = 60
+	backoff := minBackoff
+	failureCount := 0
+	backingOffLock := sync.RWMutex{}
 
 	workerShutdownWG.Add(1)
 	defer workerShutdownWG.Done()
 	for {
 		upFunc := sync.Once{}
-	    go func() {
-	        backingOffLock.RLock()
-	        wait := backoff * 2
-	        backingOffLock.RUnlock()
-	        time.Sleep(wait)
-	        upFunc.Do(func() {
-	            backingOffLock.Lock()
-	            defer backingOffLock.Unlock()
-	            // if we come back to a stable state, reset the failure count
-	            if backoff == minBackoff {
-	                failureCount = 0
-	            }
+		go func() {
+			backingOffLock.RLock()
+			wait := backoff * 2
+			backingOffLock.RUnlock()
+			time.Sleep(wait)
+			upFunc.Do(func() {
+				backingOffLock.Lock()
+				defer backingOffLock.Unlock()
+				// if we come back to a stable state, reset the failure count
+				if backoff == minBackoff {
+					failureCount = 0
+				}
 
-	            // earn back the backoff over time
-	            if failureCount > 0 {
-	                backoff = max(backoff/2, 100*time.Millisecond)
-	            }
-	        })
-	    }()
+				// earn back the backoff over time
+				if failureCount > 0 {
+					backoff = max(backoff/2, 100*time.Millisecond)
+				}
+			})
+		}()
 
 		// Create main dummy request
 		r, err := http.NewRequest(http.MethodGet, filepath.Base(worker.fileName), nil)
@@ -136,48 +136,48 @@ func (worker *worker) startThread() {
 
 		fc := r.Context().Value(contextKey).(*FrankenPHPContext)
 
-		// TODO: make the max restart configurable
-		if !workersAreDone.Load() {
-			fc.ready = false
-			if fc.exitStatus == 0 {
-				if c := logger.Check(zapcore.InfoLevel, "restarting"); c != nil {
-					c.Write(zap.String("worker", worker.fileName))
-				}
-				backingOffLock.Lock()
-                backoff = minBackoff
-                failureCount = 0
-                backingOffLock.Unlock()
-                metrics.StopWorker(worker.fileName, StopReasonRestart)
-			} else {
-				// we will wait a few milliseconds to not overwhelm the logger in case of repeated unexpected terminations
-				time.Sleep(50 * time.Millisecond)
-				if c := logger.Check(zapcore.ErrorLevel, "unexpected termination, restarting"); c != nil {
-					c.Write(zap.String("worker", worker.fileName), zap.Int("exit_status", int(fc.exitStatus)))
-				}
-
-				upFunc.Do(func() {
-                    backingOffLock.Lock()
-                    defer backingOffLock.Unlock()
-                    // if we end up here, the worker has not been up for backoff*2
-                    // this is probably due to a syntax error or another fatal error
-                    if failureCount >= maxConsecutiveFailures {
-                        panic(fmt.Errorf("workers %q: too many consecutive failures", worker.fileName))
-                    } else {
-                        failureCount += 1
-                    }
-                })
-                backingOffLock.RLock()
-                wait := backoff
-                backingOffLock.RUnlock()
-                time.Sleep(wait)
-                backingOffLock.Lock()
-                backoff *= 2
-                backoff = min(backoff, maxBackoff)
-                backingOffLock.Unlock()
-                metrics.StopWorker(worker.fileName, StopReasonCrash)
-			}
-		} else {
+		// if we are done, exit the loop
+		if workersAreDone.Load() {
 			break
+		}
+		// TODO: make the max restart configurable
+		fc.ready = false
+		if fc.exitStatus == 0 {
+			if c := logger.Check(zapcore.InfoLevel, "restarting"); c != nil {
+				c.Write(zap.String("worker", worker.fileName))
+			}
+			backingOffLock.Lock()
+			backoff = minBackoff
+			failureCount = 0
+			backingOffLock.Unlock()
+			metrics.StopWorker(worker.fileName, StopReasonRestart)
+		} else {
+			// we will wait a few milliseconds to not overwhelm the logger in case of repeated unexpected terminations
+			time.Sleep(50 * time.Millisecond)
+			if c := logger.Check(zapcore.ErrorLevel, "unexpected termination, restarting"); c != nil {
+				c.Write(zap.String("worker", worker.fileName), zap.Int("exit_status", int(fc.exitStatus)))
+			}
+
+			upFunc.Do(func() {
+				backingOffLock.Lock()
+				defer backingOffLock.Unlock()
+				// if we end up here, the worker has not been up for backoff*2
+				// this is probably due to a syntax error or another fatal error
+				if failureCount >= maxConsecutiveFailures {
+					panic(fmt.Errorf("workers %q: too many consecutive failures", worker.fileName))
+				} else {
+					failureCount += 1
+				}
+			})
+			backingOffLock.RLock()
+			wait := backoff
+			backingOffLock.RUnlock()
+			time.Sleep(wait)
+			backingOffLock.Lock()
+			backoff *= 2
+			backoff = min(backoff, maxBackoff)
+			backingOffLock.Unlock()
+			metrics.StopWorker(worker.fileName, StopReasonCrash)
 		}
 	}
 
@@ -230,16 +230,16 @@ func assignThreadToWorker(thread *PHPThread) {
 	mainRequest := thread.getMainRequest()
 	fc := mainRequest.Context().Value(contextKey).(*FrankenPHPContext)
 	fc.ready = true
-    metrics.ReadyWorker(fc.scriptFilename)
+	metrics.ReadyWorker(fc.scriptFilename)
 	worker, ok := workers[fc.scriptFilename]
-    if !ok {
-        panic("worker not found for script: "+fc.scriptFilename)
-    }
-    thread.worker = worker
-    if !workersAreReady.Load() {
-        workersReadyWG.Done()
-    }
-    // TODO: we can also store all threads assigned to the worker if needed
+	if !ok {
+		panic("worker not found for script: " + fc.scriptFilename)
+	}
+	thread.worker = worker
+	if !workersAreReady.Load() {
+		workersReadyWG.Done()
+	}
+	// TODO: we can also store all threads assigned to the worker if needed
 }
 
 //export go_frankenphp_worker_handle_request_start
@@ -252,9 +252,9 @@ func go_frankenphp_worker_handle_request_start(threadIndex int) C.bool {
 	}
 
 	// we assign a worker to the thread if it doesn't have one already
-    if(thread.worker == nil) {
-        assignThreadToWorker(thread)
-    }
+	if thread.worker == nil {
+		assignThreadToWorker(thread)
+	}
 
 	if c := logger.Check(zapcore.DebugLevel, "waiting for request"); c != nil {
 		c.Write(zap.String("worker", thread.worker.fileName))
