@@ -333,7 +333,7 @@ func Init(options ...Option) error {
 	shutdownWG.Add(1)
 	done = make(chan struct{})
 	requestChan = make(chan *http.Request)
-	initializePhpThreads(opt.numThreads)
+	initializePHPThreads(opt.numThreads)
 
 	if C.frankenphp_init(C.int(opt.numThreads)) != 0 {
 		return MainThreadCreationError
@@ -382,7 +382,7 @@ func go_shutdown() {
 func drainThreads() {
 	close(done)
 	shutdownWG.Wait()
-	initializePhpThreads(0)
+	initializePHPThreads(0)
 }
 
 func getLogger() *zap.Logger {

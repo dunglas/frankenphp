@@ -7,7 +7,7 @@ import (
 )
 
 func TestInitializeTwoPhpThreadsWithoutRequests(t *testing.T) {
-	initializePhpThreads(2)
+	initializePHPThreads(2)
 
 	assert.Len(t, phpThreads, 2)
 	assert.Equal(t, 0, getPHPThread(0).threadIndex)
@@ -18,7 +18,7 @@ func TestInitializeTwoPhpThreadsWithoutRequests(t *testing.T) {
 
 func TestMainRequestIsActiveRequest(t *testing.T) {
 	mainRequest := &http.Request{}
-	initializePhpThreads(1)
+	initializePHPThreads(1)
 	thread := getPHPThread(0)
 
 	thread.setMainRequest(mainRequest)
@@ -29,7 +29,7 @@ func TestMainRequestIsActiveRequest(t *testing.T) {
 func TestWorkerRequestIsActiveRequest(t *testing.T) {
 	mainRequest := &http.Request{}
 	workerRequest := &http.Request{}
-	initializePhpThreads(1)
+	initializePHPThreads(1)
 	thread := getPHPThread(0)
 
 	thread.setMainRequest(mainRequest)

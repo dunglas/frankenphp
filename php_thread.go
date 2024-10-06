@@ -5,9 +5,9 @@ import (
 	"runtime"
 )
 
-var phpThreads []*PHPThread
+var phpThreads []*phpThread
 
-type PHPThread struct {
+type phpThread struct {
 	threadIndex   int
 	mainRequest   *http.Request
 	workerRequest *http.Request
@@ -15,36 +15,36 @@ type PHPThread struct {
 	worker        *worker
 }
 
-func initializePhpThreads(numThreads int) {
-	phpThreads = make([]*PHPThread, numThreads)
+func initializePHPThreads(numThreads int) {
+	phpThreads = make([]*phpThread, numThreads)
 	for i := 0; i < numThreads; i++ {
-		phpThreads[i] = &PHPThread{threadIndex: i, pinner: &runtime.Pinner{}}
+		phpThreads[i] = &phpThread{threadIndex: i, pinner: &runtime.Pinner{}}
 	}
 }
 
-func getPHPThread(threadIndex int) *PHPThread {
+func getPHPThread(threadIndex int) *phpThread {
 	if threadIndex >= 0 && threadIndex < len(phpThreads) {
 		return phpThreads[threadIndex]
 	}
 	panic("no such thread")
 }
 
-func (thread *PHPThread) setMainRequest(request *http.Request) {
+func (thread *phpThread) setMainRequest(request *http.Request) {
 	thread.mainRequest = request
 }
 
-func (thread *PHPThread) setWorkerRequest(request *http.Request) {
+func (thread *phpThread) setWorkerRequest(request *http.Request) {
 	thread.workerRequest = request
 }
 
-func (thread *PHPThread) getMainRequest() *http.Request {
+func (thread *phpThread) getMainRequest() *http.Request {
 	if thread.mainRequest != nil {
 		return thread.mainRequest
 	}
 	panic("no worker request")
 }
 
-func (thread *PHPThread) getActiveRequest() *http.Request {
+func (thread *phpThread) getActiveRequest() *http.Request {
 	if thread.workerRequest != nil {
 		return thread.workerRequest
 	}

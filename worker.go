@@ -196,7 +196,7 @@ func restartWorkers(workerOpts []workerOpt) {
 	logger.Info("workers restarted successfully")
 }
 
-func assignThreadToWorker(thread *PHPThread) {
+func assignThreadToWorker(thread *phpThread) {
 	mainRequest := thread.getMainRequest()
 	fc := mainRequest.Context().Value(contextKey).(*FrankenPHPContext)
 	fc.ready = true
