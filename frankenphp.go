@@ -128,8 +128,8 @@ type FrankenPHPContext struct {
 	responseWriter http.ResponseWriter
 	exitStatus     C.int
 
-	done                 chan interface{}
-	startedAt            time.Time
+	done      chan interface{}
+	startedAt time.Time
 }
 
 func clientHasClosed(r *http.Request) bool {

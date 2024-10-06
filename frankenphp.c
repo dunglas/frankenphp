@@ -72,7 +72,7 @@ frankenphp_config frankenphp_get_config() {
 typedef struct frankenphp_server_context {
   bool is_worker_request;
   bool has_active_request;
-  bool is_starting_worker;
+  bool is_starting_new_worker_script;
   bool worker_ready;
   char *cookie_data;
   bool finished;
@@ -249,8 +249,8 @@ PHP_FUNCTION(frankenphp_request_headers) {
   }
 
   frankenphp_server_context *ctx = SG(server_context);
-  struct go_apache_request_headers_return headers =
-      go_apache_request_headers(thread_index, ctx->is_starting_worker);
+  struct go_apache_request_headers_return headers = go_apache_request_headers(
+      thread_index, ctx->is_starting_new_worker_script);
 
   array_init_size(return_value, headers.r1);
 
@@ -328,7 +328,7 @@ PHP_FUNCTION(frankenphp_handle_request) {
 
   frankenphp_server_context *ctx = SG(server_context);
 
-  if (!ctx->is_starting_worker && !ctx->is_worker_request) {
+  if (!ctx->is_starting_new_worker_script && !ctx->is_worker_request) {
     /* not a worker, throw an error */
     zend_throw_exception(
         spl_ce_RuntimeException,
@@ -348,8 +348,7 @@ PHP_FUNCTION(frankenphp_handle_request) {
   zend_unset_timeout();
 #endif
 
-  bool request =
-      go_frankenphp_worker_handle_request_start(thread_index);
+  bool request = go_frankenphp_worker_handle_request_start(thread_index);
   if (frankenphp_worker_request_startup() == FAILURE
       /* Shutting down */
       || !request) {
@@ -424,7 +423,7 @@ static zend_module_entry frankenphp_module = {
 static void frankenphp_request_shutdown() {
   frankenphp_server_context *ctx = SG(server_context);
 
-  if (!ctx->is_starting_worker) {
+  if (!ctx->is_starting_new_worker_script) {
     frankenphp_destroy_super_globals();
   }
 
@@ -435,7 +434,7 @@ static void frankenphp_request_shutdown() {
 }
 
 int frankenphp_update_server_context(
-    bool create, bool is_worker_request, bool is_starting_worker,
+    bool create, bool is_worker_request, bool is_starting_new_worker_script,
 
     const char *request_method, char *query_string, zend_long content_length,
     char *path_translated, char *request_uri, const char *content_type,
@@ -458,8 +457,8 @@ int frankenphp_update_server_context(
   SG(sapi_headers).http_response_code = 200;
 
   ctx->is_worker_request = is_worker_request;
-  ctx->has_active_request = !is_starting_worker;
-  ctx->is_starting_worker = is_starting_worker;
+  ctx->has_active_request = !is_starting_new_worker_script;
+  ctx->is_starting_new_worker_script = is_starting_new_worker_script;
 
   SG(request_info).auth_password = auth_password;
   SG(request_info).auth_user = auth_user;
@@ -492,9 +491,8 @@ static size_t frankenphp_ub_write(const char *str, size_t str_length) {
     return 0;
   }
 
-  struct go_ub_write_return result = go_ub_write(
-      thread_index,
-      (char *)str, str_length);
+  struct go_ub_write_return result =
+      go_ub_write(thread_index, (char *)str, str_length);
 
   if (result.r1) {
     php_handle_aborted_connection();
@@ -669,8 +667,7 @@ static void frankenphp_register_variables(zval *track_vars_array) {
    */
   php_import_environment_variables(track_vars_array);
 
-  go_register_variables(thread_index,
-                        track_vars_array);
+  go_register_variables(thread_index, track_vars_array);
 }
 
 static void frankenphp_log_message(const char *message, int syslog_type_int) {
