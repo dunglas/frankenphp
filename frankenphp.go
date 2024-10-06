@@ -122,6 +122,9 @@ type FrankenPHPContext struct {
 	// Whether the request is already closed by us
 	closed sync.Once
 
+	// whether the context is ready to receive requests
+	ready bool
+
 	responseWriter http.ResponseWriter
 	exitStatus     C.int
 

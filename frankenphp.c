@@ -21,6 +21,7 @@
 #if defined(__linux__)
 #include <sys/prctl.h>
 #elif defined(__FreeBSD__) || defined(__OpenBSD__)
+#include <pthread.h>
 #include <pthread_np.h>
 #endif
 

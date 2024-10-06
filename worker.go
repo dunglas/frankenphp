@@ -33,9 +33,9 @@ var (
 )
 
 func initWorkers(opt []workerOpt) error {
+	workersDone = make(chan interface{})
 	workersAreReady.Store(false)
 	workersAreDone.Store(false)
-	workersDone = make(chan interface{})
 
 	for _, o := range opt {
 		worker, err := newWorker(o)
@@ -78,9 +78,35 @@ func newWorker(o workerOpt) (*worker, error) {
 }
 
 func (worker *worker) startThread() {
+	const maxBackoff = 10 * time.Millisecond
+    const minBackoff = 1 * time.Second
+    const maxConsecutiveFailures = 60
+
+
 	workerShutdownWG.Add(1)
 	defer workerShutdownWG.Done()
 	for {
+		upFunc := sync.Once{}
+	    go func() {
+	        backingOffLock.RLock()
+	        wait := backoff * 2
+	        backingOffLock.RUnlock()
+	        time.Sleep(wait)
+	        upFunc.Do(func() {
+	            backingOffLock.Lock()
+	            defer backingOffLock.Unlock()
+	            // if we come back to a stable state, reset the failure count
+	            if backoff == minBackoff {
+	                failureCount = 0
+	            }
+
+	            // earn back the backoff over time
+	            if failureCount > 0 {
+	                backoff = max(backoff/2, 100*time.Millisecond)
+	            }
+	        })
+	    }()
+
 		// Create main dummy request
 		r, err := http.NewRequest(http.MethodGet, filepath.Base(worker.fileName), nil)
 
@@ -110,22 +136,51 @@ func (worker *worker) startThread() {
 
 		// TODO: make the max restart configurable
 		if !workersAreDone.Load() {
+			fc.ready = false
 			metrics.StopWorker(worker.fileName)
 			if fc.exitStatus == 0 {
 				if c := logger.Check(zapcore.InfoLevel, "restarting"); c != nil {
 					c.Write(zap.String("worker", worker.fileName))
 				}
+				backingOffLock.Lock()
+                backoff = minBackoff
+                failureCount = 0
+                backingOffLock.Unlock()
+                metrics.StopWorker(absFileName, StopReasonRestart)
 			} else {
 				// we will wait a few milliseconds to not overwhelm the logger in case of repeated unexpected terminations
 				time.Sleep(50 * time.Millisecond)
 				if c := logger.Check(zapcore.ErrorLevel, "unexpected termination, restarting"); c != nil {
 					c.Write(zap.String("worker", worker.fileName), zap.Int("exit_status", int(fc.exitStatus)))
 				}
+
+				upFunc.Do(func() {
+                    backingOffLock.Lock()
+                    defer backingOffLock.Unlock()
+                    // if we end up here, the worker has not been up for backoff*2
+                    // this is probably due to a syntax error or another fatal error
+                    if failureCount >= maxConsecutiveFailures {
+                        panic(fmt.Errorf("workers %q: too many consecutive failures", absFileName))
+                    } else {
+                        failureCount += 1
+                    }
+                })
+                backingOffLock.RLock()
+                wait := backoff
+                backingOffLock.RUnlock()
+                time.Sleep(wait)
+                backingOffLock.Lock()
+                backoff *= 2
+                backoff = min(backoff, maxBackoff)
+                backingOffLock.Unlock()
+                metrics.StopWorker(absFileName, StopReasonCrash)
 			}
 		} else {
 			break
 		}
 	}
+
+	metrics.StopWorker(absFileName, StopReasonShutdown)
 
 	// TODO: check if the termination is expected
 	if c := logger.Check(zapcore.DebugLevel, "terminated"); c != nil {
@@ -173,6 +228,8 @@ func restartWorkers(workerOpts []workerOpt) {
 func assignThreadToWorker(thread *PHPThread) {
 	mainRequest := thread.getMainRequest()
 	fc := mainRequest.Context().Value(contextKey).(*FrankenPHPContext)
+	fc.ready = true
+    metrics.ReadyWorker(fc.scriptFilename)
 	worker, ok := workers[fc.scriptFilename]
     if !ok {
         panic("worker not found for script: "+fc.scriptFilename)
