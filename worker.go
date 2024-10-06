@@ -81,7 +81,9 @@ func (worker *worker) startThread() {
 	const maxBackoff = 10 * time.Millisecond
     const minBackoff = 1 * time.Second
     const maxConsecutiveFailures = 60
-
+    backoff := minBackoff
+    failureCount := 0
+    backingOffLock := sync.RWMutex{}
 
 	workerShutdownWG.Add(1)
 	defer workerShutdownWG.Done()
@@ -137,7 +139,6 @@ func (worker *worker) startThread() {
 		// TODO: make the max restart configurable
 		if !workersAreDone.Load() {
 			fc.ready = false
-			metrics.StopWorker(worker.fileName)
 			if fc.exitStatus == 0 {
 				if c := logger.Check(zapcore.InfoLevel, "restarting"); c != nil {
 					c.Write(zap.String("worker", worker.fileName))
@@ -146,7 +147,7 @@ func (worker *worker) startThread() {
                 backoff = minBackoff
                 failureCount = 0
                 backingOffLock.Unlock()
-                metrics.StopWorker(absFileName, StopReasonRestart)
+                metrics.StopWorker(worker.fileName, StopReasonRestart)
 			} else {
 				// we will wait a few milliseconds to not overwhelm the logger in case of repeated unexpected terminations
 				time.Sleep(50 * time.Millisecond)
@@ -160,7 +161,7 @@ func (worker *worker) startThread() {
                     // if we end up here, the worker has not been up for backoff*2
                     // this is probably due to a syntax error or another fatal error
                     if failureCount >= maxConsecutiveFailures {
-                        panic(fmt.Errorf("workers %q: too many consecutive failures", absFileName))
+                        panic(fmt.Errorf("workers %q: too many consecutive failures", worker.fileName))
                     } else {
                         failureCount += 1
                     }
@@ -173,14 +174,14 @@ func (worker *worker) startThread() {
                 backoff *= 2
                 backoff = min(backoff, maxBackoff)
                 backingOffLock.Unlock()
-                metrics.StopWorker(absFileName, StopReasonCrash)
+                metrics.StopWorker(worker.fileName, StopReasonCrash)
 			}
 		} else {
 			break
 		}
 	}
 
-	metrics.StopWorker(absFileName, StopReasonShutdown)
+	metrics.StopWorker(worker.fileName, StopReasonShutdown)
 
 	// TODO: check if the termination is expected
 	if c := logger.Check(zapcore.DebugLevel, "terminated"); c != nil {
