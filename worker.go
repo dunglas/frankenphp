@@ -69,8 +69,8 @@ func startWorkers(fileName string, nbWorkers int, env PreparedEnv) error {
 
 	l := getLogger()
 
-	const maxBackoff = 10 * time.Millisecond
-	const minBackoff = 1 * time.Second
+	const maxBackoff = 1 * time.Second
+	const minBackoff = 10 * time.Millisecond
 	const maxConsecutiveFailures = 60
 
 	for i := 0; i < nbWorkers; i++ {
