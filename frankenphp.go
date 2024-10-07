@@ -344,6 +344,10 @@ func Init(options ...Option) error {
 		return err
 	}
 
+	if err := restartWorkersOnFileChanges(opt.workers); err != nil {
+		return err
+	}
+
 	if c := logger.Check(zapcore.InfoLevel, "FrankenPHP started 🐘"); c != nil {
 		c.Write(zap.String("php_version", Version().Version), zap.Int("num_threads", opt.numThreads))
 	}

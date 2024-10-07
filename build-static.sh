@@ -146,7 +146,7 @@ fi
 # install edant/watcher for file watching (static version)
 git clone --branch="${EDANT_WATCHER_VERSION:-next}" https://github.com/e-dant/watcher watcher
 cd watcher/watcher-c
-gcc -c -o libwatcher.o ./src/watcher-c.cpp -I ./include -I ../include -std=c++17 -Wall -Wextra -fPIC
+cc -c -o libwatcher.o ./src/watcher-c.cpp -I ./include -I ../include -std=c++17 -Wall -Wextra -fPIC
 ar rcs libwatcher.a libwatcher.o
 cp libwatcher.a "../../buildroot/lib/libwatcher.a"
 cd ../../
