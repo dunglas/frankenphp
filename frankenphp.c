@@ -248,8 +248,8 @@ PHP_FUNCTION(frankenphp_request_headers) {
   }
 
   frankenphp_server_context *ctx = SG(server_context);
-  struct go_apache_request_headers_return headers = go_apache_request_headers(
-      thread_index, ctx->has_active_request);
+  struct go_apache_request_headers_return headers =
+      go_apache_request_headers(thread_index, ctx->has_active_request);
 
   array_init_size(return_value, headers.r1);
 
