@@ -70,7 +70,7 @@ ARG EDANT_WATCHER_VERSION=next
 WORKDIR /usr/local/src/watcher
 RUN git clone --branch=$EDANT_WATCHER_VERSION https://github.com/e-dant/watcher .
 WORKDIR /usr/local/src/watcher/watcher-c
-RUN gcc -o libwatcher.so ./src/watcher-c.cpp -I ./include -I ../include -std=c++17 -O3 -Wall -Wextra -fPIC -shared && \
+RUN cc -o libwatcher.so ./src/watcher-c.cpp -I ./include -I ../include -std=c++17 -O3 -Wall -Wextra -fPIC -shared && \
 	cp libwatcher.so /usr/local/lib/libwatcher.so && \
 	ldconfig /usr/local/lib
 
