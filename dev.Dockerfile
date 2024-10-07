@@ -15,6 +15,8 @@ ENV PHPIZE_DEPS="\
 	pkg-config \
 	re2c"
 
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+
 # hadolint ignore=DL3009
 RUN apt-get update && \
 	apt-get -y --no-install-recommends install \
@@ -62,6 +64,15 @@ RUN git clone --branch=PHP-8.3 https://github.com/php/php-src.git . && \
 	echo "zend_extension=opcache.so" >> /usr/local/lib/php.ini && \
 	echo "opcache.enable=1" >> /usr/local/lib/php.ini && \
 	php --version
+
+# install edant/watcher (necessary for file watching)
+ARG EDANT_WATCHER_VERSION=next
+WORKDIR /usr/local/src/watcher
+RUN git clone --branch=$EDANT_WATCHER_VERSION https://github.com/e-dant/watcher .
+WORKDIR /usr/local/src/watcher/watcher-c
+RUN gcc -o libwatcher.so ./src/watcher-c.cpp -I ./include -I ../include -std=c++17 -O3 -Wall -Wextra -fPIC -shared && \
+	cp libwatcher.so /usr/local/lib/libwatcher.so && \
+	ldconfig /usr/local/lib
 
 WORKDIR /go/src/app
 COPY . .

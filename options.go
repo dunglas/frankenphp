@@ -21,6 +21,7 @@ type workerOpt struct {
 	fileName string
 	num      int
 	env      PreparedEnv
+	watch    []string
 }
 
 // WithNumThreads configures the number of PHP threads to start.
@@ -41,9 +42,9 @@ func WithMetrics(m Metrics) Option {
 }
 
 // WithWorkers configures the PHP workers to start.
-func WithWorkers(fileName string, num int, env map[string]string) Option {
+func WithWorkers(fileName string, num int, env map[string]string, watch []string) Option {
 	return func(o *opt) error {
-		o.workers = append(o.workers, workerOpt{fileName, num, PrepareEnv(env)})
+		o.workers = append(o.workers, workerOpt{fileName, num, PrepareEnv(env), watch})
 
 		return nil
 	}

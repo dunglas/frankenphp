@@ -12,6 +12,9 @@ ENV FRANKENPHP_VERSION=${FRANKENPHP_VERSION}
 ARG PHP_VERSION=''
 ENV PHP_VERSION=${PHP_VERSION}
 
+ARG EDANT_WATCHER_VERSION=''
+ENV EDANT_WATCHER_VERSION=${EDANT_WATCHER_VERSION}
+
 ARG PHP_EXTENSIONS=''
 ARG PHP_EXTENSION_LIBS=''
 ARG CLEAN=''
@@ -103,6 +106,7 @@ RUN go mod graph | awk '{if ($1 !~ "@") print $2}' | xargs go get
 WORKDIR /go/src/app
 COPY *.* ./
 COPY caddy caddy
+COPY watcher watcher
 
 RUN --mount=type=secret,id=github-token GITHUB_TOKEN=$(cat /run/secrets/github-token) ./build-static.sh && \
 	rm -Rf dist/static-php-cli/source/*

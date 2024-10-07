@@ -85,6 +85,16 @@ COPY --link *.* ./
 COPY --link caddy caddy
 COPY --link internal internal
 COPY --link testdata testdata
+COPY --link watcher watcher
+
+# install edant/watcher (necessary for file watching)
+ARG EDANT_WATCHER_VERSION=next
+WORKDIR /usr/local/src/watcher
+RUN curl -L https://github.com/e-dant/watcher/archive/refs/heads/$EDANT_WATCHER_VERSION.tar.gz | tar xz
+WORKDIR /usr/local/src/watcher/watcher-$EDANT_WATCHER_VERSION/watcher-c
+RUN gcc -o libwatcher.so ./src/watcher-c.cpp -I ./include -I ../include -std=c++17 -O3 -Wall -Wextra -fPIC -shared && \
+	cp libwatcher.so /usr/local/lib/libwatcher.so && \
+	ldconfig /usr/local/lib
 
 # See https://github.com/docker-library/php/blob/master/8.3/bookworm/zts/Dockerfile#L57-L59 for PHP values
 ENV CGO_CFLAGS="-DFRANKENPHP_VERSION=$FRANKENPHP_VERSION $PHP_CFLAGS"
@@ -103,6 +113,13 @@ WORKDIR /go/src/app
 FROM common AS runner
 
 ENV GODEBUG=cgocheck=0
+
+# copy watcher shared library
+COPY --from=builder /usr/local/lib/libwatcher* /usr/local/lib/
+# fix for the file watcher on arm
+RUN apt-get install -y --no-install-recommends libstdc++6 && \
+	apt-get clean && \
+	ldconfig
 
 COPY --from=builder /usr/local/bin/frankenphp /usr/local/bin/frankenphp
 RUN setcap cap_net_bind_service=+ep /usr/local/bin/frankenphp && \

@@ -35,6 +35,7 @@ import (
 
 type testOptions struct {
 	workerScript        string
+	watch               []string
 	nbWorkers           int
 	env                 map[string]string
 	nbParrallelRequests int
@@ -60,7 +61,7 @@ func runTest(t *testing.T, test func(func(http.ResponseWriter, *http.Request), *
 
 	initOpts := []frankenphp.Option{frankenphp.WithLogger(opts.logger)}
 	if opts.workerScript != "" {
-		initOpts = append(initOpts, frankenphp.WithWorkers(testDataDir+opts.workerScript, opts.nbWorkers, opts.env))
+		initOpts = append(initOpts, frankenphp.WithWorkers(testDataDir+opts.workerScript, opts.nbWorkers, opts.env, opts.watch))
 	}
 	initOpts = append(initOpts, opts.initOpts...)
 

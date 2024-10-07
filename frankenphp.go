@@ -347,6 +347,10 @@ func Init(options ...Option) error {
 		return err
 	}
 
+	if err := restartWorkersOnFileChanges(opt.workers); err != nil {
+		return err
+	}
+
 	if c := logger.Check(zapcore.InfoLevel, "FrankenPHP started 🐘"); c != nil {
 		c.Write(zap.String("php_version", Version().Version), zap.Int("num_threads", opt.numThreads))
 	}
@@ -361,14 +365,10 @@ func Init(options ...Option) error {
 
 // Shutdown stops the workers and the PHP runtime.
 func Shutdown() {
-	stopWorkers()
-	close(done)
-	shutdownWG.Wait()
+	drainWorkers()
+	drainThreads()
 	metrics.Shutdown()
 	requestChan = nil
-
-	// Always reset the WaitGroup to ensure we're in a clean state
-	workersReadyWG = sync.WaitGroup{}
 
 	// Remove the installed app
 	if EmbeddedAppPath != "" {
@@ -381,6 +381,11 @@ func Shutdown() {
 //export go_shutdown
 func go_shutdown() {
 	shutdownWG.Done()
+}
+
+func drainThreads() {
+	close(done)
+	shutdownWG.Wait()
 }
 
 func getLogger() *zap.Logger {
@@ -860,5 +865,22 @@ func convertArgs(args []string) (C.int, []*C.char) {
 func freeArgs(argv []*C.char) {
 	for _, arg := range argv {
 		C.free(unsafe.Pointer(arg))
+	}
+}
+
+func executePHPFunction(functionName string) {
+	cFunctionName := C.CString(functionName)
+	defer C.free(unsafe.Pointer(cFunctionName))
+
+	success := C.frankenphp_execute_php_function(cFunctionName)
+
+	if success == 1 {
+		if c := logger.Check(zapcore.DebugLevel, "php function call successful"); c != nil {
+			c.Write(zap.String("function", functionName))
+		}
+	} else {
+		if c := logger.Check(zapcore.ErrorLevel, "php function call failed"); c != nil {
+			c.Write(zap.String("function", functionName))
+		}
 	}
 }

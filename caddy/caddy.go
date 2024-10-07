@@ -62,6 +62,8 @@ type workerConfig struct {
 	Num int `json:"num,omitempty"`
 	// Env sets an extra environment variable to the given value. Can be specified more than once for multiple environment variables.
 	Env map[string]string `json:"env,omitempty"`
+	// Directories to watch for file changes
+	Watch []string `json:"watch,omitempty"`
 }
 
 type FrankenPHPApp struct {
@@ -85,7 +87,7 @@ func (f *FrankenPHPApp) Start() error {
 
 	opts := []frankenphp.Option{frankenphp.WithNumThreads(f.NumThreads), frankenphp.WithLogger(logger), frankenphp.WithMetrics(metrics)}
 	for _, w := range f.Workers {
-		opts = append(opts, frankenphp.WithWorkers(repl.ReplaceKnown(w.FileName, ""), w.Num, w.Env))
+		opts = append(opts, frankenphp.WithWorkers(repl.ReplaceKnown(w.FileName, ""), w.Num, w.Env, w.Watch))
 	}
 
 	_, loaded, err := phpInterpreter.LoadOrNew(mainPHPInterpreterKey, func() (caddy.Destructor, error) {
@@ -134,7 +136,6 @@ func (f *FrankenPHPApp) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 				}
 
 				f.NumThreads = v
-
 			case "worker":
 				wc := workerConfig{}
 				if d.NextArg() {
@@ -178,6 +179,13 @@ func (f *FrankenPHPApp) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 							wc.Env = make(map[string]string)
 						}
 						wc.Env[args[0]] = args[1]
+					case "watch":
+						if !d.NextArg() {
+							// the default if the watch directory is left empty:
+							wc.Watch = append(wc.Watch, "./**/*.{php,yaml,yml,twig,env}")
+						} else {
+							wc.Watch = append(wc.Watch, d.Val())
+						}
 					}
 
 					if wc.FileName == "" {
