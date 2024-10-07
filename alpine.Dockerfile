@@ -122,7 +122,7 @@ ENV CGO_CPPFLAGS=$PHP_CPPFLAGS
 ENV CGO_LDFLAGS="-lssl -lcrypto -lreadline -largon2 -lcurl -lonig -lz $PHP_LDFLAGS"
 
 WORKDIR /go/src/app/caddy/frankenphp
-RUN GOBIN=/usr/local/bin go install -ldflags "-w -s -extldflags '-Wl,-z,stack-size=0x80000' -X 'github.com/caddyserver/caddy/v2.CustomVersion=FrankenPHP $FRANKENPHP_VERSION PHP $PHP_VERSION Caddy'" && \
+RUN GOBIN=/usr/local/bin go install -tags 'brotli' -ldflags "-w -s -extldflags '-Wl,-z,stack-size=0x80000' -X 'github.com/caddyserver/caddy/v2.CustomVersion=FrankenPHP $FRANKENPHP_VERSION PHP $PHP_VERSION Caddy'" && \
 	setcap cap_net_bind_service=+ep /usr/local/bin/frankenphp && \
 	upx --best /usr/local/bin/frankenphp && \
 	frankenphp version

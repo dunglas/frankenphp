@@ -81,7 +81,6 @@ XCADDY_GO_BUILD_FLAGS="-ldflags '-w -s'" \
 xcaddy build \
     --output frankenphp \
     --with github.com/dunglas/frankenphp/caddy \
-    --with github.com/dunglas/caddy-cbrotli \
     --with github.com/dunglas/mercure/caddy \
     --with github.com/dunglas/vulcain/caddy
     # Add extra Caddy modules here
@@ -96,3 +95,7 @@ xcaddy build \
 > To do so, change the `XCADDY_GO_BUILD_FLAGS` environment variable to something like
 > `XCADDY_GO_BUILD_FLAGS=$'-ldflags "-w -s -extldflags \'-Wl,-z,stack-size=0x80000\'"'`
 > (change the value of the stack size according to your app needs).
+
+## Additionnal build tags
+
+* brotli: add the cbrotli Caddy module

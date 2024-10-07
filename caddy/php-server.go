@@ -219,15 +219,30 @@ func cmdPHPServer(fs caddycmd.Flags) (int, error) {
 			return caddy.ExitCodeFailedStartup, err
 		}
 
+		var (
+			encodings caddy.ModuleMap
+			prefer    []string
+		)
+		if brotli {
+			encodings = caddy.ModuleMap{
+				"zstd": caddyconfig.JSON(zstd.New(), nil),
+				"br":   caddyconfig.JSON(br.New(), nil),
+				"gzip": caddyconfig.JSON(gzip.New(), nil),
+			}
+			prefer = []string{"zstd", "br", "gzip"}
+		} else {
+			encodings = caddy.ModuleMap{
+				"zstd": caddyconfig.JSON(zstd.New(), nil),
+				"gzip": caddyconfig.JSON(gzip.New(), nil),
+			}
+			prefer = []string{"zstd", "gzip"}
+		}
+
 		encodeRoute := caddyhttp.Route{
 			MatcherSetsRaw: []caddy.ModuleMap{},
 			HandlersRaw: []json.RawMessage{caddyconfig.JSONModuleObject(encode.Encode{
-				EncodingsRaw: caddy.ModuleMap{
-					"zstd": caddyconfig.JSON(zstd.New(), nil),
-					"br":   caddyconfig.JSON(br.New(), nil),
-					"gzip": caddyconfig.JSON(gzip.New(), nil),
-				},
-				Prefer: []string{"zstd", "br", "gzip"},
+				EncodingsRaw: encodings,
+				Prefer:       prefer,
 			}, "handler", "encode", nil)},
 		}
 
