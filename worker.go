@@ -24,7 +24,7 @@ type worker struct {
 }
 
 const maxWorkerErrorBackoff = 1 * time.Second
-const minWorkerErrorBackoff = 10 * time.Millisecond
+const minWorkerErrorBackoff = 100 * time.Millisecond
 const maxWorkerConsecutiveFailures = 60
 
 var (
