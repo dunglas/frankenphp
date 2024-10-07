@@ -122,9 +122,6 @@ type FrankenPHPContext struct {
 	// Whether the request is already closed by us
 	closed sync.Once
 
-	// whether the context is ready to receive requests
-	ready bool
-
 	responseWriter http.ResponseWriter
 	exitStatus     C.int
 
@@ -434,11 +431,12 @@ func updateServerContext(request *http.Request, create bool, isWorkerRequest boo
 	}
 
 	cRequestUri := C.CString(request.URL.RequestURI())
+	isRunningAWorkerScript := fc.responseWriter == nil
 
 	ret := C.frankenphp_update_server_context(
 		C.bool(create),
-		C.bool(isWorkerRequest),
-		C.bool(fc.responseWriter == nil),
+		C.bool(isWorkerRequest || isRunningAWorkerScript),
+		C.bool(!isRunningAWorkerScript),
 
 		cMethod,
 		cQueryString,
@@ -651,10 +649,10 @@ func go_register_variables(threadIndex int, trackVarsArray *C.zval) {
 }
 
 //export go_apache_request_headers
-func go_apache_request_headers(threadIndex int, isStartingWorkers bool) (*C.go_string, C.size_t) {
+func go_apache_request_headers(threadIndex int, hasActiveRequest bool) (*C.go_string, C.size_t) {
 	thread := getPHPThread(threadIndex)
 
-	if isStartingWorkers {
+	if !hasActiveRequest {
 		// worker mode, not handling a request
 		mr := thread.getMainRequest()
 		mfc := mr.Context().Value(contextKey).(*FrankenPHPContext)

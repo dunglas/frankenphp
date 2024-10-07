@@ -70,9 +70,8 @@ frankenphp_config frankenphp_get_config() {
 }
 
 typedef struct frankenphp_server_context {
-  bool is_worker_request;
+  bool has_main_request;
   bool has_active_request;
-  bool is_starting_new_worker_script;
   bool worker_ready;
   char *cookie_data;
   bool finished;
@@ -250,7 +249,7 @@ PHP_FUNCTION(frankenphp_request_headers) {
 
   frankenphp_server_context *ctx = SG(server_context);
   struct go_apache_request_headers_return headers = go_apache_request_headers(
-      thread_index, ctx->is_starting_new_worker_script);
+      thread_index, ctx->has_active_request);
 
   array_init_size(return_value, headers.r1);
 
@@ -328,7 +327,7 @@ PHP_FUNCTION(frankenphp_handle_request) {
 
   frankenphp_server_context *ctx = SG(server_context);
 
-  if (!ctx->is_starting_new_worker_script && !ctx->is_worker_request) {
+  if (!ctx->has_main_request) {
     /* not a worker, throw an error */
     zend_throw_exception(
         spl_ce_RuntimeException,
@@ -423,7 +422,7 @@ static zend_module_entry frankenphp_module = {
 static void frankenphp_request_shutdown() {
   frankenphp_server_context *ctx = SG(server_context);
 
-  if (!ctx->is_starting_new_worker_script) {
+  if (ctx->has_main_request && ctx->has_active_request) {
     frankenphp_destroy_super_globals();
   }
 
@@ -434,7 +433,7 @@ static void frankenphp_request_shutdown() {
 }
 
 int frankenphp_update_server_context(
-    bool create, bool is_worker_request, bool is_starting_new_worker_script,
+    bool create, bool has_main_request, bool has_active_request,
 
     const char *request_method, char *query_string, zend_long content_length,
     char *path_translated, char *request_uri, const char *content_type,
@@ -456,9 +455,8 @@ int frankenphp_update_server_context(
   // It is not reset by zend engine, set it to 200.
   SG(sapi_headers).http_response_code = 200;
 
-  ctx->is_worker_request = is_worker_request;
-  ctx->has_active_request = !is_starting_new_worker_script;
-  ctx->is_starting_new_worker_script = is_starting_new_worker_script;
+  ctx->has_main_request = has_main_request;
+  ctx->has_active_request = has_active_request;
 
   SG(request_info).auth_password = auth_password;
   SG(request_info).auth_user = auth_user;

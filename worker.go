@@ -5,7 +5,6 @@ package frankenphp
 import "C"
 import (
 	"fmt"
-	"math"
 	"net/http"
 	"path/filepath"
 	"sync"
@@ -83,11 +82,37 @@ func newWorker(o workerOpt) (*worker, error) {
 }
 
 func (worker *worker) startNewWorkerThread() {
-	failureCount := 0
 	workerShutdownWG.Add(1)
 	defer workerShutdownWG.Done()
 
+	backoff := minWorkerErrorBackoff
+	failureCount := 0
+	backingOffLock := sync.RWMutex{}
+
 	for {
+
+		// if the worker can stay up longer than backoff*2, it is probably an application error
+		upFunc := sync.Once{}
+		go func() {
+			backingOffLock.RLock()
+			wait := backoff * 2
+			backingOffLock.RUnlock()
+			time.Sleep(wait)
+			upFunc.Do(func() {
+				backingOffLock.Lock()
+				defer backingOffLock.Unlock()
+				// if we come back to a stable state, reset the failure count
+				if backoff == minWorkerErrorBackoff {
+					failureCount = 0
+				}
+
+				// earn back the backoff over time
+				if failureCount > 0 {
+					backoff = max(backoff/2, 100*time.Millisecond)
+				}
+			})
+		}()
+
 		metrics.StartWorker(worker.fileName)
 
 		// Create main dummy request
@@ -120,35 +145,37 @@ func (worker *worker) startNewWorkerThread() {
 			break
 		}
 
-		fc.ready = false
-
 		// on exit status 0 we just run the worker script again
 		if fc.exitStatus == 0 {
 			// TODO: make the max restart configurable
 			if c := logger.Check(zapcore.InfoLevel, "restarting"); c != nil {
 				c.Write(zap.String("worker", worker.fileName))
 			}
-			failureCount = 0
 			metrics.StopWorker(worker.fileName, StopReasonRestart)
 			continue
 		}
 
 		// on exit status 1 we log the error and apply an exponential backoff when restarting
-		if c := logger.Check(zapcore.ErrorLevel, "unexpected termination, restarting"); c != nil {
-			c.Write(zap.String("worker", worker.fileName), zap.Int("exit_status", int(fc.exitStatus)))
-		}
-
-		// on too may consecutive failures the server crashes
-		if failureCount >= maxWorkerConsecutiveFailures {
-			panic(fmt.Errorf("workers %q: too many consecutive failures", worker.fileName))
-		}
-		sleepTime := time.Duration(math.Pow(2, float64(failureCount))) * minWorkerErrorBackoff
-		if sleepTime > maxWorkerErrorBackoff {
-			sleepTime = maxWorkerErrorBackoff
-		}
-		failureCount++
+		upFunc.Do(func() {
+			backingOffLock.Lock()
+			defer backingOffLock.Unlock()
+			// if we end up here, the worker has not been up for backoff*2
+			// this is probably due to a syntax error or another fatal error
+			if failureCount >= maxWorkerConsecutiveFailures {
+				panic(fmt.Errorf("workers %q: too many consecutive failures", worker.fileName))
+			} else {
+				failureCount += 1
+			}
+		})
+		backingOffLock.RLock()
+		wait := backoff
+		backingOffLock.RUnlock()
+		time.Sleep(wait)
+		backingOffLock.Lock()
+		backoff *= 2
+		backoff = min(backoff, maxWorkerErrorBackoff)
+		backingOffLock.Unlock()
 		metrics.StopWorker(worker.fileName, StopReasonCrash)
-		time.Sleep(sleepTime)
 	}
 
 	metrics.StopWorker(worker.fileName, StopReasonShutdown)
@@ -199,7 +226,6 @@ func restartWorkers(workerOpts []workerOpt) {
 func assignThreadToWorker(thread *phpThread) {
 	mainRequest := thread.getMainRequest()
 	fc := mainRequest.Context().Value(contextKey).(*FrankenPHPContext)
-	fc.ready = true
 	metrics.ReadyWorker(fc.scriptFilename)
 	worker, ok := workers[fc.scriptFilename]
 	if !ok {
