@@ -13,7 +13,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/dunglas/frankenphp/watcher"
+	"github.com/dunglas/frankenphp/internal/watcher"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )

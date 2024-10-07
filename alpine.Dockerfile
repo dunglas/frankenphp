@@ -106,7 +106,6 @@ COPY --link *.* ./
 COPY --link caddy caddy
 COPY --link internal internal
 COPY --link testdata testdata
-COPY --link watcher watcher
 
 # install edant/watcher (necessary for file watching)
 ARG EDANT_WATCHER_VERSION=next
