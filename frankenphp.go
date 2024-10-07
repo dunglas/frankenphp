@@ -435,12 +435,12 @@ func updateServerContext(request *http.Request, create bool, isWorkerRequest boo
 	}
 
 	cRequestUri := C.CString(request.URL.RequestURI())
-	isExecutingAWorkerScript := fc.responseWriter == nil
+	isBootingAWorkerScript := fc.responseWriter == nil
 
 	ret := C.frankenphp_update_server_context(
 		C.bool(create),
-		C.bool(isWorkerRequest || isExecutingAWorkerScript),
-		C.bool(!isExecutingAWorkerScript),
+		C.bool(isWorkerRequest || isBootingAWorkerScript),
+		C.bool(!isBootingAWorkerScript),
 
 		cMethod,
 		cQueryString,
