@@ -1,4 +1,4 @@
-//go:build watcher
+// go:build watcher
 #include "_cgo_export.h"
 #include "watcher-c.h"
 
