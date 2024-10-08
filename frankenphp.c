@@ -78,7 +78,7 @@ typedef struct frankenphp_server_context {
 } frankenphp_server_context;
 
 __thread frankenphp_server_context *local_ctx = NULL;
-__thread int thread_index;
+__thread uint32_t thread_index;
 
 static void frankenphp_free_request_context() {
   frankenphp_server_context *ctx = SG(server_context);
@@ -724,7 +724,7 @@ static void set_thread_name(char *thread_name) {
 static void *php_thread(void *arg) {
   char thread_name[16] = {0};
   snprintf(thread_name, 16, "php-%" PRIxPTR, (uintptr_t)arg);
-  thread_index = (int)(uintptr_t)arg;
+  thread_index = (uint32_t)(uintptr_t)arg;
   set_thread_name(thread_name);
 
 #ifdef ZTS

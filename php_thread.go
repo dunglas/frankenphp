@@ -1,5 +1,7 @@
 package frankenphp
 
+// #include <stdint.h>
+import "C"
 import (
 	"net/http"
 	"runtime"
@@ -22,8 +24,8 @@ func initializePHPThreads(numThreads int) {
 	}
 }
 
-func getPHPThread(threadIndex int) *phpThread {
-	return phpThreads[threadIndex]
+func getPHPThread(threadIndex C.uint32_t) *phpThread {
+	return phpThreads[int(threadIndex)]
 }
 
 func (thread *phpThread) setMainRequest(request *http.Request) {

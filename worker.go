@@ -243,7 +243,7 @@ func assignThreadToWorker(thread *phpThread) {
 }
 
 //export go_frankenphp_worker_handle_request_start
-func go_frankenphp_worker_handle_request_start(threadIndex int) C.bool {
+func go_frankenphp_worker_handle_request_start(threadIndex C.uint32_t) C.bool {
 	thread := getPHPThread(threadIndex)
 
 	// we assign a worker to the thread if it doesn't have one already
@@ -286,7 +286,7 @@ func go_frankenphp_worker_handle_request_start(threadIndex int) C.bool {
 }
 
 //export go_frankenphp_finish_request
-func go_frankenphp_finish_request(threadIndex int, isWorkerRequest bool) {
+func go_frankenphp_finish_request(threadIndex C.uint32_t, isWorkerRequest bool) {
 	thread := getPHPThread(threadIndex)
 	r := thread.getActiveRequest()
 	fc := r.Context().Value(contextKey).(*FrankenPHPContext)

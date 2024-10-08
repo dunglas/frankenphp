@@ -24,6 +24,7 @@ func TestMainRequestIsActiveRequest(t *testing.T) {
 	thread.setMainRequest(mainRequest)
 
 	assert.Equal(t, mainRequest, thread.getActiveRequest())
+	assert.Equal(t, mainRequest, thread.getMainRequest())
 }
 
 func TestWorkerRequestIsActiveRequest(t *testing.T) {
