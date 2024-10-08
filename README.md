@@ -34,18 +34,28 @@ Go to `https://localhost`, and enjoy!
 ### Standalone Binary
 
 If you prefer not to use Docker, we provide standalone FrankenPHP binaries for Linux and macOS
-containing [PHP 8.3](https://www.php.net/releases/8.3/en.php) and most popular PHP extensions: [Download FrankenPHP](https://github.com/dunglas/frankenphp/releases)
+containing [PHP 8.3](https://www.php.net/releases/8.3/en.php) and most popular PHP extensions.
+
+On Windows, use [WSL](https://learn.microsoft.com/windows/wsl/) to run FrankenPHP.
+
+[Download FrankenPHP](https://github.com/dunglas/frankenphp/releases) or copy this line into your
+terminal to automatically install the version appropriate for your platform:
+
+```console
+curl -sLK https://raw.githubusercontent.com/dunglas/frankenphp/main/install.sh | sh
+mv frankenphp /usr/local/bin/
+```
 
 To serve the content of the current directory, run:
 
 ```console
-./frankenphp php-server
+frankenphp php-server
 ```
 
 You can also run command-line scripts with:
 
 ```console
-./frankenphp php-cli /path/to/your/script.php
+frankenphp php-cli /path/to/your/script.php
 ```
 
 ## Docs
