@@ -246,11 +246,6 @@ func assignThreadToWorker(thread *phpThread) {
 func go_frankenphp_worker_handle_request_start(threadIndex int) C.bool {
 	thread := getPHPThread(threadIndex)
 
-	if workersAreDone.Load() {
-		// shutting down
-		return C.bool(false)
-	}
-
 	// we assign a worker to the thread if it doesn't have one already
 	if thread.worker == nil {
 		assignThreadToWorker(thread)
