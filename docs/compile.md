@@ -96,6 +96,23 @@ xcaddy build \
 > `XCADDY_GO_BUILD_FLAGS=$'-ldflags "-w -s -extldflags \'-Wl,-z,stack-size=0x80000\'"'`
 > (change the value of the stack size according to your app needs).
 
-## Additionnal build tags
+## Build Tags
 
-* brotli: add the cbrotli Caddy module
+Additional features can be enabled if the required C libraries are installed by
+passing additional build tags to the Go compiler:
+
+| Tag    | Dependencies                               | Description                                      |
+|--------|--------------------------------------------|--------------------------------------------------|
+| brotli | [Brotli](https://github.com/google/brotli) | Add a Caddy module supporting Brotli compression |
+
+When using `go build` directly, pass the additional `-tags` option followed by the comma-separated list of tags:
+
+```console
+go build -tags brotli
+```
+
+When using `xcaddy`, set the `-tags` option in the `XCADDY_GO_BUILD_FLAGS` environment variable:
+
+```console
+XCADDY_GO_BUILD_FLAGS="-tags brotli"
+```
