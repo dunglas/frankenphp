@@ -1,9 +1,12 @@
+//go:build watcher
+
 package watcher
 
 import (
-	"go.uber.org/zap"
 	"path/filepath"
 	"strings"
+
+	"go.uber.org/zap"
 )
 
 type watchPattern struct {

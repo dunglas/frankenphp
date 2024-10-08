@@ -78,7 +78,7 @@ WORKDIR /go/src/app
 COPY . .
 
 WORKDIR /go/src/app/caddy/frankenphp
-RUN go build -buildvcs=false -tags 'brotli'
+RUN go build -buildvcs=false -tags 'brotli watcher'
 
 WORKDIR /go/src/app
 CMD [ "zsh" ]

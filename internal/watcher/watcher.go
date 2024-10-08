@@ -1,3 +1,5 @@
+//go:build watcher
+
 package watcher
 
 // #cgo LDFLAGS: -lwatcher -lstdc++
@@ -8,11 +10,12 @@ package watcher
 import "C"
 import (
 	"errors"
-	"go.uber.org/zap"
 	"runtime/cgo"
 	"sync"
 	"time"
 	"unsafe"
+
+	"go.uber.org/zap"
 )
 
 type watcher struct {

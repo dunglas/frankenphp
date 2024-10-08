@@ -225,11 +225,14 @@ func restartWorkersOnFileChanges(workerOpts []workerOpt) error {
 	for _, w := range workerOpts {
 		directoriesToWatch = append(directoriesToWatch, w.watch...)
 	}
+	if len(directoriesToWatch) == 0 {
+		return nil
+	}
+
 	restartWorkers := func() {
 		restartWorkers(workerOpts)
 	}
 	if err := watcher.InitWatcher(directoriesToWatch, restartWorkers, getLogger()); err != nil {
-
 		return err
 	}
 
