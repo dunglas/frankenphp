@@ -1,9 +1,12 @@
+//go:build watcher
+
 package watcher
 
 import (
-	"github.com/stretchr/testify/assert"
 	"path/filepath"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestDisallowOnEventTypeBiggerThan3(t *testing.T) {

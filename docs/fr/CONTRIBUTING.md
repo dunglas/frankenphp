@@ -29,7 +29,7 @@ Si la version de Docker est inférieure à 23.0, la construction échoue à caus
 ## Exécution de la suite de tests
 
 ```console
-go test -race -v ./...
+go test -tags watcher -race -v ./...
 ```
 
 ## Module Caddy
@@ -145,7 +145,7 @@ docker buildx bake -f docker-bake.hcl --pull --no-cache --push
 8. Dans le conteneur, vous pouvez utiliser GDB et similaires :
 
     ```console
-    go test -c -ldflags=-w
+    go test -tags watcher -c -ldflags=-w
     gdb --args ./frankenphp.test -test.run ^MyTest$
     ```
 

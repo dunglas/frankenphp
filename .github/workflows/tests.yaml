@@ -71,11 +71,11 @@ jobs:
         run: go build
       -
         name: Run library tests
-        run: go test -race -v ./...
+        run: go test -tags watcher -race -v ./...
       -
         name: Run Caddy module tests
         working-directory: caddy/
-        run: go test -race -v ./...
+        run: go test -tags watcher -race -v ./...
       -
         name: Build the server
         working-directory: caddy/frankenphp/
