@@ -1,15 +1,17 @@
+//go:build watcher
+
 package frankenphp_test
 
 import (
-	"github.com/stretchr/testify/assert"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 )
 
 // we have to wait a few milliseconds for the watcher debounce to take effect
@@ -22,10 +24,6 @@ const minTimesToPollForChanges = 3
 const maxTimesToPollForChanges = 60
 
 func TestWorkersShouldReloadOnMatchingPattern(t *testing.T) {
-	if isRunningInMsanMode() {
-		t.Skip("Skipping watcher tests in memory sanitizer mode")
-		return
-	}
 	watch := []string{"./testdata/**/*.txt"}
 
 	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
@@ -35,11 +33,6 @@ func TestWorkersShouldReloadOnMatchingPattern(t *testing.T) {
 }
 
 func TestWorkersShouldNotReloadOnExcludingPattern(t *testing.T) {
-	if isRunningInMsanMode() {
-		t.Skip("Skipping watcher tests in memory sanitizer mode")
-
-		return
-	}
 	watch := []string{"./testdata/**/*.php"}
 
 	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
@@ -56,11 +49,6 @@ func fetchBody(method string, url string, handler func(http.ResponseWriter, *htt
 	body, _ := io.ReadAll(resp.Body)
 
 	return string(body)
-}
-
-func isRunningInMsanMode() bool {
-	cflags := os.Getenv("CFLAGS")
-	return strings.Contains(cflags, "-fsanitize=memory")
 }
 
 func pollForWorkerReset(t *testing.T, handler func(http.ResponseWriter, *http.Request), limit int) bool {

@@ -29,7 +29,7 @@ If docker version is lower than 23.0, build is failed by dockerignore [pattern i
 ## Running the test suite
 
 ```console
-go test -race -v ./...
+go test -tags watcher -race -v ./...
 ```
 
 ## Caddy module
@@ -171,7 +171,7 @@ docker buildx bake -f docker-bake.hcl --pull --no-cache --push
 8. In the container, you can use GDB and the like:
 
     ```console
-    go test -c -ldflags=-w
+    go test -tags watcher -c -ldflags=-w
     gdb --args ./frankenphp.test -test.run ^MyTest$
     ```
 

@@ -29,7 +29,7 @@ docker run --cap-add=SYS_PTRACE --security-opt seccomp=unconfined -p 8080:8080 -
 ## 运行测试套件
 
 ```console
-go test -race -v ./...
+go test -tags watcher -race -v ./...
 ```
 
 ## Caddy 模块
@@ -171,7 +171,7 @@ docker buildx bake -f docker-bake.hcl --pull --no-cache --push
 8. 在容器中，可以使用 GDB 和以下：
 
     ```console
-    go test -c -ldflags=-w
+    go test -tags watcher -c -ldflags=-w
     gdb --args ./frankenphp.test -test.run ^MyTest$
     ```
 

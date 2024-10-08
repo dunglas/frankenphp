@@ -29,7 +29,7 @@ Docker sürümü 23.0'dan düşükse, derleme dockerignore [pattern issue](https
 ## Test senaryolarını çalıştırma
 
 ```console
-go test -race -v ./...
+go test -tags watcher -race -v ./...
 ```
 
 ## Caddy modülü
@@ -171,7 +171,7 @@ docker buildx bake -f docker-bake.hcl --pull --no-cache --push
 8. Konteynerde GDB ve benzerlerini kullanabilirsiniz:
 
     ```console
-    go test -c -ldflags=-w
+    go test -tags watcher -c -ldflags=-w
     gdb --args ./frankenphp.test -test.run ^MyTest$
     ```
 
