@@ -228,8 +228,7 @@ func restartWorkers(workerOpts []workerOpt) {
 }
 
 func assignThreadToWorker(thread *phpThread) {
-	mainRequest := thread.getMainRequest()
-	fc := mainRequest.Context().Value(contextKey).(*FrankenPHPContext)
+	fc := thread.mainRequest.Context().Value(contextKey).(*FrankenPHPContext)
 	metrics.ReadyWorker(fc.scriptFilename)
 	worker, ok := workers[fc.scriptFilename]
 	if !ok {
@@ -244,7 +243,7 @@ func assignThreadToWorker(thread *phpThread) {
 
 //export go_frankenphp_worker_handle_request_start
 func go_frankenphp_worker_handle_request_start(threadIndex C.uintptr_t) C.bool {
-	thread := getPHPThread(threadIndex)
+	thread := phpThreads[threadIndex]
 
 	// we assign a worker to the thread if it doesn't have one already
 	if thread.worker == nil {
@@ -268,7 +267,7 @@ func go_frankenphp_worker_handle_request_start(threadIndex C.uintptr_t) C.bool {
 	case r = <-thread.worker.requestChan:
 	}
 
-	thread.setWorkerRequest(r)
+	thread.workerRequest = r
 
 	if c := logger.Check(zapcore.DebugLevel, "request handling started"); c != nil {
 		c.Write(zap.String("worker", thread.worker.fileName), zap.String("url", r.RequestURI))
@@ -287,12 +286,12 @@ func go_frankenphp_worker_handle_request_start(threadIndex C.uintptr_t) C.bool {
 
 //export go_frankenphp_finish_request
 func go_frankenphp_finish_request(threadIndex C.uintptr_t, isWorkerRequest bool) {
-	thread := getPHPThread(threadIndex)
+	thread := phpThreads[threadIndex]
 	r := thread.getActiveRequest()
 	fc := r.Context().Value(contextKey).(*FrankenPHPContext)
 
 	if isWorkerRequest {
-		thread.setWorkerRequest(nil)
+		thread.workerRequest = nil
 	}
 
 	maybeCloseContext(fc)

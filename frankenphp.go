@@ -330,7 +330,7 @@ func Init(options ...Option) error {
 	shutdownWG.Add(1)
 	done = make(chan struct{})
 	requestChan = make(chan *http.Request)
-	initializePHPThreads(opt.numThreads)
+	initPHPThreads(opt.numThreads)
 
 	if C.frankenphp_init(C.int(opt.numThreads)) != 0 {
 		return MainThreadCreationError
@@ -379,7 +379,7 @@ func go_shutdown() {
 func drainThreads() {
 	close(done)
 	shutdownWG.Wait()
-	initializePHPThreads(0)
+	phpThreads = nil
 }
 
 func getLogger() *zap.Logger {
@@ -508,8 +508,8 @@ func go_handle_request(threadIndex C.uintptr_t) bool {
 		return false
 
 	case r := <-requestChan:
-		thread := getPHPThread(threadIndex)
-		thread.setMainRequest(r)
+		thread := phpThreads[threadIndex]
+		thread.mainRequest = r
 
 		fc, ok := FromContext(r.Context())
 		if !ok {
@@ -517,7 +517,7 @@ func go_handle_request(threadIndex C.uintptr_t) bool {
 		}
 		defer func() {
 			maybeCloseContext(fc)
-			thread.setMainRequest(nil)
+			thread.mainRequest = nil
 		}()
 
 		if err := updateServerContext(r, true, false); err != nil {
@@ -542,7 +542,7 @@ func maybeCloseContext(fc *FrankenPHPContext) {
 
 //export go_ub_write
 func go_ub_write(threadIndex C.uintptr_t, cBuf *C.char, length C.int) (C.size_t, C.bool) {
-	r := getPHPThread(threadIndex).getActiveRequest()
+	r := phpThreads[threadIndex].getActiveRequest()
 	fc, _ := FromContext(r.Context())
 
 	var writer io.Writer
@@ -581,11 +581,9 @@ var headerKeyCache = func() otter.Cache[string, string] {
 
 //export go_register_variables
 func go_register_variables(threadIndex C.uintptr_t, trackVarsArray *C.zval) {
-	thread := getPHPThread(threadIndex)
+	thread := phpThreads[threadIndex]
 	r := thread.getActiveRequest()
 	fc := r.Context().Value(contextKey).(*FrankenPHPContext)
-
-	p := thread.pinner
 
 	dynamicVariables := make([]C.php_variable, len(fc.env)+len(r.Header))
 
@@ -608,8 +606,8 @@ func go_register_variables(threadIndex C.uintptr_t, trackVarsArray *C.zval) {
 		kData := unsafe.StringData(k)
 		vData := unsafe.StringData(v)
 
-		p.Pin(kData)
-		p.Pin(vData)
+		thread.Pin(kData)
+		thread.Pin(vData)
 
 		dynamicVariables[l]._var = (*C.char)(unsafe.Pointer(kData))
 		dynamicVariables[l].data_len = C.size_t(len(v))
@@ -626,8 +624,8 @@ func go_register_variables(threadIndex C.uintptr_t, trackVarsArray *C.zval) {
 		kData := unsafe.StringData(k)
 		vData := unsafe.Pointer(unsafe.StringData(v))
 
-		p.Pin(kData)
-		p.Pin(vData)
+		thread.Pin(kData)
+		thread.Pin(vData)
 
 		dynamicVariables[l]._var = (*C.char)(unsafe.Pointer(kData))
 		dynamicVariables[l].data_len = C.size_t(len(v))
@@ -636,26 +634,25 @@ func go_register_variables(threadIndex C.uintptr_t, trackVarsArray *C.zval) {
 		l++
 	}
 
-	knownVariables := computeKnownVariables(r, p)
+	knownVariables := computeKnownVariables(r, &thread.Pinner)
 
 	dvsd := unsafe.SliceData(dynamicVariables)
-	p.Pin(dvsd)
+	thread.Pin(dvsd)
 
 	C.frankenphp_register_bulk_variables(&knownVariables[0], dvsd, C.size_t(l), trackVarsArray)
 
-	p.Unpin()
+	thread.Unpin()
 
 	fc.env = nil
 }
 
 //export go_apache_request_headers
 func go_apache_request_headers(threadIndex C.uintptr_t, hasActiveRequest bool) (*C.go_string, C.size_t) {
-	thread := getPHPThread(threadIndex)
+	thread := phpThreads[threadIndex]
 
 	if !hasActiveRequest {
 		// worker mode, not handling a request
-		mr := thread.getMainRequest()
-		mfc := mr.Context().Value(contextKey).(*FrankenPHPContext)
+		mfc := thread.mainRequest.Context().Value(contextKey).(*FrankenPHPContext)
 
 		if c := mfc.logger.Check(zapcore.DebugLevel, "apache_request_headers() called in non-HTTP context"); c != nil {
 			c.Write(zap.String("worker", mfc.scriptFilename))
@@ -665,17 +662,15 @@ func go_apache_request_headers(threadIndex C.uintptr_t, hasActiveRequest bool) (
 	}
 	r := thread.getActiveRequest()
 
-	pinner := thread.pinner
-
 	headers := make([]C.go_string, 0, len(r.Header)*2)
 
 	for field, val := range r.Header {
 		fd := unsafe.StringData(field)
-		pinner.Pin(fd)
+		thread.Pin(fd)
 
 		cv := strings.Join(val, ", ")
 		vd := unsafe.StringData(cv)
-		pinner.Pin(vd)
+		thread.Pin(vd)
 
 		headers = append(
 			headers,
@@ -685,14 +680,14 @@ func go_apache_request_headers(threadIndex C.uintptr_t, hasActiveRequest bool) (
 	}
 
 	sd := unsafe.SliceData(headers)
-	pinner.Pin(sd)
+	thread.Pin(sd)
 
 	return sd, C.size_t(len(r.Header))
 }
 
 //export go_apache_request_cleanup
 func go_apache_request_cleanup(threadIndex C.uintptr_t) {
-	getPHPThread(threadIndex).pinner.Unpin()
+	phpThreads[threadIndex].Unpin()
 }
 
 func addHeader(fc *FrankenPHPContext, cString *C.char, length C.int) {
@@ -710,7 +705,7 @@ func addHeader(fc *FrankenPHPContext, cString *C.char, length C.int) {
 
 //export go_write_headers
 func go_write_headers(threadIndex C.uintptr_t, status C.int, headers *C.zend_llist) {
-	r := getPHPThread(threadIndex).getActiveRequest()
+	r := phpThreads[threadIndex].getActiveRequest()
 	fc := r.Context().Value(contextKey).(*FrankenPHPContext)
 
 	if fc.responseWriter == nil {
@@ -738,7 +733,7 @@ func go_write_headers(threadIndex C.uintptr_t, status C.int, headers *C.zend_lli
 
 //export go_sapi_flush
 func go_sapi_flush(threadIndex C.uintptr_t) bool {
-	r := getPHPThread(threadIndex).getActiveRequest()
+	r := phpThreads[threadIndex].getActiveRequest()
 	fc := r.Context().Value(contextKey).(*FrankenPHPContext)
 
 	if fc.responseWriter == nil || clientHasClosed(r) {
@@ -756,7 +751,7 @@ func go_sapi_flush(threadIndex C.uintptr_t) bool {
 
 //export go_read_post
 func go_read_post(threadIndex C.uintptr_t, cBuf *C.char, countBytes C.size_t) (readBytes C.size_t) {
-	r := getPHPThread(threadIndex).getActiveRequest()
+	r := phpThreads[threadIndex].getActiveRequest()
 
 	p := unsafe.Slice((*byte)(unsafe.Pointer(cBuf)), countBytes)
 	var err error
@@ -771,7 +766,7 @@ func go_read_post(threadIndex C.uintptr_t, cBuf *C.char, countBytes C.size_t) (r
 
 //export go_read_cookies
 func go_read_cookies(threadIndex C.uintptr_t) *C.char {
-	r := getPHPThread(threadIndex).getActiveRequest()
+	r := phpThreads[threadIndex].getActiveRequest()
 
 	cookies := r.Cookies()
 	if len(cookies) == 0 {

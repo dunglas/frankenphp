@@ -1,41 +1,40 @@
 package frankenphp
 
 import (
-	"github.com/stretchr/testify/assert"
 	"net/http"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestInitializeTwoPhpThreadsWithoutRequests(t *testing.T) {
-	initializePHPThreads(2)
+	initPHPThreads(2)
 
 	assert.Len(t, phpThreads, 2)
-	assert.Equal(t, 0, getPHPThread(0).threadIndex)
-	assert.Equal(t, 1, getPHPThread(1).threadIndex)
-	assert.Nil(t, getPHPThread(0).mainRequest)
-	assert.Nil(t, getPHPThread(0).workerRequest)
+	assert.NotNil(t, phpThreads[0])
+	assert.NotNil(t, phpThreads[1])
+	assert.Nil(t, phpThreads[0].mainRequest)
+	assert.Nil(t, phpThreads[0].workerRequest)
 }
 
 func TestMainRequestIsActiveRequest(t *testing.T) {
 	mainRequest := &http.Request{}
-	initializePHPThreads(1)
-	thread := getPHPThread(0)
+	initPHPThreads(1)
+	thread := phpThreads[0]
 
-	thread.setMainRequest(mainRequest)
+	thread.mainRequest = mainRequest
 
 	assert.Equal(t, mainRequest, thread.getActiveRequest())
-	assert.Equal(t, mainRequest, thread.getMainRequest())
 }
 
 func TestWorkerRequestIsActiveRequest(t *testing.T) {
 	mainRequest := &http.Request{}
 	workerRequest := &http.Request{}
-	initializePHPThreads(1)
-	thread := getPHPThread(0)
+	initPHPThreads(1)
+	thread := phpThreads[0]
 
-	thread.setMainRequest(mainRequest)
-	thread.setWorkerRequest(workerRequest)
+	thread.mainRequest = mainRequest
+	thread.workerRequest = workerRequest
 
 	assert.Equal(t, workerRequest, thread.getActiveRequest())
-	assert.Equal(t, mainRequest, thread.getMainRequest())
 }
