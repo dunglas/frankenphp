@@ -20,11 +20,11 @@ type phpThread struct {
 func initializePHPThreads(numThreads int) {
 	phpThreads = make([]*phpThread, numThreads)
 	for i := 0; i < numThreads; i++ {
-		phpThreads[i] = &phpThread{threadIndex: i, pinner: &runtime.Pinner{}}
+		phpThreads[C.uintptr_t(i)] = &phpThread{threadIndex: i, pinner: &runtime.Pinner{}}
 	}
 }
 
-func getPHPThread(threadIndex C.uint32_t) *phpThread {
+func getPHPThread(threadIndex C.uintptr_t) *phpThread {
 	return phpThreads[int(threadIndex)]
 }
 
