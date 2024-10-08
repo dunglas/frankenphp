@@ -23,10 +23,7 @@ func initializePHPThreads(numThreads int) {
 }
 
 func getPHPThread(threadIndex int) *phpThread {
-	if threadIndex >= 0 && threadIndex < len(phpThreads) {
-		return phpThreads[threadIndex]
-	}
-	panic("no such thread")
+	return phpThreads[threadIndex]
 }
 
 func (thread *phpThread) setMainRequest(request *http.Request) {
@@ -38,18 +35,12 @@ func (thread *phpThread) setWorkerRequest(request *http.Request) {
 }
 
 func (thread *phpThread) getMainRequest() *http.Request {
-	if thread.mainRequest != nil {
-		return thread.mainRequest
-	}
-	panic("no worker request")
+	return thread.mainRequest
 }
 
 func (thread *phpThread) getActiveRequest() *http.Request {
 	if thread.workerRequest != nil {
 		return thread.workerRequest
 	}
-	if thread.mainRequest != nil {
-		return thread.mainRequest
-	}
-	panic("no active request")
+	return thread.mainRequest
 }
