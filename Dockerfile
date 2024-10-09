@@ -87,7 +87,7 @@ COPY --link internal internal
 COPY --link testdata testdata
 
 # install edant/watcher (necessary for file watching)
-ARG EDANT_WATCHER_VERSION=next
+ARG EDANT_WATCHER_VERSION=release
 WORKDIR /usr/local/src/watcher
 RUN curl -L https://github.com/e-dant/watcher/archive/refs/heads/$EDANT_WATCHER_VERSION.tar.gz | tar xz
 WORKDIR /usr/local/src/watcher/watcher-$EDANT_WATCHER_VERSION/watcher-c

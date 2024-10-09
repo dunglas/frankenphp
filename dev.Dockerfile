@@ -66,7 +66,7 @@ RUN git clone --branch=PHP-8.3 https://github.com/php/php-src.git . && \
 	php --version
 
 # install edant/watcher (necessary for file watching)
-ARG EDANT_WATCHER_VERSION=next
+ARG EDANT_WATCHER_VERSION=release
 WORKDIR /usr/local/src/watcher
 RUN git clone --branch=$EDANT_WATCHER_VERSION https://github.com/e-dant/watcher .
 WORKDIR /usr/local/src/watcher/watcher-c
