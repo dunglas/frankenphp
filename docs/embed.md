@@ -24,7 +24,7 @@ For instance, for a Symfony app, you can use the following commands:
 ```console
 # Export the project to get rid of .git/, etc
 mkdir $TMPDIR/my-prepared-app
-git archive HEAD | tar -x -C $TMPDIR/my-prepared-app
+git archive $(git rev-parse HEAD^{tree}) | tar -x -C $TMPDIR/my-prepared-app
 cd $TMPDIR/my-prepared-app
 
 # Set proper environment variables
