@@ -79,7 +79,7 @@ typedef struct frankenphp_server_context {
 
 __thread frankenphp_server_context *local_ctx = NULL;
 __thread uintptr_t thread_index;
-__thread zval *cached_server = NULL;
+__thread zval *cached_environment;
 
 static void frankenphp_free_request_context() {
   frankenphp_server_context *ctx = SG(server_context);
@@ -435,17 +435,6 @@ static void frankenphp_request_shutdown() {
   memset(local_ctx, 0, sizeof(frankenphp_server_context));
 }
 
-// free the cached server array
-void free_cached_env(){
-  if(cached_server != NULL) {
-    //zval_ptr_dtor_nogc(cached_server);
-    //zend_array_release(Z_ARRVAL_P(cached_server));
-    //free(cached_server);
-
-    //cached_server = NULL;
-  }
-}
-
 int frankenphp_update_server_context(
     bool create, bool has_main_request, bool has_active_request,
 
@@ -678,25 +667,25 @@ static void frankenphp_register_variables(zval *track_vars_array) {
    * variables
    */
 
-  //frankenphp_server_context *ctx = SG(server_context);
+  frankenphp_server_context *ctx = SG(server_context);
 
-  /* In worker mode we assign the $_SERVER variable to the previously available one */
-
-  if(cached_server == NULL) {
-    //zval empty_array;
-    //ZVAL_ARR(&empty_array, zend_new_array(0));
-    //cached_server = &empty_array;
-	cached_server = malloc(sizeof(zval));
-	array_init(cached_server);
-	// convert the arrayto a zval:
-	//ZVAL_ARR(cached_server, Z_ARRVAL_P(cached_server));
-	php_import_environment_variables(cached_server);
+  bool is_worker_request = ctx->has_main_request && ctx->has_active_request;
+  if (!is_worker_request) {
+    php_import_environment_variables(track_vars_array);
+    go_register_variables(thread_index, track_vars_array);
+    return;
   }
 
-  if (cached_server != NULL) {
-    zend_hash_copy(Z_ARRVAL_P(track_vars_array), Z_ARRVAL_P(cached_server),
-                   (copy_ctor_func_t)zval_add_ref);
+  /* In worker mode we cache the environment on a thread local variable for
+   * better performance */
+  if (cached_environment == NULL) {
+    cached_environment = malloc(sizeof(zval));
+    array_init(cached_environment);
+    php_import_environment_variables(cached_environment);
   }
+
+  zend_hash_copy(Z_ARRVAL_P(track_vars_array), Z_ARRVAL_P(cached_environment),
+                 (copy_ctor_func_t)zval_add_ref);
 
   go_register_variables(thread_index, track_vars_array);
 }
@@ -771,6 +760,11 @@ static void *php_thread(void *arg) {
   local_ctx = malloc(sizeof(frankenphp_server_context));
 
   while (go_handle_request(thread_index)) {
+    if (cached_environment != NULL) {
+      // zval_ptr_dtor_nogc(cached_environment); this will cause a double free
+      free(cached_environment);
+      cached_environment = NULL;
+    }
   }
 
 #ifdef ZTS
@@ -923,8 +917,6 @@ int frankenphp_execute_script(char *file_name) {
 
   frankenphp_free_request_context();
   frankenphp_request_shutdown();
-
-  free_cached_env();
 
   return status;
 }

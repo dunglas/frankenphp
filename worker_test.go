@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
 	"testing"
@@ -135,4 +136,19 @@ func ExampleServeHTTP_workers() {
 		}
 	})
 	log.Fatal(http.ListenAndServe(":8080", nil))
+}
+
+func TestWorkerHasOSEnvironmentVariableInSERVER(t *testing.T) {
+	os.Setenv("CUSTOM_OS_ENV_VARIABLE", "custom_env_variable_value")
+	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
+		req := httptest.NewRequest("GET", "http://example.com/worker.php", nil)
+		w := httptest.NewRecorder()
+		handler(w, req)
+
+		resp := w.Result()
+		body, _ := io.ReadAll(resp.Body)
+
+		assert.Contains(t, string(body), "CUSTOM_OS_ENV_VARIABLE")
+		assert.Contains(t, string(body), "custom_env_variable_value")
+	}, &testOptions{workerScript: "worker.php", nbWorkers: 1, nbParrallelRequests: 1})
 }
