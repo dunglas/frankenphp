@@ -667,15 +667,14 @@ static void frankenphp_register_variables(zval *track_vars_array) {
 
   frankenphp_server_context *ctx = SG(server_context);
 
-  bool is_worker_request = ctx->has_main_request && ctx->has_active_request;
-  if (!is_worker_request) {
+  /* in non-worker mode we import the os environment regularly */
+  if (!ctx->has_main_request) {
     php_import_environment_variables(track_vars_array);
     go_register_variables(thread_index, track_vars_array);
     return;
   }
 
-  /* In worker mode we cache the os environment on a thread local variable for
-   * better performance */
+  /* In worker mode we cache the os environment */
   if (os_environment == NULL) {
     os_environment = malloc(sizeof(zval));
     array_init(os_environment);
@@ -905,7 +904,7 @@ int frankenphp_execute_script(char *file_name) {
   zend_catch { status = EG(exit_status); }
   zend_end_try();
 
-  // free the cached worker os environment before shutting down the script
+  // free the cached os environment before shutting down the script
   if (os_environment != NULL) {
     zval_ptr_dtor(os_environment);
     free(os_environment);
