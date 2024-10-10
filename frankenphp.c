@@ -423,9 +423,7 @@ static zend_module_entry frankenphp_module = {
 static void frankenphp_request_shutdown() {
   frankenphp_server_context *ctx = SG(server_context);
 
-  bool is_worker_request = ctx->has_main_request && ctx->has_active_request;
-
-  if (is_worker_request) {
+  if (ctx->has_main_request && ctx->has_active_request) {
     frankenphp_destroy_super_globals();
   }
 
