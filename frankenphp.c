@@ -79,6 +79,7 @@ typedef struct frankenphp_server_context {
 
 __thread frankenphp_server_context *local_ctx = NULL;
 __thread uintptr_t thread_index;
+__thread zval *cached_server = NULL;
 
 static void frankenphp_free_request_context() {
   frankenphp_server_context *ctx = SG(server_context);
@@ -422,7 +423,9 @@ static zend_module_entry frankenphp_module = {
 static void frankenphp_request_shutdown() {
   frankenphp_server_context *ctx = SG(server_context);
 
-  if (ctx->has_main_request && ctx->has_active_request) {
+  bool is_worker_request = ctx->has_main_request && ctx->has_active_request;
+
+  if (is_worker_request) {
     frankenphp_destroy_super_globals();
   }
 
@@ -430,6 +433,17 @@ static void frankenphp_request_shutdown() {
   frankenphp_free_request_context();
 
   memset(local_ctx, 0, sizeof(frankenphp_server_context));
+}
+
+// free the cached server array
+void free_cached_env(){
+  if(cached_server != NULL) {
+    //zval_ptr_dtor_nogc(cached_server);
+    //zend_array_release(Z_ARRVAL_P(cached_server));
+    //free(cached_server);
+
+    //cached_server = NULL;
+  }
 }
 
 int frankenphp_update_server_context(
@@ -663,7 +677,26 @@ static void frankenphp_register_variables(zval *track_vars_array) {
   /* In CGI mode, we consider the environment to be a part of the server
    * variables
    */
-  php_import_environment_variables(track_vars_array);
+
+  //frankenphp_server_context *ctx = SG(server_context);
+
+  /* In worker mode we assign the $_SERVER variable to the previously available one */
+
+  if(cached_server == NULL) {
+    //zval empty_array;
+    //ZVAL_ARR(&empty_array, zend_new_array(0));
+    //cached_server = &empty_array;
+	cached_server = malloc(sizeof(zval));
+	array_init(cached_server);
+	// convert the arrayto a zval:
+	//ZVAL_ARR(cached_server, Z_ARRVAL_P(cached_server));
+	php_import_environment_variables(cached_server);
+  }
+
+  if (cached_server != NULL) {
+    zend_hash_copy(Z_ARRVAL_P(track_vars_array), Z_ARRVAL_P(cached_server),
+                   (copy_ctor_func_t)zval_add_ref);
+  }
 
   go_register_variables(thread_index, track_vars_array);
 }
@@ -890,6 +923,8 @@ int frankenphp_execute_script(char *file_name) {
 
   frankenphp_free_request_context();
   frankenphp_request_shutdown();
+
+  free_cached_env();
 
   return status;
 }
