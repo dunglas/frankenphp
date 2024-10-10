@@ -674,15 +674,14 @@ static void frankenphp_register_variables(zval *track_vars_array) {
     return;
   }
 
-  /* In worker mode we cache the environment on a thread local variable for
+  /* In worker mode we cache the os environment on a thread local variable for
    * better performance */
   if (cached_environment == NULL) {
     cached_environment = malloc(sizeof(zval));
     array_init(cached_environment);
     php_import_environment_variables(cached_environment);
   }
-
-  zend_hash_copy(Z_ARRVAL_P(track_vars_array), Z_ARRVAL_P(cached_environment),
+  zend_hash_copy(Z_ARR_P(track_vars_array), Z_ARR_P(cached_environment),
                  (copy_ctor_func_t)zval_add_ref);
 
   go_register_variables(thread_index, track_vars_array);
@@ -758,11 +757,6 @@ static void *php_thread(void *arg) {
   local_ctx = malloc(sizeof(frankenphp_server_context));
 
   while (go_handle_request(thread_index)) {
-    if (cached_environment != NULL) {
-      // zval_ptr_dtor_nogc(cached_environment); this will cause a double free
-      free(cached_environment);
-      cached_environment = NULL;
-    }
   }
 
 #ifdef ZTS
@@ -910,6 +904,13 @@ int frankenphp_execute_script(char *file_name) {
   }
   zend_catch { status = EG(exit_status); }
   zend_end_try();
+
+  // free the cached worker os environment before shutting down the script
+  if (cached_environment != NULL) {
+    zval_ptr_dtor(cached_environment);
+    free(cached_environment);
+    cached_environment = NULL;
+  }
 
   zend_destroy_file_handle(&file_handle);
 
