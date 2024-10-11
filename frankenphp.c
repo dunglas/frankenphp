@@ -507,7 +507,7 @@ PHP_MINIT_FUNCTION(frankenphp)
         php_error(E_WARNING, "Failed to find built-in putenv function");
     }
 
-    // Override putenv
+    // Override getenv
     func = zend_hash_str_find_ptr(CG(function_table), "getenv", sizeof("getenv") - 1);
     if (func != NULL && func->type == ZEND_INTERNAL_FUNCTION) {
         ((zend_internal_function *)func)->handler = ZEND_FN(frankenphp_getenv);
