@@ -502,7 +502,7 @@ func ServeHTTP(responseWriter http.ResponseWriter, request *http.Request) error 
 }
 
 //export go_putenv
-func go_putenv(str *C.char, length C.int) C.int {
+func go_putenv(str *C.char, length C.int) C.bool {
 	// Create a byte slice from C string with a specified length
 	s := C.GoBytes(unsafe.Pointer(str), length)
 
@@ -517,21 +517,21 @@ func go_putenv(str *C.char, length C.int) C.int {
 
 		err := os.Setenv(key, val)
 		if err != nil {
-			return C.int(0) // Failure
+			return false // Failure
 		}
 	} else {
 		// No '=', unset the environment variable
 		err := os.Unsetenv(envString)
 		if err != nil {
-			return C.int(0) // Failure
+			return false // Failure
 		}
 	}
 
-	return C.int(1) // Success
+	return true // Success
 }
 
 //export go_getenv
-func go_getenv(name *C.char, length C.int, value **C.char, value_len *C.int) C.int {
+func go_getenv(name *C.char, length C.int, value **C.char, value_len *C.int) C.bool {
 	if name == nil {
 		// Get all environment variables
 		env := os.Environ()
@@ -541,7 +541,7 @@ func go_getenv(name *C.char, length C.int, value **C.char, value_len *C.int) C.i
 		*value = C.CString(concatenatedEnv)
 		// Set the length of the concatenated string
 		*value_len = C.int(len(concatenatedEnv))
-		return C.int(1) // Success
+		return true // Success
 	}
 
 	// Create a byte slice from C string with a specified length
@@ -556,7 +556,7 @@ func go_getenv(name *C.char, length C.int, value **C.char, value_len *C.int) C.i
 		// Environment variable does not exist
 		*value = nil
 		*value_len = 0
-		return C.int(0) // Return 0 to indicate failure
+		return false // Return 0 to indicate failure
 	}
 
 	// Convert Go string to C string
@@ -564,7 +564,7 @@ func go_getenv(name *C.char, length C.int, value **C.char, value_len *C.int) C.i
 	*value = cValue
 	*value_len = C.int(len(envValue))
 
-	return C.int(1) // Return 1 to indicate success
+	return true // Return 1 to indicate success
 }
 
 //export go_handle_request
