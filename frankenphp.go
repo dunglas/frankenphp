@@ -520,8 +520,7 @@ func go_putenv(str *C.char, length C.int) C.bool {
 		}
 	} else {
 		// No '=', unset the environment variable
-		err := os.Unsetenv(envString)
-		if err != nil {
+		if os.Unsetenv(envString) != nil {
 			return false // Failure
 		}
 	}
