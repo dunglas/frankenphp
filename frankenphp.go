@@ -515,8 +515,7 @@ func go_putenv(str *C.char, length C.int) C.bool {
 		key := envString[:idx]
 		val := envString[idx+1:]
 
-		err := os.Setenv(key, val)
-		if err != nil {
+		if os.Setenv(key, val) != nil {
 			return false // Failure
 		}
 	} else {
