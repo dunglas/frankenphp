@@ -144,7 +144,7 @@ if [ "${os}" = "linux" ]; then
 fi
 
 # install edant/watcher for file watching (static version)
-git clone --branch="${EDANT_WATCHER_VERSION:-next}" https://github.com/e-dant/watcher watcher
+git clone --branch="${EDANT_WATCHER_VERSION:-release}" https://github.com/e-dant/watcher watcher
 cd watcher/watcher-c
 cc -c -o libwatcher.o ./src/watcher-c.cpp -I ./include -I ../include -std=c++17 -Wall -Wextra -fPIC
 ar rcs libwatcher.a libwatcher.o
