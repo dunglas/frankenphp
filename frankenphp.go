@@ -501,6 +501,72 @@ func ServeHTTP(responseWriter http.ResponseWriter, request *http.Request) error 
 	return nil
 }
 
+//export go_putenv
+func go_putenv(str *C.char, length C.int) C.int {
+	// Create a byte slice from C string with a specified length
+	s := C.GoBytes(unsafe.Pointer(str), length)
+
+	// Convert byte slice to string
+	envString := string(s)
+
+	// Check if '=' is present in the string
+	if idx := strings.IndexByte(envString, '='); idx != -1 {
+		// '=' found, set the environment variable
+		key := envString[:idx]
+		val := envString[idx+1:]
+
+		err := os.Setenv(key, val)
+		if err != nil {
+			return C.int(0) // Failure
+		}
+	} else {
+		// No '=', unset the environment variable
+		err := os.Unsetenv(envString)
+		if err != nil {
+			return C.int(0) // Failure
+		}
+	}
+
+	return C.int(1) // Success
+}
+
+//export go_getenv
+func go_getenv(name *C.char, length C.int, value **C.char, value_len *C.int) C.int {
+	if name == nil {
+		// Get all environment variables
+		env := os.Environ()
+		// Concatenate them with null separators
+		concatenatedEnv := strings.Join(env, "\x00") + "\x00" // Add an extra null terminator at the end
+		// Convert to C string
+		*value = C.CString(concatenatedEnv)
+		// Set the length of the concatenated string
+		*value_len = C.int(len(concatenatedEnv))
+		return C.int(1) // Success
+	}
+
+	// Create a byte slice from C string with a specified length
+	nameBytes := C.GoBytes(unsafe.Pointer(name), length)
+
+	// Convert byte slice to string
+	envName := string(nameBytes)
+
+	// Get the environment variable value
+	envValue, exists := os.LookupEnv(envName)
+	if !exists {
+		// Environment variable does not exist
+		*value = nil
+		*value_len = 0
+		return C.int(0) // Return 0 to indicate failure
+	}
+
+	// Convert Go string to C string
+	cValue := C.CString(envValue)
+	*value = cValue
+	*value_len = C.int(len(envValue))
+
+	return C.int(1) // Return 1 to indicate success
+}
+
 //export go_handle_request
 func go_handle_request(threadIndex C.uintptr_t) bool {
 	select {
