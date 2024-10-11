@@ -243,90 +243,89 @@ PHP_FUNCTION(frankenphp_finish_request) { /* {{{ */
 } /* }}} */
 
 /* {{{ Call go's putenv to prevent race conditions */
-PHP_FUNCTION(frankenphp_putenv)
-{
-    char *setting;
-	size_t setting_len;
+PHP_FUNCTION(frankenphp_putenv) {
+  char *setting;
+  size_t setting_len;
 
-    ZEND_PARSE_PARAMETERS_START(1, 1)
-        Z_PARAM_STRING(setting, setting_len)
-    ZEND_PARSE_PARAMETERS_END();
+  ZEND_PARSE_PARAMETERS_START(1, 1)
+  Z_PARAM_STRING(setting, setting_len)
+  ZEND_PARSE_PARAMETERS_END();
 
-    // Cast str_len to int (ensure it fits in an int)
-    if (setting_len > INT_MAX) {
-        php_error(E_WARNING, "String length exceeds maximum integer value");
-        RETURN_FALSE;
-    }
+  // Cast str_len to int (ensure it fits in an int)
+  if (setting_len > INT_MAX) {
+    php_error(E_WARNING, "String length exceeds maximum integer value");
+    RETURN_FALSE;
+  }
 
-    int result = go_putenv(setting, (int)setting_len);
+  int result = go_putenv(setting, (int)setting_len);
 
-    if (result) {
-        RETURN_TRUE;
-    } else {
-        RETURN_FALSE;
-    }
+  if (result) {
+    RETURN_TRUE;
+  } else {
+    RETURN_FALSE;
+  }
 } /* }}} */
 
 /* {{{ Call go's getenv to prevent race conditions */
 PHP_FUNCTION(frankenphp_getenv) {
-    char *name = NULL;
-    size_t name_len = 0;
-    bool local_only = 0;
+  char *name = NULL;
+  size_t name_len = 0;
+  bool local_only = 0;
 
-    ZEND_PARSE_PARAMETERS_START(0, 2)
-        Z_PARAM_OPTIONAL
-        Z_PARAM_STRING_OR_NULL(name, name_len)
-        Z_PARAM_BOOL(local_only)
-    ZEND_PARSE_PARAMETERS_END();
+  ZEND_PARSE_PARAMETERS_START(0, 2)
+  Z_PARAM_OPTIONAL
+  Z_PARAM_STRING_OR_NULL(name, name_len)
+  Z_PARAM_BOOL(local_only)
+  ZEND_PARSE_PARAMETERS_END();
 
-    char *value = NULL;
-    int value_len = 0;
+  char *value = NULL;
+  int value_len = 0;
 
-    int result = go_getenv(name, (int)name_len, &value, &value_len);
+  int result = go_getenv(name, (int)name_len, &value, &value_len);
 
-    if (result) {
-            if (name == NULL) {
-                // Initialize an empty array
-                array_init(return_value);
+  if (result) {
+    if (name == NULL) {
+      // Initialize an empty array
+      array_init(return_value);
 
-                char *env = value;
-                char *end = value + value_len;
-                while (env < end && *env != '\0') {
-                    size_t len = strlen(env);
-                    char *key_value = env; // key=value format
+      char *env = value;
+      char *end = value + value_len;
+      while (env < end && *env != '\0') {
+        size_t len = strlen(env);
+        char *key_value = env; // key=value format
 
-                    // Find the position of '=' to split key and value
-                    char *equal_sign = strchr(key_value, '=');
-                    if (equal_sign != NULL) {
-                        size_t key_len = equal_sign - key_value;
-                        size_t val_len = len - key_len - 1; // Exclude '='
+        // Find the position of '=' to split key and value
+        char *equal_sign = strchr(key_value, '=');
+        if (equal_sign != NULL) {
+          size_t key_len = equal_sign - key_value;
+          size_t val_len = len - key_len - 1; // Exclude '='
 
-                        // Create PHP strings for key and value
-                        zend_string *key = zend_string_init(key_value, key_len, 0);
-                        zend_string *val = zend_string_init(equal_sign + 1, val_len, 0);
+          // Create PHP strings for key and value
+          zend_string *key = zend_string_init(key_value, key_len, 0);
+          zend_string *val = zend_string_init(equal_sign + 1, val_len, 0);
 
-                        // Add to the associative array
-                        add_assoc_str(return_value, ZSTR_VAL(key), val);
+          // Add to the associative array
+          add_assoc_str(return_value, ZSTR_VAL(key), val);
 
-                        // Release the key string
-                        zend_string_release(key);
-                    }
-
-                    // Move to the next environment variable
-                    env += len + 1;
-                }
-
-                // Free the C string allocated in Go
-                free(value);
-            } else {
-                // Return the single environment variable as a string
-                RETVAL_STRINGL(value, value_len);
-                free(value);
-            }
-        } else {
-            // Environment variable does not exist
-            RETVAL_FALSE;
+          // Release the key string
+          zend_string_release(key);
         }
+
+        // Move to the next environment variable
+        env += len + 1;
+      }
+
+      // Free the C string allocated in Go
+      free(value);
+    } else {
+      // Return the single environment variable as a string
+      RETVAL_STRINGL(value, value_len);
+      free(value);
+    }
+  } else {
+    // Environment variable does not exist
+    RETVAL_FALSE;
+  }
 } /* }}} */
 
 /* {{{ Fetch all HTTP request headers */
@@ -495,38 +494,39 @@ PHP_FUNCTION(headers_send) {
   RETURN_LONG(sapi_send_headers());
 }
 
-PHP_MINIT_FUNCTION(frankenphp)
-{
-    zend_function *func;
+PHP_MINIT_FUNCTION(frankenphp) {
+  zend_function *func;
 
-    // Override putenv
-    func = zend_hash_str_find_ptr(CG(function_table), "putenv", sizeof("putenv") - 1);
-    if (func != NULL && func->type == ZEND_INTERNAL_FUNCTION) {
-        ((zend_internal_function *)func)->handler = ZEND_FN(frankenphp_putenv);
-    } else {
-        php_error(E_WARNING, "Failed to find built-in putenv function");
-    }
+  // Override putenv
+  func = zend_hash_str_find_ptr(CG(function_table), "putenv",
+                                sizeof("putenv") - 1);
+  if (func != NULL && func->type == ZEND_INTERNAL_FUNCTION) {
+    ((zend_internal_function *)func)->handler = ZEND_FN(frankenphp_putenv);
+  } else {
+    php_error(E_WARNING, "Failed to find built-in putenv function");
+  }
 
-    // Override getenv
-    func = zend_hash_str_find_ptr(CG(function_table), "getenv", sizeof("getenv") - 1);
-    if (func != NULL && func->type == ZEND_INTERNAL_FUNCTION) {
-        ((zend_internal_function *)func)->handler = ZEND_FN(frankenphp_getenv);
-    } else {
-        php_error(E_WARNING, "Failed to find built-in getenv function");
-    }
+  // Override getenv
+  func = zend_hash_str_find_ptr(CG(function_table), "getenv",
+                                sizeof("getenv") - 1);
+  if (func != NULL && func->type == ZEND_INTERNAL_FUNCTION) {
+    ((zend_internal_function *)func)->handler = ZEND_FN(frankenphp_getenv);
+  } else {
+    php_error(E_WARNING, "Failed to find built-in getenv function");
+  }
 
-    return SUCCESS;
+  return SUCCESS;
 }
 
 static zend_module_entry frankenphp_module = {
     STANDARD_MODULE_HEADER,
     "frankenphp",
-    ext_functions, /* function table */
+    ext_functions,         /* function table */
     PHP_MINIT(frankenphp), /* initialization */
-    NULL,          /* shutdown */
-    NULL,          /* request initialization */
-    NULL,          /* request shutdown */
-    NULL,          /* information */
+    NULL,                  /* shutdown */
+    NULL,                  /* request initialization */
+    NULL,                  /* request shutdown */
+    NULL,                  /* information */
     TOSTRING(FRANKENPHP_VERSION),
     STANDARD_MODULE_PROPERTIES};
 
