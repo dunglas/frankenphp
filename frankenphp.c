@@ -300,47 +300,13 @@ PHP_FUNCTION(frankenphp_getenv) {
     return;
   }
 
-  go_string *value = NULL;
-  int value_len = 0;
-
   go_string gname = {name_len, name};
 
   struct go_getenv_return result = go_getenv(thread_index, &gname);
 
   if (result.r0) {
-    if (name == NULL) {
-      // Initialize an empty array
-      array_init(return_value);
-
-      char *key;
-      char *val;
-
-      for (int i = 0; i < value_len; i++) {
-        go_string *env = value + i;
-        key = env->data;
-        // find the equal sign
-        val = strchr(key, '=');
-        if (val != NULL) {
-          // create PHP strings for key and value
-          zend_string *key_str = zend_string_init(key, val - key, 0);
-          zend_string *val_str =
-              zend_string_init(val + 1, env->len - (val - key) - 1, 0);
-
-          // add to the associative array
-          add_assoc_str(return_value, ZSTR_VAL(key_str), val_str);
-
-          // release the key string
-          zend_string_release(key_str);
-        }
-      }
-
-      // Free the strings allocated in Go
-      free(value);
-    } else {
-      // Return the single environment variable as a string
-      RETVAL_STRINGL(result.r1->data, result.r1->len);
-      free(value);
-    }
+    // Return the single environment variable as a string
+    RETVAL_STRINGL(result.r1->data, result.r1->len);
   } else {
     // Environment variable does not exist
     RETVAL_FALSE;
