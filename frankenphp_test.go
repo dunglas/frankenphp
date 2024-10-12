@@ -637,7 +637,7 @@ func testEnv(t *testing.T, opts *testOptions) {
 		resp := w.Result()
 		body, _ := io.ReadAll(resp.Body)
 
-		assert.Equal(t, fmt.Sprintf("Set MY_VAR successfully.\nMY_VAR = HelloWorld\nUnset MY_VAR successfully.\nMY_VAR is unset.\nUnset NON_EXISTING_VAR successfully.\n"), string(body))
+		assert.Equal(t, "Set MY_VAR successfully.\nMY_VAR = HelloWorld\nUnset MY_VAR successfully.\nMY_VAR is unset.\nUnset NON_EXISTING_VAR successfully.\n", string(body))
 	}, opts)
 }
 
