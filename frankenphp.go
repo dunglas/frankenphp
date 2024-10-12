@@ -592,6 +592,7 @@ func go_handle_request(threadIndex C.uintptr_t) bool {
 		defer func() {
 			maybeCloseContext(fc)
 			thread.mainRequest = nil
+			thread.Unpin()
 		}()
 
 		if err := updateServerContext(r, true, false); err != nil {
@@ -715,8 +716,6 @@ func go_register_variables(threadIndex C.uintptr_t, trackVarsArray *C.zval) {
 
 	C.frankenphp_register_bulk_variables(&knownVariables[0], dvsd, C.size_t(l), trackVarsArray)
 
-	thread.Unpin()
-
 	fc.env = nil
 }
 
@@ -757,11 +756,6 @@ func go_apache_request_headers(threadIndex C.uintptr_t, hasActiveRequest bool) (
 	thread.Pin(sd)
 
 	return sd, C.size_t(len(r.Header))
-}
-
-//export go_apache_request_cleanup
-func go_apache_request_cleanup(threadIndex C.uintptr_t) {
-	phpThreads[threadIndex].Unpin()
 }
 
 func addHeader(fc *FrankenPHPContext, cString *C.char, length C.int) {

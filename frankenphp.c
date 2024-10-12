@@ -331,8 +331,6 @@ PHP_FUNCTION(frankenphp_request_headers) {
 
     add_assoc_stringl_ex(return_value, key.data, key.len, val.data, val.len);
   }
-
-  go_apache_request_cleanup(thread_index);
 }
 /* }}} */
 
