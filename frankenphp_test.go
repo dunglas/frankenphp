@@ -622,6 +622,25 @@ func TestFailingWorker(t *testing.T) {
 	}, &testOptions{workerScript: "failing-worker.php"})
 }
 
+func TestEnv(t *testing.T) {
+	testEnv(t, &testOptions{})
+}
+func TestEnvWorker(t *testing.T) {
+	testEnv(t, &testOptions{workerScript: "test-env.php"})
+}
+func testEnv(t *testing.T, opts *testOptions) {
+	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
+		req := httptest.NewRequest("GET", fmt.Sprintf("http://example.com/test-env.php?var=%d", i), nil)
+		w := httptest.NewRecorder()
+		handler(w, req)
+
+		resp := w.Result()
+		body, _ := io.ReadAll(resp.Body)
+
+		assert.Equal(t, fmt.Sprintf("Set MY_VAR successfully.\nMY_VAR = HelloWorld\nUnset MY_VAR successfully.\nMY_VAR is unset.\nUnset NON_EXISTING_VAR successfully.\n"), string(body))
+	}, opts)
+}
+
 func TestFileUpload_module(t *testing.T) { testFileUpload(t, &testOptions{}) }
 func TestFileUpload_worker(t *testing.T) {
 	testFileUpload(t, &testOptions{workerScript: "file-upload.php"})
