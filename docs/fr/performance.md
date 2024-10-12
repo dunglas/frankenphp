@@ -8,7 +8,7 @@ Cependant, il est possible d'améliorer considérablement les performances en ut
 Par défaut, FrankenPHP démarre 2 fois plus de threads et de workers (en mode worker) que le nombre de CPU disponibles.
 
 Les valeurs appropriées dépendent fortement de la manière dont votre application est écrite, de ce qu'elle fait et de votre matériel.
-Nous recommandons fortement de modifier ces valeurs.
+Nous recommandons vivement de modifier ces valeurs.
 
 Pour trouver les bonnes valeurs, il est souhaitable d'effectuer des tests de charge simulant le trafic réel.
 [k6](https://k6.io) et [Gatling](https://gatling.io) sont de bons outils pour cela.
@@ -18,14 +18,13 @@ Pour changer le nombre de travailleurs, utilisez l'option `num` de la section `w
 
 ## Mode worker
 
-Activer [le mode worker](worker.md) améliorere considérablement les performances,
+Activer [le mode worker](worker.md) améliore considérablement les performances,
 mais votre application doit être adaptée pour être compatible avec ce mode :
 vous devez créer un script worker et vous assurer que l'application n'a pas de fuite de mémoire.
 
 ## Ne pas utiliser musl
 
-Les binaires statiques que nous fournissons et la variante Alpine Linux des images Docker officielles
-utilisent [la librairie musl](https://musl.libc.org).
+Les binaires statiques que nous fournissons, ainsi que la variante Alpine Linux des images Docker officielles, utilisent [la librairie musl](https://musl.libc.org).
 
 PHP est connu pour être significativement plus lent lorsqu'il utilise cette bibliothèque C alternative au lieu de la bibliothèque GNU traditionnelle,
 surtout lorsqu'il est compilé en mode ZTS (thread-safe), ce qui est nécessaire pour FrankenPHP.
@@ -34,7 +33,7 @@ En outre, certains bogues ne se produisent que lors de l'utilisation de musl.
 
 Dans les environnements de production, nous recommandons fortement d'utiliser la glibc.
 
-Ceci peut être réalisé en utilisant les images Docker Debian (par défaut) et [en compilant FrankenPHP à partir des sources](compile.md).
+Cela peut être réalisé en utilisant les images Docker Debian (par défaut) et [en compilant FrankenPHP à partir des sources](compile.md).
 
 Alternativement, nous fournissons des binaires statiques compilés avec [l'allocateur mimalloc](https://github.com/microsoft/mimalloc), ce qui rend FrankenPHP+musl plus rapide (mais toujours plus lent que FrankenPHP+glibc).
 
