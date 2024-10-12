@@ -28,7 +28,7 @@ const minWorkerErrorBackoff = 100 * time.Millisecond
 const maxWorkerConsecutiveFailures = 5
 
 var (
-    isInitialBoot    bool = true
+	isInitialBoot    bool = true
 	workersReadyWG   sync.WaitGroup
 	workerShutdownWG sync.WaitGroup
 	workersAreReady  atomic.Bool
