@@ -25,7 +25,7 @@ type worker struct {
 
 const maxWorkerErrorBackoff = 1 * time.Second
 const minWorkerErrorBackoff = 100 * time.Millisecond
-const maxWorkerConsecutiveFailures = 60
+const maxWorkerConsecutiveFailures = 10
 
 var (
 	workersReadyWG   sync.WaitGroup
@@ -34,6 +34,7 @@ var (
 	workersAreDone   atomic.Bool
 	workersDone      chan interface{}
 	workers          map[string]*worker = make(map[string]*worker)
+	watcherIsEnabled bool
 )
 
 func initWorkers(opt []workerOpt) error {
@@ -162,7 +163,10 @@ func (worker *worker) startNewWorkerThread() {
 			// if we end up here, the worker has not been up for backoff*2
 			// this is probably due to a syntax error or another fatal error
 			if failureCount >= maxWorkerConsecutiveFailures {
-				panic(fmt.Errorf("workers %q: too many consecutive failures", worker.fileName))
+				if !watcherIsEnabled {
+					panic(fmt.Errorf("workers %q: too many consecutive failures", worker.fileName))
+				}
+				logger.Warn("many consecutive worker failures", zap.String("worker", worker.fileName))
 			} else {
 				failureCount += 1
 			}
@@ -206,7 +210,7 @@ func restartWorkersOnFileChanges(workerOpts []workerOpt) error {
 	if len(directoriesToWatch) == 0 {
 		return nil
 	}
-
+	watcherIsEnabled = true
 	restartWorkers := func() {
 		restartWorkers(workerOpts)
 	}

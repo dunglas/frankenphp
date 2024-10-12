@@ -1,9 +1,9 @@
 <?php
 
-$fail = random_int(1, 100) < 1;
-$wait = random_int(1, 5);
+$fail = random_int(1, 100) < 10;
+$wait = random_int(1000 * 100, 1000 * 500); // wait 100ms - 500ms
 
-sleep($wait);
+usleep($wait);
 if ($fail) {
     exit(1);
 }
