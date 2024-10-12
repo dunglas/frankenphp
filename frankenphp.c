@@ -776,7 +776,7 @@ static void frankenphp_register_variables(zval *track_vars_array) {
   /* https://www.php.net/manual/en/reserved.variables.server.php */
 
   /* In CGI mode, we consider the environment to be a part of the server
-   * variables
+   * variables.
    */
 
   frankenphp_server_context *ctx = SG(server_context);
