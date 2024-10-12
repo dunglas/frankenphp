@@ -753,6 +753,25 @@ void frankenphp_register_bulk_variables(go_string known_variables[27],
   }
 }
 
+void get_full_env(zval *track_vars_array) {
+  struct go_getfullenv_return full_env = go_getfullenv(thread_index);
+
+  for (int i = 0; i < full_env.r1; i++) {
+    go_string key = full_env.r0[i * 2];
+    go_string val = full_env.r0[i * 2 + 1];
+
+    // create PHP strings for key and value
+    zend_string *key_str = zend_string_init(key.data, key.len, 0);
+    zend_string *val_str = zend_string_init(val.data, val.len, 0);
+
+    // add to the associative array
+    add_assoc_str(track_vars_array, ZSTR_VAL(key_str), val_str);
+
+    // release the key string
+    zend_string_release(key_str);
+  }
+}
+
 static void frankenphp_register_variables(zval *track_vars_array) {
   /* https://www.php.net/manual/en/reserved.variables.server.php */
 
@@ -764,7 +783,8 @@ static void frankenphp_register_variables(zval *track_vars_array) {
 
   /* in non-worker mode we import the os environment regularly */
   if (!ctx->has_main_request) {
-    php_import_environment_variables(track_vars_array);
+    get_full_env(track_vars_array);
+    //php_import_environment_variables(track_vars_array);
     go_register_variables(thread_index, track_vars_array);
     return;
   }
@@ -773,7 +793,8 @@ static void frankenphp_register_variables(zval *track_vars_array) {
   if (os_environment == NULL) {
     os_environment = malloc(sizeof(zval));
     array_init(os_environment);
-    php_import_environment_variables(os_environment);
+    get_full_env(os_environment);
+    //php_import_environment_variables(os_environment);
   }
   zend_hash_copy(Z_ARR_P(track_vars_array), Z_ARR_P(os_environment),
                  (copy_ctor_func_t)zval_add_ref);
