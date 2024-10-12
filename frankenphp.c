@@ -278,48 +278,67 @@ PHP_FUNCTION(frankenphp_getenv) {
   Z_PARAM_BOOL(local_only)
   ZEND_PARSE_PARAMETERS_END();
 
-  char *value = NULL;
+  if (!name) {
+    struct go_getfullenv_return full_env = go_getfullenv(thread_index);
+
+    array_init(return_value);
+    for (int i = 0; i < full_env.r1; i++) {
+      go_string key = full_env.r0[i * 2];
+      go_string val = full_env.r0[i * 2 + 1];
+
+      // create PHP strings for key and value
+      zend_string *key_str = zend_string_init(key.data, key.len, 0);
+      zend_string *val_str = zend_string_init(val.data, val.len, 0);
+
+      // add to the associative array
+      add_assoc_str(return_value, ZSTR_VAL(key_str), val_str);
+
+      // release the key string
+      zend_string_release(key_str);
+    }
+
+    return;
+  }
+
+  go_string *value = NULL;
   int value_len = 0;
 
-  int result = go_getenv(name, (int)name_len, &value, &value_len);
+  go_string gname = {name_len, name};
 
-  if (result) {
+  struct go_getenv_return result = go_getenv(thread_index, &gname);
+
+  if (result.r0) {
     if (name == NULL) {
       // Initialize an empty array
       array_init(return_value);
 
-      char *env = value;
-      char *end = value + value_len;
-      while (env < end && *env != '\0') {
-        size_t len = strlen(env);
-        char *key_value = env; // key=value format
+      char *key;
+      char *val;
 
-        // Find the position of '=' to split key and value
-        char *equal_sign = strchr(key_value, '=');
-        if (equal_sign != NULL) {
-          size_t key_len = equal_sign - key_value;
-          size_t val_len = len - key_len - 1; // Exclude '='
+      for (int i = 0; i < value_len; i++) {
+        go_string *env = value + i;
+        key = env->data;
+        // find the equal sign
+        val = strchr(key, '=');
+        if (val != NULL) {
+          // create PHP strings for key and value
+          zend_string *key_str = zend_string_init(key, val - key, 0);
+          zend_string *val_str =
+              zend_string_init(val + 1, env->len - (val - key) - 1, 0);
 
-          // Create PHP strings for key and value
-          zend_string *key = zend_string_init(key_value, key_len, 0);
-          zend_string *val = zend_string_init(equal_sign + 1, val_len, 0);
+          // add to the associative array
+          add_assoc_str(return_value, ZSTR_VAL(key_str), val_str);
 
-          // Add to the associative array
-          add_assoc_str(return_value, ZSTR_VAL(key), val);
-
-          // Release the key string
-          zend_string_release(key);
+          // release the key string
+          zend_string_release(key_str);
         }
-
-        // Move to the next environment variable
-        env += len + 1;
       }
 
-      // Free the C string allocated in Go
+      // Free the strings allocated in Go
       free(value);
     } else {
       // Return the single environment variable as a string
-      RETVAL_STRINGL(value, value_len);
+      RETVAL_STRINGL(result.r1->data, result.r1->len);
       free(value);
     }
   } else {

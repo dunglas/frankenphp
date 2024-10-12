@@ -528,41 +528,51 @@ func go_putenv(str *C.char, length C.int) C.bool {
 	return true // Success
 }
 
-//export go_getenv
-func go_getenv(name *C.char, length C.int, value **C.char, value_len *C.int) C.bool {
-	if name == nil {
-		// Get all environment variables
-		env := os.Environ()
-		// Concatenate them with null separators
-		concatenatedEnv := strings.Join(env, "\x00") + "\x00" // Add an extra null terminator at the end
-		// Convert to C string
-		*value = C.CString(concatenatedEnv)
-		// Set the length of the concatenated string
-		*value_len = C.int(len(concatenatedEnv))
-		return true // Success
+//export go_getfullenv
+func go_getfullenv(threadIndex C.uintptr_t) (*C.go_string, C.size_t) {
+	thread := phpThreads[threadIndex]
+
+	env := os.Environ()
+	goStrings := make([]C.go_string, len(env)*2)
+
+	for i, envVar := range env {
+		key, val, _ := strings.Cut(envVar, "=")
+		k := unsafe.StringData(key)
+		v := unsafe.StringData(val)
+		thread.Pin(k)
+		thread.Pin(v)
+
+		goStrings[i*2] = C.go_string{C.size_t(len(key)), (*C.char)(unsafe.Pointer(k))}
+		goStrings[i*2+1] = C.go_string{C.size_t(len(val)), (*C.char)(unsafe.Pointer(v))}
 	}
 
-	// Create a byte slice from C string with a specified length
-	nameBytes := C.GoBytes(unsafe.Pointer(name), length)
+	value := unsafe.SliceData(goStrings)
+	thread.Pin(value)
 
-	// Convert byte slice to string
-	envName := string(nameBytes)
+	return value, C.size_t(len(env))
+}
+
+//export go_getenv
+func go_getenv(threadIndex C.uintptr_t, name *C.go_string) (C.bool, *C.go_string) {
+	thread := phpThreads[threadIndex]
+
+	// Create a byte slice from C string with a specified length
+	envName := C.GoStringN(name.data, C.int(name.len))
 
 	// Get the environment variable value
 	envValue, exists := os.LookupEnv(envName)
 	if !exists {
 		// Environment variable does not exist
-		*value = nil
-		*value_len = 0
-		return false // Return 0 to indicate failure
+		return false, nil // Return 0 to indicate failure
 	}
 
 	// Convert Go string to C string
-	cValue := C.CString(envValue)
-	*value = cValue
-	*value_len = C.int(len(envValue))
+	val := unsafe.StringData(envValue)
+	thread.Pin(val)
+	value := &C.go_string{C.size_t(len(envValue)), (*C.char)(unsafe.Pointer(val))}
+	thread.Pin(value)
 
-	return true // Return 1 to indicate success
+	return true, value // Return 1 to indicate success
 }
 
 //export go_handle_request
