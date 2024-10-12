@@ -637,7 +637,12 @@ func testEnv(t *testing.T, opts *testOptions) {
 		resp := w.Result()
 		body, _ := io.ReadAll(resp.Body)
 
-		assert.Equal(t, "Set MY_VAR successfully.\nMY_VAR = HelloWorld\nUnset MY_VAR successfully.\nMY_VAR is unset.\nUnset NON_EXISTING_VAR successfully.\n", string(body))
+		// execute the script as regular php script
+		cmd := exec.Command("php", "testdata/test-env.php", strconv.Itoa(i))
+		stdoutStderr, err := cmd.CombinedOutput()
+		require.NoError(t, err)
+
+		assert.Equal(t, string(stdoutStderr), string(body))
 	}, opts)
 }
 
