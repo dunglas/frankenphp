@@ -31,6 +31,7 @@ Minimal example:
 {
 	# Enable FrankenPHP
 	frankenphp
+	order php_server before file_server
 }
 
 localhost {
@@ -54,6 +55,7 @@ Optionally, the number of threads to create and [worker scripts](worker.md) to s
 			watch <path> # Sets the path to watch for file changes. Can be specified more than once for multiple paths.
 		}
 	}
+	order php_server before file_server
 }
 
 # ...
@@ -66,6 +68,7 @@ Alternatively, you may use the one-line short form of the `worker` option:
 	frankenphp {
 		worker <file> <num>
 	}
+	order php_server before file_server
 }
 
 # ...
@@ -79,6 +82,7 @@ You can also define multiple workers if you serve multiple apps on the same serv
 		worker /path/to/app/public/index.php <num>
 		worker /path/to/other/public/index.php <num>
 	}
+	order php_server before file_server
 }
 
 app.example.com {
@@ -148,6 +152,7 @@ This is useful for development environments.
 			watch
 		}
 	}
+	order php_server before file_server
 }
 ```
 
@@ -167,6 +172,7 @@ where the FrankenPHP process was started. You can instead also specify one or mo
 			watch /path/to/app/**/*.{php,twig} # watches PHP and Twig files in /path/to/app and subdirectories
 		}
 	}
+	order php_server before file_server
 }
 ```
 
