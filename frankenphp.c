@@ -257,9 +257,7 @@ PHP_FUNCTION(frankenphp_putenv) {
     RETURN_FALSE;
   }
 
-  int result = go_putenv(setting, (int)setting_len);
-
-  if (result) {
+  if (go_putenv(setting, (int)setting_len)) {
     RETURN_TRUE;
   } else {
     RETURN_FALSE;
