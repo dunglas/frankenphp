@@ -510,11 +510,7 @@ func go_putenv(str *C.char, length C.int) C.bool {
 	envString := string(s)
 
 	// Check if '=' is present in the string
-	if idx := strings.IndexByte(envString, '='); idx != -1 {
-		// '=' found, set the environment variable
-		key := envString[:idx]
-		val := envString[idx+1:]
-
+	if key, val, found := strings.Cut(envString, "="); found {
 		if os.Setenv(key, val) != nil {
 			return false // Failure
 		}
