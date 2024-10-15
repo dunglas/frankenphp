@@ -569,6 +569,19 @@ static void frankenphp_register_known_variable(const char *key, go_string value,
   }
 }
 
+static void frankenphp_register_trusted_value(const char *key, char *value,
+                                               zval *track_vars_array) {
+  zval zValue;
+  zend_string *zKey = zend_string_init_interned(key, sizeof(key)-1, 0);
+  if (value == NULL) {
+    ZVAL_STRING(&zValue, "");
+  }else{
+    ZVAL_STRING(&zValue, value);
+  }
+  zend_hash_update_ind(Z_ARRVAL_P(track_vars_array), zKey, &zValue);
+  zend_string_release_ex(zKey, 0);
+}
+
 static void
 frankenphp_register_variable_from_request_info(const char *key, char *value,
                                                zval *track_vars_array) {
@@ -587,8 +600,8 @@ void frankenphp_register_bulk_variables(go_string known_variables[27],
                                         php_variable *dynamic_variables,
                                         size_t size, zval *track_vars_array) {
   /* Not used, but must be present */
-  php_register_variable_safe("AUTH_TYPE", "", 0, track_vars_array);
-  php_register_variable_safe("REMOTE_IDENT", "", 0, track_vars_array);
+  frankenphp_register_trusted_value("AUTH_TYPE", "", track_vars_array);
+  frankenphp_register_trusted_value("REMOTE_IDENT", "", track_vars_array);
 
   /* Allocated in frankenphp_update_server_context() */
   frankenphp_register_variable_from_request_info(
@@ -609,41 +622,41 @@ void frankenphp_register_bulk_variables(go_string known_variables[27],
   /* Known variables */
   frankenphp_register_known_variable("CONTENT_LENGTH", known_variables[0],
                                      track_vars_array);
-  frankenphp_register_known_variable("DOCUMENT_ROOT", known_variables[1],
+  frankenphp_register_trusted_value("DOCUMENT_ROOT", known_variables[1].data,
                                      track_vars_array);
-  frankenphp_register_known_variable("DOCUMENT_URI", known_variables[2],
+  frankenphp_register_trusted_value("DOCUMENT_URI", known_variables[2].data,
                                      track_vars_array);
-  frankenphp_register_known_variable("GATEWAY_INTERFACE", known_variables[3],
+  frankenphp_register_trusted_value("GATEWAY_INTERFACE", known_variables[3].data,
                                      track_vars_array);
-  frankenphp_register_known_variable("HTTP_HOST", known_variables[4],
+  frankenphp_register_trusted_value("HTTP_HOST", known_variables[4].data,
                                      track_vars_array);
-  frankenphp_register_known_variable("HTTPS", known_variables[5],
+  frankenphp_register_trusted_value("HTTPS", known_variables[5].data,
                                      track_vars_array);
-  frankenphp_register_known_variable("PATH_INFO", known_variables[6],
+  frankenphp_register_trusted_value("PATH_INFO", known_variables[6].data,
                                      track_vars_array);
   frankenphp_register_known_variable("PHP_SELF", known_variables[7],
                                      track_vars_array);
-  frankenphp_register_known_variable("REMOTE_ADDR", known_variables[8],
+  frankenphp_register_trusted_value("REMOTE_ADDR", known_variables[8].data,
                                      track_vars_array);
-  frankenphp_register_known_variable("REMOTE_HOST", known_variables[9],
+  frankenphp_register_trusted_value("REMOTE_HOST", known_variables[9].data,
                                      track_vars_array);
-  frankenphp_register_known_variable("REMOTE_PORT", known_variables[10],
+  frankenphp_register_trusted_value("REMOTE_PORT", known_variables[10].data,
                                      track_vars_array);
-  frankenphp_register_known_variable("REQUEST_SCHEME", known_variables[11],
+  frankenphp_register_trusted_value("REQUEST_SCHEME", known_variables[11].data,
                                      track_vars_array);
-  frankenphp_register_known_variable("SCRIPT_FILENAME", known_variables[12],
+  frankenphp_register_trusted_value("SCRIPT_FILENAME", known_variables[12].data,
                                      track_vars_array);
-  frankenphp_register_known_variable("SCRIPT_NAME", known_variables[13],
+  frankenphp_register_trusted_value("SCRIPT_NAME", known_variables[13].data,
                                      track_vars_array);
-  frankenphp_register_known_variable("SERVER_NAME", known_variables[14],
+  frankenphp_register_trusted_value("SERVER_NAME", known_variables[14].data,
                                      track_vars_array);
-  frankenphp_register_known_variable("SERVER_PORT", known_variables[15],
+  frankenphp_register_trusted_value("SERVER_PORT", known_variables[15].data,
                                      track_vars_array);
-  frankenphp_register_known_variable("SERVER_PROTOCOL", known_variables[16],
+  frankenphp_register_trusted_value("SERVER_PROTOCOL", known_variables[16].data,
                                      track_vars_array);
-  frankenphp_register_known_variable("SERVER_SOFTWARE", known_variables[17],
+  frankenphp_register_trusted_value("SERVER_SOFTWARE", known_variables[17].data,
                                      track_vars_array);
-  frankenphp_register_known_variable("SSL_PROTOCOL", known_variables[18],
+  frankenphp_register_trusted_value("SSL_PROTOCOL", known_variables[18].data,
                                      track_vars_array);
 
   size_t new_val_len;
