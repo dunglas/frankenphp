@@ -780,7 +780,7 @@ static void frankenphp_register_variables(zval *track_vars_array) {
   /* in non-worker mode we import the os environment regularly */
   if (!ctx->has_main_request) {
     get_full_env(track_vars_array);
-    //php_import_environment_variables(track_vars_array);
+    // php_import_environment_variables(track_vars_array);
     go_register_variables(thread_index, track_vars_array);
     return;
   }
@@ -790,7 +790,7 @@ static void frankenphp_register_variables(zval *track_vars_array) {
     os_environment = malloc(sizeof(zval));
     array_init(os_environment);
     get_full_env(os_environment);
-    //php_import_environment_variables(os_environment);
+    // php_import_environment_variables(os_environment);
   }
   zend_hash_copy(Z_ARR_P(track_vars_array), Z_ARR_P(os_environment),
                  (copy_ctor_func_t)zval_add_ref);
