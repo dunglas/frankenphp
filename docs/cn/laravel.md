@@ -35,7 +35,7 @@ docker run -p 80:80 -p 443:443 -p 443:443/udp -v $PWD:/app dunglas/frankenphp
     }
     ```
 
-3. 从 Laravel 项目的根目录启动 FrankenPHP：`./frankenphp run`
+3. 从 Laravel 项目的根目录启动 FrankenPHP：`frankenphp run`
 
 ## Laravel Octane
 

@@ -42,7 +42,7 @@ On Windows, use [WSL](https://learn.microsoft.com/windows/wsl/) to run FrankenPH
 terminal to automatically install the version appropriate for your platform:
 
 ```console
-curl -sLK https://raw.githubusercontent.com/dunglas/frankenphp/main/install.sh | sh
+curl https://raw.githubusercontent.com/dunglas/frankenphp/main/install.sh | sh
 mv frankenphp /usr/local/bin/
 ```
 

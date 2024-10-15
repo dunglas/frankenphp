@@ -17,7 +17,7 @@ Et profitez !
 
 Vous pouvez également exécuter vos projets Laravel avec FrankenPHP depuis votre machine locale :
 
-1. [Téléchargez le binaire correspondant à votre système](https://github.com/dunglas/frankenphp/releases)
+1. [Téléchargez le binaire correspondant à votre système](README.md#binaire-autonome)
 2. Ajoutez la configuration suivante dans un fichier nommé `Caddyfile` placé dans le répertoire racine de votre projet Laravel :
 
  	```caddyfile
@@ -36,7 +36,7 @@ Vous pouvez également exécuter vos projets Laravel avec FrankenPHP depuis votr
     }
     ```
 
-3. Démarrez FrankenPHP depuis le répertoire racine de votre projet Laravel : `./frankenphp run`
+3. Démarrez FrankenPHP depuis le répertoire racine de votre projet Laravel : `frankenphp run`
 
 ## Laravel Octane
 

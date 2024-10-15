@@ -22,7 +22,7 @@ docker run \
 Utilisez l'option --worker de la commande php-server pour servir le contenu du répertoire courant en utilisant un worker :
 
 ```console
-./frankenphp php-server --worker /path/to/your/worker/script.php
+frankenphp php-server --worker /path/to/your/worker/script.php
 ```
 
 Si votre application PHP est [intégrée dans le binaire](embed.md), vous pouvez également ajouter un `Caddyfile` personnalisé dans le répertoire racine de l'application.
