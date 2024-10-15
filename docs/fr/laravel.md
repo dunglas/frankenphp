@@ -17,7 +17,7 @@ Et profitez !
 
 Vous pouvez également exécuter vos projets Laravel avec FrankenPHP depuis votre machine locale :
 
-1. [Téléchargez le binaire correspondant à votre système](https://github.com/dunglas/frankenphp/releases)
+1. [Téléchargez le binaire correspondant à votre système](README.md#binaire-autonome)
 2. Ajoutez la configuration suivante dans un fichier nommé `Caddyfile` placé dans le répertoire racine de votre projet Laravel :
 
  	```caddyfile
@@ -70,6 +70,9 @@ La commande `octane:frankenphp` peut prendre les options suivantes :
 * `--http-redirect` : Activer la redirection HTTP vers HTTPS (uniquement activé si --https est passé)
 * `--watch` : Recharger automatiquement le serveur lorsque l'application est modifiée
 * `--poll` : Utiliser le sondage du système de fichiers pendant la surveillance pour surveiller les fichiers sur un réseau
-* `--log-level` : Enregistrer les messages au niveau de journalisation spécifié ou au-dessus
+* `--log-level` : Enregistrer les messages au niveau de journalisation spécifié ou au-dessus, en utilisant le logger natif de Caddy
+
+> [!TIP]
+> Pour obtenir des logs structurés en JSON logs (utile quand vous utilisez des solutions d'analyse de logs), passez explicitement l'otpion `--log-level`.
 
 En savoir plus sur Laravel Octane [dans sa documentation officielle](https://laravel.com/docs/octane).
