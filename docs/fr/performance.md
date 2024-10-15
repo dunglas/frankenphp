@@ -24,7 +24,7 @@ vous devez créer un script worker et vous assurer que l'application n'a pas de 
 
 ## Ne pas utiliser musl
 
-Les binaires statiques que nous fournissons, ainsi que la variante Alpine Linux des images Docker officielles, utilisent [la librairie musl](https://musl.libc.org).
+Les binaires statiques que nous fournissons, ainsi que la variante Alpine Linux des images Docker officielles, utilisent [la bibliothèque musl](https://musl.libc.org).
 
 PHP est connu pour être significativement plus lent lorsqu'il utilise cette bibliothèque C alternative au lieu de la bibliothèque GNU traditionnelle,
 surtout lorsqu'il est compilé en mode ZTS (thread-safe), ce qui est nécessaire pour FrankenPHP.
