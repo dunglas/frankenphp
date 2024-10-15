@@ -41,7 +41,7 @@ Sous Windows, utilisez [WSL](https://learn.microsoft.com/windows/wsl/) pour exé
 [Téléchargez FrankenPHP](https://github.com/dunglas/frankenphp/releases) ou copiez cette ligne dans votre terminal pour installer automatiquement la version appropriée à votre plateforme :
 
 ```console
-curl https://raw.githubusercontent.com/dunglas/frankenphp/main/install.sh | sh
+curl https://frankenphp.dev/install.sh | sh
 mv frankenphp /usr/local/bin/
 ```
 

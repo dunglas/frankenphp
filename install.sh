@@ -12,6 +12,12 @@ DEST=${BIN_DIR}/frankenphp
 OS=$(uname -s)
 ARCH=$(uname -m)
 
+if type "tput" >/dev/null 2>&1; then
+	bold=$(tput bold)
+	italic=$(tput sitm)
+	normal=$(tput sgr0)
+fi
+
 case ${OS} in
 Linux*)
 	case ${ARCH} in
@@ -37,7 +43,7 @@ Darwin*)
 	esac
 	;;
 Windows | MINGW64_NT*)
-	echo "Install and use WSL to use FrankenPHP on Windows: https://learn.microsoft.com/windows/wsl/"
+	echo "❗ Use WSL to run FrankenPHP on Windows: https://learn.microsoft.com/windows/wsl/"
 	exit 1
 	;;
 *)
@@ -46,24 +52,37 @@ Windows | MINGW64_NT*)
 esac
 
 if [ -z "${THE_ARCH_BIN}" ]; then
-	echo "FrankenPHP is not supported on ${OS} and ${ARCH}"
+	echo "❗ FrankenPHP is not supported on ${OS} and ${ARCH}"
 	exit 1
 fi
 
 SUDO=""
+
+echo "📦 Downloading ${bold}FrankenPHP${normal} for ${OS} (${ARCH}):"
 
 # check if $DEST is writable and suppress an error message
 touch "${DEST}" 2>/dev/null
 
 # we need sudo powers to write to DEST
 if [ $? -eq 1 ]; then
-	echo "You do not have permission to write to ${DEST}, enter your password to grant sudo powers"
+	echo "❗ You do not have permission to write to ${italic}${DEST}${normal}, enter your password to grant sudo powers"
 	SUDO="sudo"
 fi
 
-${SUDO} curl -L --progress-bar "https://github.com/dunglas/frankenphp/releases/latest/download/${THE_ARCH_BIN}" -o "${DEST}"
+if type "curl" >/dev/null 2>&1; then
+	curl -L --progress-bar "https://github.com/dunglas/frankenphp/releases/latest/download/${THE_ARCH_BIN}" -o ${DEST}
+elif type "wget" >/dev/null 2>&1; then
+	${SUDO} wget "https://github.com/dunglas/frankenphp/releases/latest/download/${THE_ARCH_BIN}" -O "${DEST}"
+else
+	echo "❗ Please install ${italic}curl${normal} or ${italic}wget${normal} to download FrankenPHP"
+	exit 1
+fi
 
 ${SUDO} chmod +x "${DEST}"
 
-echo "FrankenPHP downloaded successfully to ${DEST}"
-echo "Move the binary to /usr/local/bin/ or another directory in your PATH to use it globally: sudo mv ${DEST} /usr/local/bin/"
+echo
+echo "🥳 FrankenPHP downloaded successfully to ${italic}${DEST}${normal}"
+echo "🔧 Move the binary to ${italic}/usr/local/bin/${normal} or another directory in your ${italic}PATH${normal} to use it globally:"
+echo "   ${bold}sudo mv ${DEST} /usr/local/bin/${normal}"
+echo
+echo "⭐ If you like FrankenPHP, please give it a star on GitHub: ${italic}https://github.com/dunglas/frankenphp${normal}"
