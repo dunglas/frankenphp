@@ -22,7 +22,7 @@ docker run \
 Geçerli dizinin içeriğini bir worker kullanarak sunmak için `php-server` komutunun `--worker` seçeneğini kullanın:
 
 ```console
-./frankenphp php-server --worker /path/to/your/worker/script.php
+frankenphp php-server --worker /path/to/your/worker/script.php
 ```
 
 PHP uygulamanız [binary dosyaya gömülü](embed.md) ise, uygulamanın kök dizinine özel bir `Caddyfile` ekleyebilirsiniz.

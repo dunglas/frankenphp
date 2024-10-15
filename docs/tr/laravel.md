@@ -35,7 +35,7 @@ Alternatif olarak, Laravel projelerinizi FrankenPHP ile yerel makinenizden çal�
     }
     ```
 
-3. FrankenPHP'yi Laravel projenizin kök dizininden başlatın: `./frankenphp run`
+3. FrankenPHP'yi Laravel projenizin kök dizininden başlatın: `frankenphp run`
 
 ## Laravel Octane
 
