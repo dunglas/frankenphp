@@ -563,7 +563,28 @@ int frankenphp_update_server_context(
   return SUCCESS;
 }
 
+PHPAPI void get_full_env(zval *track_vars_array) {
+  struct go_getfullenv_return full_env = go_getfullenv(thread_index);
+
+  for (int i = 0; i < full_env.r1; i++) {
+    go_string key = full_env.r0[i * 2];
+    go_string val = full_env.r0[i * 2 + 1];
+
+    // create PHP strings for key and value
+    zend_string *key_str = zend_string_init(key.data, key.len, 0);
+    zend_string *val_str = zend_string_init(val.data, val.len, 0);
+
+    // add to the associative array
+    add_assoc_str(track_vars_array, ZSTR_VAL(key_str), val_str);
+
+    // release the key string
+    zend_string_release(key_str);
+  }
+}
+
 static int frankenphp_startup(sapi_module_struct *sapi_module) {
+  php_import_environment_variables = get_full_env;
+
   return php_module_startup(sapi_module, &frankenphp_module);
 }
 
@@ -746,25 +767,6 @@ void frankenphp_register_bulk_variables(go_string known_variables[27],
                                  dynamic_variables[i].data, new_val_len,
                                  track_vars_array);
     }
-  }
-}
-
-void get_full_env(zval *track_vars_array) {
-  struct go_getfullenv_return full_env = go_getfullenv(thread_index);
-
-  for (int i = 0; i < full_env.r1; i++) {
-    go_string key = full_env.r0[i * 2];
-    go_string val = full_env.r0[i * 2 + 1];
-
-    // create PHP strings for key and value
-    zend_string *key_str = zend_string_init(key.data, key.len, 0);
-    zend_string *val_str = zend_string_init(val.data, val.len, 0);
-
-    // add to the associative array
-    add_assoc_str(track_vars_array, ZSTR_VAL(key_str), val_str);
-
-    // release the key string
-    zend_string_release(key_str);
   }
 }
 
