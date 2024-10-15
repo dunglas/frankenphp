@@ -70,7 +70,7 @@ if [ $? -eq 1 ]; then
 fi
 
 if type "curl" >/dev/null 2>&1; then
-	curl -L --progress-bar "https://github.com/dunglas/frankenphp/releases/latest/download/${THE_ARCH_BIN}" -o ${DEST}
+	curl -L --progress-bar "https://github.com/dunglas/frankenphp/releases/latest/download/${THE_ARCH_BIN}" -o "${DEST}"
 elif type "wget" >/dev/null 2>&1; then
 	${SUDO} wget "https://github.com/dunglas/frankenphp/releases/latest/download/${THE_ARCH_BIN}" -O "${DEST}"
 else
