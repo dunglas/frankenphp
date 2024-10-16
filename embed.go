@@ -34,11 +34,9 @@ func init() {
 
 	appPath := filepath.Join(os.TempDir(), "frankenphp_"+string(embeddedAppChecksum))
 
-	if _, err := os.Stat(appPath); os.IsNotExist(err) {
-		if err := untar(appPath); err != nil {
-			os.RemoveAll(appPath)
-			panic(err)
-		}
+	if err := untar(appPath); err != nil {
+		os.RemoveAll(appPath)
+		panic(err)
 	}
 
 	EmbeddedAppPath = appPath
@@ -97,37 +95,39 @@ func untar(dir string) (err error) {
 					return err
 				}
 			}
-			wf, err := os.OpenFile(abs, os.O_RDWR|os.O_CREATE|os.O_TRUNC, mode.Perm())
-			if err != nil {
-				return err
-			}
-			n, err := io.Copy(wf, tr)
-			if closeErr := wf.Close(); closeErr != nil && err == nil {
-				err = closeErr
-			}
-			if err != nil {
-				return fmt.Errorf("error writing to %s: %v", abs, err)
-			}
-			if n != f.Size {
-				return fmt.Errorf("only wrote %d bytes to %s; expected %d", n, abs, f.Size)
-			}
-			modTime := f.ModTime
-			if modTime.After(t0) {
-				// Clamp modtimes at system time. See
-				// golang.org/issue/19062 when clock on
-				// buildlet was behind the gitmirror server
-				// doing the git-archive.
-				modTime = t0
-			}
-			if !modTime.IsZero() {
-				if err := os.Chtimes(abs, modTime, modTime); err != nil && !loggedChtimesError {
-					// benign error. Gerrit doesn't even set the
-					// modtime in these, and we don't end up relying
-					// on it anywhere (the gomote push command relies
-					// on digests only), so this is a little pointless
-					// for now.
-					log.Printf("error changing modtime: %v (further Chtimes errors suppressed)", err)
-					loggedChtimesError = true // once is enough
+			if _, err := os.Stat(abs); os.IsNotExist(err) {
+				wf, err := os.OpenFile(abs, os.O_RDWR|os.O_CREATE|os.O_TRUNC, mode.Perm())
+				if err != nil {
+					return err
+				}
+				n, err := io.Copy(wf, tr)
+				if closeErr := wf.Close(); closeErr != nil && err == nil {
+					err = closeErr
+				}
+				if err != nil {
+					return fmt.Errorf("error writing to %s: %v", abs, err)
+				}
+				if n != f.Size {
+					return fmt.Errorf("only wrote %d bytes to %s; expected %d", n, abs, f.Size)
+				}
+				modTime := f.ModTime
+				if modTime.After(t0) {
+					// Clamp modtimes at system time. See
+					// golang.org/issue/19062 when clock on
+					// buildlet was behind the gitmirror server
+					// doing the git-archive.
+					modTime = t0
+				}
+				if !modTime.IsZero() {
+					if err := os.Chtimes(abs, modTime, modTime); err != nil && !loggedChtimesError {
+						// benign error. Gerrit doesn't even set the
+						// modtime in these, and we don't end up relying
+						// on it anywhere (the gomote push command relies
+						// on digests only), so this is a little pointless
+						// for now.
+						log.Printf("error changing modtime: %v (further Chtimes errors suppressed)", err)
+						loggedChtimesError = true // once is enough
+					}
 				}
 			}
 			nFiles++
