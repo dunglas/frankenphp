@@ -13,9 +13,9 @@ OS=$(uname -s)
 ARCH=$(uname -m)
 
 if type "tput" >/dev/null 2>&1; then
-	bold=$(tput bold)
-	italic=$(tput sitm)
-	normal=$(tput sgr0)
+	bold=$(tput bold || true)
+	italic=$(tput sitm || true)
+	normal=$(tput sgr0 || true)
 fi
 
 case ${OS} in
