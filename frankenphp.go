@@ -34,10 +34,12 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"os/signal"
 	"runtime"
 	"strconv"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 	"unsafe"
 
@@ -280,6 +282,8 @@ func Init(options ...Option) error {
 	if requestChan != nil {
 		return AlreaydStartedError
 	}
+
+	signal.Ignore(syscall.SIGPIPE)
 
 	opt := &opt{}
 	for _, o := range options {
