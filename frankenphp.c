@@ -12,6 +12,7 @@
 #include <php_main.h>
 #include <php_output.h>
 #include <php_variables.h>
+#include <pthread.h>
 #include <sapi/embed/php_embed.h>
 #include <signal.h>
 #include <stdint.h>
@@ -21,7 +22,6 @@
 #if defined(__linux__)
 #include <sys/prctl.h>
 #elif defined(__FreeBSD__) || defined(__OpenBSD__)
-#include <pthread.h>
 #include <pthread_np.h>
 #endif
 
