@@ -22,7 +22,7 @@ docker run \
 使用 `php-server` 命令的 `--worker` 选项， 执行命令使当前目录的内容使用 worker：
 
 ```console
-./frankenphp php-server --worker /path/to/your/worker/script.php
+frankenphp php-server --worker /path/to/your/worker/script.php
 ```
 
 ## Symfony Runtime

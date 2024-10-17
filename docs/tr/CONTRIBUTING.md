@@ -118,7 +118,7 @@ docker buildx bake -f docker-bake.hcl --pull --no-cache --push
     ```
 
 2. Mevcut `frankenphp` sürümünüzü hata ayıklama FrankenPHP çalıştırılabilir dosyasıyla değiştirin
-3. FrankenPHP'yi her zamanki gibi başlatın (alternatif olarak FrankenPHP'yi doğrudan GDB ile başlatabilirsiniz: `gdb --args ./frankenphp run`)
+3. FrankenPHP'yi her zamanki gibi başlatın (alternatif olarak FrankenPHP'yi doğrudan GDB ile başlatabilirsiniz: `gdb --args frankenphp run`)
 4. GDB ile sürece bağlanın:
 
     ```console
@@ -172,7 +172,7 @@ docker buildx bake -f docker-bake.hcl --pull --no-cache --push
 
     ```console
     go test -tags watcher -c -ldflags=-w
-    gdb --args ./frankenphp.test -test.run ^MyTest$
+    gdb --args frankenphp.test -test.run ^MyTest$
     ```
 
 9. Hata düzeltildiğinde, tüm bu değişiklikleri geri alın

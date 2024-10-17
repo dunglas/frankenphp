@@ -118,7 +118,7 @@ docker buildx bake -f docker-bake.hcl --pull --no-cache --push
     ```
 
 2. Replace your current version of `frankenphp` by the debug FrankenPHP executable
-3. Start FrankenPHP as usual (alternatively, you can directly start FrankenPHP with GDB: `gdb --args ./frankenphp run`)
+3. Start FrankenPHP as usual (alternatively, you can directly start FrankenPHP with GDB: `gdb --args frankenphp run`)
 4. Attach to the process with GDB:
 
     ```console
@@ -172,7 +172,7 @@ docker buildx bake -f docker-bake.hcl --pull --no-cache --push
 
     ```console
     go test -tags watcher -c -ldflags=-w
-    gdb --args ./frankenphp.test -test.run ^MyTest$
+    gdb --args frankenphp.test -test.run ^MyTest$
     ```
 
 9. When the bug is fixed, revert all these changes

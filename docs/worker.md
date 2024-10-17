@@ -22,7 +22,7 @@ docker run \
 Use the `--worker` option of the `php-server` command to serve the content of the current directory using a worker:
 
 ```console
-./frankenphp php-server --worker /path/to/your/worker/script.php
+frankenphp php-server --worker /path/to/your/worker/script.php
 ```
 
 If your PHP app is [embedded in the binary](embed.md), you can add a custom `Caddyfile` in the root directory of the app.
@@ -32,7 +32,7 @@ It's also possible to [restart the worker on file changes](config.md#watching-fo
 The following command will trigger a restart if any file ending in `.php` in the `/path/to/your/app/` directory or subdirectories is modified:
 
 ```console
-./frankenphp php-server --worker /path/to/your/worker/script.php --watch "/path/to/your/app/**/*.php"
+frankenphp php-server --worker /path/to/your/worker/script.php --watch "/path/to/your/app/**/*.php"
 ```
 
 ## Symfony Runtime
