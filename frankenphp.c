@@ -556,24 +556,11 @@ static char *frankenphp_read_cookies(void) {
   return ctx->cookie_data;
 }
 
-static void frankenphp_register_known_variable(const char *key, go_string value,
-                                               zval *track_vars_array) {
-  if (value.data == NULL) {
-    php_register_variable_safe(key, "", 0, track_vars_array);
-    return;
-  }
-
-  size_t new_val_len;
-  if (sapi_module.input_filter(PARSE_SERVER, key, &value.data, value.len,
-                               &new_val_len)) {
-    php_register_variable_safe(key, value.data, new_val_len, track_vars_array);
-  }
-}
-
-static void frankenphp_register_trusted_value(zend_string *zKey, char *value,
-                                               int valSize, zval *track_vars_array) {
+static void frankenphp_register_trusted_variable(zend_string *zKey, char *value,
+                                                 int valSize,
+                                                 zval *track_vars_array) {
   zval zValue;
-  ZVAL_STRINGL(&zValue, value, valSize);
+  ZVAL_STRINGL_FAST(&zValue, value, valSize);
   zend_hash_update_ind(Z_ARRVAL_P(track_vars_array), zKey, &zValue);
 }
 
@@ -595,21 +582,20 @@ void frankenphp_register_bulk_variables(go_string known_variables[27],
                                         php_variable *dynamic_variables,
                                         size_t size, zval *track_vars_array) {
 
-  /* these variables are trusted, they do not contain user input, we will register them directly: */
+  /* these variables are trusted, they do not contain user input, we will
+   * register them directly: */
   /* They are allocated in frankenphp_update_server_context() */
   for (size_t i = 0; i < 19; i++) {
-    if(known_variable_keys[i] != NULL) {
-  	  frankenphp_register_trusted_value(known_variable_keys[i], known_variables[i].data, known_variables[i].len, track_vars_array);
-    }
+    frankenphp_register_trusted_variable(
+        known_variable_keys[i], known_variables[i].data, known_variables[i].len,
+        track_vars_array);
   }
 
   /* Not used, but must be present AUTH_TYPE and REMOTE_IDENT */
-  frankenphp_register_trusted_value(known_variable_keys[19], "", 0, track_vars_array);
-  frankenphp_register_trusted_value(known_variable_keys[20], "", 0, track_vars_array);
-
-  /* These variables are not to be trusted since they contain user input, we will register them safely: */
-  frankenphp_register_known_variable("HTTP_HOST", known_variables[4], track_vars_array);
-  frankenphp_register_known_variable("PHP_SELF", known_variables[7], track_vars_array);
+  frankenphp_register_trusted_variable(known_variable_keys[19], "", 0,
+                                       track_vars_array);
+  frankenphp_register_trusted_variable(known_variable_keys[20], "", 0,
+                                       track_vars_array);
 
   frankenphp_register_variable_from_request_info(
       "CONTENT_TYPE", (char *)SG(request_info).content_type, track_vars_array);
@@ -625,7 +611,6 @@ void frankenphp_register_bulk_variables(go_string known_variables[27],
       track_vars_array);
   frankenphp_register_variable_from_request_info(
       "REQUEST_URI", SG(request_info).request_uri, track_vars_array);
-
 
   /* Finally we register dynamic variables like headers or the Caddy env: */
   size_t new_val_len;
@@ -722,18 +707,18 @@ static void set_thread_name(char *thread_name) {
 }
 
 /* Known variables are stored in a global array to avoid unnecessary allocations
- * and de-allocations
- * THe variable order mirrors that in cgi.go
+ * The variable order mirrors that in cgi.go
  */
 static void init_known_variable_keys(void) {
   known_variable_keys[0] = zend_string_init_interned("CONTENT_LENGTH", 14, 1);
   known_variable_keys[1] = zend_string_init_interned("DOCUMENT_ROOT", 13, 1);
   known_variable_keys[2] = zend_string_init_interned("DOCUMENT_URI", 12, 1);
-  known_variable_keys[3] = zend_string_init_interned("GATEWAY_INTERFACE", 17, 1);
-  known_variable_keys[4] = NULL; // HTTP_HOST contains user input
+  known_variable_keys[3] =
+      zend_string_init_interned("GATEWAY_INTERFACE", 17, 1);
+  known_variable_keys[4] = zend_string_init_interned("HTTP_HOST", 9, 1);
   known_variable_keys[5] = zend_string_init_interned("HTTPS", 5, 1);
   known_variable_keys[6] = zend_string_init_interned("PATH_INFO", 9, 1);
-  known_variable_keys[7] = NULL; // PHP_SELF contains user input
+  known_variable_keys[7] = zend_string_init_interned("PHP_SELF", 8, 1);
   known_variable_keys[8] = zend_string_init_interned("REMOTE_ADDR", 11, 1);
   known_variable_keys[9] = zend_string_init_interned("REMOTE_HOST", 11, 1);
   known_variable_keys[10] = zend_string_init_interned("REMOTE_PORT", 11, 1);
@@ -752,12 +737,11 @@ static void init_known_variable_keys(void) {
 void release_known_variable_keys(void) {
   for (size_t i = 0; i < 21; i++) {
     if (known_variable_keys[i] != NULL) {
-	  zend_string_release(known_variable_keys[i]);
+      zend_string_release(known_variable_keys[i]);
       known_variable_keys[i] = NULL;
-	}
+    }
   }
 }
-
 
 static void *php_thread(void *arg) {
   char thread_name[16] = {0};
