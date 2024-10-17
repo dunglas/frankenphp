@@ -581,22 +581,20 @@ frankenphp_register_variable_from_request_info(const char *key, char *value,
 void frankenphp_register_bulk_variables(go_string known_variables[27],
                                         php_variable *dynamic_variables,
                                         size_t size, zval *track_vars_array) {
-
-  /* these variables are trusted, they do not contain user input, we will
-   * register them directly: */
-  /* They are allocated in frankenphp_update_server_context() */
+  /* These variables are allocated in frankenphp_update_server_context() */
   for (size_t i = 0; i < 19; i++) {
     frankenphp_register_trusted_variable(
         known_variable_keys[i], known_variables[i].data, known_variables[i].len,
         track_vars_array);
   }
 
-  /* Not used, but must be present AUTH_TYPE and REMOTE_IDENT */
+  /* AUTH_TYPE and REMOTE_IDENT are always empty but must be present */
   frankenphp_register_trusted_variable(known_variable_keys[19], "", 0,
                                        track_vars_array);
   frankenphp_register_trusted_variable(known_variable_keys[20], "", 0,
                                        track_vars_array);
 
+  /* These variables are registered from the request_info  */
   frankenphp_register_variable_from_request_info(
       "CONTENT_TYPE", (char *)SG(request_info).content_type, track_vars_array);
   frankenphp_register_variable_from_request_info(
@@ -612,7 +610,7 @@ void frankenphp_register_bulk_variables(go_string known_variables[27],
   frankenphp_register_variable_from_request_info(
       "REQUEST_URI", SG(request_info).request_uri, track_vars_array);
 
-  /* Finally we register dynamic variables like headers or the Caddy env: */
+  /* Finally we register dynamic variables like headers or the PreparedEnv: */
   size_t new_val_len;
   for (size_t i = 0; i < size; i++) {
     if (sapi_module.input_filter(PARSE_SERVER, dynamic_variables[i].var,
