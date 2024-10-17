@@ -594,7 +594,7 @@ void frankenphp_register_bulk_variables(go_string known_variables[27],
   frankenphp_register_trusted_variable(known_variable_keys[20], "", 0,
                                        track_vars_array);
 
-  /* These variables are registered from the request_info  */
+  /* These variables are registered from the request_info */
   frankenphp_register_variable_from_request_info(
       "CONTENT_TYPE", (char *)SG(request_info).content_type, track_vars_array);
   frankenphp_register_variable_from_request_info(
