@@ -277,23 +277,8 @@ PHP_FUNCTION(frankenphp_getenv) {
   ZEND_PARSE_PARAMETERS_END();
 
   if (!name) {
-    struct go_getfullenv_return full_env = go_getfullenv(thread_index);
-
     array_init(return_value);
-    for (int i = 0; i < full_env.r1; i++) {
-      go_string key = full_env.r0[i * 2];
-      go_string val = full_env.r0[i * 2 + 1];
-
-      // create PHP strings for key and value
-      zend_string *key_str = zend_string_init(key.data, key.len, 0);
-      zend_string *val_str = zend_string_init(val.data, val.len, 0);
-
-      // add to the associative array
-      add_assoc_str(return_value, ZSTR_VAL(key_str), val_str);
-
-      // release the key string
-      zend_string_release(key_str);
-    }
+    go_getfullenv((uintptr_t) return_value);
 
     return;
   }
