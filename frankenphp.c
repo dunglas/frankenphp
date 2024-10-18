@@ -150,6 +150,25 @@ static void frankenphp_worker_request_shutdown() {
   SG(rfc1867_uploaded_files) = NULL;
 }
 
+PHPAPI void get_full_env(zval *track_vars_array) {
+  struct go_getfullenv_return full_env = go_getfullenv(thread_index);
+
+  for (int i = 0; i < full_env.r1; i++) {
+    go_string key = full_env.r0[i * 2];
+    go_string val = full_env.r0[i * 2 + 1];
+
+    // create PHP strings for key and value
+    zend_string *key_str = zend_string_init(key.data, key.len, 0);
+    zend_string *val_str = zend_string_init(val.data, val.len, 0);
+
+    // add to the associative array
+    add_assoc_str(track_vars_array, ZSTR_VAL(key_str), val_str);
+
+    // release the key string
+    zend_string_release(key_str);
+  }
+}
+
 /* Adapted from php_request_startup() */
 static int frankenphp_worker_request_startup() {
   int retval = SUCCESS;
@@ -278,7 +297,7 @@ PHP_FUNCTION(frankenphp_getenv) {
 
   if (!name) {
     array_init(return_value);
-    go_getfullenv((uintptr_t) return_value);
+    get_full_env(return_value);
 
     return;
   }
@@ -546,25 +565,6 @@ int frankenphp_update_server_context(
   SG(request_info).proto_num = proto_num;
 
   return SUCCESS;
-}
-
-PHPAPI void get_full_env(zval *track_vars_array) {
-  struct go_getfullenv_return full_env = go_getfullenv(thread_index);
-
-  for (int i = 0; i < full_env.r1; i++) {
-    go_string key = full_env.r0[i * 2];
-    go_string val = full_env.r0[i * 2 + 1];
-
-    // create PHP strings for key and value
-    zend_string *key_str = zend_string_init(key.data, key.len, 0);
-    zend_string *val_str = zend_string_init(val.data, val.len, 0);
-
-    // add to the associative array
-    add_assoc_str(track_vars_array, ZSTR_VAL(key_str), val_str);
-
-    // release the key string
-    zend_string_release(key_str);
-  }
 }
 
 static int frankenphp_startup(sapi_module_struct *sapi_module) {
