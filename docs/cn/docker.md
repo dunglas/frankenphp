@@ -30,11 +30,11 @@ FROM dunglas/frankenphp
 
 # 在此处添加其他扩展：
 RUN install-php-extensions \
-  pdo_mysql \
-  gd \
-  intl \
-  zip \
-  opcache
+	pdo_mysql \
+	gd \
+	intl \
+	zip \
+	opcache
 ```
 
 ## 如何安装更多 Caddy 模块
@@ -52,14 +52,14 @@ COPY --from=caddy:builder /usr/bin/xcaddy /usr/bin/xcaddy
 # 必须启用 CGO 才能构建 FrankenPHP
 ENV CGO_ENABLED=1 XCADDY_SETCAP=1 XCADDY_GO_BUILD_FLAGS="-ldflags '-w -s'"
 RUN xcaddy build \
-  --output /usr/local/bin/frankenphp \
-  --with github.com/dunglas/frankenphp=./ \
-  --with github.com/dunglas/frankenphp/caddy=./caddy/ \
-  --with github.com/dunglas/caddy-cbrotli \
-  # Mercure 和 Vulcain 包含在官方版本中，如果不需要你可以删除它们
-  --with github.com/dunglas/mercure/caddy \
-  --with github.com/dunglas/vulcain/caddy
-  # 在此处添加额外的 Caddy 模块
+	--output /usr/local/bin/frankenphp \
+	--with github.com/dunglas/frankenphp=./ \
+	--with github.com/dunglas/frankenphp/caddy=./caddy/ \
+	--with github.com/dunglas/caddy-cbrotli \
+	# Mercure 和 Vulcain 包含在官方版本中，如果不需要你可以删除它们
+	--with github.com/dunglas/mercure/caddy \
+	--with github.com/dunglas/vulcain/caddy
+	# 在此处添加额外的 Caddy 模块
 
 FROM dunglas/frankenphp AS runner
 
@@ -140,12 +140,12 @@ FROM dunglas/frankenphp
 ARG USER=www-data
 
 RUN \
-  # 在基于 alpine 的发行版使用 "adduser -D ${USER}"
-  useradd -D ${USER}; \
-  # 需要开放80和443端口的权限
-  setcap CAP_NET_BIND_SERVICE=+eip /usr/local/bin/frankenphp; \
-  # 需要 /data/caddy 和 /config/caddy 目录的写入权限
-  chown -R ${USER}:${USER} /data/caddy && chown -R ${USER}:${USER} /config/caddy;
+	# 在基于 alpine 的发行版使用 "adduser -D ${USER}"
+	useradd -D ${USER}; \
+	# 需要开放80和443端口的权限
+	setcap CAP_NET_BIND_SERVICE=+eip /usr/local/bin/frankenphp; \
+	# 需要 /data/caddy 和 /config/caddy 目录的写入权限
+	chown -R ${USER}:${USER} /data/caddy && chown -R ${USER}:${USER} /config/caddy;
 
 USER ${USER}
 ```
