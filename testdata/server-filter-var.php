@@ -3,8 +3,9 @@
  * This file tests the filter_input(INPUT_SERVER, $name) feature
  * Specifically when it's enabled via fringe_mode
  * If it's not enabled, just echo out the variables directly from $_SERVER
+ * @see TestAllServerVarsWithoutInputFilter
+ * @see TestAllServerVarsWithInputFilterInFringeMode
  */
-
 echo "<pre>\n";
 foreach ([
              'CONTENT_LENGTH',
@@ -45,6 +46,5 @@ foreach ([
     } else {
         echo "$name:" . $_SERVER[$name] . "\n";
     }
-
 }
 echo "</pre>";

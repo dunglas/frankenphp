@@ -78,11 +78,11 @@ typedef struct frankenphp_server_context {
   bool finished;
 } frankenphp_server_context;
 
+static bool should_filter_var = 0;
 __thread frankenphp_server_context *local_ctx = NULL;
 __thread zend_string *known_variable_keys[27] = {NULL};
 __thread uintptr_t thread_index;
 __thread zval *os_environment = NULL;
-static bool should_filter_var = 0;
 
 static void frankenphp_free_request_context() {
   frankenphp_server_context *ctx = SG(server_context);
