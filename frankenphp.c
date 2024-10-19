@@ -12,6 +12,7 @@
 #include <php_main.h>
 #include <php_output.h>
 #include <php_variables.h>
+#include <pthread.h>
 #include <sapi/embed/php_embed.h>
 #include <signal.h>
 #include <stdint.h>
@@ -21,7 +22,6 @@
 #if defined(__linux__)
 #include <sys/prctl.h>
 #elif defined(__FreeBSD__) || defined(__OpenBSD__)
-#include <pthread.h>
 #include <pthread_np.h>
 #endif
 
@@ -151,6 +151,25 @@ static void frankenphp_worker_request_shutdown() {
   SG(rfc1867_uploaded_files) = NULL;
 }
 
+PHPAPI void get_full_env(zval *track_vars_array) {
+  struct go_getfullenv_return full_env = go_getfullenv(thread_index);
+
+  for (int i = 0; i < full_env.r1; i++) {
+    go_string key = full_env.r0[i * 2];
+    go_string val = full_env.r0[i * 2 + 1];
+
+    // create PHP strings for key and value
+    zend_string *key_str = zend_string_init(key.data, key.len, 0);
+    zend_string *val_str = zend_string_init(val.data, val.len, 0);
+
+    // add to the associative array
+    add_assoc_str(track_vars_array, ZSTR_VAL(key_str), val_str);
+
+    // release the key string
+    zend_string_release(key_str);
+  }
+}
+
 /* Adapted from php_request_startup() */
 static int frankenphp_worker_request_startup() {
   int retval = SUCCESS;
@@ -243,6 +262,60 @@ PHP_FUNCTION(frankenphp_finish_request) { /* {{{ */
   RETURN_TRUE;
 } /* }}} */
 
+/* {{{ Call go's putenv to prevent race conditions */
+PHP_FUNCTION(frankenphp_putenv) {
+  char *setting;
+  size_t setting_len;
+
+  ZEND_PARSE_PARAMETERS_START(1, 1)
+  Z_PARAM_STRING(setting, setting_len)
+  ZEND_PARSE_PARAMETERS_END();
+
+  // Cast str_len to int (ensure it fits in an int)
+  if (setting_len > INT_MAX) {
+    php_error(E_WARNING, "String length exceeds maximum integer value");
+    RETURN_FALSE;
+  }
+
+  if (go_putenv(setting, (int)setting_len)) {
+    RETURN_TRUE;
+  } else {
+    RETURN_FALSE;
+  }
+} /* }}} */
+
+/* {{{ Call go's getenv to prevent race conditions */
+PHP_FUNCTION(frankenphp_getenv) {
+  char *name = NULL;
+  size_t name_len = 0;
+  bool local_only = 0;
+
+  ZEND_PARSE_PARAMETERS_START(0, 2)
+  Z_PARAM_OPTIONAL
+  Z_PARAM_STRING_OR_NULL(name, name_len)
+  Z_PARAM_BOOL(local_only)
+  ZEND_PARSE_PARAMETERS_END();
+
+  if (!name) {
+    array_init(return_value);
+    get_full_env(return_value);
+
+    return;
+  }
+
+  go_string gname = {name_len, name};
+
+  struct go_getenv_return result = go_getenv(thread_index, &gname);
+
+  if (result.r0) {
+    // Return the single environment variable as a string
+    RETVAL_STRINGL(result.r1->data, result.r1->len);
+  } else {
+    // Environment variable does not exist
+    RETVAL_FALSE;
+  }
+} /* }}} */
+
 /* {{{ Fetch all HTTP request headers */
 PHP_FUNCTION(frankenphp_request_headers) {
   if (zend_parse_parameters_none() == FAILURE) {
@@ -261,8 +334,6 @@ PHP_FUNCTION(frankenphp_request_headers) {
 
     add_assoc_stringl_ex(return_value, key.data, key.len, val.data, val.len);
   }
-
-  go_apache_request_cleanup(thread_index);
 }
 /* }}} */
 
@@ -409,15 +480,39 @@ PHP_FUNCTION(headers_send) {
   RETURN_LONG(sapi_send_headers());
 }
 
+PHP_MINIT_FUNCTION(frankenphp) {
+  zend_function *func;
+
+  // Override putenv
+  func = zend_hash_str_find_ptr(CG(function_table), "putenv",
+                                sizeof("putenv") - 1);
+  if (func != NULL && func->type == ZEND_INTERNAL_FUNCTION) {
+    ((zend_internal_function *)func)->handler = ZEND_FN(frankenphp_putenv);
+  } else {
+    php_error(E_WARNING, "Failed to find built-in putenv function");
+  }
+
+  // Override getenv
+  func = zend_hash_str_find_ptr(CG(function_table), "getenv",
+                                sizeof("getenv") - 1);
+  if (func != NULL && func->type == ZEND_INTERNAL_FUNCTION) {
+    ((zend_internal_function *)func)->handler = ZEND_FN(frankenphp_getenv);
+  } else {
+    php_error(E_WARNING, "Failed to find built-in getenv function");
+  }
+
+  return SUCCESS;
+}
+
 static zend_module_entry frankenphp_module = {
     STANDARD_MODULE_HEADER,
     "frankenphp",
-    ext_functions, /* function table */
-    NULL,          /* initialization */
-    NULL,          /* shutdown */
-    NULL,          /* request initialization */
-    NULL,          /* request shutdown */
-    NULL,          /* information */
+    ext_functions,         /* function table */
+    PHP_MINIT(frankenphp), /* initialization */
+    NULL,                  /* shutdown */
+    NULL,                  /* request initialization */
+    NULL,                  /* request shutdown */
+    NULL,                  /* information */
     TOSTRING(FRANKENPHP_VERSION),
     STANDARD_MODULE_PROPERTIES};
 
@@ -474,6 +569,8 @@ int frankenphp_update_server_context(
 }
 
 static int frankenphp_startup(sapi_module_struct *sapi_module) {
+  php_import_environment_variables = get_full_env;
+
   return php_module_startup(sapi_module, &frankenphp_module);
 }
 
@@ -627,14 +724,15 @@ static void frankenphp_register_variables(zval *track_vars_array) {
   /* https://www.php.net/manual/en/reserved.variables.server.php */
 
   /* In CGI mode, we consider the environment to be a part of the server
-   * variables
+   * variables.
    */
 
   frankenphp_server_context *ctx = SG(server_context);
 
   /* in non-worker mode we import the os environment regularly */
   if (!ctx->has_main_request) {
-    php_import_environment_variables(track_vars_array);
+    get_full_env(track_vars_array);
+    // php_import_environment_variables(track_vars_array);
     go_register_variables(thread_index, track_vars_array);
     return;
   }
@@ -643,7 +741,8 @@ static void frankenphp_register_variables(zval *track_vars_array) {
   if (os_environment == NULL) {
     os_environment = malloc(sizeof(zval));
     array_init(os_environment);
-    php_import_environment_variables(os_environment);
+    get_full_env(os_environment);
+    // php_import_environment_variables(os_environment);
   }
   zend_hash_copy(Z_ARR_P(track_vars_array), Z_ARR_P(os_environment),
                  (copy_ctor_func_t)zval_add_ref);

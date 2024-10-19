@@ -34,10 +34,12 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"os/signal"
 	"runtime"
 	"strconv"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 	"unsafe"
 
@@ -281,6 +283,10 @@ func Init(options ...Option) error {
 		return AlreaydStartedError
 	}
 
+	// Ignore all SIGPIPE signals to prevent weird issues with systemd: https://github.com/dunglas/frankenphp/issues/1020
+	// Docker/Moby has a similar hack: https://github.com/moby/moby/blob/d828b032a87606ae34267e349bf7f7ccb1f6495a/cmd/dockerd/docker.go#L87-L90
+	signal.Ignore(syscall.SIGPIPE)
+
 	opt := &opt{}
 	for _, o := range options {
 		if err := o(opt); err != nil {
@@ -501,6 +507,76 @@ func ServeHTTP(responseWriter http.ResponseWriter, request *http.Request) error 
 	return nil
 }
 
+//export go_putenv
+func go_putenv(str *C.char, length C.int) C.bool {
+	// Create a byte slice from C string with a specified length
+	s := C.GoBytes(unsafe.Pointer(str), length)
+
+	// Convert byte slice to string
+	envString := string(s)
+
+	// Check if '=' is present in the string
+	if key, val, found := strings.Cut(envString, "="); found {
+		if os.Setenv(key, val) != nil {
+			return false // Failure
+		}
+	} else {
+		// No '=', unset the environment variable
+		if os.Unsetenv(envString) != nil {
+			return false // Failure
+		}
+	}
+
+	return true // Success
+}
+
+//export go_getfullenv
+func go_getfullenv(threadIndex C.uintptr_t) (*C.go_string, C.size_t) {
+	thread := phpThreads[threadIndex]
+
+	env := os.Environ()
+	goStrings := make([]C.go_string, len(env)*2)
+
+	for i, envVar := range env {
+		key, val, _ := strings.Cut(envVar, "=")
+		k := unsafe.StringData(key)
+		v := unsafe.StringData(val)
+		thread.Pin(k)
+		thread.Pin(v)
+
+		goStrings[i*2] = C.go_string{C.size_t(len(key)), (*C.char)(unsafe.Pointer(k))}
+		goStrings[i*2+1] = C.go_string{C.size_t(len(val)), (*C.char)(unsafe.Pointer(v))}
+	}
+
+	value := unsafe.SliceData(goStrings)
+	thread.Pin(value)
+
+	return value, C.size_t(len(env))
+}
+
+//export go_getenv
+func go_getenv(threadIndex C.uintptr_t, name *C.go_string) (C.bool, *C.go_string) {
+	thread := phpThreads[threadIndex]
+
+	// Create a byte slice from C string with a specified length
+	envName := C.GoStringN(name.data, C.int(name.len))
+
+	// Get the environment variable value
+	envValue, exists := os.LookupEnv(envName)
+	if !exists {
+		// Environment variable does not exist
+		return false, nil // Return 0 to indicate failure
+	}
+
+	// Convert Go string to C string
+	val := unsafe.StringData(envValue)
+	thread.Pin(val)
+	value := &C.go_string{C.size_t(len(envValue)), (*C.char)(unsafe.Pointer(val))}
+	thread.Pin(value)
+
+	return true, value // Return 1 to indicate success
+}
+
 //export go_handle_request
 func go_handle_request(threadIndex C.uintptr_t) bool {
 	select {
@@ -518,6 +594,7 @@ func go_handle_request(threadIndex C.uintptr_t) bool {
 		defer func() {
 			maybeCloseContext(fc)
 			thread.mainRequest = nil
+			thread.Unpin()
 		}()
 
 		if err := updateServerContext(r, true, false); err != nil {
@@ -641,8 +718,6 @@ func go_register_variables(threadIndex C.uintptr_t, trackVarsArray *C.zval) {
 
 	C.frankenphp_register_bulk_variables(&knownVariables[0], dvsd, C.size_t(l), trackVarsArray)
 
-	thread.Unpin()
-
 	fc.env = nil
 }
 
@@ -683,11 +758,6 @@ func go_apache_request_headers(threadIndex C.uintptr_t, hasActiveRequest bool) (
 	thread.Pin(sd)
 
 	return sd, C.size_t(len(r.Header))
-}
-
-//export go_apache_request_cleanup
-func go_apache_request_cleanup(threadIndex C.uintptr_t) {
-	phpThreads[threadIndex].Unpin()
 }
 
 func addHeader(fc *FrankenPHPContext, cString *C.char, length C.int) {
