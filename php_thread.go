@@ -14,9 +14,9 @@ var phpThreads []*phpThread
 type phpThread struct {
 	runtime.Pinner
 
-	mainRequest   *http.Request
-	workerRequest *http.Request
-	worker        *worker
+	mainRequest       *http.Request
+	workerRequest     *http.Request
+	worker            *worker
 	knownVariableKeys map[string]*C.zend_string
 }
 
