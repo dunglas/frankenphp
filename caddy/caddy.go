@@ -71,6 +71,8 @@ type FrankenPHPApp struct {
 	NumThreads int `json:"num_threads,omitempty"`
 	// Workers configures the worker scripts to start.
 	Workers []workerConfig `json:"workers,omitempty"`
+	// Whether to support fringe features like filter_input(INPUT_SERVER, $name)
+	FringeMode bool `json:"fringe_mode,omitempty"`
 }
 
 // CaddyModule returns the Caddy module information.
@@ -88,6 +90,9 @@ func (f *FrankenPHPApp) Start() error {
 	opts := []frankenphp.Option{frankenphp.WithNumThreads(f.NumThreads), frankenphp.WithLogger(logger), frankenphp.WithMetrics(metrics)}
 	for _, w := range f.Workers {
 		opts = append(opts, frankenphp.WithWorkers(repl.ReplaceKnown(w.FileName, ""), w.Num, w.Env, w.Watch))
+	}
+	if f.FringeMode {
+		opts = append(opts, frankenphp.WithFringeMode())
 	}
 
 	_, loaded, err := phpInterpreter.LoadOrNew(mainPHPInterpreterKey, func() (caddy.Destructor, error) {
@@ -136,6 +141,16 @@ func (f *FrankenPHPApp) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 				}
 
 				f.NumThreads = v
+			case "fringe_mode":
+				if !d.NextArg() {
+					f.FringeMode = true
+					continue
+				}
+				v, err := strconv.ParseBool(d.Val())
+				if err != nil {
+					return err
+				}
+				f.FringeMode = v
 			case "worker":
 				wc := workerConfig{}
 				if d.NextArg() {
