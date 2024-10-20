@@ -336,7 +336,7 @@ func Init(options ...Option) error {
 	requestChan = make(chan *http.Request)
 	initPHPThreads(opt.numThreads)
 
-	if C.frankenphp_init(C.int(opt.numThreads)) != 0 {
+	if C.frankenphp_init(C.int(opt.numThreads), C.bool(opt.fringeMode)) != 0 {
 		return MainThreadCreationError
 	}
 
@@ -653,71 +653,6 @@ var headerKeyCache = func() otter.Cache[string, string] {
 
 	return c
 }()
-
-//export go_register_variables
-func go_register_variables(threadIndex C.uintptr_t, trackVarsArray *C.zval) {
-	thread := phpThreads[threadIndex]
-	r := thread.getActiveRequest()
-	fc := r.Context().Value(contextKey).(*FrankenPHPContext)
-
-	dynamicVariables := make([]C.php_variable, len(fc.env)+len(r.Header))
-
-	var l int
-
-	// Add all HTTP headers to env variables
-	for field, val := range r.Header {
-		k, ok := headerKeyCache.Get(field)
-		if !ok {
-			k = "HTTP_" + headerNameReplacer.Replace(strings.ToUpper(field)) + "\x00"
-			headerKeyCache.SetIfAbsent(field, k)
-		}
-
-		if _, ok := fc.env[k]; ok {
-			continue
-		}
-
-		v := strings.Join(val, ", ")
-
-		kData := unsafe.StringData(k)
-		vData := unsafe.StringData(v)
-
-		thread.Pin(kData)
-		thread.Pin(vData)
-
-		dynamicVariables[l]._var = (*C.char)(unsafe.Pointer(kData))
-		dynamicVariables[l].data_len = C.size_t(len(v))
-		dynamicVariables[l].data = (*C.char)(unsafe.Pointer(vData))
-
-		l++
-	}
-
-	for k, v := range fc.env {
-		if _, ok := knownServerKeys[k]; ok {
-			continue
-		}
-
-		kData := unsafe.StringData(k)
-		vData := unsafe.Pointer(unsafe.StringData(v))
-
-		thread.Pin(kData)
-		thread.Pin(vData)
-
-		dynamicVariables[l]._var = (*C.char)(unsafe.Pointer(kData))
-		dynamicVariables[l].data_len = C.size_t(len(v))
-		dynamicVariables[l].data = (*C.char)(unsafe.Pointer(vData))
-
-		l++
-	}
-
-	knownVariables := computeKnownVariables(r, &thread.Pinner)
-
-	dvsd := unsafe.SliceData(dynamicVariables)
-	thread.Pin(dvsd)
-
-	C.frankenphp_register_bulk_variables(&knownVariables[0], dvsd, C.size_t(l), trackVarsArray)
-
-	fc.env = nil
-}
 
 //export go_apache_request_headers
 func go_apache_request_headers(threadIndex C.uintptr_t, hasActiveRequest bool) (*C.go_string, C.size_t) {
