@@ -80,7 +80,6 @@ typedef struct frankenphp_server_context {
 
 static bool should_filter_var = 0;
 __thread frankenphp_server_context *local_ctx = NULL;
-__thread zend_string *known_variable_keys[27] = {NULL};
 __thread uintptr_t thread_index;
 __thread zval *os_environment = NULL;
 
@@ -656,7 +655,7 @@ static char *frankenphp_read_cookies(void) {
 }
 
 /* all variables with well defined keys can safely be registered like this */
-static void frankenphp_register_trusted_var(zend_string *z_key, char *value,
+void frankenphp_register_trusted_var(zend_string *z_key, char *value,
                                             int val_len,
                                             zval *track_vars_array) {
   if (value == NULL) {
@@ -673,8 +672,15 @@ static void frankenphp_register_trusted_var(zend_string *z_key, char *value,
   }
 }
 
-static void
-frankenphp_register_variable_from_request_info(zend_string *zKey, char *value,
+zend_string *frankenphp_init_interned_string(const char *string, size_t len) {
+  return zend_string_init_interned(string, len, 1);
+}
+
+void frankenphp_release_zend_string(zend_string *z_string) {
+  zend_string_release(z_string);
+}
+
+static void frankenphp_register_variable_from_request_info(zend_string *zKey, char *value,
                                                zval *track_vars_array) {
   if (value == NULL) {
     return;
@@ -682,52 +688,35 @@ frankenphp_register_variable_from_request_info(zend_string *zKey, char *value,
   frankenphp_register_trusted_var(zKey, value, strlen(value), track_vars_array);
 }
 
-void frankenphp_register_bulk_variables(go_string known_variables[27],
-                                        php_variable *dynamic_variables,
-                                        size_t size, zval *track_vars_array) {
-  /* These variables are allocated in frankenphp_update_server_context() */
-  for (size_t i = 0; i < 19; i++) {
-    frankenphp_register_trusted_var(known_variable_keys[i],
-                                    known_variables[i].data,
-                                    known_variables[i].len, track_vars_array);
-  }
+void frankenphp_register_variables_from_request_info(zval *track_vars_array, zend_string *content_type, zend_string *path_translated, zend_string *query_string, zend_string *auth_user, zend_string *request_method, zend_string *request_uri) {
+  frankenphp_register_variable_from_request_info(
+      content_type, (char *)SG(request_info).content_type,
+      track_vars_array);
+  frankenphp_register_variable_from_request_info(
+      path_translated, (char *)SG(request_info).path_translated,
+      track_vars_array);
+  frankenphp_register_variable_from_request_info(
+      query_string, SG(request_info).query_string, track_vars_array);
+  frankenphp_register_variable_from_request_info(
+      auth_user, (char *)SG(request_info).auth_user,
+      track_vars_array);
+  frankenphp_register_variable_from_request_info(
+      request_method, (char *)SG(request_info).request_method,
+      track_vars_array);
+  frankenphp_register_variable_from_request_info(
+      request_uri, SG(request_info).request_uri, track_vars_array);
+}
 
-  /* AUTH_TYPE and REMOTE_IDENT are always empty but must be present */
-  frankenphp_register_trusted_var(known_variable_keys[19], "", 0,
-                                  track_vars_array);
-  frankenphp_register_trusted_var(known_variable_keys[20], "", 0,
-                                  track_vars_array);
-
-  /* These variables are registered from the request_info */
-  frankenphp_register_variable_from_request_info(
-      known_variable_keys[21], (char *)SG(request_info).content_type,
-      track_vars_array);
-  frankenphp_register_variable_from_request_info(
-      known_variable_keys[22], (char *)SG(request_info).path_translated,
-      track_vars_array);
-  frankenphp_register_variable_from_request_info(
-      known_variable_keys[23], SG(request_info).query_string, track_vars_array);
-  frankenphp_register_variable_from_request_info(
-      known_variable_keys[24], (char *)SG(request_info).auth_user,
-      track_vars_array);
-  frankenphp_register_variable_from_request_info(
-      known_variable_keys[25], (char *)SG(request_info).request_method,
-      track_vars_array);
-  frankenphp_register_variable_from_request_info(
-      known_variable_keys[26], SG(request_info).request_uri, track_vars_array);
-
-  /* Finally we register dynamic variables like headers or the PreparedEnv: */
-  /* These have to be registered safely since their keys are not known */
-  for (size_t i = 0; i < size; i++) {
-    size_t new_val_len = dynamic_variables[i].data_len;
-    if (!should_filter_var ||
-        sapi_module.input_filter(PARSE_SERVER, dynamic_variables[i].var,
-                                 &dynamic_variables[i].data, new_val_len,
-                                 &new_val_len)) {
-      php_register_variable_safe(dynamic_variables[i].var,
-                                 dynamic_variables[i].data, new_val_len,
-                                 track_vars_array);
-    }
+/* variables with user defined keys must be registered 'safely' */
+void frankenphp_register_variable_safe(char *key, char *val, size_t val_len, zval *track_vars_array){
+  size_t new_val_len = val_len;
+  if (!should_filter_var ||
+      sapi_module.input_filter(PARSE_SERVER, key,
+                               &val, new_val_len,
+                               &new_val_len)) {
+    php_register_variable_safe(key,
+                               val, new_val_len,
+                               track_vars_array);
   }
 }
 
@@ -814,51 +803,6 @@ static void set_thread_name(char *thread_name) {
 #endif
 }
 
-/* Known variables are stored in a global array to avoid unnecessary allocations
- */
-static void init_known_variable_keys(void) {
-  /* the first 19 variables are mirrored in cgi.go */
-  known_variable_keys[0] = zend_string_init_interned("CONTENT_LENGTH", 14, 1);
-  known_variable_keys[1] = zend_string_init_interned("DOCUMENT_ROOT", 13, 1);
-  known_variable_keys[2] = zend_string_init_interned("DOCUMENT_URI", 12, 1);
-  known_variable_keys[3] =
-      zend_string_init_interned("GATEWAY_INTERFACE", 17, 1);
-  known_variable_keys[4] = zend_string_init_interned("HTTP_HOST", 9, 1);
-  known_variable_keys[5] = zend_string_init_interned("HTTPS", 5, 1);
-  known_variable_keys[6] = zend_string_init_interned("PATH_INFO", 9, 1);
-  known_variable_keys[7] = zend_string_init_interned("PHP_SELF", 8, 1);
-  known_variable_keys[8] = zend_string_init_interned("REMOTE_ADDR", 11, 1);
-  known_variable_keys[9] = zend_string_init_interned("REMOTE_HOST", 11, 1);
-  known_variable_keys[10] = zend_string_init_interned("REMOTE_PORT", 11, 1);
-  known_variable_keys[11] = zend_string_init_interned("REQUEST_SCHEME", 14, 1);
-  known_variable_keys[12] = zend_string_init_interned("SCRIPT_FILENAME", 15, 1);
-  known_variable_keys[13] = zend_string_init_interned("SCRIPT_NAME", 11, 1);
-  known_variable_keys[14] = zend_string_init_interned("SERVER_NAME", 11, 1);
-  known_variable_keys[15] = zend_string_init_interned("SERVER_PORT", 11, 1);
-  known_variable_keys[16] = zend_string_init_interned("SERVER_PROTOCOL", 15, 1);
-  known_variable_keys[17] = zend_string_init_interned("SERVER_SOFTWARE", 15, 1);
-  known_variable_keys[18] = zend_string_init_interned("SSL_PROTOCOL", 12, 1);
-
-  // these 2 variables are always empty:
-  known_variable_keys[19] = zend_string_init_interned("AUTH_TYPE", 9, 1);
-  known_variable_keys[20] = zend_string_init_interned("REMOTE_IDENT", 12, 1);
-
-  /* these 6 variables are stored in the request_info */
-  known_variable_keys[21] = zend_string_init_interned("CONTENT_TYPE", 12, 1);
-  known_variable_keys[22] = zend_string_init_interned("PATH_TRANSLATED", 15, 1);
-  known_variable_keys[23] = zend_string_init_interned("QUERY_STRING", 12, 1);
-  known_variable_keys[24] = zend_string_init_interned("REMOTE_USER", 11, 1);
-  known_variable_keys[25] = zend_string_init_interned("REQUEST_METHOD", 14, 1);
-  known_variable_keys[26] = zend_string_init_interned("REQUEST_URI", 11, 1);
-}
-
-void release_known_variable_keys(void) {
-  for (size_t i = 0; i < 27; i++) {
-    zend_string_release(known_variable_keys[i]);
-    known_variable_keys[i] = NULL;
-  }
-}
-
 static void *php_thread(void *arg) {
   char thread_name[16] = {0};
   snprintf(thread_name, 16, "php-%" PRIxPTR, (uintptr_t)arg);
@@ -874,12 +818,11 @@ static void *php_thread(void *arg) {
 #endif
 
   local_ctx = malloc(sizeof(frankenphp_server_context));
-  init_known_variable_keys();
 
   while (go_handle_request(thread_index)) {
   }
 
-  release_known_variable_keys();
+  go_frankenphp_release_known_variable_keys(thread_index);
 
 #ifdef ZTS
   ts_free_thread();

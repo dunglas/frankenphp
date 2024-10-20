@@ -1,10 +1,12 @@
 package frankenphp
 
 // #include <stdint.h>
+// #include <php_variables.h>
 import "C"
 import (
 	"net/http"
 	"runtime"
+	"unsafe"
 )
 
 var phpThreads []*phpThread
@@ -15,6 +17,7 @@ type phpThread struct {
 	mainRequest   *http.Request
 	workerRequest *http.Request
 	worker        *worker
+	knownVariableKeys map[string]*C.zend_string
 }
 
 func initPHPThreads(numThreads int) {
@@ -30,4 +33,10 @@ func (thread phpThread) getActiveRequest() *http.Request {
 	}
 
 	return thread.mainRequest
+}
+
+func (thread *phpThread) pinString(s string) *C.char {
+	sData := unsafe.StringData(s)
+	thread.Pin(sData)
+	return (*C.char)(unsafe.Pointer(sData))
 }
