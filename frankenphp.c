@@ -656,8 +656,7 @@ static char *frankenphp_read_cookies(void) {
 
 /* all variables with well defined keys can safely be registered like this */
 void frankenphp_register_trusted_var(zend_string *z_key, char *value,
-                                            int val_len,
-                                            zval *track_vars_array) {
+                                     int val_len, zval *track_vars_array) {
   if (value == NULL) {
     value = "";
   }
@@ -680,7 +679,8 @@ void frankenphp_release_zend_string(zend_string *z_string) {
   zend_string_release(z_string);
 }
 
-static void frankenphp_register_variable_from_request_info(zend_string *zKey, char *value,
+static void
+frankenphp_register_variable_from_request_info(zend_string *zKey, char *value,
                                                zval *track_vars_array) {
   if (value == NULL) {
     return;
@@ -688,18 +688,20 @@ static void frankenphp_register_variable_from_request_info(zend_string *zKey, ch
   frankenphp_register_trusted_var(zKey, value, strlen(value), track_vars_array);
 }
 
-void frankenphp_register_variables_from_request_info(zval *track_vars_array, zend_string *content_type, zend_string *path_translated, zend_string *query_string, zend_string *auth_user, zend_string *request_method, zend_string *request_uri) {
+void frankenphp_register_variables_from_request_info(
+    zval *track_vars_array, zend_string *content_type,
+    zend_string *path_translated, zend_string *query_string,
+    zend_string *auth_user, zend_string *request_method,
+    zend_string *request_uri) {
   frankenphp_register_variable_from_request_info(
-      content_type, (char *)SG(request_info).content_type,
-      track_vars_array);
+      content_type, (char *)SG(request_info).content_type, track_vars_array);
   frankenphp_register_variable_from_request_info(
       path_translated, (char *)SG(request_info).path_translated,
       track_vars_array);
   frankenphp_register_variable_from_request_info(
       query_string, SG(request_info).query_string, track_vars_array);
   frankenphp_register_variable_from_request_info(
-      auth_user, (char *)SG(request_info).auth_user,
-      track_vars_array);
+      auth_user, (char *)SG(request_info).auth_user, track_vars_array);
   frankenphp_register_variable_from_request_info(
       request_method, (char *)SG(request_info).request_method,
       track_vars_array);
@@ -708,15 +710,13 @@ void frankenphp_register_variables_from_request_info(zval *track_vars_array, zen
 }
 
 /* variables with user defined keys must be registered 'safely' */
-void frankenphp_register_variable_safe(char *key, char *val, size_t val_len, zval *track_vars_array){
+void frankenphp_register_variable_safe(char *key, char *val, size_t val_len,
+                                       zval *track_vars_array) {
   size_t new_val_len = val_len;
   if (!should_filter_var ||
-      sapi_module.input_filter(PARSE_SERVER, key,
-                               &val, new_val_len,
+      sapi_module.input_filter(PARSE_SERVER, key, &val, new_val_len,
                                &new_val_len)) {
-    php_register_variable_safe(key,
-                               val, new_val_len,
-                               track_vars_array);
+    php_register_variable_safe(key, val, new_val_len, track_vars_array);
   }
 }
 
