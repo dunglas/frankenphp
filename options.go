@@ -12,6 +12,7 @@ type Option func(h *opt) error
 // If you change this, also update the Caddy module and the documentation.
 type opt struct {
 	numThreads int
+	fringeMode bool
 	workers    []workerOpt
 	logger     *zap.Logger
 	metrics    Metrics
@@ -54,6 +55,15 @@ func WithWorkers(fileName string, num int, env map[string]string, watch []string
 func WithLogger(l *zap.Logger) Option {
 	return func(o *opt) error {
 		o.logger = l
+
+		return nil
+	}
+}
+
+// WithFringeMode configures whether to enable fringe features like filter_input(INPUT_SERVER, $name).
+func WithFringeMode() Option {
+	return func(o *opt) error {
+		o.fringeMode = true
 
 		return nil
 	}
