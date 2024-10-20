@@ -92,7 +92,6 @@ func addKnownVariablesToServer(thread *phpThread, request *http.Request, fc *Fra
 		registerTrustedVar(knownServerKeys["SSL_PROTOCOL\x00"], "", track_vars_array, thread)
 	} else {
 		rs = "https"
-
 		if h, ok := fc.env["HTTPS\x00"]; ok {
 			registerTrustedVar(knownServerKeys["HTTPS\x00"], h, track_vars_array, thread)
 		} else {
