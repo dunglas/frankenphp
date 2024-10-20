@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"net/http"
+	"os"
 	"strings"
 	"sync"
 	"testing"
@@ -576,7 +577,43 @@ func TestAutoWorkerConfig(t *testing.T) {
 		))
 }
 
+func TestAllServerVarsWithInputFilterInFringeMode(t *testing.T) {
+	expectedBody, _ := os.ReadFile("../testdata/server-filter-var.txt")
+	tester := caddytest.NewTester(t)
+	tester.InitServer(`
+		{
+			skip_install_trust
+			admin localhost:2999
+			http_port `+testPort+`
+			frankenphp {
+				fringe_mode true
+			}
+		}
+		localhost:`+testPort+` {
+			route {
+			    root ../testdata
+				php
+			}
+		}
+		`, "caddyfile")
+
+	tester.AssertPostResponseBody(
+		"http://user@localhost:"+testPort+"/server-filter-var.php/path?withFilterVar=true&specialChars=%3C\\x00</>",
+		[]string{
+			"Content-Type: application/x-www-form-urlencoded",
+			"Content-Length: 14", // maliciously set to 14
+			"Special-Chars: <\\x00>",
+			"Host: Malicous Host",
+		},
+		bytes.NewBufferString("foo=bar"),
+		http.StatusOK,
+		string(expectedBody),
+	)
+}
+
 func TestAllServerVarsWithoutInputFilter(t *testing.T) {
+	expectedBody, _ := os.ReadFile("../testdata/server-filter-var.txt")
+	expectedBody = bytes.ReplaceAll(expectedBody, []byte("withFilterVar=true"), []byte("withFilterVar=false"))
 	tester := caddytest.NewTester(t)
 	tester.InitServer(`
 		{
@@ -602,102 +639,6 @@ func TestAllServerVarsWithoutInputFilter(t *testing.T) {
 		},
 		bytes.NewBufferString("foo=bar"),
 		http.StatusOK,
-		`<pre>
-CONTENT_LENGTH:7
-HTTP_CONTENT_LENGTH:7
-HTTP_SPECIAL_CHARS:<\x00>
-DOCUMENT_ROOT:/go/src/app/testdata
-DOCUMENT_URI:/server-filter-var.php
-GATEWAY_INTERFACE:CGI/1.1
-HTTP_HOST:localhost:`+testPort+`
-HTTPS:
-PATH_INFO:/path
-CONTENT_TYPE:application/x-www-form-urlencoded
-DOCUMENT_ROOT:/go/src/app/testdata
-REMOTE_ADDR:127.0.0.1
-CONTENT_LENGTH:7
-PHP_SELF:/server-filter-var.php/path
-REMOTE_HOST:127.0.0.1
-REQUEST_SCHEME:http
-SCRIPT_FILENAME:/go/src/app/testdata/server-filter-var.php
-SCRIPT_NAME:/server-filter-var.php
-SERVER_NAME:localhost
-SERVER_PORT:`+testPort+`
-SERVER_PROTOCOL:HTTP/1.1
-SERVER_SOFTWARE:FrankenPHP
-SSL_PROTOCOL:
-AUTH_TYPE:
-REMOTE_IDENT:
-CONTENT_TYPE:application/x-www-form-urlencoded
-PATH_TRANSLATED:/go/src/app/testdata/path
-QUERY_STRING:withFilterVar=false&specialChars=%3C%3E\x00</>
-REMOTE_USER:user
-REQUEST_METHOD:POST
-REQUEST_URI:/server-filter-var.php/path?withFilterVar=false&specialChars=%3C%3E\x00</>
-</pre>`,
-	)
-}
-
-func TestAllServerVarsWithInputFilterInFringeMode(t *testing.T) {
-	tester := caddytest.NewTester(t)
-	tester.InitServer(`
-		{
-			skip_install_trust
-			admin localhost:2999
-			http_port `+testPort+`
-			frankenphp {
-				fringe_mode true
-			}
-		}
-		localhost:`+testPort+` {
-			route {
-			    root ../testdata
-				php
-			}
-		}
-		`, "caddyfile")
-	tester.AssertPostResponseBody(
-		"http://user@localhost:"+testPort+"/server-filter-var.php/path?withFilterVar=true&specialChars=%3C%3E\\x00</>",
-		[]string{
-			"Content-Type: application/x-www-form-urlencoded",
-			"Content-Length: 14", // maliciously set to 14
-			"Special-Chars: <\\x00>",
-			"Host: Malicous Host",
-		},
-		bytes.NewBufferString("foo=bar"),
-		http.StatusOK,
-		`<pre>
-CONTENT_LENGTH:7
-HTTP_CONTENT_LENGTH:7
-HTTP_SPECIAL_CHARS:<\x00>
-DOCUMENT_ROOT:/go/src/app/testdata
-DOCUMENT_URI:/server-filter-var.php
-GATEWAY_INTERFACE:CGI/1.1
-HTTP_HOST:localhost:`+testPort+`
-HTTPS:
-PATH_INFO:/path
-CONTENT_TYPE:application/x-www-form-urlencoded
-DOCUMENT_ROOT:/go/src/app/testdata
-REMOTE_ADDR:127.0.0.1
-CONTENT_LENGTH:7
-PHP_SELF:/server-filter-var.php/path
-REMOTE_HOST:127.0.0.1
-REQUEST_SCHEME:http
-SCRIPT_FILENAME:/go/src/app/testdata/server-filter-var.php
-SCRIPT_NAME:/server-filter-var.php
-SERVER_NAME:localhost
-SERVER_PORT:`+testPort+`
-SERVER_PROTOCOL:HTTP/1.1
-SERVER_SOFTWARE:FrankenPHP
-SSL_PROTOCOL:
-AUTH_TYPE:
-REMOTE_IDENT:
-CONTENT_TYPE:application/x-www-form-urlencoded
-PATH_TRANSLATED:/go/src/app/testdata/path
-QUERY_STRING:withFilterVar=true&specialChars=%3C%3E\x00</>
-REMOTE_USER:user
-REQUEST_METHOD:POST
-REQUEST_URI:/server-filter-var.php/path?withFilterVar=true&specialChars=%3C%3E\x00</>
-</pre>`,
+		string(expectedBody),
 	)
 }
