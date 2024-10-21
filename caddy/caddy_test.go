@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"net/http"
+	"os"
 	"strings"
 	"sync"
 	"testing"
@@ -574,4 +575,70 @@ func TestAutoWorkerConfig(t *testing.T) {
 			"frankenphp_testdata_index_php_worker_restarts",
 			"frankenphp_testdata_index_php_ready_workers",
 		))
+}
+
+func TestAllServerVarsWithInputFilterInFringeMode(t *testing.T) {
+	expectedBody, _ := os.ReadFile("../testdata/server-filter-var.txt")
+	tester := caddytest.NewTester(t)
+	tester.InitServer(`
+		{
+			skip_install_trust
+			admin localhost:2999
+			http_port `+testPort+`
+			frankenphp {
+				fringe_mode true
+			}
+		}
+		localhost:`+testPort+` {
+			route {
+			    root ../testdata
+				php
+			}
+		}
+		`, "caddyfile")
+
+	tester.AssertPostResponseBody(
+		"http://user@localhost:"+testPort+"/server-filter-var.php/path?withFilterVar=true&specialChars=%3C\\x00</>",
+		[]string{
+			"Content-Type: application/x-www-form-urlencoded",
+			"Content-Length: 14", // maliciously set to 14
+			"Special-Chars: <\\x00>",
+			"Host: Malicous Host",
+		},
+		bytes.NewBufferString("foo=bar"),
+		http.StatusOK,
+		string(expectedBody),
+	)
+}
+
+func TestAllServerVarsWithoutInputFilter(t *testing.T) {
+	expectedBody, _ := os.ReadFile("../testdata/server-filter-var.txt")
+	expectedBody = bytes.ReplaceAll(expectedBody, []byte("withFilterVar=true"), []byte("withFilterVar=false"))
+	tester := caddytest.NewTester(t)
+	tester.InitServer(`
+		{
+			skip_install_trust
+			admin localhost:2999
+			http_port `+testPort+`
+			frankenphp
+		}
+		localhost:`+testPort+` {
+			route {
+			    root ../testdata
+				php
+			}
+		}
+		`, "caddyfile")
+	tester.AssertPostResponseBody(
+		"http://user@localhost:"+testPort+"/server-filter-var.php/path?withFilterVar=false&specialChars=%3C%3E\\x00</>",
+		[]string{
+			"Content-Type: application/x-www-form-urlencoded",
+			"Content-Length: 14", // maliciously set to 14
+			"Special-Chars: <\\x00>",
+			"Host: Malicous Host",
+		},
+		bytes.NewBufferString("foo=bar"),
+		http.StatusOK,
+		string(expectedBody),
+	)
 }
