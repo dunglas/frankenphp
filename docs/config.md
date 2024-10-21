@@ -3,23 +3,27 @@
 FrankenPHP, Caddy as well as the Mercure and Vulcain modules can be configured using [the formats supported by Caddy](https://caddyserver.com/docs/getting-started#your-first-config).
 
 In [the Docker images](docker.md), the `Caddyfile` is located at `/etc/caddy/Caddyfile`.
+The static binary will look for the `Caddyfile` in the directory in which it is started.
 
-You can also configure PHP using `php.ini` as usual.
+PHP itself can be configured [using a `php.ini` file](https://www.php.net/manual/en/configuration.file.php).
 
-In the Docker images, the `php.ini` file is not present, you can create it manually  or copy an official template:
+By default, the PHP supplied with the Docker images and the one included in the static binary will look for a `php.ini` file in the directory where FrankenPHP is started and in `/usr/local/etc/php/`. They will also load all files ending in `.ini` from `/usr/local/etc/php/conf.d/`.
+
+No `php.ini` file is present by default, you should copy an official template provided by the PHP project.
+
+On Docker, the templates are provided in the images:
 
 ```dockerfile
 FROM dunglas/frankenphp
 
-# Developement:
-RUN cp $PHP_INI_DIR/php.ini-development $PHP_INI_DIR/php.ini
-
-# Or production:
+# Production:
 RUN cp $PHP_INI_DIR/php.ini-production $PHP_INI_DIR/php.ini
+
+# Or developement:
+RUN cp $PHP_INI_DIR/php.ini-development $PHP_INI_DIR/php.ini
 ```
 
-The static binary will look for a `php.ini` file in the current working directory,
-in `/lib/` as well as [the other standard locations](https://www.php.net/manual/en/configuration.file.php).
+Docker kullanmıyorsanız, [PHP kaynak kodu](https://github.com/php/php-src/) ile birlikte verilen `php.ini-production` veya `php.ini-development` dosyalarından birini kopyalayın.
 
 ## Caddyfile Config
 

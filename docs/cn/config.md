@@ -2,21 +2,24 @@
 
 FrankenPHP，Caddy 以及 Mercure 和 Vulcain 模块可以使用 [Caddy 支持的格式](https://caddyserver.com/docs/getting-started#your-first-config) 进行配置。
 
-在 Docker 镜像中，`Caddyfile` 位于 `/etc/caddy/Caddyfile`。
-
-您也可以像往常一样使用 `php.ini` 配置 PHP。
-
-在 Docker 镜像中，默认不存在 `php.ini`，您可以手动创建它或从官方模板中复制。
+在[Docker 映像](docker.md) 中，`Caddyfile` 位于 `/etc/caddy/Caddyfile`。
+静态二进制文件会在启动时所在的目录中查找 `Caddyfile`。
+PHP 本身可以[使用 `php.ini` 文件](https://www.php.net/manual/zh/configuration.file.php)进行配置。
+默认情况下，随 Docker 映像提供的 PHP 和静态二进制文件中包含的 PHP 将在启动 FrankenPHP 的目录和 `/usr/local/etc/php/` 中查找`php.ini` 文件。它们还会从 `/usr/local/etc/php/conf.d/` 中加载所有以 `.ini` 结尾的文件。
+默认情况下没有 `php.ini` 文件，因此应复制 PHP 项目提供的官方模板。
+在 Docker 上，模板在镜像中提供：
 
 ```dockerfile
 FROM dunglas/frankenphp
 
-# 开发:
-RUN cp $PHP_INI_DIR/php.ini-development $PHP_INI_DIR/php.ini
-
 # 生产:
 RUN cp $PHP_INI_DIR/php.ini-production $PHP_INI_DIR/php.ini
+
+# 开发:
+RUN cp $PHP_INI_DIR/php.ini-development $PHP_INI_DIR/php.ini
 ```
+
+如果不使用 Docker，请复制[PHP 源代码](https://github.com/php/php-src/)中提供的`php.ini-production`或`php.ini-development`中的一个。
 
 ## Caddyfile 配置
 
