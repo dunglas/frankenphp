@@ -22,6 +22,8 @@ RUN cp $PHP_INI_DIR/php.ini-development $PHP_INI_DIR/php.ini
 RUN cp $PHP_INI_DIR/php.ini-production $PHP_INI_DIR/php.ini
 ```
 
+Docker kullanmıyorsanız, [PHP kaynak kodu](https://github.com/php/php-src/) ile birlikte verilen `php.ini-production` veya `php.ini-development` dosyalarından birini kopyalayın.
+
 ## Caddyfile Konfigürasyonu
 
 FrankenPHP yürütücüsünü kaydetmek için `frankenphp` [global seçenek](https://caddyserver.com/docs/caddyfile/concepts#global-options) ayarlanmalıdır, ardından PHP uygulamanızı sunmak için site blokları içinde `php_server` veya `php` [HTTP yönergeleri](https://caddyserver.com/docs/caddyfile/concepts#directives) kullanılabilir.
