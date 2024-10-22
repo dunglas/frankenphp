@@ -231,20 +231,3 @@ docker run -v $PWD:/app/public \
     -p 80:80 -p 443:443 -p 443:443/udp \
     dunglas/frankenphp
 ```
-
-## Enable the Deprecated Mode
-
-Some PHP features are disabled by default since they will negatively impact performance. You can still enable these
-features by setting `deprecated_mode` to true in the global options.
-
-```caddyfile
-{
-    frankenphp {
-        deprecated_mode true
-    }
-}
-```
-
-Currently, 'deprecated' features include:
-
-- Using `filter_input(INPUT_SERVER, $variable)` instead of `$_SERVER[$variable]`

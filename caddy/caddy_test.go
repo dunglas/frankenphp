@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
@@ -577,50 +578,13 @@ func TestAutoWorkerConfig(t *testing.T) {
 		))
 }
 
-func TestAllServerVarsWithInputFilterInDeprecatedMode(t *testing.T) {
-	absPath, _ := filepath.Abs("./testdata/")
-	expectedBody, _ := os.ReadFile("../testdata/server-filter-var.txt")
-	expectedBody = bytes.ReplaceAll(expectedBody, "{withFilterVar}", "true")
-	expectedBody = bytes.ReplaceAll(expectedBody, "{absPath}", absPath)
-	expectedBody = bytes.ReplaceAll(expectedBody, "{testPort}", testPort)
-	tester := caddytest.NewTester(t)
-	tester.InitServer(`
-		{
-			skip_install_trust
-			admin localhost:2999
-			http_port `+testPort+`
-			frankenphp {
-				deprecated_mode true
-			}
-		}
-		localhost:`+testPort+` {
-			route {
-			    root ../testdata
-				php
-			}
-		}
-		`, "caddyfile")
-
-	tester.AssertPostResponseBody(
-		"http://user@localhost:"+testPort+"/server-filter-var.php/path?withFilterVar=true&specialChars=%3C\\x00</>",
-		[]string{
-			"Content-Type: application/x-www-form-urlencoded",
-			"Content-Length: 14", // maliciously set to 14
-			"Special-Chars: <\\x00>",
-			"Host: Malicous Host",
-		},
-		bytes.NewBufferString("foo=bar"),
-		http.StatusOK,
-		string(expectedBody),
-	)
-}
-
-func TestAllServerVarsWithoutInputFilter(t *testing.T) {
-	absPath, _ := filepath.Abs("./testdata/")
-	expectedBody, _ := os.ReadFile("../testdata/server-filter-var.txt")
-	expectedBody = bytes.ReplaceAll(expectedBody, "{withFilterVar}", "false")
-	expectedBody = bytes.ReplaceAll(expectedBody, "{absPath}", absPath)
-	expectedBody = bytes.ReplaceAll(expectedBody, "{testPort}", testPort)
+func TestAllDefinedServerVars(t *testing.T) {
+	documentRoot, _ := filepath.Abs("../testdata/")
+	expectedBodyFile, _ := os.ReadFile("../testdata/server-all-vars-ordered.txt")
+	expectedBody := string(expectedBodyFile)
+	expectedBody = strings.ReplaceAll(expectedBody, "{documentRoot}", documentRoot)
+	expectedBody = strings.ReplaceAll(expectedBody, "\r\n", "\n")
+	expectedBody = strings.ReplaceAll(expectedBody, "{testPort}", testPort)
 	tester := caddytest.NewTester(t)
 	tester.InitServer(`
 		{
@@ -637,15 +601,15 @@ func TestAllServerVarsWithoutInputFilter(t *testing.T) {
 		}
 		`, "caddyfile")
 	tester.AssertPostResponseBody(
-		"http://user@localhost:"+testPort+"/server-filter-var.php/path?withFilterVar=false&specialChars=%3C%3E\\x00</>",
+		"http://user@localhost:"+testPort+"/server-all-vars-ordered.php/path?specialChars=%3E\\x00%00</>",
 		[]string{
 			"Content-Type: application/x-www-form-urlencoded",
 			"Content-Length: 14", // maliciously set to 14
-			"Special-Chars: <\\x00>",
+			"Special-Chars: <%00>",
 			"Host: Malicous Host",
 		},
 		bytes.NewBufferString("foo=bar"),
 		http.StatusOK,
-		string(expectedBody),
+		expectedBody,
 	)
 }
