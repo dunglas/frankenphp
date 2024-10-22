@@ -336,7 +336,7 @@ func Init(options ...Option) error {
 	requestChan = make(chan *http.Request)
 	initPHPThreads(opt.numThreads)
 
-	if C.frankenphp_init(C.int(opt.numThreads), C.bool(opt.fringeMode)) != 0 {
+	if C.frankenphp_init(C.int(opt.numThreads), C.bool(opt.deprecatedMode)) != 0 {
 		return MainThreadCreationError
 	}
 

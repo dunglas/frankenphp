@@ -72,7 +72,7 @@ type FrankenPHPApp struct {
 	// Workers configures the worker scripts to start.
 	Workers []workerConfig `json:"workers,omitempty"`
 	// Whether to support fringe features like filter_input(INPUT_SERVER, $name)
-	FringeMode bool `json:"fringe_mode,omitempty"`
+	DeprecatedMode bool `json:"deprecated_mode,omitempty"`
 }
 
 // CaddyModule returns the Caddy module information.
@@ -91,8 +91,8 @@ func (f *FrankenPHPApp) Start() error {
 	for _, w := range f.Workers {
 		opts = append(opts, frankenphp.WithWorkers(repl.ReplaceKnown(w.FileName, ""), w.Num, w.Env, w.Watch))
 	}
-	if f.FringeMode {
-		opts = append(opts, frankenphp.WithFringeMode())
+	if f.DeprecatedMode {
+		opts = append(opts, frankenphp.WithDeprecatedMode())
 	}
 
 	_, loaded, err := phpInterpreter.LoadOrNew(mainPHPInterpreterKey, func() (caddy.Destructor, error) {
@@ -141,16 +141,16 @@ func (f *FrankenPHPApp) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 				}
 
 				f.NumThreads = v
-			case "fringe_mode":
+			case "deprecated_mode":
 				if !d.NextArg() {
-					f.FringeMode = true
+					f.DeprecatedMode = true
 					continue
 				}
 				v, err := strconv.ParseBool(d.Val())
 				if err != nil {
 					return err
 				}
-				f.FringeMode = v
+				f.DeprecatedMode = v
 			case "worker":
 				wc := workerConfig{}
 				if d.NextArg() {

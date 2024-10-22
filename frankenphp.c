@@ -917,9 +917,9 @@ static void *php_main(void *arg) {
   return NULL;
 }
 
-int frankenphp_init(int num_threads, bool fringe_mode) {
+int frankenphp_init(int num_threads, bool deprecated_mode) {
   pthread_t thread;
-  should_filter_var = fringe_mode;
+  should_filter_var = deprecated_mode;
 
   if (pthread_create(&thread, NULL, &php_main, (void *)(intptr_t)num_threads) !=
       0) {
