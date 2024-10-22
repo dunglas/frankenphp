@@ -869,12 +869,12 @@ func executePHPFunction(functionName string) {
 
 // Ensure that the request path does not contain null bytes
 func requestIsValid(r *http.Request, rw http.ResponseWriter) bool {
-    if strings.Contains(r.URL.Path, "\x00") {
-        rw.WriteHeader(http.StatusBadRequest)
-        rw.Write([]byte("Invalid request path"))
-        rw.(http.Flusher).Flush()
-        return false
-    }
+	if strings.Contains(r.URL.Path, "\x00") {
+		rw.WriteHeader(http.StatusBadRequest)
+		rw.Write([]byte("Invalid request path"))
+		rw.(http.Flusher).Flush()
+		return false
+	}
 
 	return true
 }

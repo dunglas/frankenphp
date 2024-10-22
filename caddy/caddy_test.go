@@ -578,7 +578,11 @@ func TestAutoWorkerConfig(t *testing.T) {
 }
 
 func TestAllServerVarsWithInputFilterInFringeMode(t *testing.T) {
+	absPath, _ := filepath.Abs("./testdata/")
 	expectedBody, _ := os.ReadFile("../testdata/server-filter-var.txt")
+	expectedBody = bytes.ReplaceAll(expectedBody, "{withFilterVar}", "true")
+	expectedBody = bytes.ReplaceAll(expectedBody, "{absPath}", absPath)
+	expectedBody = bytes.ReplaceAll(expectedBody, "{testPort}", testPort)
 	tester := caddytest.NewTester(t)
 	tester.InitServer(`
 		{
@@ -612,8 +616,11 @@ func TestAllServerVarsWithInputFilterInFringeMode(t *testing.T) {
 }
 
 func TestAllServerVarsWithoutInputFilter(t *testing.T) {
+	absPath, _ := filepath.Abs("./testdata/")
 	expectedBody, _ := os.ReadFile("../testdata/server-filter-var.txt")
-	expectedBody = bytes.ReplaceAll(expectedBody, []byte("withFilterVar=true"), []byte("withFilterVar=false"))
+	expectedBody = bytes.ReplaceAll(expectedBody, "{withFilterVar}", "false")
+	expectedBody = bytes.ReplaceAll(expectedBody, "{absPath}", absPath)
+	expectedBody = bytes.ReplaceAll(expectedBody, "{testPort}", testPort)
 	tester := caddytest.NewTester(t)
 	tester.InitServer(`
 		{
