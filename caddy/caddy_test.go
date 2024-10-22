@@ -577,7 +577,7 @@ func TestAutoWorkerConfig(t *testing.T) {
 		))
 }
 
-func TestAllServerVarsWithInputFilterInFringeMode(t *testing.T) {
+func TestAllServerVarsWithInputFilterInDeprecatedMode(t *testing.T) {
 	absPath, _ := filepath.Abs("./testdata/")
 	expectedBody, _ := os.ReadFile("../testdata/server-filter-var.txt")
 	expectedBody = bytes.ReplaceAll(expectedBody, "{withFilterVar}", "true")
@@ -590,7 +590,7 @@ func TestAllServerVarsWithInputFilterInFringeMode(t *testing.T) {
 			admin localhost:2999
 			http_port `+testPort+`
 			frankenphp {
-				fringe_mode true
+				deprecated_mode true
 			}
 		}
 		localhost:`+testPort+` {
