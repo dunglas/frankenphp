@@ -1,7 +1,7 @@
 <?php
 /**
  * This file tests the filter_input(INPUT_SERVER, $name) feature
- * Specifically when it's enabled via fringe_mode
+ * Specifically when it's enabled via deprecated_mode
  * If it's not enabled, just echo out the variables directly from $_SERVER
  * @see TestAllServerVarsWithoutInputFilter
  * @see TestAllServerVarsWithInputFilterInFringeMode

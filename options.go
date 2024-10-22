@@ -11,11 +11,11 @@ type Option func(h *opt) error
 //
 // If you change this, also update the Caddy module and the documentation.
 type opt struct {
-	numThreads int
-	fringeMode bool
-	workers    []workerOpt
-	logger     *zap.Logger
-	metrics    Metrics
+	numThreads     int
+	deprecatedMode bool
+	workers        []workerOpt
+	logger         *zap.Logger
+	metrics        Metrics
 }
 
 type workerOpt struct {
@@ -61,9 +61,9 @@ func WithLogger(l *zap.Logger) Option {
 }
 
 // WithFringeMode configures whether to enable fringe features like filter_input(INPUT_SERVER, $name).
-func WithFringeMode() Option {
+func WithDeprecatedMode() Option {
 	return func(o *opt) error {
-		o.fringeMode = true
+		o.deprecatedMode = true
 
 		return nil
 	}
