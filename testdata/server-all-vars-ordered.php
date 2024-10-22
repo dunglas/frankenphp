@@ -1,11 +1,5 @@
 <?php
-/**
- * This file tests the filter_input(INPUT_SERVER, $name) feature
- * Specifically when it's enabled via deprecated_mode
- * If it's not enabled, just echo out the variables directly from $_SERVER
- * @see TestAllServerVarsWithoutInputFilter
- * @see TestAllServerVarsWithInputFilterInFringeMode
- */
+
 echo "<pre>\n";
 foreach ([
              'CONTENT_LENGTH',
@@ -40,11 +34,6 @@ foreach ([
              'REQUEST_METHOD',
              'REQUEST_URI',
          ] as $name) {
-
-    if ($_GET['withFilterVar'] === 'true') {
-        echo "$name:" . filter_input(INPUT_SERVER, $name) . "\n";
-    } else {
-        echo "$name:" . $_SERVER[$name] . "\n";
-    }
+    echo "$name:" . $_SERVER[$name] . "\n";
 }
 echo "</pre>";

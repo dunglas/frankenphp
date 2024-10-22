@@ -40,7 +40,7 @@ typedef struct frankenphp_config {
 } frankenphp_config;
 frankenphp_config frankenphp_get_config();
 
-int frankenphp_init(int num_threads, bool deprecated_mode);
+int frankenphp_init(int num_threads);
 
 int frankenphp_update_server_context(
     bool create, bool has_main_request, bool has_active_request,
