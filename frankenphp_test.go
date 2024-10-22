@@ -888,3 +888,36 @@ func BenchmarkServerSuperGlobal(b *testing.B) {
 		handler(w, req)
 	}
 }
+
+// This test will fuzz inputs to assert that they are correctly passed to the PHP script
+func FuzzRequestHeaders(f *testing.F) {
+	f.Add("hello world")
+	f.Add("😀😅🙃🤩🥲🤪😘😇😉🐘🧟")
+	f.Add("%11%%22%%33%%44%%55%%66%%77%%88%%99%%aa%%bb%%cc%%dd%%ee%%ff")
+	f.Add("\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f")
+	f.Fuzz(func(t *testing.T, fuzzedString string) {
+		runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, _ int) {
+			//req := httptest.NewRequest("GET", fmt.Sprintf("http://example.com/request-headers.php?i=%s", fuzzedString), nil)
+			req := httptest.NewRequest("GET", "http://example.com/server-variable", nil)
+			req.URL = &url.URL{RawQuery: "test="+fuzzedString, Path: "/server-variable.php/"+fuzzedString}
+			req.RequestURI = fuzzedString
+			req.Header.Add(strings.Clone("Fuzzed"), strings.Clone(fuzzedString))
+
+			w := httptest.NewRecorder()
+			handler(w, req)
+
+			resp := w.Result()
+			body, _ := io.ReadAll(resp.Body)
+
+			//assert.Contains(t, string(body), fmt.Sprintf("[QUERY_STRING] => %s", "test="+fuzzedString))
+			if len(fuzzedString) > 0 {
+				assert.Contains(t, string(body), fmt.Sprintf("[HTTP_FUZZED] => %s", fuzzedString))
+			}else {
+				assert.NotContains(t, string(body), "[HTTP_FUZZED]")
+			}
+			assert.Contains(t, string(body), fmt.Sprintf("[PATH_INFO] => /%s", fuzzedString))
+			assert.True(t, true)
+			assert.NotEmpty(t, body)
+		}, &testOptions{workerScript: "request-headers.php"})
+	})
+}
