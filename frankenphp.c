@@ -78,7 +78,7 @@ typedef struct frankenphp_server_context {
   bool finished;
 } frankenphp_server_context;
 
-static bool should_filter_var = 0;
+__thread bool should_filter_var = 0;
 __thread frankenphp_server_context *local_ctx = NULL;
 __thread uintptr_t thread_index;
 __thread zval *os_environment = NULL;
@@ -669,7 +669,7 @@ void frankenphp_release_zend_string(zend_string *z_string) {
 
 static void
 frankenphp_register_variable_from_request_info(zend_string *zKey, char *value,
-												bool must_be_present,
+                                               bool must_be_present,
                                                zval *track_vars_array) {
   if (value != NULL) {
     frankenphp_register_trusted_var(zKey, value, strlen(value),
@@ -701,7 +701,8 @@ void frankenphp_register_variables_from_request_info(
       request_uri, SG(request_info).request_uri, true, track_vars_array);
 }
 
-/* variables with user defined keys must be registered safely to avoid globals takepvers */
+/* variables with user defined keys must be registered safely to avoid globals
+ * takepvers */
 void frankenphp_register_variable_safe(char *key, char *val, size_t val_len,
                                        zval *track_vars_array) {
   if (val == NULL || key == NULL) {
@@ -814,6 +815,12 @@ static void *php_thread(void *arg) {
 
   local_ctx = malloc(sizeof(frankenphp_server_context));
 
+  /* check if a default filter (deprecated) is set in php.ini and only filter if
+   * it is */
+  char *default_filter;
+  cfg_get_string("filter.default", &default_filter);
+  should_filter_var = default_filter != NULL;
+
   while (go_handle_request(thread_index)) {
   }
 
@@ -917,9 +924,9 @@ static void *php_main(void *arg) {
   return NULL;
 }
 
-int frankenphp_init(int num_threads, bool deprecated_mode) {
+int frankenphp_init(int num_threads) {
   pthread_t thread;
-  should_filter_var = deprecated_mode;
+  should_filter_var = false;
 
   if (pthread_create(&thread, NULL, &php_main, (void *)(intptr_t)num_threads) !=
       0) {
