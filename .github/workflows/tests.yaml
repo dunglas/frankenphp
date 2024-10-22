@@ -75,7 +75,7 @@ jobs:
       -
         name: Run Caddy module tests
         working-directory: caddy/
-        run: go test -tags watcher -race -v ./...
+        run: go test -tags watcher,brotli,nobadger,nomysql,nopgx -race -v ./...
       -
         name: Build the server
         working-directory: caddy/frankenphp/
