@@ -109,11 +109,14 @@ passing additional build tags to the Go compiler:
 When using `go build` directly, pass the additional `-tags` option followed by the comma-separated list of tags:
 
 ```console
-go build -tags 'brotli watcher'
+go build -tags 'nobadger,nomysql,nopgx,brotli,watcher'
 ```
+
+> [!NOTE]
+> You should always pass the `nobadger,nomysql,nopgx` tags to disable unused features of the SmallStep nosql dependency.
 
 When using `xcaddy`, set the `-tags` option in the `XCADDY_GO_BUILD_FLAGS` environment variable:
 
 ```console
-XCADDY_GO_BUILD_FLAGS="-tags 'brotli watcher'"
+XCADDY_GO_BUILD_FLAGS="-tags 'brotli,watcher'"
 ```
