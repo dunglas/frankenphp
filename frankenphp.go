@@ -462,6 +462,10 @@ func updateServerContext(thread *phpThread, request *http.Request, create bool, 
 
 // ServeHTTP executes a PHP script according to the given context.
 func ServeHTTP(responseWriter http.ResponseWriter, request *http.Request) error {
+	if !requestIsValid(request, responseWriter) {
+		return nil
+	}
+
 	shutdownWG.Add(1)
 	defer shutdownWG.Done()
 
@@ -861,4 +865,16 @@ func executePHPFunction(functionName string) {
 			c.Write(zap.String("function", functionName))
 		}
 	}
+}
+
+// Ensure that the request path does not contain null bytes
+func requestIsValid(r *http.Request, rw http.ResponseWriter) bool {
+    if strings.Contains(r.URL.Path, "\x00") {
+        rw.WriteHeader(http.StatusBadRequest)
+        rw.Write([]byte("Invalid request path"))
+        rw.(http.Flusher).Flush()
+        return false
+    }
+
+	return true
 }
