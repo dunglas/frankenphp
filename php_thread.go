@@ -35,8 +35,14 @@ func (thread phpThread) getActiveRequest() *http.Request {
 	return thread.mainRequest
 }
 
+// Pin a string that is not null-terminated
 func (thread *phpThread) pinString(s string) *C.char {
 	sData := unsafe.StringData(s)
 	thread.Pin(sData)
 	return (*C.char)(unsafe.Pointer(sData))
+}
+
+// C strings must be null-terminated
+func (thread *phpThread) pinCString(s string) *C.char {
+	return thread.pinString(s+"\x00")
 }
