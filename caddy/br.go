@@ -1,4 +1,4 @@
-//go:build brotli
+//go:build !nobrotli
 
 package caddy
 

@@ -35,7 +35,7 @@ Use the [Homebrew](https://brew.sh/) package manager to install
 `libiconv`, `bison`, `re2c` and `pkg-config`:
 
 ```console
-brew install libiconv bison re2c pkg-config
+brew install libiconv bison brotli re2c pkg-config
 echo 'export PATH="/opt/homebrew/opt/bison/bin:$PATH"' >> ~/.zshrc
 ```
 
@@ -61,6 +61,16 @@ make -j"$(getconf _NPROCESSORS_ONLN)"
 sudo make install
 ```
 
+## Install Optional Dependencies
+
+Some FrankenPHP features depend on optional system dependencies that must be installed.
+Alternatively, these features can be disabled by passing build tags to the Go compiler.
+
+| Feature                        | Dependency                                                            | Build tag to disable it |
+|--------------------------------|-----------------------------------------------------------------------|-------------------------|
+| Brotli compression             | [Brotli](https://github.com/google/brotli)                            | nobrotli                |
+| Restart workers on file change | [Watcher C](https://github.com/e-dant/watcher/tree/release/watcher-c) | nowatcher               |
+
 ## Compile the Go App
 
 You can now build the final binary:
@@ -68,7 +78,7 @@ You can now build the final binary:
 ```console
 curl -L https://github.com/dunglas/frankenphp/archive/refs/heads/main.tar.gz | tar xz
 cd frankenphp-main/caddy/frankenphp
-CGO_CFLAGS=$(php-config --includes) CGO_LDFLAGS="$(php-config --ldflags) $(php-config --libs)" go build
+CGO_CFLAGS=$(php-config --includes) CGO_LDFLAGS="$(php-config --ldflags) $(php-config --libs)" go build -tags=nobadger,nomysql,nopgx
 ```
 
 ### Using xcaddy
@@ -77,7 +87,7 @@ Alternatively, use [xcaddy](https://github.com/caddyserver/xcaddy) to compile Fr
 
 ```console
 CGO_ENABLED=1 \
-XCADDY_GO_BUILD_FLAGS="-ldflags '-w -s'" \
+XCADDY_GO_BUILD_FLAGS="-ldflags='-w -s' -tags=nobadger,nomysql,nopgx" \
 xcaddy build \
     --output frankenphp \
     --with github.com/dunglas/frankenphp/caddy \
@@ -95,28 +105,3 @@ xcaddy build \
 > To do so, change the `XCADDY_GO_BUILD_FLAGS` environment variable to something like
 > `XCADDY_GO_BUILD_FLAGS=$'-ldflags "-w -s -extldflags \'-Wl,-z,stack-size=0x80000\'"'`
 > (change the value of the stack size according to your app needs).
-
-## Build Tags
-
-Additional features can be enabled if the required C libraries are installed by
-passing additional build tags to the Go compiler:
-
-| Tag     | Dependencies                                 | Description                    |
-|---------|----------------------------------------------|--------------------------------|
-| brotli  | [Brotli](https://github.com/google/brotli)   | Brotli compression             |
-| watcher | [Watcher](https://github.com/e-dant/watcher) | Restart workers on file change |
-
-When using `go build` directly, pass the additional `-tags` option followed by the comma-separated list of tags:
-
-```console
-go build -tags 'nobadger,nomysql,nopgx,brotli,watcher'
-```
-
-> [!NOTE]
-> You should always pass the `nobadger,nomysql,nopgx` tags to disable unused features of the SmallStep nosql dependency.
-
-When using `xcaddy`, set the `-tags` option in the `XCADDY_GO_BUILD_FLAGS` environment variable:
-
-```console
-XCADDY_GO_BUILD_FLAGS="-tags 'brotli,watcher'"
-```
