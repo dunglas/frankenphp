@@ -56,13 +56,11 @@ var contextKey = contextKeyStruct{}
 
 var (
 	InvalidRequestError         = errors.New("not a FrankenPHP request")
-	AlreaydStartedError         = errors.New("FrankenPHP is already started")
+	AlreadyStartedError         = errors.New("FrankenPHP is already started")
 	InvalidPHPVersionError      = errors.New("FrankenPHP is only compatible with PHP 8.2+")
-	ZendSignalsError            = errors.New("Zend Signals are enabled, recompile PHP with --disable-zend-signals")
 	NotEnoughThreads            = errors.New("the number of threads must be superior to the number of workers")
 	MainThreadCreationError     = errors.New("error creating the main thread")
 	RequestContextCreationError = errors.New("error during request context creation")
-	RequestStartupError         = errors.New("error during PHP request startup")
 	ScriptExecutionError        = errors.New("error during PHP script execution")
 
 	requestChan chan *http.Request
@@ -280,7 +278,7 @@ func calculateMaxThreads(opt *opt) error {
 // Init starts the PHP runtime and the configured workers.
 func Init(options ...Option) error {
 	if requestChan != nil {
-		return AlreaydStartedError
+		return AlreadyStartedError
 	}
 
 	// Ignore all SIGPIPE signals to prevent weird issues with systemd: https://github.com/dunglas/frankenphp/issues/1020
@@ -371,7 +369,7 @@ func Shutdown() {
 
 	// Remove the installed app
 	if EmbeddedAppPath != "" {
-		os.RemoveAll(EmbeddedAppPath)
+		_ = os.RemoveAll(EmbeddedAppPath)
 	}
 
 	logger.Debug("FrankenPHP shut down")

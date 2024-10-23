@@ -1,11 +1,12 @@
 package frankenphp
 
 import (
-	"github.com/prometheus/client_golang/prometheus"
 	"path/filepath"
 	"regexp"
 	"sync"
 	"time"
+
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 var metricsNameRegex = regexp.MustCompile(`\W+`)
@@ -43,19 +44,19 @@ type Metrics interface {
 
 type nullMetrics struct{}
 
-func (n nullMetrics) StartWorker(name string) {
+func (n nullMetrics) StartWorker(string) {
 }
 
-func (n nullMetrics) ReadyWorker(name string) {
+func (n nullMetrics) ReadyWorker(string) {
 }
 
-func (n nullMetrics) StopWorker(name string, reason StopReason) {
+func (n nullMetrics) StopWorker(string, StopReason) {
 }
 
-func (n nullMetrics) TotalWorkers(name string, num int) {
+func (n nullMetrics) TotalWorkers(string, int) {
 }
 
-func (n nullMetrics) TotalThreads(num int) {
+func (n nullMetrics) TotalThreads(int) {
 }
 
 func (n nullMetrics) StartRequest() {
@@ -64,10 +65,10 @@ func (n nullMetrics) StartRequest() {
 func (n nullMetrics) StopRequest() {
 }
 
-func (n nullMetrics) StopWorkerRequest(name string, duration time.Duration) {
+func (n nullMetrics) StopWorkerRequest(string, time.Duration) {
 }
 
-func (n nullMetrics) StartWorkerRequest(name string) {
+func (n nullMetrics) StartWorkerRequest(string) {
 }
 
 func (n nullMetrics) Shutdown() {
@@ -133,7 +134,7 @@ func (m *PrometheusMetrics) getIdentity(name string) (string, error) {
 	return actualName, nil
 }
 
-func (m *PrometheusMetrics) TotalWorkers(name string, num int) {
+func (m *PrometheusMetrics) TotalWorkers(name string, _ int) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
