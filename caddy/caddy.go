@@ -74,10 +74,10 @@ type FrankenPHPApp struct {
 }
 
 // CaddyModule returns the Caddy module information.
-func (a FrankenPHPApp) CaddyModule() caddy.ModuleInfo {
+func (f FrankenPHPApp) CaddyModule() caddy.ModuleInfo {
 	return caddy.ModuleInfo{
 		ID:  "frankenphp",
-		New: func() caddy.Module { return &a },
+		New: func() caddy.Module { return &f },
 	}
 }
 
@@ -189,7 +189,7 @@ func (f *FrankenPHPApp) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 					}
 
 					if wc.FileName == "" {
-						return errors.New(`The "file" argument must be specified`)
+						return errors.New(`the "file" argument must be specified`)
 					}
 
 					if frankenphp.EmbeddedAppPath != "" && filepath.IsLocal(wc.FileName) {
@@ -592,7 +592,7 @@ func parsePhpServer(h httpcaddyfile.Helper) ([]httpcaddyfile.ConfigValue, error)
 
 	// route to actually pass requests to PHP files;
 	// match only requests that are for PHP files
-	pathList := []string{}
+	var pathList []string
 	for _, ext := range extensions {
 		pathList = append(pathList, "*"+ext)
 	}

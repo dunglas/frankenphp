@@ -25,7 +25,7 @@ Executes a PHP script similarly to the CLI SAPI.`,
 	})
 }
 
-func cmdPHPCLI(fs caddycmd.Flags) (int, error) {
+func cmdPHPCLI(caddycmd.Flags) (int, error) {
 	args := os.Args[2:]
 	if len(args) < 1 {
 		return 1, errors.New("the path to the PHP script is required")

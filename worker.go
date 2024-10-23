@@ -34,7 +34,7 @@ var (
 	workersAreReady  atomic.Bool
 	workersAreDone   atomic.Bool
 	workersDone      chan interface{}
-	workers          map[string]*worker = make(map[string]*worker)
+	workers          = make(map[string]*worker)
 )
 
 func initWorkers(opt []workerOpt) error {
@@ -203,7 +203,7 @@ func drainWorkers() {
 }
 
 func restartWorkersOnFileChanges(workerOpts []workerOpt) error {
-	directoriesToWatch := []string{}
+	var directoriesToWatch []string
 	for _, w := range workerOpts {
 		directoriesToWatch = append(directoriesToWatch, w.watch...)
 	}

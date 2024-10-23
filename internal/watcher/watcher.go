@@ -35,8 +35,8 @@ var (
 	reloadWaitGroup sync.WaitGroup
 	// we are passing the logger from the main package to the watcher
 	logger                *zap.Logger
-	AlreadyStartedError   = errors.New("The watcher is already running")
-	UnableToStartWatching = errors.New("Unable to start the watcher")
+	AlreadyStartedError   = errors.New("the watcher is already running")
+	UnableToStartWatching = errors.New("unable to start the watcher")
 )
 
 func InitWatcher(filePatterns []string, callback func(), zapLogger *zap.Logger) error {

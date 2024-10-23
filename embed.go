@@ -17,7 +17,7 @@ import (
 	"time"
 )
 
-// The path of the embedded PHP application (empty if none)
+// EmbeddedAppPath contains the path of the embedded PHP application (empty if none)
 var EmbeddedAppPath string
 
 //go:embed app.tar
@@ -35,7 +35,7 @@ func init() {
 	appPath := filepath.Join(os.TempDir(), "frankenphp_"+string(embeddedAppChecksum))
 
 	if err := untar(appPath); err != nil {
-		os.RemoveAll(appPath)
+		_ = os.RemoveAll(appPath)
 		panic(err)
 	}
 
