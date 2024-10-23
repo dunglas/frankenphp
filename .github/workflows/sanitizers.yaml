@@ -97,6 +97,7 @@ jobs:
         name: Add PHP to the PATH
         run: echo "$(pwd)/php/target/bin" >> "$GITHUB_PATH"
       -
+        if: matrix.sanitizer != 'msan'
         uses: actions/checkout@v4
         name: Checkout watcher
         with:
@@ -104,6 +105,7 @@ jobs:
           ref: ${{ env.EDANT_WATCHER_VERSION }}
           path: 'edant/watcher'
       -
+        if: matrix.sanitizer != 'msan'
         name: Compile edant/watcher
         run: |
           cd edant/watcher/watcher-c/
@@ -119,7 +121,7 @@ jobs:
           } >> "$GITHUB_ENV"
       -
         name: Compile tests
-        run: go test -tags=nowatcher -${{ matrix.sanitizer }} -v -x -c
+        run: go test  ${{ matrix.sanitizer == 'msan' && '-tags=nowatcher' || '' }} -${{ matrix.sanitizer }} -v -x -c
       -
         name: Run tests
         run: ./frankenphp.test -test.v
