@@ -2,11 +2,15 @@
 
 FrankenPHP, Caddy'nin yanı sıra Mercure ve Vulcain modülleri [Caddy tarafından desteklenen formatlar](https://caddyserver.com/docs/getting-started#your-first-config) kullanılarak yapılandırılabilir.
 
-Docker imajında, `Caddyfile` `/etc/caddy/Caddyfile` dosyası olarak bulunur.
+Docker imajlarında] (docker.md), `Caddyfile` `/etc/caddy/Caddyfile` adresinde bulunur.
+Statik ikili, başlatıldığı dizinde `Caddyfile` dosyasını arayacaktır.
 
-PHP'yi her zamanki gibi `php.ini` kullanarak da yapılandırabilirsiniz.
+PHP'nin kendisi [bir `php.ini` dosyası kullanılarak yapılandırılabilir](https://www.php.net/manual/tr/configuration.file.php).
 
-Docker imajında `php.ini` dosyası mevcut değildir, elle oluşturabilir veya resmi bir şablonu kopyalayabilirsiniz:
+Varsayılan olarak, Docker imajlarıyla birlikte verilen PHP ve statik ikili dosyada bulunan PHP, FrankenPHP'nin başlatıldığı dizinde ve `/usr/local/etc/php/` içinde bir `php.ini` dosyası arayacaktır. Ayrıca `.ini` ile biten tüm dosyaları `/usr/local/etc/php/conf.d/` dizininden yükleyecektir.
+
+Öntanımlı olarak `php.ini` dosyası yoktur, PHP projesi tarafından sağlanan resmi bir şablonu kopyalamanız gerekir.
+Docker'da şablonlar imajlar içinde sağlanır:
 
 ```dockerfile
 FROM dunglas/frankenphp
@@ -17,6 +21,8 @@ RUN cp $PHP_INI_DIR/php.ini-development $PHP_INI_DIR/php.ini
 # Veya production:
 RUN cp $PHP_INI_DIR/php.ini-production $PHP_INI_DIR/php.ini
 ```
+
+Docker kullanmıyorsanız, [PHP kaynak kodu](https://github.com/php/php-src/) ile birlikte verilen `php.ini-production` veya `php.ini-development` dosyalarından birini kopyalayın.
 
 ## Caddyfile Konfigürasyonu
 
