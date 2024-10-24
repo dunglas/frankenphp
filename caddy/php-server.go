@@ -179,7 +179,7 @@ func cmdPHPServer(fs caddycmd.Flags) (int, error) {
 
 	// route to actually pass requests to PHP files;
 	// match only requests that are for PHP files
-	pathList := []string{}
+	var pathList []string
 	for _, ext := range extensions {
 		pathList = append(pathList, "*"+ext)
 	}

@@ -38,7 +38,7 @@ Build Caddy with the FrankenPHP Caddy module:
 
 ```console
 cd caddy/frankenphp/
-go build
+go build -tags watcher,brotli,nobadger,nomysql,nopgx
 cd ../../
 ```
 

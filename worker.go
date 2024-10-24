@@ -34,7 +34,7 @@ var (
 	workersAreReady  atomic.Bool
 	workersAreDone   atomic.Bool
 	workersDone      chan interface{}
-	workers          map[string]*worker = make(map[string]*worker)
+	workers          = make(map[string]*worker)
 )
 
 func initWorkers(opt []workerOpt) error {
@@ -203,7 +203,7 @@ func drainWorkers() {
 }
 
 func restartWorkersOnFileChanges(workerOpts []workerOpt) error {
-	directoriesToWatch := []string{}
+	var directoriesToWatch []string
 	for _, w := range workerOpts {
 		directoriesToWatch = append(directoriesToWatch, w.watch...)
 	}
@@ -277,7 +277,7 @@ func go_frankenphp_worker_handle_request_start(threadIndex C.uintptr_t) C.bool {
 		c.Write(zap.String("worker", thread.worker.fileName), zap.String("url", r.RequestURI))
 	}
 
-	if err := updateServerContext(r, false, true); err != nil {
+	if err := updateServerContext(thread, r, false, true); err != nil {
 		// Unexpected error
 		// TODO: The goroutine waiting for fc.done will actually get stuck here forever
 		if c := logger.Check(zapcore.DebugLevel, "unexpected error"); c != nil {

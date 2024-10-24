@@ -1,4 +1,6 @@
-//go:build watcher
+//go:build !nowatcher
+
+//go:generate curl --silent https://raw.githubusercontent.com/e-dant/watcher/refs/heads/release/watcher-c/include/wtr/watcher-c.h -o watcher-c.h
 
 package watcher
 
@@ -35,8 +37,8 @@ var (
 	reloadWaitGroup sync.WaitGroup
 	// we are passing the logger from the main package to the watcher
 	logger                *zap.Logger
-	AlreadyStartedError   = errors.New("The watcher is already running")
-	UnableToStartWatching = errors.New("Unable to start the watcher")
+	AlreadyStartedError   = errors.New("the watcher is already running")
+	UnableToStartWatching = errors.New("unable to start the watcher")
 )
 
 func InitWatcher(filePatterns []string, callback func(), zapLogger *zap.Logger) error {

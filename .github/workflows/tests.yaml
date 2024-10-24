@@ -75,7 +75,11 @@ jobs:
       -
         name: Run Caddy module tests
         working-directory: caddy/
-        run: go test -tags watcher -race -v ./...
+        run: go test -tags watcher,brotli,nobadger,nomysql,nopgx -race -v ./...
+      -
+        name: Run Fuzzing Tests
+        working-directory: caddy/
+        run: go test -fuzz FuzzRequest -fuzztime 20s
       -
         name: Run Fuzzing Tests
         working-directory: caddy/

@@ -1,4 +1,4 @@
-//go:build watcher
+//go:build !nowatcher
 
 package frankenphp_test
 

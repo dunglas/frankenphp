@@ -46,14 +46,16 @@ func WithRequestResolvedDocumentRoot(documentRoot string) RequestOption {
 	}
 }
 
+// WithRequestSplitPath contains a list of split path strings.
+//
 // The path in the URL will be split into two, with the first piece ending
-// with the value of SplitPath. The first piece will be assumed as the
+// with the value of splitPath. The first piece will be assumed as the
 // actual resource (CGI script) name, and the second piece will be set to
 // PATH_INFO for the CGI script to use.
 //
 // Future enhancements should be careful to avoid CVE-2019-11043,
 // which can be mitigated with use of a try_files-like behavior
-// that 404s if the fastcgi path info is not found.
+// that 404s if the FastCGI path info is not found.
 func WithRequestSplitPath(splitPath []string) RequestOption {
 	return func(o *FrankenPHPContext) error {
 		o.splitPath = splitPath
