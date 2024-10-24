@@ -827,8 +827,8 @@ static void *php_thread(void *arg) {
 
   local_ctx = malloc(sizeof(frankenphp_server_context));
 
-  /* check if a default filter (deprecated) is set in php.ini and only filter if
-   * it is */
+  /* check if a default filter is set in php.ini and only filter if
+   * it is, this is deprecated and will be removed in PHP 9 */
   char *default_filter;
   cfg_get_string("filter.default", &default_filter);
   should_filter_var = default_filter != NULL;
@@ -938,7 +938,6 @@ static void *php_main(void *arg) {
 
 int frankenphp_init(int num_threads) {
   pthread_t thread;
-  should_filter_var = false;
 
   if (pthread_create(&thread, NULL, &php_main, (void *)(intptr_t)num_threads) !=
       0) {
