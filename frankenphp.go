@@ -393,7 +393,7 @@ func getLogger() *zap.Logger {
 	return logger
 }
 
-func updateServerContext(thread *phpThread, request *http.Request, create bool, isWorkerRequest bool) error {
+func updateServerContext(request *http.Request, create bool, isWorkerRequest bool) error {
 	fc, ok := FromContext(request.Context())
 	if !ok {
 		return InvalidRequestError
@@ -402,14 +402,14 @@ func updateServerContext(thread *phpThread, request *http.Request, create bool, 
 	authUser, authPassword, ok := request.BasicAuth()
 	var cAuthUser, cAuthPassword *C.char
 	if ok && authPassword != "" {
-		cAuthPassword = thread.pinCString(authPassword)
+		cAuthPassword = C.CString(authPassword)
 	}
 	if ok && authUser != "" {
-		cAuthUser = thread.pinCString(authUser)
+		cAuthUser = C.CString(authUser)
 	}
 
-	cMethod := thread.pinCString(request.Method)
-	cQueryString := thread.pinCString(request.URL.RawQuery)
+	cMethod := C.CString(request.Method)
+	cQueryString := C.CString(request.URL.RawQuery)
 	contentLengthStr := request.Header.Get("Content-Length")
 	contentLength := 0
 	if contentLengthStr != "" {
@@ -423,7 +423,7 @@ func updateServerContext(thread *phpThread, request *http.Request, create bool, 
 	contentType := request.Header.Get("Content-Type")
 	var cContentType *C.char
 	if contentType != "" {
-		cContentType = thread.pinCString(contentType)
+		cContentType = C.CString(contentType)
 	}
 
 	// compliance with the CGI specification requires that
@@ -431,10 +431,10 @@ func updateServerContext(thread *phpThread, request *http.Request, create bool, 
 	// Info: https://www.ietf.org/rfc/rfc3875 Page 14
 	var cPathTranslated *C.char
 	if fc.pathInfo != "" {
-		cPathTranslated = thread.pinCString(sanitizedPathJoin(fc.documentRoot, fc.pathInfo)) // Info: http://www.oreilly.com/openbook/cgi/ch02_04.html
+		cPathTranslated = C.CString(sanitizedPathJoin(fc.documentRoot, fc.pathInfo)) // Info: http://www.oreilly.com/openbook/cgi/ch02_04.html
 	}
 
-	cRequestUri := thread.pinCString(request.URL.RequestURI())
+	cRequestUri := C.CString(request.URL.RequestURI())
 	isBootingAWorkerScript := fc.responseWriter == nil
 
 	ret := C.frankenphp_update_server_context(
@@ -599,7 +599,7 @@ func go_handle_request(threadIndex C.uintptr_t) bool {
 			thread.Unpin()
 		}()
 
-		if err := updateServerContext(thread, r, true, false); err != nil {
+		if err := updateServerContext(r, true, false); err != nil {
 			panic(err)
 		}
 
@@ -871,7 +871,7 @@ func executePHPFunction(functionName string) {
 func requestIsValid(r *http.Request, rw http.ResponseWriter) bool {
 	if strings.Contains(r.URL.Path, "\x00") {
 		rw.WriteHeader(http.StatusBadRequest)
-		rw.Write([]byte("Invalid request path"))
+		_, _ = rw.Write([]byte("Invalid request path"))
 		rw.(http.Flusher).Flush()
 		return false
 	}
