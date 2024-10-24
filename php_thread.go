@@ -41,8 +41,3 @@ func (thread *phpThread) pinString(s string) *C.char {
 	thread.Pin(sData)
 	return (*C.char)(unsafe.Pointer(sData))
 }
-
-// C strings must be null-terminated
-func (thread *phpThread) pinCString(s string) *C.char {
-	return thread.pinString(s+"\x00")
-}
