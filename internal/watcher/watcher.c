@@ -1,5 +1,5 @@
 // clang-format off
-//go:build watcher
+//go:build !nowatcher
 // clang-format on
 #include "_cgo_export.h"
 #include "watcher-c.h"

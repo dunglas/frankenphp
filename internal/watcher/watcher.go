@@ -1,4 +1,6 @@
-//go:build watcher
+//go:build !nowatcher
+
+//go:generate curl --silent https://raw.githubusercontent.com/e-dant/watcher/refs/heads/release/watcher-c/include/wtr/watcher-c.h -o watcher-c.h
 
 package watcher
 
