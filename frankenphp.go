@@ -56,11 +56,13 @@ var contextKey = contextKeyStruct{}
 
 var (
 	InvalidRequestError         = errors.New("not a FrankenPHP request")
-	AlreadyStartedError         = errors.New("FrankenPHP is already started")
+	AlreaydStartedError         = errors.New("FrankenPHP is already started")
 	InvalidPHPVersionError      = errors.New("FrankenPHP is only compatible with PHP 8.2+")
+	ZendSignalsError            = errors.New("Zend Signals are enabled, recompile PHP with --disable-zend-signals")
 	NotEnoughThreads            = errors.New("the number of threads must be superior to the number of workers")
 	MainThreadCreationError     = errors.New("error creating the main thread")
 	RequestContextCreationError = errors.New("error during request context creation")
+	RequestStartupError         = errors.New("error during PHP request startup")
 	ScriptExecutionError        = errors.New("error during PHP script execution")
 
 	requestChan chan *http.Request
@@ -278,7 +280,7 @@ func calculateMaxThreads(opt *opt) error {
 // Init starts the PHP runtime and the configured workers.
 func Init(options ...Option) error {
 	if requestChan != nil {
-		return AlreadyStartedError
+		return AlreaydStartedError
 	}
 
 	// Ignore all SIGPIPE signals to prevent weird issues with systemd: https://github.com/dunglas/frankenphp/issues/1020
@@ -369,7 +371,7 @@ func Shutdown() {
 
 	// Remove the installed app
 	if EmbeddedAppPath != "" {
-		_ = os.RemoveAll(EmbeddedAppPath)
+		os.RemoveAll(EmbeddedAppPath)
 	}
 
 	logger.Debug("FrankenPHP shut down")
@@ -462,6 +464,10 @@ func updateServerContext(request *http.Request, create bool, isWorkerRequest boo
 
 // ServeHTTP executes a PHP script according to the given context.
 func ServeHTTP(responseWriter http.ResponseWriter, request *http.Request) error {
+	if !requestIsValid(request, responseWriter) {
+		return nil
+	}
+
 	shutdownWG.Add(1)
 	defer shutdownWG.Done()
 
@@ -653,71 +659,6 @@ var headerKeyCache = func() otter.Cache[string, string] {
 
 	return c
 }()
-
-//export go_register_variables
-func go_register_variables(threadIndex C.uintptr_t, trackVarsArray *C.zval) {
-	thread := phpThreads[threadIndex]
-	r := thread.getActiveRequest()
-	fc := r.Context().Value(contextKey).(*FrankenPHPContext)
-
-	dynamicVariables := make([]C.php_variable, len(fc.env)+len(r.Header))
-
-	var l int
-
-	// Add all HTTP headers to env variables
-	for field, val := range r.Header {
-		k, ok := headerKeyCache.Get(field)
-		if !ok {
-			k = "HTTP_" + headerNameReplacer.Replace(strings.ToUpper(field)) + "\x00"
-			headerKeyCache.SetIfAbsent(field, k)
-		}
-
-		if _, ok := fc.env[k]; ok {
-			continue
-		}
-
-		v := strings.Join(val, ", ")
-
-		kData := unsafe.StringData(k)
-		vData := unsafe.StringData(v)
-
-		thread.Pin(kData)
-		thread.Pin(vData)
-
-		dynamicVariables[l]._var = (*C.char)(unsafe.Pointer(kData))
-		dynamicVariables[l].data_len = C.size_t(len(v))
-		dynamicVariables[l].data = (*C.char)(unsafe.Pointer(vData))
-
-		l++
-	}
-
-	for k, v := range fc.env {
-		if _, ok := knownServerKeys[k]; ok {
-			continue
-		}
-
-		kData := unsafe.StringData(k)
-		vData := unsafe.Pointer(unsafe.StringData(v))
-
-		thread.Pin(kData)
-		thread.Pin(vData)
-
-		dynamicVariables[l]._var = (*C.char)(unsafe.Pointer(kData))
-		dynamicVariables[l].data_len = C.size_t(len(v))
-		dynamicVariables[l].data = (*C.char)(unsafe.Pointer(vData))
-
-		l++
-	}
-
-	knownVariables := computeKnownVariables(r, &thread.Pinner)
-
-	dvsd := unsafe.SliceData(dynamicVariables)
-	thread.Pin(dvsd)
-
-	C.frankenphp_register_bulk_variables(&knownVariables[0], dvsd, C.size_t(l), trackVarsArray)
-
-	fc.env = nil
-}
 
 //export go_apache_request_headers
 func go_apache_request_headers(threadIndex C.uintptr_t, hasActiveRequest bool) (*C.go_string, C.size_t) {
@@ -926,4 +867,16 @@ func executePHPFunction(functionName string) {
 			c.Write(zap.String("function", functionName))
 		}
 	}
+}
+
+// Ensure that the request path does not contain null bytes
+func requestIsValid(r *http.Request, rw http.ResponseWriter) bool {
+	if strings.Contains(r.URL.Path, "\x00") {
+		rw.WriteHeader(http.StatusBadRequest)
+		_, _ = rw.Write([]byte("Invalid request path"))
+		rw.(http.Flusher).Flush()
+		return false
+	}
+
+	return true
 }

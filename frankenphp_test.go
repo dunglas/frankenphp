@@ -19,6 +19,7 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -887,4 +888,49 @@ func BenchmarkServerSuperGlobal(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		handler(w, req)
 	}
+}
+
+// This test will fuzz inputs to assert that they are correctly passed to the PHP script
+func FuzzRequest(f *testing.F) {
+	f.Add("hello world")
+	f.Add("😀😅🙃🤩🥲🤪😘😇😉🐘🧟")
+	f.Add("%00%11%%22%%33%%44%%55%%66%%77%%88%%99%%aa%%bb%%cc%%dd%%ee%%ff")
+	f.Add("\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f")
+	f.Fuzz(func(t *testing.T, fuzzedString string) {
+		absPath, _ := filepath.Abs("./testdata/")
+		runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, _ int) {
+			req := httptest.NewRequest("GET", "http://example.com/server-variable", nil)
+			req.URL = &url.URL{RawQuery: "test=" + fuzzedString, Path: "/server-variable.php/" + fuzzedString}
+			req.Header.Add(strings.Clone("Fuzzed"), strings.Clone(fuzzedString))
+			req.Header.Add(strings.Clone("Content-Type"), fuzzedString)
+
+			w := httptest.NewRecorder()
+			handler(w, req)
+
+			resp := w.Result()
+			body, _ := io.ReadAll(resp.Body)
+
+			// The response status must be 400 if the request contains null bytes
+			if strings.Contains(fuzzedString, "\x00") {
+				assert.Equal(t, 400, resp.StatusCode)
+				assert.Contains(t, string(body), "Invalid request path")
+				return
+			}
+
+			// The fuzzed string must be present in the path
+			assert.Contains(t, string(body), fmt.Sprintf("[PATH_INFO] => /%s", fuzzedString))
+			assert.Contains(t, string(body), fmt.Sprintf("[PATH_TRANSLATED] => %s", filepath.Join(absPath, fuzzedString)))
+
+			// The header should only be present if the fuzzed string is not empty
+			if len(fuzzedString) > 0 {
+				assert.Contains(t, string(body), fmt.Sprintf("[CONTENT_TYPE] => %s", fuzzedString))
+				assert.Contains(t, string(body), fmt.Sprintf("[HTTP_FUZZED] => %s", fuzzedString))
+			} else {
+				assert.NotContains(t, string(body), "[HTTP_FUZZED]")
+			}
+
+			assert.True(t, true)
+			assert.NotEmpty(t, body)
+		}, &testOptions{workerScript: "request-headers.php"})
+	})
 }
