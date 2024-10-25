@@ -312,5 +312,7 @@ func go_frankenphp_finish_request(threadIndex C.uintptr_t, isWorkerRequest bool)
 		c.Write(fields...)
 	}
 
-	thread.Unpin()
+	if isWorkerRequest {
+		thread.Unpin()
+	}
 }
