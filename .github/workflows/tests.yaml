@@ -69,10 +69,6 @@ jobs:
         working-directory: caddy/
         run: go test -fuzz FuzzRequest -fuzztime 20s
       -
-        name: Run Fuzzing Tests
-        working-directory: caddy/
-        run: go test -fuzz FuzzRequest -fuzztime 20s
-      -
         name: Build the server
         working-directory: caddy/frankenphp/
         run: go build
