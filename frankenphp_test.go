@@ -890,7 +890,7 @@ func BenchmarkServerSuperGlobal(b *testing.B) {
 	}
 }
 
-// This test will fuzz inputs to assert that they are correctly passed to the PHP script
+// This fuzzing test asserts that inputs are correctly passed to the PHP script
 func FuzzRequest(f *testing.F) {
 	f.Add("hello world")
 	f.Add("😀😅🙃🤩🥲🤪😘😇😉🐘🧟")
