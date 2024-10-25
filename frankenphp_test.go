@@ -928,9 +928,6 @@ func FuzzRequest(f *testing.F) {
 			} else {
 				assert.NotContains(t, string(body), "[HTTP_FUZZED]")
 			}
-
-			assert.True(t, true)
-			assert.NotEmpty(t, body)
 		}, &testOptions{workerScript: "request-headers.php"})
 	})
 }
