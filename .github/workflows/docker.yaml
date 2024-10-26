@@ -162,6 +162,7 @@ jobs:
             runner-${{ matrix.variant }}
           # Remove tags to prevent "can't push tagged ref [...] by digest" error
           set: |
+            ${{ (github.event_name == 'pull_request') && '*.args.NO_COMPRESS=1' || '' }}
             *.tags=
             *.platform=${{ matrix.platform }}
             builder-${{ matrix.variant }}.cache-from=type=gha,scope=builder-${{ matrix.variant }}-${{ needs.prepare.outputs.ref || github.ref }}-${{ matrix.platform }}
