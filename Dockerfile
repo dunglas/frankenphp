@@ -91,9 +91,9 @@ COPY --link testdata testdata
 
 # Install e-dant/watcher (necessary for file watching)
 ARG EDANT_WATCHER_VERSION=release
-RUN curl -L https://github.com/e-dant/watcher/archive/refs/heads/$EDANT_WATCHER_VERSION.tar.gz | tar xz -C /usr/local/src
-WORKDIR /usr/local/src/watcher-$EDANT_WATCHER_VERSION
-RUN cmake -S . -B build -DCMAKE_BUILD_TYPE=Release && \
+WORKDIR /usr/local/src/watcher
+RUN curl -L https://github.com/e-dant/watcher/archive/refs/heads/$EDANT_WATCHER_VERSION.tar.gz | tar xz --strip-components 1 && \
+    cmake -S . -B build -DCMAKE_BUILD_TYPE=Release && \
 	cmake --build build/ && \
 	cmake --install build
 
