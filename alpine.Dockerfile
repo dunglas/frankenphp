@@ -72,7 +72,7 @@ RUN apk add --no-cache --virtual .build-deps \
 	gnu-libiconv-dev \
 	libsodium-dev \
 	# Needed for the file watcher \
-    cmake \
+	cmake \
 	libstdc++ \
 	libxml2-dev \
 	linux-headers \
@@ -117,8 +117,8 @@ ARG EDANT_WATCHER_VERSION=release
 RUN curl -L https://github.com/e-dant/watcher/archive/refs/heads/$EDANT_WATCHER_VERSION.tar.gz | tar xz -C /usr/local/src
 WORKDIR /usr/local/src/watcher-$EDANT_WATCHER_VERSION
 RUN cmake -S . -B build -DCMAKE_BUILD_TYPE=Release && \
-    cmake --build build/ && \
-    cmake --install build
+	cmake --build build/ && \
+	cmake --install build
 
 # See https://github.com/docker-library/php/blob/master/8.3/alpine3.20/zts/Dockerfile#L53-L55
 ENV CGO_CFLAGS="-DFRANKENPHP_VERSION=$FRANKENPHP_VERSION $PHP_CFLAGS"

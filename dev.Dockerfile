@@ -36,7 +36,7 @@ RUN apt-get update && \
 	# Dev tools \
 	git \
 	clang \
-    cmake \
+	cmake \
 	llvm \
 	gdb \
 	valgrind \
@@ -71,8 +71,8 @@ ARG EDANT_WATCHER_VERSION=release
 RUN git clone --branch=$EDANT_WATCHER_VERSION https://github.com/e-dant/watcher /usr/local/src/watcher
 WORKDIR /usr/local/src/watcher
 RUN cmake -S . -B build -DCMAKE_BUILD_TYPE=Release && \
-    cmake --build build/ && \
-    cmake --install build
+	cmake --build build/ && \
+	cmake --install build
 
 WORKDIR /go/src/app
 COPY . .
