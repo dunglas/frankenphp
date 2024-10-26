@@ -64,7 +64,7 @@ void frankenphp_register_variable_safe(char *key, char *var, size_t val_len,
                                        zval *track_vars_array);
 void frankenphp_register_trusted_var(zend_string *z_key, char *value,
                                      int val_len, zval *track_vars_array);
-zend_string *frankenphp_init_interned_string(const char *string, size_t len);
+zend_string *frankenphp_init_persistent_string(const char *string, size_t len);
 void frankenphp_release_zend_string(zend_string *z_string);
 
 #endif

@@ -659,8 +659,8 @@ void frankenphp_register_trusted_var(zend_string *z_key, char *value,
   }
 }
 
-zend_string *frankenphp_init_interned_string(const char *string, size_t len) {
-  return zend_string_init_interned(string, len, 1);
+zend_string *frankenphp_init_persistent_string(const char *string, size_t len) {
+  return zend_string_init(string, len, 1);
 }
 
 void frankenphp_release_zend_string(zend_string *z_string) {

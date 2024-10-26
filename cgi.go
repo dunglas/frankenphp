@@ -201,7 +201,7 @@ func getKnownVariableKeys(thread *phpThread) map[string]*C.zend_string {
 	threadServerKeys := make(map[string]*C.zend_string)
 	for k, _ := range knownServerKeys {
 		keyWithoutNull := strings.Replace(k, "\x00", "", -1)
-		threadServerKeys[k] = C.frankenphp_init_interned_string(thread.pinString(keyWithoutNull), C.size_t(len(keyWithoutNull)))
+		threadServerKeys[k] = C.frankenphp_init_persistent_string(thread.pinString(keyWithoutNull), C.size_t(len(keyWithoutNull)))
 	}
 	thread.knownVariableKeys = threadServerKeys
 	return threadServerKeys
