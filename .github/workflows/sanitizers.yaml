@@ -99,7 +99,7 @@ jobs:
       -
         if: matrix.sanitizer != 'msan'
         name: Download e-dant/watcher
-        run: gh release download --repo e-dant/watcher -A tar.gz -o - | tar -xz -C watcher --strip-components 1
+        run: gh release download --repo e-dant/watcher -A tar.gz -O - | tar -xz -C watcher --strip-components 1
       -
         if: matrix.sanitizer != 'msan'
         name: Compile e-dant/watcher
