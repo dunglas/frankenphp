@@ -98,20 +98,16 @@ jobs:
         run: echo "$(pwd)/php/target/bin" >> "$GITHUB_PATH"
       -
         if: matrix.sanitizer != 'msan'
-        uses: actions/checkout@v4
-        name: Checkout watcher
-        with:
-          repository: e-dant/watcher
-          ref: ${{ env.EDANT_WATCHER_VERSION }}
-          path: 'edant/watcher'
+        name: Download e-dant/watcher
+        run: gh release download --repo e-dant/watcher -A tar.gz -o - | tar -xz -C watcher --strip-components 1
       -
         if: matrix.sanitizer != 'msan'
-        name: Compile edant/watcher
+        name: Compile e-dant/watcher
+        working-directory: watcher
         run: |
-          cd edant/watcher/watcher-c/
-          "$CC" -o libwatcher.so ./src/watcher-c.cpp -I ./include -I ../include -std=c++17 -Wall -Wextra -fPIC -shared ${{ matrix.sanitizer == 'msan' && '-fsanitize=memory -fno-omit-frame-pointer -fno-optimize-sibling-calls' || '' }}
-          sudo cp libwatcher.so /usr/local/lib/libwatcher.so
-          sudo ldconfig
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+          cmake --build build/
+          sudo cmake --install build
       -
         name: Set Set CGO flags
         run: |

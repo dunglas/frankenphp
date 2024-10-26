@@ -4,8 +4,7 @@
 
 package watcher
 
-// #cgo LDFLAGS: -lwatcher -lstdc++
-// #cgo CFLAGS: -Wall -Werror
+// #cgo LDFLAGS: -lwatcher-c -lstdc++ -Wl,-rpath /usr/local/lib
 // #include <stdint.h>
 // #include <stdlib.h>
 // #include "watcher.h"

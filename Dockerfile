@@ -89,14 +89,13 @@ COPY --link caddy caddy
 COPY --link internal internal
 COPY --link testdata testdata
 
-# install edant/watcher (necessary for file watching)
+# Install e-dant/watcher (necessary for file watching)
 ARG EDANT_WATCHER_VERSION=release
-WORKDIR /usr/local/src/watcher
-RUN curl -L https://github.com/e-dant/watcher/archive/refs/heads/$EDANT_WATCHER_VERSION.tar.gz | tar xz
-WORKDIR /usr/local/src/watcher/watcher-$EDANT_WATCHER_VERSION/watcher-c
-RUN cc -o libwatcher.so ./src/watcher-c.cpp -I ./include -I ../include -std=c++17 -O3 -Wall -Wextra -fPIC -shared && \
-	cp libwatcher.so /usr/local/lib/libwatcher.so && \
-	ldconfig /usr/local/lib
+RUN curl -L https://github.com/e-dant/watcher/archive/refs/heads/$EDANT_WATCHER_VERSION.tar.gz | tar xz -C /usr/local/src
+WORKDIR /usr/local/src/watcher-$EDANT_WATCHER_VERSION
+RUN cmake -S . -B build -DCMAKE_BUILD_TYPE=Release && \
+    cmake --build build/ && \
+    sudo cmake --install build
 
 # See https://github.com/docker-library/php/blob/master/8.3/bookworm/zts/Dockerfile#L57-L59 for PHP values
 ENV CGO_CFLAGS="-DFRANKENPHP_VERSION=$FRANKENPHP_VERSION $PHP_CFLAGS"

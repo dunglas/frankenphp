@@ -2,7 +2,7 @@
 //go:build !nowatcher
 // clang-format on
 #include "_cgo_export.h"
-#include "watcher-c.h"
+#include "wtr/watcher-c.h"
 
 void handle_event(struct wtr_watcher_event event, void *data) {
   go_handle_file_watcher_event((char *)event.path_name, event.effect_type,
