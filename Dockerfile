@@ -95,7 +95,7 @@ RUN curl -L https://github.com/e-dant/watcher/archive/refs/heads/$EDANT_WATCHER_
 WORKDIR /usr/local/src/watcher-$EDANT_WATCHER_VERSION
 RUN cmake -S . -B build -DCMAKE_BUILD_TYPE=Release && \
     cmake --build build/ && \
-    sudo cmake --install build
+    cmake --install build
 
 # See https://github.com/docker-library/php/blob/master/8.3/bookworm/zts/Dockerfile#L57-L59 for PHP values
 ENV CGO_CFLAGS="-DFRANKENPHP_VERSION=$FRANKENPHP_VERSION $PHP_CFLAGS"
