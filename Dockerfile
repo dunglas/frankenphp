@@ -61,6 +61,7 @@ ENV PATH=/usr/local/go/bin:$PATH
 # This is required to link the FrankenPHP binary to the PHP binary
 RUN apt-get update && \
 	apt-get -y --no-install-recommends install \
+    cmake \
 	libargon2-dev \
 	libbrotli-dev \
 	libcurl4-openssl-dev \
