@@ -23,7 +23,8 @@ jobs:
     env:
       GOEXPERIMENT: cgocheck2
       GOMAXPROCS: 10
-      EDANT_WATCHER_VERSION: next
+      LIBRARY_PATH: ${{ github.workspace }}/php/target/lib:/usr/local/lib
+      LD_LIBRARY_PATH: ${{ github.workspace }}/php/target/lib:/usr/local/lib
     steps:
       -
         uses: actions/checkout@v4
@@ -58,7 +59,6 @@ jobs:
           cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
           cmake --build build/
           sudo cmake --install build
-          sudo ldconfig
       -
         name: Set CGO flags
         run: |
