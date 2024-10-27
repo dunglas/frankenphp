@@ -58,16 +58,19 @@ jobs:
           cmake --build build/
           sudo cmake --install build
       -
-        name: Set CGO flags
+        name: Set Set CGO flags
         run: |
-          echo "CGO_CFLAGS=$(php-config --includes)" >> "$GITHUB_ENV"
+          {
+            echo "CGO_CFLAGS=$CFLAGS $(php-config --includes)"
+            echo "CGO_LDFLAGS=$LDFLAGS $(php-config --ldflags) $(php-config --libs)"
+          } >> "$GITHUB_ENV"
       -
         name: Build
         run: go build          
-      #-
-      #  name: Build testcli binary
-      #  working-directory: internal/testcli/
-      #  run: go build
+      -
+        name: Build testcli binary
+        working-directory: internal/testcli/
+        run: go build
       -
         name: Run library tests
         run: go test -race -v ./...
