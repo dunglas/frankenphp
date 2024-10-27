@@ -61,8 +61,8 @@ jobs:
         name: Set Set CGO flags
         run: |
           {
-            echo "CGO_CFLAGS=$CFLAGS $(php-config --includes)"
-            echo "CGO_LDFLAGS=$LDFLAGS $(php-config --ldflags) $(php-config --libs)"
+            echo "CGO_CFLAGS=-I/usr/local/include $(php-config --includes)"
+            echo "CGO_LDFLAGS=-L/usr/local/lib -lwatcher-c"
           } >> "$GITHUB_ENV"
       -
         name: Build
