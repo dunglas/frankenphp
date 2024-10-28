@@ -1,4 +1,5 @@
-name: Install e-dant/watcher
+name: watcher
+description: Install e-dant/watcher
 runs:
   using: composite
   steps:
@@ -19,7 +20,6 @@ runs:
     -
       if: steps.cache-watcher.outputs.cache-hit != 'true'
       name: Compile e-dant/watcher
-      working-directory: watcher
       run: |
         mkdir watcher
         gh release download --repo e-dant/watcher -A tar.gz -O - | tar -xz -C watcher --strip-components 1
