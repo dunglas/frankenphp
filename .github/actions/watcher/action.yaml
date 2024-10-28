@@ -25,8 +25,8 @@ runs:
         gh release download --repo e-dant/watcher -A tar.gz -O - | tar -xz -C watcher --strip-components 1
         cd watcher
         cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
-        cmake --build build/
-        sudo cmake --install target/ --prefix ${PWD}/target/
+        cmake --build build
+        sudo cmake --install build --prefix target
       shell: bash
       env:
         GH_TOKEN: ${{ github.token }}
