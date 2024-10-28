@@ -29,7 +29,6 @@ jobs:
       CXX: clang++
       USE_ZEND_ALLOC: 0
       LIBRARY_PATH: ${{ github.workspace }}/php/target/lib:${{ github.workspace }}/watcher/target/lib
-      LD_LIBRARY_PATH: ${{ github.workspace }}/php/target/lib:${{ github.workspace }}/watcher/target/lib
     steps:
       -
         name: Remove local PHP
@@ -96,30 +95,8 @@ jobs:
         name: Add PHP to the PATH
         run: echo "$(pwd)/php/target/bin" >> "$GITHUB_PATH"
       -
-        name: Determine e-dant/watcher version
-        id: determine-watcher-version
-        run: echo version="$(gh release view --repo e-dant/watcher --json tagName --template '{{ .tagName }}')" >> "${GITHUB_OUTPUT}"
-        env:
-          GH_TOKEN: ${{ github.token }}
-      -
-        name: Cache e-dant/watcher
-        id: cache-watcher
-        uses: actions/cache@v4
-        with:
-          path: watcher/target
-          key: watcher-${{ runner.os }}-${{ runner.arch }}-${{ steps.determine-watcher-version.outputs.version }}-${{ env.CC }}
-      -
-        if: steps.cache-watcher.outputs.cache-hit != 'true'
-        name: Compile e-dant/watcher
-        run: |
-          mkdir watcher
-          gh release download --repo e-dant/watcher -A tar.gz -O - | tar -xz -C watcher --strip-components 1
-          cd watcher
-          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
-          cmake --build build
-          sudo cmake --install build --prefix target
-        env:
-          GH_TOKEN: ${{ github.token }}
+        name: Install e-dant/watcher
+        uses: ./.github/actions/watcher
       -
         name: Set Set CGO flags
         run: |
