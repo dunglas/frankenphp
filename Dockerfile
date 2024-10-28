@@ -100,8 +100,9 @@ RUN curl -s https://api.github.com/repos/e-dant/watcher/releases/latest | \
 		xargs curl -L | \
     tar xz --strip-components 1 && \
     cmake -S . -B build -DCMAKE_BUILD_TYPE=Release && \
-	cmake --build build/ && \
-	cmake --install build
+	cmake --build build && \
+	cmake --install build && \
+    ldconfig
 
 # See https://github.com/docker-library/php/blob/master/8.3/bookworm/zts/Dockerfile#L57-L59 for PHP values
 ENV CGO_CFLAGS="-DFRANKENPHP_VERSION=$FRANKENPHP_VERSION $PHP_CFLAGS"

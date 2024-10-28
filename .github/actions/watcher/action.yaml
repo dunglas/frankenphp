@@ -27,6 +27,8 @@ runs:
         cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
         cmake --build build
         sudo cmake --install build --prefix target
+        sudo echo "${PWD}/watcher/target/lib" > /etc/ld.so.conf.d/watcher.conf
+        sudo ldconfig
       shell: bash
       env:
         GH_TOKEN: ${{ github.token }}

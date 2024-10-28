@@ -122,7 +122,7 @@ RUN curl -s https://api.github.com/repos/e-dant/watcher/releases/latest | \
 		xargs curl -L | \
     tar xz --strip-components 1 && \
     cmake -S . -B build -DCMAKE_BUILD_TYPE=Release && \
-	cmake --build build/ && \
+	cmake --build build && \
 	cmake --install build
 
 # See https://github.com/docker-library/php/blob/master/8.3/alpine3.20/zts/Dockerfile#L53-L55
