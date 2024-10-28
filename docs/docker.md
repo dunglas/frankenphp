@@ -52,7 +52,7 @@ FrankenPHP is built on top of Caddy, and all [Caddy modules](https://caddyserver
 The easiest way to install custom Caddy modules is to use [xcaddy](https://github.com/caddyserver/xcaddy):
 
 ```dockerfile
-FROM dunglas/frankenphp:latest-builder AS builder
+FROM dunglas/frankenphp:builder AS builder
 
 # Copy xcaddy in the builder image
 COPY --from=caddy:builder /usr/bin/xcaddy /usr/bin/xcaddy
