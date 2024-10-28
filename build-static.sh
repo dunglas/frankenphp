@@ -123,12 +123,13 @@ fi
 # Compile e-dant/watcher as a static library
 mkdir watcher
 cd watcher
-curl -s https://api.github.com/repos/e-dant/watcher/releases/latest |
+curl https://api.github.com/repos/e-dant/watcher/releases/latest
+curl -f --retry 5 https://api.github.com/repos/e-dant/watcher/releases/latest |
 	grep tarball_url |
 	awk '{ print $2 }' |
 	sed 's/,$//' |
 	sed 's/"//g' |
-	xargs curl -L |
+	xargs curl -fL --retry 5 |
 	tar xz --strip-components 1
 ls
 cd watcher-c
@@ -192,7 +193,7 @@ if [ "${os}" = "linux" ]; then
 
 			git checkout "$(git describe --tags "$(git rev-list --tags --max-count=1 || true)" || true)"
 
-			curl -f -L --retry 5 https://raw.githubusercontent.com/tweag/rust-alpine-mimalloc/b26002b49d466a295ea8b50828cb7520a71a872a/mimalloc.diff -o mimalloc.diff
+			curl -fL --retry 5 https://raw.githubusercontent.com/tweag/rust-alpine-mimalloc/b26002b49d466a295ea8b50828cb7520a71a872a/mimalloc.diff -o mimalloc.diff
 			patch -p1 <mimalloc.diff
 
 			mkdir -p out/
