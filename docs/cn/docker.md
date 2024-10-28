@@ -44,7 +44,7 @@ FrankenPHP 建立在 Caddy 之上，所有 [Caddy 模块](https://caddyserver.co
 安装自定义 Caddy 模块的最简单方法是使用 [xcaddy](https://github.com/caddyserver/xcaddy)：
 
 ```dockerfile
-FROM dunglas/frankenphp:latest-builder AS builder
+FROM dunglas/frankenphp:builder AS builder
 
 # 在构建器镜像中复制 xcaddy
 COPY --from=caddy:builder /usr/bin/xcaddy /usr/bin/xcaddy

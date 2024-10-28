@@ -45,7 +45,7 @@ FrankenPHP, Caddy'nin üzerine inşa edilmiştir ve tüm [Caddy modülleri](http
 Özel Caddy modüllerini kurmanın en kolay yolu [xcaddy](https://github.com/caddyserver/xcaddy) kullanmaktır:
 
 ```dockerfile
-FROM dunglas/frankenphp:latest-builder AS builder
+FROM dunglas/frankenphp:builder AS builder
 
 # xcaddy'yi derleyen imaja kopyalayın
 COPY --from=caddy:builder /usr/bin/xcaddy /usr/bin/xcaddy
