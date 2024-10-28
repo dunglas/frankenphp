@@ -96,6 +96,7 @@ jobs:
         name: Add PHP to the PATH
         run: echo "$(pwd)/php/target/bin" >> "$GITHUB_PATH"
       -
+        name: Install e-dant/watcher
         uses: ./.github/actions/watcher
       -
         name: Set Set CGO flags

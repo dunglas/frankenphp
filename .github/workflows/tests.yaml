@@ -46,6 +46,7 @@ jobs:
           phpts: ts
           debug: true
       -
+        name: Install e-dant/watcher
         uses: ./.github/actions/watcher
       -
         name: Set Set CGO flags

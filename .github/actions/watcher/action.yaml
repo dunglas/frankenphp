@@ -11,7 +11,7 @@ runs:
         GH_TOKEN: ${{ github.token }}
     -
       name: Cache e-dant/watcher
-      id: cache-php
+      id: cache-watcher
       uses: actions/cache@v4
       with:
         path: watcher/target
