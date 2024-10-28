@@ -1,0 +1,32 @@
+name: Install e-dant/watcher
+runs:
+  using: composite
+  steps:
+    -
+      name: Determine e-dant/watcher version
+      id: determine-watcher-version
+      run: echo version="$(gh release view --repo e-dant/watcher --json tagName --template '{{ .tagName }}')" >> "${GITHUB_OUTPUT}"
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+    -
+      name: Cache e-dant/watcher
+      id: cache-php
+      uses: actions/cache@v4
+      with:
+        path: watcher/target
+        key: watcher-${{ runner.os }}-${{ runner.arch }}-${{ steps.determine-watcher-version.outputs.version }}
+    -
+      if: steps.cache-watcher.outputs.cache-hit != 'true'
+      name: Compile e-dant/watcher
+      working-directory: watcher
+      run: |
+        mkdir watcher
+        gh release download --repo e-dant/watcher -A tar.gz -O - | tar -xz -C watcher --strip-components 1
+        cd watcher
+        cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+        cmake --build build/
+        sudo cmake --install target/ --prefix ${PWD}/target/
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}

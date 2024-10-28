@@ -28,8 +28,8 @@ jobs:
       CC: clang
       CXX: clang++
       USE_ZEND_ALLOC: 0
-      LIBRARY_PATH: ${{ github.workspace }}/php/target/lib:/usr/local/lib
-      LD_LIBRARY_PATH: ${{ github.workspace }}/php/target/lib:/usr/local/lib
+      LIBRARY_PATH: ${{ github.workspace }}/php/target/lib:${{ github.workspace }}/watcher/target/lib:/usr/local/lib
+      LD_LIBRARY_PATH: ${{ github.workspace }}/php/target/lib:${{ github.workspace }}/watcher/target/lib:/usr/local/lib
     steps:
       -
         name: Remove local PHP
@@ -96,21 +96,7 @@ jobs:
         name: Add PHP to the PATH
         run: echo "$(pwd)/php/target/bin" >> "$GITHUB_PATH"
       -
-        if: matrix.sanitizer != 'msan'
-        name: Download e-dant/watcher
-        run: |
-          mkdir watcher
-          gh release download --repo e-dant/watcher -A tar.gz -O - | tar -xz -C watcher --strip-components 1
-        env:
-          GH_TOKEN: ${{ github.token }}
-      -
-        if: matrix.sanitizer != 'msan'
-        name: Compile e-dant/watcher
-        working-directory: watcher
-        run: |
-          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
-          cmake --build build/
-          sudo cmake --install build
+        uses: ./.github/actions/watcher
       -
         name: Set Set CGO flags
         run: |

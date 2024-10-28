@@ -23,8 +23,8 @@ jobs:
     env:
       GOEXPERIMENT: cgocheck2
       GOMAXPROCS: 10
-      LIBRARY_PATH: /usr/local/lib
-      LD_LIBRARY_PATH: /usr/local/lib
+      LIBRARY_PATH: ${{ github.workspace }}/watcher/target/lib:/usr/local/lib
+      LD_LIBRARY_PATH: ${{ github.workspace }}/watcher/target/lib:/usr/local/lib
     steps:
       -
         uses: actions/checkout@v4
@@ -46,26 +46,10 @@ jobs:
           phpts: ts
           debug: true
       -
-        name: Download e-dant/watcher
-        run: |
-          mkdir watcher
-          gh release download --repo e-dant/watcher -A tar.gz -O - | tar -xz -C watcher --strip-components 1
-        env:
-          GH_TOKEN: ${{ github.token }}
-      -
-        name: Compile e-dant/watcher
-        working-directory: watcher
-        run: |
-          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
-          cmake --build build/
-          sudo cmake --install build
+        uses: ./.github/actions/watcher
       -
         name: Set Set CGO flags
-        run: |
-          {
-            echo "CGO_CFLAGS=-I/usr/local/include $(php-config --includes)"
-            echo "CGO_LDFLAGS=-L/usr/local/lib -lwatcher-c"
-          } >> "$GITHUB_ENV"
+        run: echo "CGO_CFLAGS=$(php-config --includes)" >> "${GITHUB_ENV}"
       -
         name: Build
         run: go build          
