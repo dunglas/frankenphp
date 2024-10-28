@@ -124,12 +124,13 @@ fi
 mkdir watcher
 cd watcher
 curl -s https://api.github.com/repos/e-dant/watcher/releases/latest |
-	grep tarball_url |
+  grep tarball_url |
 	awk '{ print $2 }' |
 	sed 's/,$//' |
 	sed 's/"//g' |
 	xargs curl -L |
 	tar xz --strip-components 1
+ls
 cd watcher-c
 cc -c -o libwatcher-c.o ./src/watcher-c.cpp -I ./include -I ../include -std=c++17 -Wall -Wextra -fPIC
 ar rcs libwatcher-c.a libwatcher-c.o

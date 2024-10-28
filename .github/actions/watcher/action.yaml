@@ -33,6 +33,6 @@ runs:
     -
       name: Update LD_LIBRARY_PATH
       run: |
-        sudo echo "${PWD}/watcher/target/lib" > /etc/ld.so.conf.d/watcher.conf
+        sudo sh -c "echo ${PWD}/watcher/target/lib > /etc/ld.so.conf.d/watcher.conf"
         sudo ldconfig
       shell: bash
