@@ -50,7 +50,7 @@ jobs:
         uses: ./.github/actions/watcher
       -
         name: Set Set CGO flags
-        run: echo "CGO_CFLAGS=$(php-config --includes)" >> "${GITHUB_ENV}"
+        run: echo "CGO_CFLAGS=-I${PWD}/watcher/target/include $(php-config --includes)" >> "${GITHUB_ENV}"
       -
         name: Build
         run: go build          

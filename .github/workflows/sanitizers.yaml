@@ -102,7 +102,7 @@ jobs:
         name: Set Set CGO flags
         run: |
           {
-            echo "CGO_CFLAGS=$CFLAGS $(php-config --includes)"
+            echo "CGO_CFLAGS=$CFLAGS -I${PWD}/watcher/target/include $(php-config --includes)"
             echo "CGO_LDFLAGS=$LDFLAGS $(php-config --ldflags) $(php-config --libs)"
           } >> "$GITHUB_ENV"
       -

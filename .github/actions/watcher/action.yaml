@@ -16,7 +16,7 @@ runs:
       uses: actions/cache@v4
       with:
         path: watcher/target
-        key: watcher-${{ runner.os }}-${{ runner.arch }}-${{ steps.determine-watcher-version.outputs.version }}
+        key: watcher-${{ runner.os }}-${{ runner.arch }}-${{ steps.determine-watcher-version.outputs.version }}-${{ env.CC }}
     -
       if: steps.cache-watcher.outputs.cache-hit != 'true'
       name: Compile e-dant/watcher
