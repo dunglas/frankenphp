@@ -29,6 +29,7 @@ jobs:
       CXX: clang++
       USE_ZEND_ALLOC: 0
       LIBRARY_PATH: ${{ github.workspace }}/php/target/lib:${{ github.workspace }}/watcher/target/lib
+      LD_LIBRARY_PATH: ${{ github.workspace }}/php/target/lib
     steps:
       -
         name: Remove local PHP
