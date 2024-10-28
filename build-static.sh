@@ -124,7 +124,7 @@ fi
 mkdir watcher
 cd watcher
 curl -s https://api.github.com/repos/e-dant/watcher/releases/latest |
-  grep tarball_url |
+	grep tarball_url |
 	awk '{ print $2 }' |
 	sed 's/,$//' |
 	sed 's/"//g' |

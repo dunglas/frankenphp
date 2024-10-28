@@ -23,6 +23,7 @@ jobs:
     env:
       GOEXPERIMENT: cgocheck2
       GOMAXPROCS: 10
+      LIBRARY_PATH: ${{ github.workspace }}/watcher/target/lib
     steps:
       -
         uses: actions/checkout@v4
