@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 set -o errexit
 set -x
@@ -120,15 +120,20 @@ else
 	./bin/spc build --debug --enable-zts --build-embed ${extraOpts} "${PHP_EXTENSIONS}" --with-libs="${PHP_EXTENSION_LIBS}"
 fi
 
+curlGitHubHeaders=(--header "X-GitHub-Api-Version: 2022-11-28")
+if [ -z "${GITHUB_TOKEN}" ]; then
+  curlGitHubHeaders+=(--header "Authorization: Bearer ${GITHUB_TOKEN}")
+fi
+
 # Compile e-dant/watcher as a static library
 mkdir watcher
 cd watcher
-curl -f --retry 5 https://api.github.com/repos/e-dant/watcher/releases/latest |
+curl -f --retry 5 "${curlGitHubHeaders[@]}" https://api.github.com/repos/e-dant/watcher/releases/latest |
 	grep tarball_url |
 	awk '{ print $2 }' |
 	sed 's/,$//' |
 	sed 's/"//g' |
-	xargs curl -fL --retry 5 |
+	xargs curl -fL --retry 5 "${curlGitHubHeaders[@]}" |
 	tar xz --strip-components 1
 cd watcher-c
 cc -c -o libwatcher-c.o ./src/watcher-c.cpp -I ./include -I ../include -std=c++17 -Wall -Wextra -fPIC
