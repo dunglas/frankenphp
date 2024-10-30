@@ -121,7 +121,7 @@ else
 fi
 
 curlGitHubHeaders=(--header "X-GitHub-Api-Version: 2022-11-28")
-if [ -z "${GITHUB_TOKEN}" ]; then
+if [ "${GITHUB_TOKEN}" ]; then
 	curlGitHubHeaders+=(--header "Authorization: Bearer ${GITHUB_TOKEN}")
 fi
 
