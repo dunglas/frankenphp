@@ -192,7 +192,7 @@ func (worker *worker) startNewWorkerThread() {
 	}
 }
 
-func (worker *worker) handleRequest(r *http.Request, fc *FrankenPHPContext) {
+func (worker *worker) handleRequest(r *http.Request) {
 	worker.threadMutex.RLock()
 	// dispatch requests to all worker threads in order
 	for _, thread := range worker.threads {
