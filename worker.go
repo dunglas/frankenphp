@@ -194,6 +194,7 @@ func (worker *worker) startNewWorkerThread() {
 
 func (worker *worker) handleRequest(r *http.Request, fc *FrankenPHPContext) {
 	worker.threadMutex.RLock()
+	// dispatch requests to all worker threads in order
 	for _, thread := range worker.threads {
 		select {
 		case thread.requestChan <- r:
@@ -203,6 +204,8 @@ func (worker *worker) handleRequest(r *http.Request, fc *FrankenPHPContext) {
 		}
 	}
 	worker.threadMutex.RUnlock()
+	// if no thread was available, fan the request out to all threads
+	// TODO: theoretically there could be autoscaling of threads here
 	worker.requestChan <- r
 }
 
