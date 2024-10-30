@@ -122,7 +122,7 @@ fi
 
 curlGitHubHeaders=(--header "X-GitHub-Api-Version: 2022-11-28")
 if [ -z "${GITHUB_TOKEN}" ]; then
-  curlGitHubHeaders+=(--header "Authorization: Bearer ${GITHUB_TOKEN}")
+	curlGitHubHeaders+=(--header "Authorization: Bearer ${GITHUB_TOKEN}")
 fi
 
 # Compile e-dant/watcher as a static library
