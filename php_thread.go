@@ -15,6 +15,7 @@ type phpThread struct {
 	mainRequest   *http.Request
 	workerRequest *http.Request
 	worker        *worker
+	requestChan   chan *http.Request
 }
 
 func initPHPThreads(numThreads int) {

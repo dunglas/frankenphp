@@ -21,6 +21,8 @@ type worker struct {
 	num         int
 	env         PreparedEnv
 	requestChan chan *http.Request
+	threads     []*phpThread
+	threadMutex sync.RWMutex
 }
 
 const maxWorkerErrorBackoff = 1 * time.Second
@@ -44,6 +46,7 @@ func initWorkers(opt []workerOpt) error {
 
 	for _, o := range opt {
 		worker, err := newWorker(o)
+		worker.threads = make([]*phpThread, 0, o.num)
 		if err != nil {
 			return err
 		}
@@ -189,6 +192,20 @@ func (worker *worker) startNewWorkerThread() {
 	}
 }
 
+func (worker *worker) handleRequest(r *http.Request, fc *FrankenPHPContext) {
+	worker.threadMutex.RLock()
+	for _, thread := range worker.threads {
+		select {
+		case thread.requestChan <- r:
+			worker.threadMutex.RUnlock()
+			return
+		default:
+		}
+	}
+	worker.threadMutex.RUnlock()
+	worker.requestChan <- r
+}
+
 func stopWorkers() {
 	workersAreDone.Store(true)
 	close(workersDone)
@@ -242,7 +259,10 @@ func assignThreadToWorker(thread *phpThread) {
 	if !workersAreReady.Load() {
 		workersReadyWG.Done()
 	}
-	// TODO: we can also store all threads assigned to the worker if needed
+	thread.requestChan = make(chan *http.Request)
+	worker.threadMutex.Lock()
+	defer worker.threadMutex.Unlock()
+	worker.threads = append(worker.threads, thread)
 }
 
 //export go_frankenphp_worker_handle_request_start
@@ -269,6 +289,7 @@ func go_frankenphp_worker_handle_request_start(threadIndex C.uintptr_t) C.bool {
 
 		return C.bool(false)
 	case r = <-thread.worker.requestChan:
+	case r = <-thread.requestChan:
 	}
 
 	thread.workerRequest = r
