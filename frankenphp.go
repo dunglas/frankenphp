@@ -479,7 +479,7 @@ func ServeHTTP(responseWriter http.ResponseWriter, request *http.Request) error 
 	if !isWorker {
 		if worker, ok := workers[fc.scriptFilename]; ok {
 			metrics.StartWorkerRequest(fc.scriptFilename)
-			worker.handleRequest(request, fc)
+			worker.handleRequest(request)
 			<-fc.done
 			metrics.StopWorkerRequest(fc.scriptFilename, time.Since(fc.startedAt))
 			return nil
