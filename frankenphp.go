@@ -14,7 +14,7 @@ package frankenphp
 
 // #cgo darwin pkg-config: libxml-2.0
 // #cgo CFLAGS: -Wall -Werror
-// #cgo CFLAGS: -I/usr/local/include/php -I/usr/local/include/php/main -I/usr/local/include/php/TSRM -I/usr/local/include/php/Zend -I/usr/local/include/php/ext -I/usr/local/include/php/ext/date/lib
+// #cgo CFLAGS: -I/usr/local/include -I/usr/local/include/php -I/usr/local/include/php/main -I/usr/local/include/php/TSRM -I/usr/local/include/php/Zend -I/usr/local/include/php/ext -I/usr/local/include/php/ext/date/lib
 // #cgo linux CFLAGS: -D_GNU_SOURCE
 // #cgo darwin LDFLAGS: -L/opt/homebrew/opt/libiconv/lib -liconv
 // #cgo linux LDFLAGS: -lresolv
