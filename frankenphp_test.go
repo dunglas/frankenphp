@@ -890,6 +890,32 @@ func BenchmarkServerSuperGlobal(b *testing.B) {
 	}
 }
 
+func TestRejectInvalidHeaders_module(t *testing.T) { testRejectInvalidHeaders(t, &testOptions{}) }
+func TestRejectInvalidHeaders_worker(t *testing.T) {
+	testRejectInvalidHeaders(t, &testOptions{workerScript: "headers.php"})
+}
+func testRejectInvalidHeaders(t *testing.T, opts *testOptions) {
+	invalidHeaders := [][]string{
+		[]string{"Content-Length", "-1"},
+		[]string{"Content-Length", "something"},
+	}
+	for _, header := range invalidHeaders {
+		runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, _ int) {
+			req := httptest.NewRequest("GET", "http://example.com/headers.php", nil)
+			req.Header.Add(header[0], header[1])
+
+			w := httptest.NewRecorder()
+			handler(w, req)
+
+			resp := w.Result()
+			body, _ := io.ReadAll(resp.Body)
+
+			assert.Equal(t, 400, resp.StatusCode)
+			assert.Contains(t, string(body), "Invalid")
+		}, opts)
+	}
+}
+
 // This fuzzing test asserts that inputs are correctly passed to the PHP script
 func FuzzRequest(f *testing.F) {
 	f.Add("hello world")

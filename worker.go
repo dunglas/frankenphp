@@ -279,12 +279,14 @@ func go_frankenphp_worker_handle_request_start(threadIndex C.uintptr_t) C.bool {
 
 	if err := updateServerContext(thread, r, false, true); err != nil {
 		// Unexpected error
-		// TODO: The goroutine waiting for fc.done will actually get stuck here forever
 		if c := logger.Check(zapcore.DebugLevel, "unexpected error"); c != nil {
 			c.Write(zap.String("worker", thread.worker.fileName), zap.String("url", r.RequestURI), zap.Error(err))
 		}
+		fc := r.Context().Value(contextKey).(*FrankenPHPContext)
+		rejectRequest(fc.responseWriter, err.Error())
+		maybeCloseContext(fc)
 
-		return C.bool(false)
+		return go_frankenphp_worker_handle_request_start(threadIndex)
 	}
 	return C.bool(true)
 }

@@ -30,6 +30,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -414,9 +415,8 @@ func updateServerContext(thread *phpThread, request *http.Request, create bool, 
 	if contentLengthStr != "" {
 		var err error
 		contentLength, err = strconv.Atoi(contentLengthStr)
-		if err != nil {
-			// If the content length is invalid we will just set it to 0 instead of panicking
-			contentLength = 0
+		if err != nil || contentLength < 0 {
+			return fmt.Errorf("Invalid Content-Length header: %w", err)
 		}
 	}
 
@@ -600,7 +600,8 @@ func go_handle_request(threadIndex C.uintptr_t) bool {
 		}()
 
 		if err := updateServerContext(thread, r, true, false); err != nil {
-			panic(err)
+			rejectRequest(fc.responseWriter, err.Error())
+			return true
 		}
 
 		// scriptFilename is freed in frankenphp_execute_script()
@@ -870,13 +871,14 @@ func executePHPFunction(functionName string) {
 // Ensure that the request path does not contain null bytes
 func requestIsValid(r *http.Request, rw http.ResponseWriter) bool {
 	if !strings.Contains(r.URL.Path, "\x00") {
-	return true
-}
-		rw.WriteHeader(http.StatusBadRequest)
-		_, _ = rw.Write([]byte("Invalid request path"))
-		rw.(http.Flusher).Flush()
-		return false
+		return true
 	}
+	rejectRequest(rw, "Invalid request path")
+	return false
+}
 
-	return true
+func rejectRequest(rw http.ResponseWriter, message string) {
+	rw.WriteHeader(http.StatusBadRequest)
+	_, _ = rw.Write([]byte(message))
+	rw.(http.Flusher).Flush()
 }
