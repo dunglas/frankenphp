@@ -1,7 +1,7 @@
 package frankenphp
 
-//#include <php_variables.h>
-//#include "frankenphp.h"
+// #include <php_variables.h>
+// #include "frankenphp.h"
 import "C"
 import (
 	"crypto/tls"
