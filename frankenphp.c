@@ -659,6 +659,8 @@ void frankenphp_register_trusted_var(zend_string *z_key, char *value,
   }
 }
 
+/** Persistent strings are ignored by the PHP GC, we have to release these
+ * ourselves **/
 zend_string *frankenphp_init_persistent_string(const char *string, size_t len) {
   return zend_string_init(string, len, 1);
 }
