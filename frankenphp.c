@@ -703,8 +703,8 @@ void frankenphp_register_variables_from_request_info(
       request_uri, SG(request_info).request_uri, true, track_vars_array);
 }
 
-/* variables with user defined keys must be registered safely to avoid globals
- * takepvers */
+/* variables with user-defined keys must be registered safely
+ * see: php_variables.c -> php_register_variable_ex (#1106) */
 void frankenphp_register_variable_safe(char *key, char *val, size_t val_len,
                                        zval *track_vars_array) {
   if (val == NULL || key == NULL) {
