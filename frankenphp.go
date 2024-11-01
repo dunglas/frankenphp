@@ -30,7 +30,6 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -416,7 +415,8 @@ func updateServerContext(thread *phpThread, request *http.Request, create bool, 
 		var err error
 		contentLength, err = strconv.Atoi(contentLengthStr)
 		if err != nil {
-			return fmt.Errorf("invalid Content-Length header: %w", err)
+			// If the content length is invalid we will just set it to 0 instead of panicking
+			contentLength = 0
 		}
 	}
 
