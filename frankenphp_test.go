@@ -916,7 +916,7 @@ func testRejectInvalidHeaders(t *testing.T, opts *testOptions) {
 	}
 }
 
-// This fuzzing test asserts that inputs are correctly passed to the PHP script
+// To run this fuzzing test use: go test -fuzz FuzzRequest
 func FuzzRequest(f *testing.F) {
 	f.Add("hello world")
 	f.Add("😀😅🙃🤩🥲🤪😘😇😉🐘🧟")
