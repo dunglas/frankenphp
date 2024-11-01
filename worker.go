@@ -264,8 +264,8 @@ func assignThreadToWorker(thread *phpThread) {
 	}
 	thread.requestChan = make(chan *http.Request)
 	worker.threadMutex.Lock()
-	defer worker.threadMutex.Unlock()
 	worker.threads = append(worker.threads, thread)
+	worker.threadMutex.Unlock()
 }
 
 //export go_frankenphp_worker_handle_request_start
