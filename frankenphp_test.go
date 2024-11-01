@@ -917,6 +917,7 @@ func testRejectInvalidHeaders(t *testing.T, opts *testOptions) {
 }
 
 // To run this fuzzing test use: go test -fuzz FuzzRequest
+// TODO: Cover more potential cases
 func FuzzRequest(f *testing.F) {
 	f.Add("hello world")
 	f.Add("😀😅🙃🤩🥲🤪😘😇😉🐘🧟")
@@ -936,8 +937,8 @@ func FuzzRequest(f *testing.F) {
 			resp := w.Result()
 			body, _ := io.ReadAll(resp.Body)
 
-			// The response status must be 400 if the request contains null bytes
-			if strings.Contains(fuzzedString, "\x00") {
+			// The response status must be 400 if the request path contains null bytes
+			if strings.Contains(req.URL.Path, "\x00") {
 				assert.Equal(t, 400, resp.StatusCode)
 				assert.Contains(t, string(body), "Invalid request path")
 				return
