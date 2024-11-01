@@ -36,7 +36,7 @@ func (thread phpThread) getActiveRequest() *http.Request {
 }
 
 // Pin a string that is not null-terminated
-// PHP's zend_string may to contain null-bytes
+// PHP's zend_string may contain null-bytes
 func (thread *phpThread) pinString(s string) *C.char {
 	sData := unsafe.StringData(s)
 	thread.Pin(sData)
