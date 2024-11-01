@@ -286,6 +286,7 @@ func go_frankenphp_worker_handle_request_start(threadIndex C.uintptr_t) C.bool {
 		rejectRequest(fc.responseWriter, err.Error())
 		maybeCloseContext(fc)
 		thread.workerRequest = nil
+		thread.Unpin()
 
 		return go_frankenphp_worker_handle_request_start(threadIndex)
 	}
