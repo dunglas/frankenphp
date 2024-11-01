@@ -65,6 +65,7 @@ var (
 
 	requestChan chan *http.Request
 	done        chan struct{}
+	mainThreadWG sync.WaitGroup
 	shutdownWG  sync.WaitGroup
 
 	loggerMu sync.RWMutex
@@ -336,8 +337,13 @@ func Init(options ...Option) error {
 	requestChan = make(chan *http.Request)
 	initPHPThreads(opt.numThreads)
 
-	if C.frankenphp_init(C.int(opt.numThreads)) != 0 {
-		return MainThreadCreationError
+	startMainThread(opt.numThreads)
+
+	// TODO: calc num threads
+	for i := 0; i < 1; i++ {
+		if err := startNewThread(); err != nil {
+			return err
+		}
 	}
 
 	if err := initWorkers(opt.workers); err != nil {
@@ -384,6 +390,24 @@ func drainThreads() {
 	close(done)
 	shutdownWG.Wait()
 	phpThreads = nil
+}
+
+func startMainThread(numThreads int) error {
+	mainThreadWG.Add(1)
+    if C.frankenphp_new_main_thread(C.int(numThreads)) != 0 {
+        return MainThreadCreationError
+    }
+    mainThreadWG.Wait()
+    return nil
+}
+
+func startNewThread() error {
+	thread := getInactiveThread()
+	thread.isActive = true
+	if C.frankenphp_new_php_thread(C.uintptr_t(thread.threadIndex)) != 0 {
+		return fmt.Errorf("error creating thread %d", thread.threadIndex)
+	}
+	return nil
 }
 
 func getLogger() *zap.Logger {
@@ -503,6 +527,14 @@ func ServeHTTP(responseWriter http.ResponseWriter, request *http.Request) error 
 	}
 
 	return nil
+}
+
+//export go_listen_for_shutdown
+func go_listen_for_shutdown(){
+	mainThreadWG.Done()
+	select{
+	case <-done:
+	}
 }
 
 //export go_putenv

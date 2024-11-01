@@ -838,10 +838,10 @@ static void set_thread_name(char *thread_name) {
 #endif
 }
 
-static void *php_thread(void *arg) {
-  char thread_name[16] = {0};
-  snprintf(thread_name, 16, "php-%" PRIxPTR, (uintptr_t)arg);
+static void init_php_thread(void *arg) {
   thread_index = (uintptr_t)arg;
+  char thread_name[16] = {0};
+  snprintf(thread_name, 16, "php-%" PRIxPTR, thread_index);
   set_thread_name(thread_name);
 
 #ifdef ZTS
@@ -853,14 +853,41 @@ static void *php_thread(void *arg) {
 #endif
 
   local_ctx = malloc(sizeof(frankenphp_server_context));
-
-  while (go_handle_request(thread_index)) {
-  }
-
+}
+static void shutdown_php_thread(void) {
+  //free(local_ctx);
+  //local_ctx = NULL;
 #ifdef ZTS
   ts_free_thread();
 #endif
+}
 
+static void *php_thread(void *arg) {
+  init_php_thread(arg);
+
+  // handle requests until the channel is closed
+  while (go_handle_request(thread_index)) {
+  }
+
+  shutdown_php_thread();
+  return NULL;
+}
+
+static void *php_worker_thread(void *arg) {
+  init_php_thread(arg);
+
+  // run the loop that executes the worker script
+  while (true) {
+    char *script_name = go_before_worker_script(thread_index);
+    if (script_name == NULL) {
+	  break;
+	}
+    frankenphp_execute_script(script_name);
+    go_after_worker_script(thread_index);
+  }
+
+  shutdown_php_thread();
+  go_shutdown_woker_thread(thread_index);
   return NULL;
 }
 
@@ -912,28 +939,7 @@ static void *php_main(void *arg) {
 
   frankenphp_sapi_module.startup(&frankenphp_sapi_module);
 
-  pthread_t *threads = malloc(num_threads * sizeof(pthread_t));
-  if (threads == NULL) {
-    perror("malloc failed");
-    exit(EXIT_FAILURE);
-  }
-
-  for (uintptr_t i = 0; i < num_threads; i++) {
-    if (pthread_create(&(*(threads + i)), NULL, &php_thread, (void *)i) != 0) {
-      perror("failed to create PHP thread");
-      free(threads);
-      exit(EXIT_FAILURE);
-    }
-  }
-
-  for (int i = 0; i < num_threads; i++) {
-    if (pthread_join((*(threads + i)), NULL) != 0) {
-      perror("failed to join PHP thread");
-      free(threads);
-      exit(EXIT_FAILURE);
-    }
-  }
-  free(threads);
+  go_listen_for_shutdown();
 
   /* channel closed, shutdown gracefully */
   frankenphp_sapi_module.shutdown(&frankenphp_sapi_module);
@@ -955,17 +961,33 @@ static void *php_main(void *arg) {
   return NULL;
 }
 
-int frankenphp_init(int num_threads) {
+int frankenphp_new_main_thread(int num_threads) {
   pthread_t thread;
 
   if (pthread_create(&thread, NULL, &php_main, (void *)(intptr_t)num_threads) !=
       0) {
     go_shutdown();
-
     return -1;
   }
-
   return pthread_detach(thread);
+}
+
+int frankenphp_new_worker_thread(uintptr_t thread_index){
+	pthread_t thread;
+	if (pthread_create(&thread, NULL, &php_worker_thread, (void *)thread_index) != 0){
+		return 1;
+	}
+	pthread_detach(thread);
+	return 0;
+}
+
+int frankenphp_new_php_thread(uintptr_t thread_index){
+	pthread_t thread;
+	if (pthread_create(&thread, NULL, &php_thread, (void *)thread_index) != 0){
+		return 1;
+	}
+	pthread_detach(thread);
+	return 0;
 }
 
 int frankenphp_request_startup() {

@@ -47,9 +47,10 @@ func initWorkers(opt []workerOpt) error {
 		if err != nil {
 			return err
 		}
-		workersReadyWG.Add(worker.num)
 		for i := 0; i < worker.num; i++ {
-			go worker.startNewWorkerThread()
+			if err := worker.startNewThread(nil); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -80,6 +81,19 @@ func newWorker(o workerOpt) (*worker, error) {
 	workers[absFileName] = w
 
 	return w, nil
+}
+
+func (worker *worker) startNewThread(r *http.Request) error {
+	workersReadyWG.Add(1)
+    workerShutdownWG.Add(1)
+	thread := getInactiveThread()
+    thread.worker = worker
+    thread.isActive = true
+    if C.frankenphp_new_worker_thread(C.uintptr_t(thread.threadIndex)) != 0 {
+        return fmt.Errorf("failed to create worker thread")
+    }
+
+	return nil
 }
 
 func (worker *worker) startNewWorkerThread() {
@@ -232,26 +246,76 @@ func restartWorkers(workerOpts []workerOpt) {
 }
 
 func assignThreadToWorker(thread *phpThread) {
-	fc := thread.mainRequest.Context().Value(contextKey).(*FrankenPHPContext)
-	metrics.ReadyWorker(fc.scriptFilename)
-	worker, ok := workers[fc.scriptFilename]
-	if !ok {
-		panic("worker not found for script: " + fc.scriptFilename)
-	}
-	thread.worker = worker
-	if !workersAreReady.Load() {
-		workersReadyWG.Done()
-	}
+	metrics.ReadyWorker(thread.worker.fileName)
+	thread.isReady = true
+    workersReadyWG.Done()
 	// TODO: we can also store all threads assigned to the worker if needed
+}
+
+//export go_before_worker_script
+func go_before_worker_script(threadIndex C.uintptr_t) *C.char {
+	thread := phpThreads[threadIndex]
+	worker := thread.worker
+
+	// if we are done, exit the loop that restarts the worker script
+	if workersAreDone.Load() {
+        return nil
+    }
+	metrics.StartWorker(worker.fileName)
+
+    // Create main dummy request
+    r, err := http.NewRequest(http.MethodGet, filepath.Base(worker.fileName), nil)
+    if err != nil {
+        panic(err)
+    }
+
+    r, err = NewRequestWithContext(
+        r,
+        WithRequestDocumentRoot(filepath.Dir(worker.fileName), false),
+        WithRequestPreparedEnv(worker.env),
+    )
+    if err != nil {
+        panic(err)
+    }
+    thread.mainRequest = r
+    if c := logger.Check(zapcore.DebugLevel, "starting"); c != nil {
+        c.Write(zap.String("worker", worker.fileName), zap.Int("num", worker.num))
+    }
+
+    if err := updateServerContext(r, true, false); err != nil {
+        panic(err)
+    }
+	return C.CString(worker.fileName)
+}
+
+//export go_after_worker_script
+func go_after_worker_script(threadIndex C.uintptr_t) {
+	thread := phpThreads[threadIndex]
+	fc := thread.mainRequest.Context().Value(contextKey).(*FrankenPHPContext)
+
+    // on exit status 0 we just run the worker script again
+    if fc.exitStatus == 0 {
+        // TODO: make the max restart configurable
+        if c := logger.Check(zapcore.InfoLevel, "restarting"); c != nil {
+            c.Write(zap.String("worker", thread.worker.fileName))
+        }
+        metrics.StopWorker(thread.worker.fileName, StopReasonRestart)
+    }
+}
+
+//export go_shutdown_woker_thread
+func go_shutdown_woker_thread(threadIndex C.uintptr_t) {
+	workerShutdownWG.Done()
 }
 
 //export go_frankenphp_worker_handle_request_start
 func go_frankenphp_worker_handle_request_start(threadIndex C.uintptr_t) C.bool {
 	thread := phpThreads[threadIndex]
 
-	// we assign a worker to the thread if it doesn't have one already
-	if thread.worker == nil {
-		assignThreadToWorker(thread)
+	if !thread.isReady {
+	    thread.isReady = true
+	    workersReadyWG.Done()
+		metrics.ReadyWorker(thread.worker.fileName)
 	}
 
 	if c := logger.Check(zapcore.DebugLevel, "waiting for request"); c != nil {
