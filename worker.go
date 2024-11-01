@@ -285,6 +285,7 @@ func go_frankenphp_worker_handle_request_start(threadIndex C.uintptr_t) C.bool {
 		fc := r.Context().Value(contextKey).(*FrankenPHPContext)
 		rejectRequest(fc.responseWriter, err.Error())
 		maybeCloseContext(fc)
+		thread.workerRequest = nil
 
 		return go_frankenphp_worker_handle_request_start(threadIndex)
 	}
