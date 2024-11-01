@@ -48,7 +48,7 @@ func initWorkers(opt []workerOpt) error {
 			return err
 		}
 		for i := 0; i < worker.num; i++ {
-			if err := worker.startNewThread(nil); err != nil {
+			if err := startNewWorkerThread(worker); err != nil {
 				return err
 			}
 		}
@@ -83,20 +83,7 @@ func newWorker(o workerOpt) (*worker, error) {
 	return w, nil
 }
 
-func (worker *worker) startNewThread(r *http.Request) error {
-	workersReadyWG.Add(1)
-    workerShutdownWG.Add(1)
-	thread := getInactiveThread()
-    thread.worker = worker
-    thread.isActive = true
-    if C.frankenphp_new_worker_thread(C.uintptr_t(thread.threadIndex)) != 0 {
-        return fmt.Errorf("failed to create worker thread")
-    }
-
-	return nil
-}
-
-func (worker *worker) startNewWorkerThread() {
+func (worker *worker) asdasd() {
 	workerShutdownWG.Add(1)
 	defer workerShutdownWG.Done()
 
@@ -289,10 +276,14 @@ func go_before_worker_script(threadIndex C.uintptr_t) *C.char {
 }
 
 //export go_after_worker_script
-func go_after_worker_script(threadIndex C.uintptr_t) {
+func go_after_worker_script(threadIndex C.uintptr_t, exitStatus C.int) {
 	thread := phpThreads[threadIndex]
 	fc := thread.mainRequest.Context().Value(contextKey).(*FrankenPHPContext)
+	fc.exitStatus = exitStatus
 
+	if fc.exitStatus < 0 {
+        panic(ScriptExecutionError)
+    }
     // on exit status 0 we just run the worker script again
     if fc.exitStatus == 0 {
         // TODO: make the max restart configurable
@@ -300,12 +291,14 @@ func go_after_worker_script(threadIndex C.uintptr_t) {
             c.Write(zap.String("worker", thread.worker.fileName))
         }
         metrics.StopWorker(thread.worker.fileName, StopReasonRestart)
+        return
+    } else {
+        time.Sleep(1 * time.Millisecond)
+    	logger.Error("worker script exited with non-zero status")
     }
-}
-
-//export go_shutdown_woker_thread
-func go_shutdown_woker_thread(threadIndex C.uintptr_t) {
-	workerShutdownWG.Done()
+	maybeCloseContext(fc)
+    thread.mainRequest = nil
+    thread.Unpin()
 }
 
 //export go_frankenphp_worker_handle_request_start
@@ -328,7 +321,6 @@ func go_frankenphp_worker_handle_request_start(threadIndex C.uintptr_t) C.bool {
 		if c := logger.Check(zapcore.DebugLevel, "shutting down"); c != nil {
 			c.Write(zap.String("worker", thread.worker.fileName))
 		}
-		thread.worker = nil
 		executePHPFunction("opcache_reset")
 
 		return C.bool(false)

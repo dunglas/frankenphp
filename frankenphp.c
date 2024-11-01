@@ -855,8 +855,8 @@ static void init_php_thread(void *arg) {
   local_ctx = malloc(sizeof(frankenphp_server_context));
 }
 static void shutdown_php_thread(void) {
-  //free(local_ctx);
-  //local_ctx = NULL;
+  free(local_ctx);
+  local_ctx = NULL;
 #ifdef ZTS
   ts_free_thread();
 #endif
@@ -870,6 +870,7 @@ static void *php_thread(void *arg) {
   }
 
   shutdown_php_thread();
+  go_shutdown_php_thread(thread_index);
   return NULL;
 }
 
@@ -882,12 +883,12 @@ static void *php_worker_thread(void *arg) {
     if (script_name == NULL) {
 	  break;
 	}
-    frankenphp_execute_script(script_name);
-    go_after_worker_script(thread_index);
+    int exit_status = frankenphp_execute_script(script_name);
+    go_after_worker_script(thread_index, exit_status);
   }
 
   shutdown_php_thread();
-  go_shutdown_woker_thread(thread_index);
+  go_shutdown_worker_thread(thread_index);
   return NULL;
 }
 
@@ -939,7 +940,7 @@ static void *php_main(void *arg) {
 
   frankenphp_sapi_module.startup(&frankenphp_sapi_module);
 
-  go_listen_for_shutdown();
+  go_main_thread_is_ready();
 
   /* channel closed, shutdown gracefully */
   frankenphp_sapi_module.shutdown(&frankenphp_sapi_module);
@@ -955,9 +956,7 @@ static void *php_main(void *arg) {
     frankenphp_sapi_module.ini_entries = NULL;
   }
 #endif
-
-  go_shutdown();
-
+  go_shutdown_main_thread();
   return NULL;
 }
 
@@ -966,7 +965,6 @@ int frankenphp_new_main_thread(int num_threads) {
 
   if (pthread_create(&thread, NULL, &php_main, (void *)(intptr_t)num_threads) !=
       0) {
-    go_shutdown();
     return -1;
   }
   return pthread_detach(thread);

@@ -65,8 +65,6 @@ var (
 
 	requestChan chan *http.Request
 	done        chan struct{}
-	mainThreadWG sync.WaitGroup
-	shutdownWG  sync.WaitGroup
 
 	loggerMu sync.RWMutex
 	logger   *zap.Logger
@@ -332,16 +330,19 @@ func Init(options ...Option) error {
 		logger.Warn(`ZTS is not enabled, only 1 thread will be available, recompile PHP using the "--enable-zts" configuration option or performance will be degraded`)
 	}
 
-	shutdownWG.Add(1)
 	done = make(chan struct{})
 	requestChan = make(chan *http.Request)
-	initPHPThreads(opt.numThreads)
+	if err:= initPHPThreads(opt.numThreads); err != nil {
+		return err
+	}
 
-	startMainThread(opt.numThreads)
+	totalWorkers := 0
+	for _, w := range opt.workers {
+		totalWorkers += w.num
+	}
 
-	// TODO: calc num threads
-	for i := 0; i < 1; i++ {
-		if err := startNewThread(); err != nil {
+	for i := 0; i < opt.numThreads - totalWorkers; i++ {
+		if err := startNewPHPThread(); err != nil {
 			return err
 		}
 	}
@@ -349,6 +350,7 @@ func Init(options ...Option) error {
 	if err := initWorkers(opt.workers); err != nil {
 		return err
 	}
+	readyWG.Wait()
 
 	if err := restartWorkersOnFileChanges(opt.workers); err != nil {
 		return err
@@ -369,7 +371,7 @@ func Init(options ...Option) error {
 // Shutdown stops the workers and the PHP runtime.
 func Shutdown() {
 	drainWorkers()
-	drainThreads()
+	drainPHPThreads()
 	metrics.Shutdown()
 	requestChan = nil
 
@@ -379,35 +381,6 @@ func Shutdown() {
 	}
 
 	logger.Debug("FrankenPHP shut down")
-}
-
-//export go_shutdown
-func go_shutdown() {
-	shutdownWG.Done()
-}
-
-func drainThreads() {
-	close(done)
-	shutdownWG.Wait()
-	phpThreads = nil
-}
-
-func startMainThread(numThreads int) error {
-	mainThreadWG.Add(1)
-    if C.frankenphp_new_main_thread(C.int(numThreads)) != 0 {
-        return MainThreadCreationError
-    }
-    mainThreadWG.Wait()
-    return nil
-}
-
-func startNewThread() error {
-	thread := getInactiveThread()
-	thread.isActive = true
-	if C.frankenphp_new_php_thread(C.uintptr_t(thread.threadIndex)) != 0 {
-		return fmt.Errorf("error creating thread %d", thread.threadIndex)
-	}
-	return nil
 }
 
 func getLogger() *zap.Logger {
@@ -486,9 +459,6 @@ func updateServerContext(request *http.Request, create bool, isWorkerRequest boo
 
 // ServeHTTP executes a PHP script according to the given context.
 func ServeHTTP(responseWriter http.ResponseWriter, request *http.Request) error {
-	shutdownWG.Add(1)
-	defer shutdownWG.Done()
-
 	fc, ok := FromContext(request.Context())
 	if !ok {
 		return InvalidRequestError
@@ -527,14 +497,6 @@ func ServeHTTP(responseWriter http.ResponseWriter, request *http.Request) error 
 	}
 
 	return nil
-}
-
-//export go_listen_for_shutdown
-func go_listen_for_shutdown(){
-	mainThreadWG.Done()
-	select{
-	case <-done:
-	}
 }
 
 //export go_putenv
@@ -609,6 +571,11 @@ func go_getenv(threadIndex C.uintptr_t, name *C.go_string) (C.bool, *C.go_string
 
 //export go_handle_request
 func go_handle_request(threadIndex C.uintptr_t) bool {
+	thread := phpThreads[threadIndex]
+	if !thread.isReady {
+		thread.isReady = true
+		readyWG.Done()
+	}
 	select {
 	case <-done:
 		return false
