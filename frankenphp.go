@@ -172,9 +172,9 @@ func NewRequestWithContext(r *http.Request, opts ...RequestOption) (*http.Reques
 		fc.logger = getLogger()
 	}
 
-	if splitPos := splitPos(fc, r.URL.Path); splitPos > -1 {
-		fc.docURI = r.URL.Path[:splitPos]
-		fc.pathInfo = r.URL.Path[splitPos:]
+	if splitPos := splitPos(fc, r.URL.EscapedPath()); splitPos > -1 {
+		fc.docURI = r.URL.EscapedPath()[:splitPos]
+		fc.pathInfo = r.URL.EscapedPath()[splitPos:]
 
 		// Strip PATH_INFO from SCRIPT_NAME
 		fc.scriptName = strings.TrimSuffix(r.URL.Path, fc.pathInfo)

@@ -112,7 +112,7 @@ func computeKnownVariables(request *http.Request, p *runtime.Pinner) (cArr [27]C
 	setKnownServerVariable(p, &cArr, remotePort, port)
 	setKnownServerVariable(p, &cArr, documentRoot, fc.documentRoot)
 	setKnownServerVariable(p, &cArr, pathInfo, fc.pathInfo)
-	setKnownServerVariable(p, &cArr, phpSelf, request.URL.Path)
+	setKnownServerVariable(p, &cArr, phpSelf, request.URL.EscapedPath())
 	setKnownServerVariable(p, &cArr, documentUri, fc.docURI)
 	setKnownServerVariable(p, &cArr, scriptFilename, fc.scriptFilename)
 	setKnownServerVariable(p, &cArr, scriptName, fc.scriptName)
