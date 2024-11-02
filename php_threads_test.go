@@ -17,7 +17,6 @@ func TestStartAndStopTheMainThread(t *testing.T) {
 	assert.Equal(t, 1, len(phpThreads))
 	assert.Equal(t, 0, phpThreads[0].threadIndex)
 	assert.False(t, phpThreads[0].isActive)
-	assert.False(t, phpThreads[0].isReady)
 	assert.Nil(t, phpThreads[0].worker)
 
 	drainPHPThreads()
@@ -66,7 +65,7 @@ func TestStartAndStop100PHPThreadsThatDoNothing(t *testing.T) {
 	assert.Equal(t, numThreads, int(finishedThreads.Load()))
 }
 
-// This test calls sleep() 10.000 times for 1ms (completes in ~200ms)
+// This test calls sleep() 10.000 times for 1ms in 100 PHP threads.
 func TestSleep10000TimesIn100Threads(t *testing.T) {
 	logger = zap.NewNop() // the logger needs to not be nil
 	numThreads := 100

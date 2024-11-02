@@ -253,7 +253,7 @@ PHP_FUNCTION(frankenphp_finish_request) { /* {{{ */
   php_header();
 
   if (ctx->has_active_request) {
-    go_frankenphp_finish_request(thread_index, false);
+    go_frankenphp_finish_request_manually(thread_index);
   }
 
   ctx->finished = true;
@@ -453,7 +453,7 @@ PHP_FUNCTION(frankenphp_handle_request) {
 
   frankenphp_worker_request_shutdown();
   ctx->has_active_request = false;
-  go_frankenphp_finish_request(thread_index, true);
+  go_frankenphp_finish_worker_request(thread_index);
 
   RETURN_TRUE;
 }

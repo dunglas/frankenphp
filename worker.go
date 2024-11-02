@@ -210,7 +210,6 @@ func afterWorkerScript(thread *phpThread, exitStatus C.int) {
 //export go_frankenphp_worker_handle_request_start
 func go_frankenphp_worker_handle_request_start(threadIndex C.uintptr_t) C.bool {
 	thread := phpThreads[threadIndex]
-	thread.setReady()
 
 	if c := logger.Check(zapcore.DebugLevel, "waiting for request"); c != nil {
 		c.Write(zap.String("worker", thread.worker.fileName))
@@ -247,28 +246,32 @@ func go_frankenphp_worker_handle_request_start(threadIndex C.uintptr_t) C.bool {
 	return C.bool(true)
 }
 
-//export go_frankenphp_finish_request
-func go_frankenphp_finish_request(threadIndex C.uintptr_t, isWorkerRequest bool) {
+//export go_frankenphp_finish_worker_request
+func go_frankenphp_finish_worker_request(threadIndex C.uintptr_t) {
 	thread := phpThreads[threadIndex]
 	r := thread.getActiveRequest()
 	fc := r.Context().Value(contextKey).(*FrankenPHPContext)
-
-	if isWorkerRequest {
-		thread.workerRequest = nil
-	}
+	thread.workerRequest = nil
 
 	maybeCloseContext(fc)
 
 	if c := fc.logger.Check(zapcore.DebugLevel, "request handling finished"); c != nil {
-		var fields []zap.Field
-		if isWorkerRequest {
-			fields = append(fields, zap.String("worker", fc.scriptFilename), zap.String("url", r.RequestURI))
-		} else {
-			fields = append(fields, zap.String("url", r.RequestURI))
-		}
-
-		c.Write(fields...)
+		c.Write(zap.String("worker", fc.scriptFilename), zap.String("url", r.RequestURI))
 	}
 
 	thread.Unpin()
+}
+
+// when frankenphp_finish_request() is directly called from PHP
+//
+//export go_frankenphp_finish_request_manually
+func go_frankenphp_finish_request_manually(threadIndex C.uintptr_t) {
+	thread := phpThreads[threadIndex]
+	r := thread.getActiveRequest()
+	fc := r.Context().Value(contextKey).(*FrankenPHPContext)
+	maybeCloseContext(fc)
+
+	if c := fc.logger.Check(zapcore.DebugLevel, "request handling finished"); c != nil {
+		c.Write(zap.String("url", r.RequestURI))
+	}
 }

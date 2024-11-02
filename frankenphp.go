@@ -242,7 +242,7 @@ func Config() PHPConfig {
 // MaxThreads is internally used during tests. It is written to, but never read and may go away in the future.
 var MaxThreads int
 
-func calculateMaxThreads(opt *opt) error {
+func calculateMaxThreads(opt *opt) (int, int, error) {
 	maxProcs := runtime.GOMAXPROCS(0) * 2
 
 	var numWorkers int
@@ -264,13 +264,13 @@ func calculateMaxThreads(opt *opt) error {
 			opt.numThreads = maxProcs
 		}
 	} else if opt.numThreads <= numWorkers {
-		return NotEnoughThreads
+		return opt.numThreads, numWorkers, NotEnoughThreads
 	}
 
 	metrics.TotalThreads(opt.numThreads)
 	MaxThreads = opt.numThreads
 
-	return nil
+	return opt.numThreads, numWorkers, nil
 }
 
 // Init starts the PHP runtime and the configured workers.
@@ -309,7 +309,7 @@ func Init(options ...Option) error {
 		metrics = opt.metrics
 	}
 
-	err := calculateMaxThreads(opt)
+	totalThreadCount, workerThreadCount, err := calculateMaxThreads(opt)
 	if err != nil {
 		return err
 	}
@@ -325,21 +325,16 @@ func Init(options ...Option) error {
 			logger.Warn(`Zend Max Execution Timers are not enabled, timeouts (e.g. "max_execution_time") are disabled, recompile PHP with the "--enable-zend-max-execution-timers" configuration option to fix this issue`)
 		}
 	} else {
-		opt.numThreads = 1
+		totalThreadCount = 1
 		logger.Warn(`ZTS is not enabled, only 1 thread will be available, recompile PHP using the "--enable-zts" configuration option or performance will be degraded`)
 	}
 
 	requestChan = make(chan *http.Request)
-	if err := initPHPThreads(opt.numThreads); err != nil {
+	if err := initPHPThreads(totalThreadCount); err != nil {
 		return err
 	}
 
-	totalWorkers := 0
-	for _, w := range opt.workers {
-		totalWorkers += w.num
-	}
-
-	for i := 0; i < opt.numThreads-totalWorkers; i++ {
+	for i := 0; i < totalThreadCount-workerThreadCount; i++ {
 		thread := getInactivePHPThread()
 		thread.onWork = handleRequest
 		if err := thread.run(); err != nil {
@@ -359,7 +354,7 @@ func Init(options ...Option) error {
 	}
 
 	if c := logger.Check(zapcore.InfoLevel, "FrankenPHP started 🐘"); c != nil {
-		c.Write(zap.String("php_version", Version().Version), zap.Int("num_threads", opt.numThreads))
+		c.Write(zap.String("php_version", Version().Version), zap.Int("num_threads", totalThreadCount))
 	}
 	if EmbeddedAppPath != "" {
 		if c := logger.Check(zapcore.InfoLevel, "embedded PHP app 📦"); c != nil {
