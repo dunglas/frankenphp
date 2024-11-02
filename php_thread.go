@@ -13,9 +13,10 @@ type phpThread struct {
 	mainRequest   *http.Request
 	workerRequest *http.Request
 	worker        *worker
-	isActive	  bool
-	isReady	      bool
-	threadIndex   int
+	isActive      bool                 // whether the thread is currently running
+	isReady       bool                 // whether the thread is ready to accept requests
+	threadIndex   int                  // the index of the thread in the phpThreads slice
+	backoff       *exponentialBackoff  // backoff for worker failures
 }
 
 func (thread phpThread) getActiveRequest() *http.Request {
@@ -25,3 +26,17 @@ func (thread phpThread) getActiveRequest() *http.Request {
 
 	return thread.mainRequest
 }
+
+func (thread *phpThread) setReadyForRequests() {
+	if thread.isReady {
+		return
+	}
+
+    thread.isReady = true
+    threadsReadyWG.Done()
+    if thread.worker != nil {
+        metrics.ReadyWorker(thread.worker.fileName)
+    }
+}
+
+

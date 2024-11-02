@@ -332,7 +332,7 @@ func Init(options ...Option) error {
 
 	done = make(chan struct{})
 	requestChan = make(chan *http.Request)
-	if err:= initPHPThreads(opt.numThreads); err != nil {
+	if err := initPHPThreads(opt.numThreads); err != nil {
 		return err
 	}
 
@@ -341,7 +341,7 @@ func Init(options ...Option) error {
 		totalWorkers += w.num
 	}
 
-	for i := 0; i < opt.numThreads - totalWorkers; i++ {
+	for i := 0; i < opt.numThreads-totalWorkers; i++ {
 		if err := startNewPHPThread(); err != nil {
 			return err
 		}
@@ -350,7 +350,9 @@ func Init(options ...Option) error {
 	if err := initWorkers(opt.workers); err != nil {
 		return err
 	}
-	readyWG.Wait()
+
+	// wait for all regular and worker threads to be ready for requests
+	threadsReadyWG.Wait()
 
 	if err := restartWorkersOnFileChanges(opt.workers); err != nil {
 		return err
@@ -572,10 +574,7 @@ func go_getenv(threadIndex C.uintptr_t, name *C.go_string) (C.bool, *C.go_string
 //export go_handle_request
 func go_handle_request(threadIndex C.uintptr_t) bool {
 	thread := phpThreads[threadIndex]
-	if !thread.isReady {
-		thread.isReady = true
-		readyWG.Done()
-	}
+	thread.setReadyForRequests()
 	select {
 	case <-done:
 		return false
