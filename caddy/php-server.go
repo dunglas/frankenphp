@@ -128,7 +128,7 @@ func cmdPHPServer(fs caddycmd.Flags) (int, error) {
 	}
 
 	const indexFile = "index.php"
-	extensions := []string{"php"}
+	extensions := []string{".php"}
 	tryFiles := []string{"{http.request.uri.path}", "{http.request.uri.path}/" + indexFile, indexFile}
 
 	rrs := true
