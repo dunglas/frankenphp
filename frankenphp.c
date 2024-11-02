@@ -838,7 +838,7 @@ static void set_thread_name(char *thread_name) {
 #endif
 }
 
-static void init_php_thread(void *arg) {
+static void *php_thread(void *arg) {
   thread_index = (uintptr_t)arg;
   char thread_name[16] = {0};
   snprintf(thread_name, 16, "php-%" PRIxPTR, thread_index);
@@ -851,44 +851,20 @@ static void init_php_thread(void *arg) {
   ZEND_TSRMLS_CACHE_UPDATE();
 #endif
 #endif
-
   local_ctx = malloc(sizeof(frankenphp_server_context));
-}
-static void shutdown_php_thread(void) {
-  free(local_ctx);
-  local_ctx = NULL;
+
+  go_frankenphp_on_thread_startup(thread_index);
+
+  // perform work until go signals to stop
+  while (go_frankenphp_on_thread_work(thread_index)) {
+  }
+
 #ifdef ZTS
   ts_free_thread();
 #endif
-}
 
-static void *php_thread(void *arg) {
-  init_php_thread(arg);
+  go_frankenphp_on_thread_shutdown(thread_index);
 
-  // handle requests until the channel is closed
-  while (go_handle_request(thread_index)) {
-  }
-
-  shutdown_php_thread();
-  go_shutdown_php_thread(thread_index);
-  return NULL;
-}
-
-static void *php_worker_thread(void *arg) {
-  init_php_thread(arg);
-
-  // run the loop that executes the worker script
-  while (true) {
-    char *script_name = go_before_worker_script(thread_index);
-    if (script_name == NULL) {
-	  break;
-	}
-    int exit_status = frankenphp_execute_script(script_name);
-    go_after_worker_script(thread_index, exit_status);
-  }
-
-  shutdown_php_thread();
-  go_shutdown_worker_thread(thread_index);
   return NULL;
 }
 
@@ -940,7 +916,7 @@ static void *php_main(void *arg) {
 
   frankenphp_sapi_module.startup(&frankenphp_sapi_module);
 
-  go_main_thread_is_ready();
+  go_frankenphp_main_thread_is_ready();
 
   /* channel closed, shutdown gracefully */
   frankenphp_sapi_module.shutdown(&frankenphp_sapi_module);
@@ -956,7 +932,7 @@ static void *php_main(void *arg) {
     frankenphp_sapi_module.ini_entries = NULL;
   }
 #endif
-  go_shutdown_main_thread();
+  go_frankenphp_shutdown_main_thread();
   return NULL;
 }
 
@@ -970,22 +946,13 @@ int frankenphp_new_main_thread(int num_threads) {
   return pthread_detach(thread);
 }
 
-int frankenphp_new_worker_thread(uintptr_t thread_index){
-	pthread_t thread;
-	if (pthread_create(&thread, NULL, &php_worker_thread, (void *)thread_index) != 0){
-		return 1;
-	}
-	pthread_detach(thread);
-	return 0;
-}
-
-int frankenphp_new_php_thread(uintptr_t thread_index){
-	pthread_t thread;
-	if (pthread_create(&thread, NULL, &php_thread, (void *)thread_index) != 0){
-		return 1;
-	}
-	pthread_detach(thread);
-	return 0;
+int frankenphp_new_php_thread(uintptr_t thread_index) {
+  pthread_t thread;
+  if (pthread_create(&thread, NULL, &php_thread, (void *)thread_index) != 0) {
+    return 1;
+  }
+  pthread_detach(thread);
+  return 0;
 }
 
 int frankenphp_request_startup() {

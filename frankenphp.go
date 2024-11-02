@@ -340,7 +340,9 @@ func Init(options ...Option) error {
 	}
 
 	for i := 0; i < opt.numThreads-totalWorkers; i++ {
-		if err := startNewPHPThread(); err != nil {
+		thread := getInactivePHPThread()
+		thread.onWork = handleRequest
+		if err := thread.run(); err != nil {
 			return err
 		}
 	}
@@ -569,16 +571,12 @@ func go_getenv(threadIndex C.uintptr_t, name *C.go_string) (C.bool, *C.go_string
 	return true, value // Return 1 to indicate success
 }
 
-//export go_handle_request
-func go_handle_request(threadIndex C.uintptr_t) bool {
-	thread := phpThreads[threadIndex]
-	thread.setReadyForRequests()
+func handleRequest(thread *phpThread) bool {
 	select {
 	case <-done:
 		return false
 
 	case r := <-requestChan:
-		thread := phpThreads[threadIndex]
 		thread.mainRequest = r
 
 		fc, ok := FromContext(r.Context())
@@ -595,11 +593,7 @@ func go_handle_request(threadIndex C.uintptr_t) bool {
 			panic(err)
 		}
 
-		// scriptFilename is freed in frankenphp_execute_script()
-		fc.exitStatus = C.frankenphp_execute_script(C.CString(fc.scriptFilename))
-		if fc.exitStatus < 0 {
-			panic(ScriptExecutionError)
-		}
+		fc.exitStatus = executeScriptCGI(fc.scriptFilename)
 
 		return true
 	}
@@ -880,6 +874,15 @@ func go_log(message *C.char, level C.int) {
 	}
 }
 
+func executeScriptCGI(script string) C.int {
+	// scriptFilename is freed in frankenphp_execute_script()
+	exitStatus := C.frankenphp_execute_script(C.CString(script))
+	if exitStatus < 0 {
+		panic(ScriptExecutionError)
+	}
+	return exitStatus
+}
+
 // ExecuteScriptCLI executes the PHP script passed as parameter.
 // It returns the exit status code of the script.
 func ExecuteScriptCLI(script string, args []string) int {
@@ -907,19 +910,11 @@ func freeArgs(argv []*C.char) {
 	}
 }
 
-func executePHPFunction(functionName string) {
+func executePHPFunction(functionName string) bool {
 	cFunctionName := C.CString(functionName)
 	defer C.free(unsafe.Pointer(cFunctionName))
 
 	success := C.frankenphp_execute_php_function(cFunctionName)
 
-	if success == 1 {
-		if c := logger.Check(zapcore.DebugLevel, "php function call successful"); c != nil {
-			c.Write(zap.String("function", functionName))
-		}
-	} else {
-		if c := logger.Check(zapcore.ErrorLevel, "php function call failed"); c != nil {
-			c.Write(zap.String("function", functionName))
-		}
-	}
+	return success == 1
 }

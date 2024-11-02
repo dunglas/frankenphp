@@ -72,6 +72,22 @@ func newWorker(o workerOpt) (*worker, error) {
 	return w, nil
 }
 
+func startNewWorkerThread(worker *worker) error {
+	workerShutdownWG.Add(1)
+	thread := getInactivePHPThread()
+	thread.onStartup = func(thread *phpThread) {
+		thread.worker = worker
+		metrics.ReadyWorker(worker.fileName)
+		thread.backoff = newExponentialBackoff()
+	}
+	thread.onWork = runWorkerScript
+	thread.onShutdown = func(thread *phpThread) {
+		thread.worker = nil
+		workerShutdownWG.Done()
+	}
+	return thread.run()
+}
+
 func stopWorkers() {
 	workersAreDone.Store(true)
 	close(workersDone)
@@ -114,15 +130,20 @@ func restartWorkers(workerOpts []workerOpt) {
 	logger.Info("workers restarted successfully")
 }
 
-//export go_before_worker_script
-func go_before_worker_script(threadIndex C.uintptr_t) *C.char {
-	thread := phpThreads[threadIndex]
-	worker := thread.worker
-
-	// if we are done, exit the loop that restarts the worker script
+func runWorkerScript(thread *phpThread) bool {
+	// if workers are done, we stop the loop that runs the worker script
 	if workersAreDone.Load() {
-		return nil
+		return false
 	}
+	beforeWorkerScript(thread)
+	exitStatus := executeScriptCGI(thread.worker.fileName)
+	afterWorkerScript(thread, exitStatus)
+
+	return true
+}
+
+func beforeWorkerScript(thread *phpThread) {
+	worker := thread.worker
 
 	// if we are restarting the worker, reset the exponential failure backoff
 	thread.backoff.reset()
@@ -149,27 +170,19 @@ func go_before_worker_script(threadIndex C.uintptr_t) *C.char {
 
 	thread.mainRequest = r
 	if c := logger.Check(zapcore.DebugLevel, "starting"); c != nil {
-		c.Write(zap.String("worker", worker.fileName), zap.Int("num", worker.num))
+		c.Write(zap.String("worker", worker.fileName), zap.Int("thread", thread.threadIndex))
 	}
-
-	return C.CString(worker.fileName)
 }
 
-//export go_after_worker_script
-func go_after_worker_script(threadIndex C.uintptr_t, exitStatus C.int) {
-	thread := phpThreads[threadIndex]
+func afterWorkerScript(thread *phpThread, exitStatus C.int) {
 	fc := thread.mainRequest.Context().Value(contextKey).(*FrankenPHPContext)
 	fc.exitStatus = exitStatus
 
-	if fc.exitStatus < 0 {
-		panic(ScriptExecutionError)
-	}
-
 	defer func() {
-        maybeCloseContext(fc)
-        thread.mainRequest = nil
-        thread.Unpin()
-    }()
+		maybeCloseContext(fc)
+		thread.mainRequest = nil
+		thread.Unpin()
+	}()
 
 	// on exit status 0 we just run the worker script again
 	if fc.exitStatus == 0 {
@@ -197,7 +210,7 @@ func go_after_worker_script(threadIndex C.uintptr_t, exitStatus C.int) {
 //export go_frankenphp_worker_handle_request_start
 func go_frankenphp_worker_handle_request_start(threadIndex C.uintptr_t) C.bool {
 	thread := phpThreads[threadIndex]
-	thread.setReadyForRequests()
+	thread.setReady()
 
 	if c := logger.Check(zapcore.DebugLevel, "waiting for request"); c != nil {
 		c.Write(zap.String("worker", thread.worker.fileName))
@@ -209,7 +222,9 @@ func go_frankenphp_worker_handle_request_start(threadIndex C.uintptr_t) C.bool {
 		if c := logger.Check(zapcore.DebugLevel, "shutting down"); c != nil {
 			c.Write(zap.String("worker", thread.worker.fileName))
 		}
-		executePHPFunction("opcache_reset")
+		if !executePHPFunction("opcache_reset") {
+			logger.Warn("opcache_reset failed")
+		}
 
 		return C.bool(false)
 	case r = <-thread.worker.requestChan:

@@ -4,7 +4,6 @@ package frankenphp
 // #include "frankenphp.h"
 import "C"
 import (
-	"fmt"
 	"sync"
 )
 
@@ -14,7 +13,7 @@ var (
 	mainThreadShutdownWG sync.WaitGroup
 	threadsReadyWG       sync.WaitGroup
 	shutdownWG           sync.WaitGroup
-	done        chan struct{}
+	done                 chan struct{}
 )
 
 // reserve a fixed number of PHP threads on the go side
@@ -46,32 +45,7 @@ func startMainThread(numThreads int) error {
 	return nil
 }
 
-func startNewPHPThread() error {
-	threadsReadyWG.Add(1)
-	shutdownWG.Add(1)
-	thread := getInactiveThread()
-	thread.isActive = true
-	if C.frankenphp_new_php_thread(C.uintptr_t(thread.threadIndex)) != 0 {
-		return fmt.Errorf("error creating thread %d", thread.threadIndex)
-	}
-	return nil
-}
-
-func startNewWorkerThread(worker *worker) error {
-	threadsReadyWG.Add(1)
-	workerShutdownWG.Add(1)
-	thread := getInactiveThread()
-	thread.worker = worker
-	thread.backoff = newExponentialBackoff()
-	thread.isActive = true
-	if C.frankenphp_new_worker_thread(C.uintptr_t(thread.threadIndex)) != 0 {
-		return fmt.Errorf("failed to create worker thread")
-	}
-
-	return nil
-}
-
-func getInactiveThread() *phpThread {
+func getInactivePHPThread() *phpThread {
 	for _, thread := range phpThreads {
 		if !thread.isActive {
 			return thread
@@ -81,32 +55,13 @@ func getInactiveThread() *phpThread {
 	return nil
 }
 
-//export go_main_thread_is_ready
-func go_main_thread_is_ready() {
+//export go_frankenphp_main_thread_is_ready
+func go_frankenphp_main_thread_is_ready() {
 	threadsReadyWG.Done()
 	mainThreadShutdownWG.Wait()
 }
 
-//export go_shutdown_main_thread
-func go_shutdown_main_thread() {
+//export go_frankenphp_shutdown_main_thread
+func go_frankenphp_shutdown_main_thread() {
 	terminationWG.Done()
-}
-
-//export go_shutdown_php_thread
-func go_shutdown_php_thread(threadIndex C.uintptr_t) {
-	thread := phpThreads[threadIndex]
-	thread.Unpin()
-	thread.isActive = false
-	thread.isReady = false
-	shutdownWG.Done()
-}
-
-//export go_shutdown_worker_thread
-func go_shutdown_worker_thread(threadIndex C.uintptr_t) {
-	thread := phpThreads[threadIndex]
-	thread.Unpin()
-	thread.isActive = false
-	thread.isReady = false
-	thread.worker = nil
-	workerShutdownWG.Done()
 }
