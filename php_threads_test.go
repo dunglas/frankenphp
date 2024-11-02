@@ -24,9 +24,6 @@ func TestStartAndStopTheMainThread(t *testing.T) {
 }
 
 // We'll start 100 threads and check that their hooks work correctly
-// onStartup  => before the thread is ready
-// onWork     => while the thread is working
-// onShutdown => after the thread is done
 func TestStartAndStop100PHPThreadsThatDoNothing(t *testing.T) {
 	numThreads := 100
 	readyThreads := atomic.Uint64{}
@@ -36,17 +33,23 @@ func TestStartAndStop100PHPThreadsThatDoNothing(t *testing.T) {
 
 	for i := 0; i < numThreads; i++ {
 		newThread := getInactivePHPThread()
+
+		// onStartup  => before the thread is ready
 		newThread.onStartup = func(thread *phpThread) {
 			if thread.threadIndex == newThread.threadIndex {
 				readyThreads.Add(1)
 			}
 		}
+
+		// onWork => while the thread is running (we stop here immediately)
 		newThread.onWork = func(thread *phpThread) bool {
 			if thread.threadIndex == newThread.threadIndex {
 				workingThreads.Add(1)
 			}
 			return false // stop immediately
 		}
+
+		// onShutdown => after the thread is done
 		newThread.onShutdown = func(thread *phpThread) {
 			if thread.threadIndex == newThread.threadIndex {
 				finishedThreads.Add(1)
