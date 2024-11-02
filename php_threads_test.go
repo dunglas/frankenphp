@@ -86,7 +86,7 @@ func TestSleep10000TimesIn100Threads(t *testing.T) {
 			thread.mainRequest = r
 		}
 
-		// execute the php script until we reach the maxExecutions
+		// execute the sleep.php script until we reach maxExecutions
 		newThread.onWork = func(thread *phpThread) bool {
 			executionMutex.Lock()
 			if executionCount >= maxExecutions {
