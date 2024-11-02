@@ -12,12 +12,14 @@ var (
 	phpThreads           []*phpThread
 	terminationWG        sync.WaitGroup
 	mainThreadShutdownWG sync.WaitGroup
-	threadsReadyWG              sync.WaitGroup
+	threadsReadyWG       sync.WaitGroup
 	shutdownWG           sync.WaitGroup
+	done        chan struct{}
 )
 
 // reserve a fixed number of PHP threads on the go side
 func initPHPThreads(numThreads int) error {
+	done = make(chan struct{})
 	phpThreads = make([]*phpThread, numThreads)
 	for i := 0; i < numThreads; i++ {
 		phpThreads[i] = &phpThread{threadIndex: i}
@@ -28,9 +30,9 @@ func initPHPThreads(numThreads int) error {
 func drainPHPThreads() {
 	close(done)
 	shutdownWG.Wait()
-	phpThreads = nil
 	mainThreadShutdownWG.Done()
 	terminationWG.Wait()
+	phpThreads = nil
 }
 
 func startMainThread(numThreads int) error {
