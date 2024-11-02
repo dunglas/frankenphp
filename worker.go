@@ -75,16 +75,33 @@ func newWorker(o workerOpt) (*worker, error) {
 func startNewWorkerThread(worker *worker) error {
 	workerShutdownWG.Add(1)
 	thread := getInactivePHPThread()
+
+	// onStartup => right before the thread is ready
 	thread.onStartup = func(thread *phpThread) {
 		thread.worker = worker
 		metrics.ReadyWorker(worker.fileName)
 		thread.backoff = newExponentialBackoff()
 	}
-	thread.onWork = runWorkerScript
+
+	// onWork => while the thread is working (in a loop)
+	thread.onWork = func(thread *phpThread) bool {
+		if workersAreDone.Load() {
+			return false
+		}
+		beforeWorkerScript(thread)
+		exitStatus := executeScriptCGI(thread.worker.fileName)
+		afterWorkerScript(thread, exitStatus)
+
+		return true
+	}
+
+	// onShutdown => after the thread is done
 	thread.onShutdown = func(thread *phpThread) {
 		thread.worker = nil
+		thread.backoff = nil
 		workerShutdownWG.Done()
 	}
+
 	return thread.run()
 }
 
@@ -128,18 +145,6 @@ func restartWorkers(workerOpts []workerOpt) {
 		panic(err)
 	}
 	logger.Info("workers restarted successfully")
-}
-
-func runWorkerScript(thread *phpThread) bool {
-	// if workers are done, we stop the loop that runs the worker script
-	if workersAreDone.Load() {
-		return false
-	}
-	beforeWorkerScript(thread)
-	exitStatus := executeScriptCGI(thread.worker.fileName)
-	afterWorkerScript(thread, exitStatus)
-
-	return true
 }
 
 func beforeWorkerScript(thread *phpThread) {

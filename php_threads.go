@@ -51,8 +51,7 @@ func getInactivePHPThread() *phpThread {
 			return thread
 		}
 	}
-
-	return nil
+	panic("not enough threads reserved")
 }
 
 //export go_frankenphp_main_thread_is_ready
