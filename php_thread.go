@@ -16,6 +16,7 @@ type phpThread struct {
 	mainRequest   *http.Request
 	workerRequest *http.Request
 	worker        *worker
+	requestChan   chan *http.Request
 	threadIndex   int                   // the index of the thread in the phpThreads slice
 	isActive      bool                  // whether the thread is currently running
 	onStartup     func(*phpThread)      // the function to run when ready

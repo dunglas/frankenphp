@@ -464,33 +464,28 @@ func ServeHTTP(responseWriter http.ResponseWriter, request *http.Request) error 
 	fc.responseWriter = responseWriter
 	fc.startedAt = time.Now()
 
-	isWorker := fc.responseWriter == nil
 	isWorkerRequest := false
 
 	rc := requestChan
 	// Detect if a worker is available to handle this request
-	if !isWorker {
-		if worker, ok := workers[fc.scriptFilename]; ok {
-			isWorkerRequest = true
-			metrics.StartWorkerRequest(fc.scriptFilename)
-			rc = worker.requestChan
-		} else {
-			metrics.StartRequest()
-		}
+	if worker, ok := workers[fc.scriptFilename]; ok {
+		isWorkerRequest = true
+		metrics.StartWorkerRequest(fc.scriptFilename)
+		rc = worker.requestChan
+	} else {
+		metrics.StartRequest()
 	}
-
+	
 	select {
 	case <-done:
 	case rc <- request:
 		<-fc.done
 	}
 
-	if !isWorker {
-		if isWorkerRequest {
-			metrics.StopWorkerRequest(fc.scriptFilename, time.Since(fc.startedAt))
-		} else {
-			metrics.StopRequest()
-		}
+	if isWorkerRequest {
+		metrics.StopWorkerRequest(fc.scriptFilename, time.Since(fc.startedAt))
+	} else {
+		metrics.StopRequest()
 	}
 
 	return nil

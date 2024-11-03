@@ -79,6 +79,7 @@ func startNewWorkerThread(worker *worker) error {
 	// onStartup => right before the thread is ready
 	thread.onStartup = func(thread *phpThread) {
 		thread.worker = worker
+		thread.requestChan = chan(*http.Request)
 		metrics.ReadyWorker(worker.fileName)
 		thread.backoff = newExponentialBackoff()
 	}
@@ -138,7 +139,6 @@ func restartWorkersOnFileChanges(workerOpts []workerOpt) error {
 }
 
 func restartWorkers(workerOpts []workerOpt) {
-	stopWorkers()
 	workerShutdownWG.Wait()
 	if err := initWorkers(workerOpts); err != nil {
 		logger.Error("failed to restart workers when watching files")
@@ -226,12 +226,18 @@ func go_frankenphp_worker_handle_request_start(threadIndex C.uintptr_t) C.bool {
 		if c := logger.Check(zapcore.DebugLevel, "shutting down"); c != nil {
 			c.Write(zap.String("worker", thread.worker.fileName))
 		}
-		if !executePHPFunction("opcache_reset") {
-			logger.Warn("opcache_reset failed")
-		}
 
 		return C.bool(false)
 	case r = <-thread.worker.requestChan:
+	}
+
+	// a nil request is a signal for the worker to restart
+	if r == nil {
+		if !executePHPFunction("opcache_reset") {
+            logger.Warn("opcache_reset failed")
+        }
+
+		return C.bool(false)
 	}
 
 	thread.workerRequest = r
@@ -256,23 +262,21 @@ func go_frankenphp_finish_worker_request(threadIndex C.uintptr_t) {
 	thread := phpThreads[threadIndex]
 	r := thread.getActiveRequest()
 	fc := r.Context().Value(contextKey).(*FrankenPHPContext)
-	thread.workerRequest = nil
 
 	maybeCloseContext(fc)
+	thread.workerRequest = nil
+	thread.Unpin()
 
 	if c := fc.logger.Check(zapcore.DebugLevel, "request handling finished"); c != nil {
 		c.Write(zap.String("worker", fc.scriptFilename), zap.String("url", r.RequestURI))
 	}
-
-	thread.Unpin()
 }
 
 // when frankenphp_finish_request() is directly called from PHP
 //
 //export go_frankenphp_finish_request_manually
 func go_frankenphp_finish_request_manually(threadIndex C.uintptr_t) {
-	thread := phpThreads[threadIndex]
-	r := thread.getActiveRequest()
+	r := phpThreads[threadIndex].getActiveRequest()
 	fc := r.Context().Value(contextKey).(*FrankenPHPContext)
 	maybeCloseContext(fc)
 
