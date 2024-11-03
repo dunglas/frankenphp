@@ -7,6 +7,7 @@ import "C"
 import (
 	"fmt"
 	"net/http"
+	"sync/atomic"
 	"runtime"
 )
 
@@ -18,7 +19,7 @@ type phpThread struct {
 	worker        *worker
 	requestChan   chan *http.Request
 	threadIndex   int                   // the index of the thread in the phpThreads slice
-	isActive      bool                  // whether the thread is currently running
+	isActive      atomic.Bool           // whether the thread is currently running
 	onStartup     func(*phpThread)      // the function to run when ready
 	onWork        func(*phpThread) bool // the function to run in a loop when ready
 	onShutdown    func(*phpThread)      // the function to run after shutdown
@@ -34,7 +35,7 @@ func (thread phpThread) getActiveRequest() *http.Request {
 }
 
 func (thread *phpThread) run() error {
-	if thread.isActive {
+	if thread.isActive.Load() {
 		return fmt.Errorf("thread is already running %d", thread.threadIndex)
 	}
 	if thread.onWork == nil {
@@ -42,7 +43,7 @@ func (thread *phpThread) run() error {
 	}
 	threadsReadyWG.Add(1)
 	shutdownWG.Add(1)
-	thread.isActive = true
+	thread.isActive.Store(true)
 	if C.frankenphp_new_php_thread(C.uintptr_t(thread.threadIndex)) != 0 {
 		return fmt.Errorf("error creating thread %d", thread.threadIndex)
 	}
@@ -68,7 +69,7 @@ func go_frankenphp_on_thread_work(threadIndex C.uintptr_t) C.bool {
 //export go_frankenphp_on_thread_shutdown
 func go_frankenphp_on_thread_shutdown(threadIndex C.uintptr_t) {
 	thread := phpThreads[threadIndex]
-	thread.isActive = false
+	thread.isActive.Store(false)
 	thread.Unpin()
 	if thread.onShutdown != nil {
 		thread.onShutdown(thread)

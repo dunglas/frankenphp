@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/dunglas/frankenphp/internal/watcher"
 	"go.uber.org/zap"
@@ -20,6 +21,8 @@ type worker struct {
 	num         int
 	env         PreparedEnv
 	requestChan chan *http.Request
+	threads     []*phpThread
+	threadMutex sync.RWMutex
 }
 
 var (
@@ -79,9 +82,12 @@ func startNewWorkerThread(worker *worker) error {
 	// onStartup => right before the thread is ready
 	thread.onStartup = func(thread *phpThread) {
 		thread.worker = worker
-		thread.requestChan = chan(*http.Request)
+		thread.requestChan = make(chan *http.Request)
 		metrics.ReadyWorker(worker.fileName)
 		thread.backoff = newExponentialBackoff()
+		worker.threadMutex.Lock()
+        worker.threads = append(worker.threads, thread)
+        worker.threadMutex.Unlock()
 	}
 
 	// onWork => while the thread is working (in a loop)
@@ -90,7 +96,8 @@ func startNewWorkerThread(worker *worker) error {
 			return false
 		}
 		beforeWorkerScript(thread)
-		exitStatus := executeScriptCGI(thread.worker.fileName)
+		// TODO: opcache reset only if watcher is enabled
+		exitStatus := executeScriptCGI(thread.worker.fileName, true)
 		afterWorkerScript(thread, exitStatus)
 
 		return true
@@ -119,6 +126,18 @@ func drainWorkers() {
 	workers = make(map[string]*worker)
 }
 
+// send a nil requests to workers to signal a restart
+func restartWorkers() {
+	for _, worker := range workers {
+		worker.threadMutex.RLock()
+        for _, thread := range worker.threads {
+            thread.requestChan <- nil
+        }
+        worker.threadMutex.RUnlock()
+	}
+	time.Sleep(100 * time.Millisecond) // wait a bit before allowing another restart
+}
+
 func restartWorkersOnFileChanges(workerOpts []workerOpt) error {
 	var directoriesToWatch []string
 	for _, w := range workerOpts {
@@ -128,23 +147,11 @@ func restartWorkersOnFileChanges(workerOpts []workerOpt) error {
 	if !watcherIsEnabled {
 		return nil
 	}
-	restartWorkers := func() {
-		restartWorkers(workerOpts)
-	}
 	if err := watcher.InitWatcher(directoriesToWatch, restartWorkers, getLogger()); err != nil {
 		return err
 	}
 
 	return nil
-}
-
-func restartWorkers(workerOpts []workerOpt) {
-	workerShutdownWG.Wait()
-	if err := initWorkers(workerOpts); err != nil {
-		logger.Error("failed to restart workers when watching files")
-		panic(err)
-	}
-	logger.Info("workers restarted successfully")
 }
 
 func beforeWorkerScript(thread *phpThread) {
@@ -212,6 +219,23 @@ func afterWorkerScript(thread *phpThread, exitStatus C.int) {
 	})
 }
 
+func (worker *worker) handleRequest(r *http.Request) {
+	worker.threadMutex.RLock()
+	// dispatch requests to all worker threads in order
+	for _, thread := range worker.threads {
+		select {
+		case thread.requestChan <- r:
+			worker.threadMutex.RUnlock()
+			return
+		default:
+		}
+	}
+	worker.threadMutex.RUnlock()
+	// if no thread was available, fan the request out to all threads
+	// TODO: theoretically there could be autoscaling of threads here
+	worker.requestChan <- r
+}
+
 //export go_frankenphp_worker_handle_request_start
 func go_frankenphp_worker_handle_request_start(threadIndex C.uintptr_t) C.bool {
 	thread := phpThreads[threadIndex]
@@ -228,15 +252,12 @@ func go_frankenphp_worker_handle_request_start(threadIndex C.uintptr_t) C.bool {
 		}
 
 		return C.bool(false)
+	case r = <-thread.requestChan:
 	case r = <-thread.worker.requestChan:
 	}
 
 	// a nil request is a signal for the worker to restart
 	if r == nil {
-		if !executePHPFunction("opcache_reset") {
-            logger.Warn("opcache_reset failed")
-        }
-
 		return C.bool(false)
 	}
 

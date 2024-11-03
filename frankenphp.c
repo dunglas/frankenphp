@@ -965,7 +965,26 @@ int frankenphp_request_startup() {
   return FAILURE;
 }
 
-int frankenphp_execute_script(char *file_name) {
+int frankenphp_execute_php_function(const char *php_function) {
+  zval retval = {0};
+  zend_fcall_info fci = {0};
+  zend_fcall_info_cache fci_cache = {0};
+  zend_string *func_name =
+      zend_string_init(php_function, strlen(php_function), 0);
+  ZVAL_STR(&fci.function_name, func_name);
+  fci.size = sizeof fci;
+  fci.retval = &retval;
+  int success = 0;
+
+  zend_try { success = zend_call_function(&fci, &fci_cache) == SUCCESS; }
+  zend_end_try();
+
+  zend_string_release(func_name);
+
+  return success;
+}
+
+int frankenphp_execute_script(char *file_name, bool clear_op_cache) {
   if (frankenphp_request_startup() == FAILURE) {
     free(file_name);
     file_name = NULL;
@@ -1001,6 +1020,10 @@ int frankenphp_execute_script(char *file_name) {
 
   frankenphp_free_request_context();
   frankenphp_request_shutdown();
+
+  if (clear_op_cache) {
+	frankenphp_execute_php_function("opcache_reset");
+  }
 
   return status;
 }
@@ -1159,23 +1182,4 @@ int frankenphp_execute_script_cli(char *script, int argc, char **argv) {
   }
 
   return (intptr_t)exit_status;
-}
-
-int frankenphp_execute_php_function(const char *php_function) {
-  zval retval = {0};
-  zend_fcall_info fci = {0};
-  zend_fcall_info_cache fci_cache = {0};
-  zend_string *func_name =
-      zend_string_init(php_function, strlen(php_function), 0);
-  ZVAL_STR(&fci.function_name, func_name);
-  fci.size = sizeof fci;
-  fci.retval = &retval;
-  int success = 0;
-
-  zend_try { success = zend_call_function(&fci, &fci_cache) == SUCCESS; }
-  zend_end_try();
-
-  zend_string_release(func_name);
-
-  return success;
 }

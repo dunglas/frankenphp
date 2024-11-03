@@ -16,7 +16,7 @@ func TestStartAndStopTheMainThread(t *testing.T) {
 
 	assert.Equal(t, 1, len(phpThreads))
 	assert.Equal(t, 0, phpThreads[0].threadIndex)
-	assert.False(t, phpThreads[0].isActive)
+	assert.False(t, phpThreads[0].isActive.Load())
 	assert.Nil(t, phpThreads[0].worker)
 
 	drainPHPThreads()
@@ -100,7 +100,7 @@ func TestSleep10000TimesIn100Threads(t *testing.T) {
 			executionMutex.Unlock()
 
 			// exit the loop and fail the test if the script fails
-			if int(executeScriptCGI(scriptPath)) != 0 {
+			if int(executeScriptCGI(scriptPath, false)) != 0 {
 				return false
 			}
 

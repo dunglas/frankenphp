@@ -47,7 +47,7 @@ func startMainThread(numThreads int) error {
 
 func getInactivePHPThread() *phpThread {
 	for _, thread := range phpThreads {
-		if !thread.isActive {
+		if !thread.isActive.Load() {
 			return thread
 		}
 	}

@@ -464,29 +464,24 @@ func ServeHTTP(responseWriter http.ResponseWriter, request *http.Request) error 
 	fc.responseWriter = responseWriter
 	fc.startedAt = time.Now()
 
-	isWorkerRequest := false
-
-	rc := requestChan
 	// Detect if a worker is available to handle this request
 	if worker, ok := workers[fc.scriptFilename]; ok {
-		isWorkerRequest = true
 		metrics.StartWorkerRequest(fc.scriptFilename)
-		rc = worker.requestChan
-	} else {
-		metrics.StartRequest()
+		worker.handleRequest(request)
+		<-fc.done
+		metrics.StopWorkerRequest(fc.scriptFilename, time.Since(fc.startedAt))
+		return nil
 	}
+
+	metrics.StartRequest()
 	
 	select {
 	case <-done:
-	case rc <- request:
+	case requestChan <- request:
 		<-fc.done
 	}
 
-	if isWorkerRequest {
-		metrics.StopWorkerRequest(fc.scriptFilename, time.Since(fc.startedAt))
-	} else {
-		metrics.StopRequest()
-	}
+	metrics.StopRequest()
 
 	return nil
 }
@@ -583,7 +578,7 @@ func handleRequest(thread *phpThread) bool {
 			panic(err)
 		}
 
-		fc.exitStatus = executeScriptCGI(fc.scriptFilename)
+		fc.exitStatus = executeScriptCGI(fc.scriptFilename, false)
 
 		return true
 	}
@@ -864,9 +859,9 @@ func go_log(message *C.char, level C.int) {
 	}
 }
 
-func executeScriptCGI(script string) C.int {
+func executeScriptCGI(script string, clearOpCache bool) C.int {
 	// scriptFilename is freed in frankenphp_execute_script()
-	exitStatus := C.frankenphp_execute_script(C.CString(script))
+	exitStatus := C.frankenphp_execute_script(C.CString(script), C.bool(clearOpCache))
 	if exitStatus < 0 {
 		panic(ScriptExecutionError)
 	}
@@ -898,13 +893,4 @@ func freeArgs(argv []*C.char) {
 	for _, arg := range argv {
 		C.free(unsafe.Pointer(arg))
 	}
-}
-
-func executePHPFunction(functionName string) bool {
-	cFunctionName := C.CString(functionName)
-	defer C.free(unsafe.Pointer(cFunctionName))
-
-	success := C.frankenphp_execute_php_function(cFunctionName)
-
-	return success == 1
 }
