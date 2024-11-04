@@ -316,12 +316,12 @@ func cmdPHPServer(fs caddycmd.Flags) (int, error) {
 		Servers: map[string]*caddyhttp.Server{"php": server},
 	}
 
-	var false bool
+	var f bool
 	cfg := &caddy.Config{
 		Admin: &caddy.AdminConfig{
 			Disabled: true,
 			Config: &caddy.ConfigSettings{
-				Persist: &false,
+				Persist: &f,
 			},
 		},
 		AppsRaw: caddy.ModuleMap{

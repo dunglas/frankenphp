@@ -46,7 +46,6 @@ The following extensions have known bugs and unexpected behaviors when used with
 | Name                                                          | Problem                                                                                                                                                                                                                                                                                         |
 |---------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | [ext-openssl](https://www.php.net/manual/en/book.openssl.php) | When using a static build of FrankenPHP (built with the musl libc), the OpenSSL extension may crash under heavy loads. A workaround is to use a dynamically linked build (like the one used in Docker images). This bug is [being tracked by PHP](https://github.com/php/php-src/issues/13648). |
-| [parallel](https://github.com/krakjoe/parallel)               | `parallel` makes FrankenPHP freeze and crash. [Bug report](https://github.com/krakjoe/parallel/issues/308)                                                                                                                                                                                      |
 
 ## get_browser
 

@@ -68,7 +68,7 @@ func newWorker(o workerOpt) (*worker, error) {
 		return nil, fmt.Errorf("worker filename is invalid %q: %w", o.fileName, err)
 	}
 
-	// if the worker already exists, return it
+	// if the worker already exists, return it,
 	// it's necessary since we don't want to destroy the channels when restarting on file changes
 	if w, ok := workers[absFileName]; ok {
 		return w, nil
