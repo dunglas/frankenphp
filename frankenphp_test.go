@@ -184,7 +184,7 @@ func TestUnusualServerVariable_worker(t *testing.T) {
 }
 func testUnusualServerVariable(t *testing.T, opts *testOptions) {
 	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
-		req := httptest.NewRequest("POST", fmt.Sprintf("http://example.com//%%2f///server-variable.php%%2fbaz/bat?foo=a&bar=b&i=%d#hash", i), strings.NewReader("foo"))
+		req := httptest.NewRequest("POST", fmt.Sprintf("http://example.com//%%2f///server-variable.php%%2fbaz///////bat?foo=a&bar=b&i=%d#hash", i), strings.NewReader("foo"))
 		req.SetBasicAuth(strings.Clone("kevin"), strings.Clone("password"))
 		req.Header.Add(strings.Clone("Content-Type"), strings.Clone("text/plain"))
 		w := httptest.NewRecorder()
@@ -204,7 +204,7 @@ func testUnusualServerVariable(t *testing.T, opts *testOptions) {
 		assert.Contains(t, strBody, "[PHP_SELF] => /server-variable.php/baz/bat")
 		assert.Contains(t, strBody, "[CONTENT_TYPE] => text/plain")
 		assert.Contains(t, strBody, fmt.Sprintf("[QUERY_STRING] => foo=a&bar=b&i=%d#hash", i))
-		assert.Contains(t, strBody, fmt.Sprintf("[REQUEST_URI] => //%%2f///server-variable.php%%2fbaz/bat?foo=a&bar=b&i=%d#hash", i))
+		assert.Contains(t, strBody, fmt.Sprintf("[REQUEST_URI] => //%%2f///server-variable.php%%2fbaz///////bat?foo=a&bar=b&i=%d#hash", i))
 		assert.Contains(t, strBody, "[CONTENT_LENGTH]")
 		assert.Contains(t, strBody, "[REMOTE_ADDR]")
 		assert.Contains(t, strBody, "[REMOTE_PORT]")
