@@ -130,7 +130,7 @@ func (rw *ResponseRecorder) WriteString(str string) (int, error) {
 
 func checkWriteHeaderCode(code int) {
 	// Issue 22880: require valid WriteHeader status codes.
-	// For now we only enforce that it's three digits.
+	// For now, we only enforce that it's three digits.
 	// In the future we might block things over 599 (600 and above aren't defined
 	// at https://httpwg.org/specs/rfc7231.html#status.codes)
 	// and we might block under 200 (once we have more mature 1xx support).

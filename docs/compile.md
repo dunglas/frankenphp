@@ -17,7 +17,7 @@ cd php-*/
 ```
 
 Then, run the `configure` script with the options needed for your platform.
-Th following `./configure` flags are mandatory, but you can add others, for example to compile extensions or additional features.
+The following `./configure` flags are mandatory, but you can add others, for example to compile extensions or additional features.
 
 ### Linux
 

@@ -76,7 +76,7 @@ Bu, Docker ve Docker Compose'un en son sürümlerinin zaten yüklü olduğu bir 
 Test amaçlı kullanım için en ucuz planlar yeterli olacaktır.
 Gerçek production kullanımı için, muhtemelen ihtiyaçlarınıza uyacak şekilde "genel amaçlı" bölümünden bir plan seçmek isteyeceksiniz.
 
-![Docker ile DigitalOcean FrankenPHP](digitalocean-droplet.png)
+![Docker ile DigitalOcean FrankenPHP](../digitalocean-droplet.png)
 
 Diğer ayarlar için varsayılanları koruyabilir veya ihtiyaçlarınıza göre değiştirebilirsiniz.
 SSH anahtarınızı eklemeyi veya bir parola oluşturmayı unutmayın, ardından "Sonlandır ve oluştur" düğmesine basın.
@@ -101,7 +101,7 @@ your-domain-name.example.com.  IN  A     207.154.233.113
 
 DigitalOcean Alan Adları hizmetiyle ilgili örnek ("Networking" > "Domains"):
 
-![DigitalOcean'da DNS Yapılandırma](digitalocean-dns.png)
+![DigitalOcean'da DNS Yapılandırma](../digitalocean-dns.png)
 
 > [!NOTE]
 >

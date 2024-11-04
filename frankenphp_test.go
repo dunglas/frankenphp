@@ -7,6 +7,7 @@ package frankenphp_test
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -686,7 +687,8 @@ func TestExecuteScriptCLI(t *testing.T) {
 	stdoutStderr, err := cmd.CombinedOutput()
 	assert.Error(t, err)
 
-	if exitError, ok := err.(*exec.ExitError); ok {
+	var exitError *exec.ExitError
+	if errors.As(err, &exitError) {
 		assert.Equal(t, 3, exitError.ExitCode())
 	}
 
@@ -896,8 +898,8 @@ func TestRejectInvalidHeaders_worker(t *testing.T) {
 }
 func testRejectInvalidHeaders(t *testing.T, opts *testOptions) {
 	invalidHeaders := [][]string{
-		[]string{"Content-Length", "-1"},
-		[]string{"Content-Length", "something"},
+		{"Content-Length", "-1"},
+		{"Content-Length", "something"},
 	}
 	for _, header := range invalidHeaders {
 		runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, _ int) {
@@ -911,7 +913,7 @@ func testRejectInvalidHeaders(t *testing.T, opts *testOptions) {
 			body, _ := io.ReadAll(resp.Body)
 
 			assert.Equal(t, 400, resp.StatusCode)
-			assert.Contains(t, string(body), "Invalid")
+			assert.Contains(t, string(body), "invalid")
 		}, opts)
 	}
 }
