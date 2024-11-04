@@ -8,24 +8,24 @@ import "C"
 import (
 	"fmt"
 	"net/http"
-	"sync/atomic"
 	"runtime"
+	"sync/atomic"
 	"unsafe"
 )
 
 type phpThread struct {
 	runtime.Pinner
 
-	mainRequest   *http.Request
-	workerRequest *http.Request
-	worker        *worker
-	requestChan   chan *http.Request
-	threadIndex   int                   // the index of the thread in the phpThreads slice
-	isActive      atomic.Bool           // whether the thread is currently running
-	onStartup     func(*phpThread)      // the function to run when ready
-	onWork        func(*phpThread) bool // the function to run in a loop when ready
-	onShutdown    func(*phpThread)      // the function to run after shutdown
-	backoff       *exponentialBackoff   // backoff for worker failures
+	mainRequest       *http.Request
+	workerRequest     *http.Request
+	worker            *worker
+	requestChan       chan *http.Request
+	threadIndex       int                   // the index of the thread in the phpThreads slice
+	isActive          atomic.Bool           // whether the thread is currently running
+	onStartup         func(*phpThread)      // the function to run when ready
+	onWork            func(*phpThread) bool // the function to run in a loop when ready
+	onShutdown        func(*phpThread)      // the function to run after shutdown
+	backoff           *exponentialBackoff   // backoff for worker failures
 	knownVariableKeys map[string]*C.zend_string
 }
 
@@ -64,7 +64,7 @@ func (thread *phpThread) pinString(s string) *C.char {
 
 // C strings must be null-terminated
 func (thread *phpThread) pinCString(s string) *C.char {
-	return thread.pinString(s+"\x00")
+	return thread.pinString(s + "\x00")
 }
 
 //export go_frankenphp_on_thread_startup

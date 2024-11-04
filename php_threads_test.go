@@ -85,7 +85,7 @@ func TestSleep10000TimesIn100Threads(t *testing.T) {
 		newThread.onStartup = func(thread *phpThread) {
 			r, _ := http.NewRequest(http.MethodGet, "sleep.php", nil)
 			r, _ = NewRequestWithContext(r, WithRequestDocumentRoot("/", false))
-			assert.NoError(t, updateServerContext(r, true, false))
+			assert.NoError(t, updateServerContext(thread, r, true, false))
 			thread.mainRequest = r
 		}
 

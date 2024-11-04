@@ -25,13 +25,13 @@ type worker struct {
 }
 
 var (
-	watcherIsEnabled bool
-	workersAreDone   atomic.Bool
-	workersDone      chan interface{}
-	workers          map[string]*worker
-	isRestarting     atomic.Bool
-	workerRestartWG  sync.WaitGroup
-	workerShutdownWG sync.WaitGroup
+	workers              map[string]*worker
+	workersDone          chan interface{}
+	watcherIsEnabled     bool
+	workersAreDone       atomic.Bool
+	workersAreRestarting atomic.Bool
+	workerRestartWG      sync.WaitGroup
+	workerShutdownWG     sync.WaitGroup
 )
 
 func initWorkers(opt []workerOpt) error {
@@ -101,7 +101,7 @@ func startNewWorkerThread(worker *worker) error {
 		if workersAreDone.Load() {
 			return false
 		}
-		if watcherIsEnabled && isRestarting.Load() {
+		if watcherIsEnabled && workersAreRestarting.Load() {
 			workerShutdownWG.Done()
 			workerRestartWG.Wait()
 		}
@@ -134,15 +134,15 @@ func drainWorkers() {
 
 func restartWorkers() {
 	workerRestartWG.Add(1)
+	defer workerRestartWG.Done()
 	for _, worker := range workers {
 		workerShutdownWG.Add(worker.num)
 	}
-	isRestarting.Store(true)
+	workersAreRestarting.Store(true)
 	close(workersDone)
 	workerShutdownWG.Wait()
 	workersDone = make(chan interface{})
-	isRestarting.Store(false)
-	workerRestartWG.Done()
+	workersAreRestarting.Store(false)
 }
 
 func getDirectoriesToWatch(workerOpts []workerOpt) []string {
@@ -175,7 +175,7 @@ func beforeWorkerScript(thread *phpThread) {
 		panic(err)
 	}
 
-	if err := updateServerContext(r, true, false); err != nil {
+	if err := updateServerContext(thread, r, true, false); err != nil {
 		panic(err)
 	}
 
@@ -249,14 +249,15 @@ func go_frankenphp_worker_handle_request_start(threadIndex C.uintptr_t) C.bool {
 		if c := logger.Check(zapcore.DebugLevel, "shutting down"); c != nil {
 			c.Write(zap.String("worker", thread.worker.fileName))
 		}
-		if isRestarting.Load() && !executePHPFunction("opcache_reset") {
+
+		// execute opcache_reset if the restart was triggered by the watcher
+		if watcherIsEnabled && workersAreRestarting.Load() && !executePHPFunction("opcache_reset") {
 			logger.Error("failed to call opcache_reset")
 		}
 
 		return C.bool(false)
 	case r = <-thread.requestChan:
 	case r = <-thread.worker.requestChan:
-	case r = <-thread.requestChan:
 	}
 
 	thread.workerRequest = r
@@ -307,6 +308,4 @@ func go_frankenphp_finish_request_manually(threadIndex C.uintptr_t) {
 	if c := fc.logger.Check(zapcore.DebugLevel, "request handling finished"); c != nil {
 		c.Write(zap.String("url", r.RequestURI))
 	}
-
-	thread.Unpin()
 }
