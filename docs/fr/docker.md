@@ -74,7 +74,7 @@ L'image builder fournie par FrankenPHP contient une version compilée de `libphp
 > [!TIP]
 >
 > Si vous utilisez Alpine Linux et Symfony,
-> vous devrez peut-être [augmenter la taille de pile par défaut](compile.md#using-xcaddy).
+> vous devrez peut-être [augmenter la taille de pile par défaut](compile.md#utiliser-xcaddy).
 
 ## Activer le mode Worker par défaut
 

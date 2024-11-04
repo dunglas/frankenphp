@@ -43,6 +43,7 @@ func initWorkers(opt []workerOpt) error {
 
 	for _, o := range opt {
 		worker, err := newWorker(o)
+		worker.threads = make([]*phpThread, 0, o.num)
 		if err != nil {
 			return err
 		}
@@ -255,6 +256,7 @@ func go_frankenphp_worker_handle_request_start(threadIndex C.uintptr_t) C.bool {
 		return C.bool(false)
 	case r = <-thread.requestChan:
 	case r = <-thread.worker.requestChan:
+	case r = <-thread.requestChan:
 	}
 
 	thread.workerRequest = r
@@ -263,13 +265,18 @@ func go_frankenphp_worker_handle_request_start(threadIndex C.uintptr_t) C.bool {
 		c.Write(zap.String("worker", thread.worker.fileName), zap.String("url", r.RequestURI))
 	}
 
-	if err := updateServerContext(r, false, true); err != nil {
+	if err := updateServerContext(thread, r, false, true); err != nil {
 		// Unexpected error
 		if c := logger.Check(zapcore.DebugLevel, "unexpected error"); c != nil {
 			c.Write(zap.String("worker", thread.worker.fileName), zap.String("url", r.RequestURI), zap.Error(err))
 		}
+		fc := r.Context().Value(contextKey).(*FrankenPHPContext)
+		rejectRequest(fc.responseWriter, err.Error())
+		maybeCloseContext(fc)
+		thread.workerRequest = nil
+		thread.Unpin()
 
-		return C.bool(false)
+		return go_frankenphp_worker_handle_request_start(threadIndex)
 	}
 	return C.bool(true)
 }
@@ -300,4 +307,6 @@ func go_frankenphp_finish_request_manually(threadIndex C.uintptr_t) {
 	if c := fc.logger.Check(zapcore.DebugLevel, "request handling finished"); c != nil {
 		c.Write(zap.String("url", r.RequestURI))
 	}
+
+	thread.Unpin()
 }

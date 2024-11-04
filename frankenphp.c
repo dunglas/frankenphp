@@ -9,6 +9,7 @@
 #include <inttypes.h>
 #include <php.h>
 #include <php_config.h>
+#include <php_ini.h>
 #include <php_main.h>
 #include <php_output.h>
 #include <php_variables.h>
@@ -77,6 +78,7 @@ typedef struct frankenphp_server_context {
   bool finished;
 } frankenphp_server_context;
 
+__thread bool should_filter_var = 0;
 __thread frankenphp_server_context *local_ctx = NULL;
 __thread uintptr_t thread_index;
 __thread zval *os_environment = NULL;
@@ -87,25 +89,13 @@ static void frankenphp_free_request_context() {
   free(ctx->cookie_data);
   ctx->cookie_data = NULL;
 
-  free(SG(request_info).auth_password);
+  /* Is freed via thread.Unpin() at the end of each request */
   SG(request_info).auth_password = NULL;
-
-  free(SG(request_info).auth_user);
   SG(request_info).auth_user = NULL;
-
-  free((char *)SG(request_info).request_method);
   SG(request_info).request_method = NULL;
-
-  free(SG(request_info).query_string);
   SG(request_info).query_string = NULL;
-
-  free((char *)SG(request_info).content_type);
   SG(request_info).content_type = NULL;
-
-  free(SG(request_info).path_translated);
   SG(request_info).path_translated = NULL;
-
-  free(SG(request_info).request_uri);
   SG(request_info).request_uri = NULL;
 }
 
@@ -652,106 +642,79 @@ static char *frankenphp_read_cookies(void) {
   return ctx->cookie_data;
 }
 
-static void frankenphp_register_known_variable(const char *key, go_string value,
-                                               zval *track_vars_array) {
-  if (value.data == NULL) {
-    php_register_variable_safe(key, "", 0, track_vars_array);
-    return;
+/* all variables with well defined keys can safely be registered like this */
+void frankenphp_register_trusted_var(zend_string *z_key, char *value,
+                                     int val_len, zval *track_vars_array) {
+  if (value == NULL) {
+    value = "";
   }
+  size_t new_val_len = val_len;
 
-  size_t new_val_len;
-  if (sapi_module.input_filter(PARSE_SERVER, key, &value.data, value.len,
-                               &new_val_len)) {
-    php_register_variable_safe(key, value.data, new_val_len, track_vars_array);
+  if (!should_filter_var ||
+      sapi_module.input_filter(PARSE_SERVER, ZSTR_VAL(z_key), &value,
+                               new_val_len, &new_val_len)) {
+    zval z_value;
+    ZVAL_STRINGL_FAST(&z_value, value, new_val_len);
+    zend_hash_update_ind(Z_ARRVAL_P(track_vars_array), z_key, &z_value);
   }
+}
+
+/** Persistent strings are ignored by the PHP GC, we have to release these
+ * ourselves **/
+zend_string *frankenphp_init_persistent_string(const char *string, size_t len) {
+  return zend_string_init(string, len, 1);
+}
+
+void frankenphp_release_zend_string(zend_string *z_string) {
+  zend_string_release(z_string);
 }
 
 static void
-frankenphp_register_variable_from_request_info(const char *key, char *value,
+frankenphp_register_variable_from_request_info(zend_string *zKey, char *value,
+                                               bool must_be_present,
                                                zval *track_vars_array) {
-  if (value == NULL) {
-    return;
-  }
-
-  size_t new_val_len;
-  if (sapi_module.input_filter(PARSE_SERVER, key, &value, strlen(value),
-                               &new_val_len)) {
-    php_register_variable_safe(key, value, new_val_len, track_vars_array);
+  if (value != NULL) {
+    frankenphp_register_trusted_var(zKey, value, strlen(value),
+                                    track_vars_array);
+  } else if (must_be_present) {
+    frankenphp_register_trusted_var(zKey, "", 0, track_vars_array);
   }
 }
 
-void frankenphp_register_bulk_variables(go_string known_variables[27],
-                                        php_variable *dynamic_variables,
-                                        size_t size, zval *track_vars_array) {
-  /* Not used, but must be present */
-  php_register_variable_safe("AUTH_TYPE", "", 0, track_vars_array);
-  php_register_variable_safe("REMOTE_IDENT", "", 0, track_vars_array);
-
-  /* Allocated in frankenphp_update_server_context() */
+void frankenphp_register_variables_from_request_info(
+    zval *track_vars_array, zend_string *content_type,
+    zend_string *path_translated, zend_string *query_string,
+    zend_string *auth_user, zend_string *request_method,
+    zend_string *request_uri) {
   frankenphp_register_variable_from_request_info(
-      "CONTENT_TYPE", (char *)SG(request_info).content_type, track_vars_array);
-  frankenphp_register_variable_from_request_info(
-      "PATH_TRANSLATED", (char *)SG(request_info).path_translated,
+      content_type, (char *)SG(request_info).content_type, false,
       track_vars_array);
   frankenphp_register_variable_from_request_info(
-      "QUERY_STRING", SG(request_info).query_string, track_vars_array);
-  frankenphp_register_variable_from_request_info(
-      "REMOTE_USER", (char *)SG(request_info).auth_user, track_vars_array);
-  frankenphp_register_variable_from_request_info(
-      "REQUEST_METHOD", (char *)SG(request_info).request_method,
+      path_translated, (char *)SG(request_info).path_translated, false,
       track_vars_array);
   frankenphp_register_variable_from_request_info(
-      "REQUEST_URI", SG(request_info).request_uri, track_vars_array);
+      query_string, SG(request_info).query_string, true, track_vars_array);
+  frankenphp_register_variable_from_request_info(
+      auth_user, (char *)SG(request_info).auth_user, false, track_vars_array);
+  frankenphp_register_variable_from_request_info(
+      request_method, (char *)SG(request_info).request_method, false,
+      track_vars_array);
+  frankenphp_register_variable_from_request_info(
+      request_uri, SG(request_info).request_uri, true, track_vars_array);
+}
 
-  /* Known variables */
-  frankenphp_register_known_variable("CONTENT_LENGTH", known_variables[0],
-                                     track_vars_array);
-  frankenphp_register_known_variable("DOCUMENT_ROOT", known_variables[1],
-                                     track_vars_array);
-  frankenphp_register_known_variable("DOCUMENT_URI", known_variables[2],
-                                     track_vars_array);
-  frankenphp_register_known_variable("GATEWAY_INTERFACE", known_variables[3],
-                                     track_vars_array);
-  frankenphp_register_known_variable("HTTP_HOST", known_variables[4],
-                                     track_vars_array);
-  frankenphp_register_known_variable("HTTPS", known_variables[5],
-                                     track_vars_array);
-  frankenphp_register_known_variable("PATH_INFO", known_variables[6],
-                                     track_vars_array);
-  frankenphp_register_known_variable("PHP_SELF", known_variables[7],
-                                     track_vars_array);
-  frankenphp_register_known_variable("REMOTE_ADDR", known_variables[8],
-                                     track_vars_array);
-  frankenphp_register_known_variable("REMOTE_HOST", known_variables[9],
-                                     track_vars_array);
-  frankenphp_register_known_variable("REMOTE_PORT", known_variables[10],
-                                     track_vars_array);
-  frankenphp_register_known_variable("REQUEST_SCHEME", known_variables[11],
-                                     track_vars_array);
-  frankenphp_register_known_variable("SCRIPT_FILENAME", known_variables[12],
-                                     track_vars_array);
-  frankenphp_register_known_variable("SCRIPT_NAME", known_variables[13],
-                                     track_vars_array);
-  frankenphp_register_known_variable("SERVER_NAME", known_variables[14],
-                                     track_vars_array);
-  frankenphp_register_known_variable("SERVER_PORT", known_variables[15],
-                                     track_vars_array);
-  frankenphp_register_known_variable("SERVER_PROTOCOL", known_variables[16],
-                                     track_vars_array);
-  frankenphp_register_known_variable("SERVER_SOFTWARE", known_variables[17],
-                                     track_vars_array);
-  frankenphp_register_known_variable("SSL_PROTOCOL", known_variables[18],
-                                     track_vars_array);
-
-  size_t new_val_len;
-  for (size_t i = 0; i < size; i++) {
-    if (sapi_module.input_filter(PARSE_SERVER, dynamic_variables[i].var,
-                                 &dynamic_variables[i].data,
-                                 dynamic_variables[i].data_len, &new_val_len)) {
-      php_register_variable_safe(dynamic_variables[i].var,
-                                 dynamic_variables[i].data, new_val_len,
-                                 track_vars_array);
-    }
+/* variables with user-defined keys must be registered safely
+ * see: php_variables.c -> php_register_variable_ex (#1106) */
+void frankenphp_register_variable_safe(char *key, char *val, size_t val_len,
+                                       zval *track_vars_array) {
+  if (val == NULL || key == NULL) {
+    return;
+  }
+  size_t new_val_len = val_len;
+  if (!should_filter_var ||
+      sapi_module.input_filter(PARSE_SERVER, key, &val, new_val_len,
+                               &new_val_len)) {
+    php_register_variable_safe(key, val, new_val_len, track_vars_array);
   }
 }
 
@@ -853,11 +816,19 @@ static void *php_thread(void *arg) {
 #endif
   local_ctx = malloc(sizeof(frankenphp_server_context));
 
+  /* check if a default filter is set in php.ini and only filter if
+   * it is, this is deprecated and will be removed in PHP 9 */
+  char *default_filter;
+  cfg_get_string("filter.default", &default_filter);
+  should_filter_var = default_filter != NULL;
+
   go_frankenphp_on_thread_startup(thread_index);
 
   // perform work until go signals to stop
   while (go_frankenphp_on_thread_work(thread_index)) {
   }
+
+  go_frankenphp_release_known_variable_keys(thread_index);
 
 #ifdef ZTS
   ts_free_thread();

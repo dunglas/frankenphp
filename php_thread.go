@@ -2,6 +2,7 @@ package frankenphp
 
 // #include <stdint.h>
 // #include <stdbool.h>
+// #include <php_variables.h>
 // #include "frankenphp.h"
 import "C"
 import (
@@ -9,6 +10,7 @@ import (
 	"net/http"
 	"sync/atomic"
 	"runtime"
+	"unsafe"
 )
 
 type phpThread struct {
@@ -24,6 +26,7 @@ type phpThread struct {
 	onWork        func(*phpThread) bool // the function to run in a loop when ready
 	onShutdown    func(*phpThread)      // the function to run after shutdown
 	backoff       *exponentialBackoff   // backoff for worker failures
+	knownVariableKeys map[string]*C.zend_string
 }
 
 func (thread phpThread) getActiveRequest() *http.Request {
@@ -49,6 +52,19 @@ func (thread *phpThread) run() error {
 	}
 
 	return nil
+}
+
+// Pin a string that is not null-terminated
+// PHP's zend_string may contain null-bytes
+func (thread *phpThread) pinString(s string) *C.char {
+	sData := unsafe.StringData(s)
+	thread.Pin(sData)
+	return (*C.char)(unsafe.Pointer(sData))
+}
+
+// C strings must be null-terminated
+func (thread *phpThread) pinCString(s string) *C.char {
+	return thread.pinString(s+"\x00")
 }
 
 //export go_frankenphp_on_thread_startup

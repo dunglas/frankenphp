@@ -94,8 +94,8 @@ func TestWorkerEnv(t *testing.T) {
 }
 
 func TestWorkerGetOpt(t *testing.T) {
-	observer, logs := observer.New(zapcore.InfoLevel)
-	logger := zap.New(observer)
+	obs, logs := observer.New(zapcore.InfoLevel)
+	logger := zap.New(obs)
 
 	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
 		req := httptest.NewRequest("GET", fmt.Sprintf("http://example.com/worker-getopt.php?i=%d", i), nil)
@@ -111,8 +111,8 @@ func TestWorkerGetOpt(t *testing.T) {
 		assert.Contains(t, string(body), fmt.Sprintf("[REQUEST_URI] => /worker-getopt.php?i=%d", i))
 	}, &testOptions{logger: logger, workerScript: "worker-getopt.php", env: map[string]string{"FOO": "bar"}})
 
-	for _, log := range logs.FilterFieldKey("exit_status").All() {
-		assert.Failf(t, "unexpected exit status", "exit status: %d", log.ContextMap()["exit_status"])
+	for _, l := range logs.FilterFieldKey("exit_status").All() {
+		assert.Failf(t, "unexpected exit status", "exit status: %d", l.ContextMap()["exit_status"])
 	}
 }
 
