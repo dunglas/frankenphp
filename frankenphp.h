@@ -50,11 +50,12 @@ int frankenphp_update_server_context(
     char *path_translated, char *request_uri, const char *content_type,
     char *auth_user, char *auth_password, int proto_num);
 int frankenphp_request_startup();
-int frankenphp_execute_script(char *file_name, bool clear_opcache);
+int frankenphp_execute_script(char *file_name);
 void frankenphp_register_bulk_variables(go_string known_variables[27],
                                         php_variable *dynamic_variables,
                                         size_t size, zval *track_vars_array);
 
 int frankenphp_execute_script_cli(char *script, int argc, char **argv);
+int frankenphp_execute_php_function(const char *php_function);
 
 #endif

@@ -100,7 +100,7 @@ func TestSleep10000TimesIn100Threads(t *testing.T) {
 			executionMutex.Unlock()
 
 			// exit the loop and fail the test if the script fails
-			if int(executeScriptCGI(scriptPath, false)) != 0 {
+			if int(executeScriptCGI(scriptPath)) != 0 {
 				return false
 			}
 

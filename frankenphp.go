@@ -349,10 +349,6 @@ func Init(options ...Option) error {
 	// wait for all regular and worker threads to be ready for requests
 	threadsReadyWG.Wait()
 
-	if err := restartWorkersOnFileChanges(opt.workers); err != nil {
-		return err
-	}
-
 	if c := logger.Check(zapcore.InfoLevel, "FrankenPHP started 🐘"); c != nil {
 		c.Write(zap.String("php_version", Version().Version), zap.Int("num_threads", totalThreadCount))
 	}
@@ -474,7 +470,7 @@ func ServeHTTP(responseWriter http.ResponseWriter, request *http.Request) error 
 	}
 
 	metrics.StartRequest()
-	
+
 	select {
 	case <-done:
 	case requestChan <- request:
@@ -578,7 +574,7 @@ func handleRequest(thread *phpThread) bool {
 			panic(err)
 		}
 
-		fc.exitStatus = executeScriptCGI(fc.scriptFilename, false)
+		fc.exitStatus = executeScriptCGI(fc.scriptFilename)
 
 		return true
 	}
@@ -859,9 +855,9 @@ func go_log(message *C.char, level C.int) {
 	}
 }
 
-func executeScriptCGI(script string, clearOpCache bool) C.int {
+func executeScriptCGI(script string) C.int {
 	// scriptFilename is freed in frankenphp_execute_script()
-	exitStatus := C.frankenphp_execute_script(C.CString(script), C.bool(clearOpCache))
+	exitStatus := C.frankenphp_execute_script(C.CString(script))
 	if exitStatus < 0 {
 		panic(ScriptExecutionError)
 	}
@@ -893,4 +889,11 @@ func freeArgs(argv []*C.char) {
 	for _, arg := range argv {
 		C.free(unsafe.Pointer(arg))
 	}
+}
+
+func executePHPFunction(functionName string) bool {
+	cFunctionName := C.CString(functionName)
+	defer C.free(unsafe.Pointer(cFunctionName))
+
+	return C.frankenphp_execute_php_function(cFunctionName) == 1
 }
