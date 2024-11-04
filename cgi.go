@@ -7,6 +7,7 @@ import (
 	"crypto/tls"
 	"net"
 	"net/http"
+	"path"
 	"path/filepath"
 	"strings"
 )
@@ -80,7 +81,7 @@ func addKnownVariablesToServer(thread *phpThread, request *http.Request, fc *Fra
 	registerTrustedVar(keys["REMOTE_PORT\x00"], port, trackVarsArray, thread)
 	registerTrustedVar(keys["DOCUMENT_ROOT\x00"], fc.documentRoot, trackVarsArray, thread)
 	registerTrustedVar(keys["PATH_INFO\x00"], fc.pathInfo, trackVarsArray, thread)
-	registerTrustedVar(keys["PHP_SELF\x00"], request.URL.Path, trackVarsArray, thread)
+	registerTrustedVar(keys["PHP_SELF\x00"], path.Clean(request.URL.Path), trackVarsArray, thread)
 	registerTrustedVar(keys["DOCUMENT_URI\x00"], fc.docURI, trackVarsArray, thread)
 	registerTrustedVar(keys["SCRIPT_FILENAME\x00"], fc.scriptFilename, trackVarsArray, thread)
 	registerTrustedVar(keys["SCRIPT_NAME\x00"], fc.scriptName, trackVarsArray, thread)

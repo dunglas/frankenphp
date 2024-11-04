@@ -176,6 +176,53 @@ func testServerVariable(t *testing.T, opts *testOptions) {
 	}, opts)
 }
 
+func TestUnusualServerVariable_module(t *testing.T) {
+	testUnusualServerVariable(t, nil)
+}
+func TestUnusualServerVariable_worker(t *testing.T) {
+	testUnusualServerVariable(t, &testOptions{workerScript: "server-variable.php"})
+}
+func testUnusualServerVariable(t *testing.T, opts *testOptions) {
+	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
+		req := httptest.NewRequest("POST", fmt.Sprintf("http://example.com//%%2f///server-variable.php%%2fbaz/bat?foo=a&bar=b&i=%d#hash", i), strings.NewReader("foo"))
+		req.SetBasicAuth(strings.Clone("kevin"), strings.Clone("password"))
+		req.Header.Add(strings.Clone("Content-Type"), strings.Clone("text/plain"))
+		w := httptest.NewRecorder()
+		handler(w, req)
+
+		resp := w.Result()
+		body, _ := io.ReadAll(resp.Body)
+
+		strBody := string(body)
+
+		assert.Contains(t, strBody, "[REMOTE_HOST]")
+		assert.Contains(t, strBody, "[REMOTE_USER] => kevin")
+		assert.Contains(t, strBody, "[PHP_AUTH_USER] => kevin")
+		assert.Contains(t, strBody, "[PHP_AUTH_PW] => password")
+		assert.Contains(t, strBody, "[HTTP_AUTHORIZATION] => Basic a2V2aW46cGFzc3dvcmQ=")
+		assert.Contains(t, strBody, "[DOCUMENT_ROOT]")
+		assert.Contains(t, strBody, "[PHP_SELF] => /server-variable.php/baz/bat")
+		assert.Contains(t, strBody, "[CONTENT_TYPE] => text/plain")
+		assert.Contains(t, strBody, fmt.Sprintf("[QUERY_STRING] => foo=a&bar=b&i=%d#hash", i))
+		assert.Contains(t, strBody, fmt.Sprintf("[REQUEST_URI] => //%%2f///server-variable.php%%2fbaz/bat?foo=a&bar=b&i=%d#hash", i))
+		assert.Contains(t, strBody, "[CONTENT_LENGTH]")
+		assert.Contains(t, strBody, "[REMOTE_ADDR]")
+		assert.Contains(t, strBody, "[REMOTE_PORT]")
+		assert.Contains(t, strBody, "[REQUEST_SCHEME] => http")
+		assert.Contains(t, strBody, "[DOCUMENT_URI]")
+		assert.Contains(t, strBody, "[AUTH_TYPE]")
+		assert.Contains(t, strBody, "[REMOTE_IDENT]")
+		assert.Contains(t, strBody, "[REQUEST_METHOD] => POST")
+		assert.Contains(t, strBody, "[SERVER_NAME] => example.com")
+		assert.Contains(t, strBody, "[SERVER_PROTOCOL] => HTTP/1.1")
+		assert.Contains(t, strBody, "[SCRIPT_FILENAME]")
+		assert.Contains(t, strBody, "[SERVER_SOFTWARE] => FrankenPHP")
+		assert.Contains(t, strBody, "[REQUEST_TIME_FLOAT]")
+		assert.Contains(t, strBody, "[REQUEST_TIME]")
+		assert.Contains(t, strBody, "[SERVER_PORT] => 80")
+	}, opts)
+}
+
 func TestPathInfo_module(t *testing.T) { testPathInfo(t, nil) }
 func TestPathInfo_worker(t *testing.T) {
 	testPathInfo(t, &testOptions{workerScript: "server-variable.php"})
