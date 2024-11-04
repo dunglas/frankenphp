@@ -37,6 +37,7 @@ RUN apk add --no-cache \
 	# Dev tools \
 	git \
 	clang \
+	cmake \
 	llvm \
 	gdb \
 	valgrind \
@@ -63,14 +64,13 @@ RUN git clone --branch=PHP-8.3 https://github.com/php/php-src.git . && \
 	echo "opcache.enable=1" >> /usr/local/lib/php.ini && \
 	php --version
 
-# install edant/watcher (necessary for file watching)
+# Install e-dant/watcher (necessary for file watching)
 ARG EDANT_WATCHER_VERSION=release
 WORKDIR /usr/local/src/watcher
-RUN git clone --branch=$EDANT_WATCHER_VERSION https://github.com/e-dant/watcher .
-WORKDIR /usr/local/src/watcher/watcher-c
-RUN cc -o libwatcher.so ./src/watcher-c.cpp -I ./include -I ../include -std=c++17 -O3 -Wall -Wextra -fPIC -shared && \
-	cp libwatcher.so /usr/local/lib/libwatcher.so && \
-	ldconfig /usr/local/lib
+RUN git clone --branch=$EDANT_WATCHER_VERSION https://github.com/e-dant/watcher . && \
+    cmake -S . -B build -DCMAKE_BUILD_TYPE=Release && \
+	cmake --build build/ && \
+	cmake --install build
 
 WORKDIR /go/src/app
 COPY . .

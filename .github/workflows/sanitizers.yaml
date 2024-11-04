@@ -28,9 +28,8 @@ jobs:
       CC: clang
       CXX: clang++
       USE_ZEND_ALLOC: 0
-      LIBRARY_PATH: ${{ github.workspace }}/php/target/lib
+      LIBRARY_PATH: ${{ github.workspace }}/php/target/lib:${{ github.workspace }}/watcher/target/lib
       LD_LIBRARY_PATH: ${{ github.workspace }}/php/target/lib
-      EDANT_WATCHER_VERSION: next
     steps:
       -
         name: Remove local PHP
@@ -97,26 +96,13 @@ jobs:
         name: Add PHP to the PATH
         run: echo "$(pwd)/php/target/bin" >> "$GITHUB_PATH"
       -
-        if: matrix.sanitizer != 'msan'
-        uses: actions/checkout@v4
-        name: Checkout watcher
-        with:
-          repository: e-dant/watcher
-          ref: ${{ env.EDANT_WATCHER_VERSION }}
-          path: 'edant/watcher'
-      -
-        if: matrix.sanitizer != 'msan'
-        name: Compile edant/watcher
-        run: |
-          cd edant/watcher/watcher-c/
-          "$CC" -o libwatcher.so ./src/watcher-c.cpp -I ./include -I ../include -std=c++17 -Wall -Wextra -fPIC -shared ${{ matrix.sanitizer == 'msan' && '-fsanitize=memory -fno-omit-frame-pointer -fno-optimize-sibling-calls' || '' }}
-          sudo cp libwatcher.so /usr/local/lib/libwatcher.so
-          sudo ldconfig
+        name: Install e-dant/watcher
+        uses: ./.github/actions/watcher
       -
         name: Set Set CGO flags
         run: |
           {
-            echo "CGO_CFLAGS=$CFLAGS $(php-config --includes)"
+            echo "CGO_CFLAGS=$CFLAGS -I${PWD}/watcher/target/include $(php-config --includes)"
             echo "CGO_LDFLAGS=$LDFLAGS $(php-config --ldflags) $(php-config --libs)"
           } >> "$GITHUB_ENV"
       -

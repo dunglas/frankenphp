@@ -61,6 +61,7 @@ ENV PATH=/usr/local/go/bin:$PATH
 # This is required to link the FrankenPHP binary to the PHP binary
 RUN apt-get update && \
 	apt-get -y --no-install-recommends install \
+    cmake \
 	libargon2-dev \
 	libbrotli-dev \
 	libcurl4-openssl-dev \
@@ -89,19 +90,26 @@ COPY --link caddy caddy
 COPY --link internal internal
 COPY --link testdata testdata
 
-# install edant/watcher (necessary for file watching)
-ARG EDANT_WATCHER_VERSION=release
+# Install e-dant/watcher (necessary for file watching)
 WORKDIR /usr/local/src/watcher
-RUN curl -L https://github.com/e-dant/watcher/archive/refs/heads/$EDANT_WATCHER_VERSION.tar.gz | tar xz
-WORKDIR /usr/local/src/watcher/watcher-$EDANT_WATCHER_VERSION/watcher-c
-RUN cc -o libwatcher.so ./src/watcher-c.cpp -I ./include -I ../include -std=c++17 -O3 -Wall -Wextra -fPIC -shared && \
-	cp libwatcher.so /usr/local/lib/libwatcher.so && \
-	ldconfig /usr/local/lib
+RUN curl -s https://api.github.com/repos/e-dant/watcher/releases/latest | \
+		grep tarball_url | \
+		awk '{ print $2 }' | \
+		sed 's/,$//' | \
+		sed 's/"//g' | \
+		xargs curl -L | \
+    tar xz --strip-components 1 && \
+    cmake -S . -B build -DCMAKE_BUILD_TYPE=Release && \
+	cmake --build build && \
+	cmake --install build && \
+    ldconfig
 
 # See https://github.com/docker-library/php/blob/master/8.3/bookworm/zts/Dockerfile#L57-L59 for PHP values
 ENV CGO_CFLAGS="-DFRANKENPHP_VERSION=$FRANKENPHP_VERSION $PHP_CFLAGS"
 ENV CGO_CPPFLAGS=$PHP_CPPFLAGS
-ENV CGO_LDFLAGS="-lssl -lcrypto -lreadline -largon2 -lcurl -lonig -lz $PHP_LDFLAGS"
+ENV CGO_LDFLAGS="-L/usr/local/lib -lssl -lcrypto -lreadline -largon2 -lcurl -lonig -lz $PHP_LDFLAGS"
+
+RUN echo $CGO_LDFLAGS
 
 WORKDIR /go/src/app/caddy/frankenphp
 RUN GOBIN=/usr/local/bin go install -tags 'nobadger,nomysql,nopgx' -ldflags "-w -s -X 'github.com/caddyserver/caddy/v2.CustomVersion=FrankenPHP $FRANKENPHP_VERSION PHP $PHP_VERSION Caddy'" && \

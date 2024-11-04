@@ -23,7 +23,7 @@ jobs:
     env:
       GOEXPERIMENT: cgocheck2
       GOMAXPROCS: 10
-      EDANT_WATCHER_VERSION: next
+      LIBRARY_PATH: ${{ github.workspace }}/watcher/target/lib
     steps:
       -
         uses: actions/checkout@v4
@@ -45,23 +45,11 @@ jobs:
           phpts: ts
           debug: true
       -
-        uses: actions/checkout@v4
-        name: Checkout watcher
-        with:
-          repository: e-dant/watcher
-          ref: ${{ env.EDANT_WATCHER_VERSION }}
-          path: 'edant/watcher'
+        name: Install e-dant/watcher
+        uses: ./.github/actions/watcher
       -
-        name: Compile edant/watcher
-        run: |
-          cd edant/watcher/watcher-c/
-          cc -o libwatcher.so ./src/watcher-c.cpp -I ./include -I ../include -std=c++17 -O3 -Wall -Wextra -fPIC -shared
-          sudo cp libwatcher.so /usr/local/lib/libwatcher.so
-          sudo ldconfig
-      -
-        name: Set CGO flags
-        run: |
-          echo "CGO_CFLAGS=$(php-config --includes)" >> "$GITHUB_ENV"
+        name: Set Set CGO flags
+        run: echo "CGO_CFLAGS=-I${PWD}/watcher/target/include $(php-config --includes)" >> "${GITHUB_ENV}"
       -
         name: Build
         run: go build          
@@ -71,11 +59,15 @@ jobs:
         run: go build
       -
         name: Run library tests
-        run: go test -tags watcher -race -v ./...
+        run: go test -race -v ./...
       -
         name: Run Caddy module tests
         working-directory: caddy/
-        run: go test -tags watcher,brotli,nobadger,nomysql,nopgx -race -v ./...
+        run: go test -tags nobadger,nomysql,nopgx -race -v ./...
+      -
+        name: Run Fuzzing Tests
+        working-directory: caddy/
+        run: go test -fuzz FuzzRequest -fuzztime 20s
       -
         name: Build the server
         working-directory: caddy/frankenphp/

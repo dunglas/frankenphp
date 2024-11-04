@@ -14,7 +14,7 @@ package frankenphp
 
 // #cgo darwin pkg-config: libxml-2.0
 // #cgo CFLAGS: -Wall -Werror
-// #cgo CFLAGS: -I/usr/local/include/php -I/usr/local/include/php/main -I/usr/local/include/php/TSRM -I/usr/local/include/php/Zend -I/usr/local/include/php/ext -I/usr/local/include/php/ext/date/lib
+// #cgo CFLAGS: -I/usr/local/include -I/usr/local/include/php -I/usr/local/include/php/main -I/usr/local/include/php/TSRM -I/usr/local/include/php/Zend -I/usr/local/include/php/ext -I/usr/local/include/php/ext/date/lib
 // #cgo linux CFLAGS: -D_GNU_SOURCE
 // #cgo darwin LDFLAGS: -L/opt/homebrew/opt/libiconv/lib -liconv
 // #cgo linux LDFLAGS: -lresolv
@@ -393,7 +393,7 @@ func getLogger() *zap.Logger {
 	return logger
 }
 
-func updateServerContext(request *http.Request, create bool, isWorkerRequest bool) error {
+func updateServerContext(thread *phpThread, request *http.Request, create bool, isWorkerRequest bool) error {
 	fc, ok := FromContext(request.Context())
 	if !ok {
 		return InvalidRequestError
@@ -402,28 +402,28 @@ func updateServerContext(request *http.Request, create bool, isWorkerRequest boo
 	authUser, authPassword, ok := request.BasicAuth()
 	var cAuthUser, cAuthPassword *C.char
 	if ok && authPassword != "" {
-		cAuthPassword = C.CString(authPassword)
+		cAuthPassword = thread.pinCString(authPassword)
 	}
 	if ok && authUser != "" {
-		cAuthUser = C.CString(authUser)
+		cAuthUser = thread.pinCString(authUser)
 	}
 
-	cMethod := C.CString(request.Method)
-	cQueryString := C.CString(request.URL.RawQuery)
+	cMethod := thread.pinCString(request.Method)
+	cQueryString := thread.pinCString(request.URL.RawQuery)
 	contentLengthStr := request.Header.Get("Content-Length")
 	contentLength := 0
 	if contentLengthStr != "" {
 		var err error
 		contentLength, err = strconv.Atoi(contentLengthStr)
-		if err != nil {
-			return fmt.Errorf("invalid Content-Length header: %w", err)
+		if err != nil || contentLength < 0 {
+			return fmt.Errorf("Invalid Content-Length header: %w", err)
 		}
 	}
 
 	contentType := request.Header.Get("Content-Type")
 	var cContentType *C.char
 	if contentType != "" {
-		cContentType = C.CString(contentType)
+		cContentType = thread.pinCString(contentType)
 	}
 
 	// compliance with the CGI specification requires that
@@ -431,10 +431,10 @@ func updateServerContext(request *http.Request, create bool, isWorkerRequest boo
 	// Info: https://www.ietf.org/rfc/rfc3875 Page 14
 	var cPathTranslated *C.char
 	if fc.pathInfo != "" {
-		cPathTranslated = C.CString(sanitizedPathJoin(fc.documentRoot, fc.pathInfo)) // Info: http://www.oreilly.com/openbook/cgi/ch02_04.html
+		cPathTranslated = thread.pinCString(sanitizedPathJoin(fc.documentRoot, fc.pathInfo)) // Info: http://www.oreilly.com/openbook/cgi/ch02_04.html
 	}
 
-	cRequestUri := C.CString(request.URL.RequestURI())
+	cRequestUri := thread.pinCString(request.URL.RequestURI())
 	isBootingAWorkerScript := fc.responseWriter == nil
 
 	ret := C.frankenphp_update_server_context(
@@ -462,6 +462,10 @@ func updateServerContext(request *http.Request, create bool, isWorkerRequest boo
 
 // ServeHTTP executes a PHP script according to the given context.
 func ServeHTTP(responseWriter http.ResponseWriter, request *http.Request) error {
+	if !requestIsValid(request, responseWriter) {
+		return nil
+	}
+
 	shutdownWG.Add(1)
 	defer shutdownWG.Done()
 
@@ -591,8 +595,9 @@ func go_handle_request(threadIndex C.uintptr_t) bool {
 			thread.Unpin()
 		}()
 
-		if err := updateServerContext(r, true, false); err != nil {
-			panic(err)
+		if err := updateServerContext(thread, r, true, false); err != nil {
+			rejectRequest(fc.responseWriter, err.Error())
+			return true
 		}
 
 		// scriptFilename is freed in frankenphp_execute_script()
@@ -649,71 +654,6 @@ var headerKeyCache = func() otter.Cache[string, string] {
 
 	return c
 }()
-
-//export go_register_variables
-func go_register_variables(threadIndex C.uintptr_t, trackVarsArray *C.zval) {
-	thread := phpThreads[threadIndex]
-	r := thread.getActiveRequest()
-	fc := r.Context().Value(contextKey).(*FrankenPHPContext)
-
-	dynamicVariables := make([]C.php_variable, len(fc.env)+len(r.Header))
-
-	var l int
-
-	// Add all HTTP headers to env variables
-	for field, val := range r.Header {
-		k, ok := headerKeyCache.Get(field)
-		if !ok {
-			k = "HTTP_" + headerNameReplacer.Replace(strings.ToUpper(field)) + "\x00"
-			headerKeyCache.SetIfAbsent(field, k)
-		}
-
-		if _, ok := fc.env[k]; ok {
-			continue
-		}
-
-		v := strings.Join(val, ", ")
-
-		kData := unsafe.StringData(k)
-		vData := unsafe.StringData(v)
-
-		thread.Pin(kData)
-		thread.Pin(vData)
-
-		dynamicVariables[l]._var = (*C.char)(unsafe.Pointer(kData))
-		dynamicVariables[l].data_len = C.size_t(len(v))
-		dynamicVariables[l].data = (*C.char)(unsafe.Pointer(vData))
-
-		l++
-	}
-
-	for k, v := range fc.env {
-		if _, ok := knownServerKeys[k]; ok {
-			continue
-		}
-
-		kData := unsafe.StringData(k)
-		vData := unsafe.Pointer(unsafe.StringData(v))
-
-		thread.Pin(kData)
-		thread.Pin(vData)
-
-		dynamicVariables[l]._var = (*C.char)(unsafe.Pointer(kData))
-		dynamicVariables[l].data_len = C.size_t(len(v))
-		dynamicVariables[l].data = (*C.char)(unsafe.Pointer(vData))
-
-		l++
-	}
-
-	knownVariables := computeKnownVariables(r, &thread.Pinner)
-
-	dvsd := unsafe.SliceData(dynamicVariables)
-	thread.Pin(dvsd)
-
-	C.frankenphp_register_bulk_variables(&knownVariables[0], dvsd, C.size_t(l), trackVarsArray)
-
-	fc.env = nil
-}
 
 //export go_apache_request_headers
 func go_apache_request_headers(threadIndex C.uintptr_t, hasActiveRequest bool) (*C.go_string, C.size_t) {
@@ -922,4 +862,19 @@ func executePHPFunction(functionName string) {
 			c.Write(zap.String("function", functionName))
 		}
 	}
+}
+
+// Ensure that the request path does not contain null bytes
+func requestIsValid(r *http.Request, rw http.ResponseWriter) bool {
+	if !strings.Contains(r.URL.Path, "\x00") {
+		return true
+	}
+	rejectRequest(rw, "Invalid request path")
+	return false
+}
+
+func rejectRequest(rw http.ResponseWriter, message string) {
+	rw.WriteHeader(http.StatusBadRequest)
+	_, _ = rw.Write([]byte(message))
+	rw.(http.Flusher).Flush()
 }
