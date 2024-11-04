@@ -17,6 +17,7 @@ type phpThread struct {
 	mainRequest       *http.Request
 	workerRequest     *http.Request
 	worker            *worker
+	requestChan       chan *http.Request
 	knownVariableKeys map[string]*C.zend_string
 }
 
