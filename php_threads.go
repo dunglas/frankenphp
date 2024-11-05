@@ -27,7 +27,6 @@ func initPHPThreads(numThreads int) error {
 	for i := 0; i < numThreads; i++ {
 		phpThreads[i] = &phpThread{threadIndex: i}
 	}
-	logger.Warn("initializing main thread")
 	if err := startMainThread(numThreads); err != nil {
 		return err
 	}
@@ -36,10 +35,8 @@ func initPHPThreads(numThreads int) error {
 	threadsReadyWG.Add(len(phpThreads))
 	shutdownWG.Add(len(phpThreads))
 	for _, thread := range phpThreads {
-		logger.Warn("initializing thread")
 		thread.setInactive()
-		logger.Warn("thread initialized")
-		if !C.frankenphp_new_php_thread(C.uintptr_t(thread.threadIndex)) {
+		if C.frankenphp_new_php_thread(C.uintptr_t(thread.threadIndex)) == C.false {
 			panic(fmt.Sprintf("unable to create thread %d", thread.threadIndex))
 		}
 	}
