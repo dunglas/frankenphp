@@ -11,11 +11,11 @@ import (
 	"go.uber.org/zap"
 )
 
-func TestStartAndStopTheMainThread(t *testing.T) {
+func TestStartAndStopTheMainThreadWithOneInactiveThread(t *testing.T) {
 	logger = zap.NewNop() // the logger needs to not be nil
 	initPHPThreads(1)     // reserve 1 thread
 
-	assert.Equal(t, 1, len(phpThreads))
+	assert.Len(t, phpThreads, 1)
 	assert.Equal(t, 0, phpThreads[0].threadIndex)
 	assert.False(t, phpThreads[0].isActive.Load())
 	assert.Nil(t, phpThreads[0].worker)
@@ -103,7 +103,7 @@ func TestSleep10000TimesIn100Threads(t *testing.T) {
 				executionMutex.Unlock()
 
 				// exit the loop and fail the test if the script fails
-				if int(executeScriptCGI(scriptPath)) != 0 {
+				if int(executeScriptClassic(scriptPath)) != 0 {
 					panic("script execution failed: " + scriptPath)
 				}
 			},

@@ -97,7 +97,7 @@ func (worker *worker) startNewThread() {
 				workerRestartWG.Wait()
 			}
 			beforeWorkerScript(thread)
-			exitStatus := executeScriptCGI(thread.worker.fileName)
+			exitStatus := executeScriptClassic(thread.worker.fileName)
 			afterWorkerScript(thread, exitStatus)
 		},
 		// onShutdown => after the thread is done
@@ -284,8 +284,8 @@ func go_frankenphp_finish_worker_request(threadIndex C.uintptr_t) {
 
 // when frankenphp_finish_request() is directly called from PHP
 //
-//export go_frankenphp_finish_request_manually
-func go_frankenphp_finish_request_manually(threadIndex C.uintptr_t) {
+//export go_frankenphp_finish_php_request
+func go_frankenphp_finish_php_request(threadIndex C.uintptr_t) {
 	r := phpThreads[threadIndex].getActiveRequest()
 	fc := r.Context().Value(contextKey).(*FrankenPHPContext)
 	maybeCloseContext(fc)

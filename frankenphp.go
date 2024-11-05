@@ -573,7 +573,7 @@ func handleRequest(thread *phpThread) {
 			return
 		}
 
-		fc.exitStatus = executeScriptCGI(fc.scriptFilename)
+		fc.exitStatus = executeScriptClassic(fc.scriptFilename)
 	}
 }
 
@@ -787,7 +787,7 @@ func go_log(message *C.char, level C.int) {
 	}
 }
 
-func executeScriptCGI(script string) C.int {
+func executeScriptClassic(script string) C.int {
 	// scriptFilename is freed in frankenphp_execute_script()
 	exitStatus := C.frankenphp_execute_script(C.CString(script))
 	if exitStatus < 0 {

@@ -243,7 +243,7 @@ PHP_FUNCTION(frankenphp_finish_request) { /* {{{ */
   php_header();
 
   if (ctx->has_active_request) {
-    go_frankenphp_finish_request_manually(thread_index);
+    go_frankenphp_finish_php_request(thread_index);
   }
 
   ctx->finished = true;
@@ -913,13 +913,13 @@ int frankenphp_new_main_thread(int num_threads) {
   return pthread_detach(thread);
 }
 
-int frankenphp_new_php_thread(uintptr_t thread_index) {
+bool frankenphp_new_php_thread(uintptr_t thread_index) {
   pthread_t thread;
   if (pthread_create(&thread, NULL, &php_thread, (void *)thread_index) != 0) {
-    return 1;
+    return false;
   }
   pthread_detach(thread);
-  return 0;
+  return true;
 }
 
 int frankenphp_request_startup() {

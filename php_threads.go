@@ -39,8 +39,8 @@ func initPHPThreads(numThreads int) error {
 		logger.Warn("initializing thread")
 		thread.setInactive()
 		logger.Warn("thread initialized")
-		if C.frankenphp_new_php_thread(C.uintptr_t(thread.threadIndex)) != 0 {
-			return fmt.Errorf("unable to create thread %d", thread.threadIndex)
+		if !C.frankenphp_new_php_thread(C.uintptr_t(thread.threadIndex)) {
+			panic(fmt.Sprintf("unable to create thread %d", thread.threadIndex))
 		}
 	}
 	threadsReadyWG.Wait()
