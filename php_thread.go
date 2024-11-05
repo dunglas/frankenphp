@@ -15,18 +15,28 @@ import (
 type phpThread struct {
 	runtime.Pinner
 
-	mainRequest       *http.Request
-	workerRequest     *http.Request
-	worker            *worker
-	requestChan       chan *http.Request
-	done              chan struct{}       // to signal the thread to stop the
-	threadIndex       int                 // the index of the thread in the phpThreads slice
-	isActive          atomic.Bool         // whether the thread is currently running
-	isReady           atomic.Bool         // whether the thread is ready for work
-	onStartup         func(*phpThread)    // the function to run when ready
-	onWork            func(*phpThread)    // the function to run in a loop when ready
-	onShutdown        func(*phpThread)    // the function to run after shutdown
-	backoff           *exponentialBackoff // backoff for worker failures
+	mainRequest   *http.Request
+	workerRequest *http.Request
+	requestChan   chan *http.Request
+	worker        *worker
+
+	// the index in the phpThreads slice
+	threadIndex int
+	// whether the thread has work assigned to it
+	isActive atomic.Bool
+	// whether the thread is ready for work
+	isReady atomic.Bool
+	// right before the first work iteration
+	onStartup func(*phpThread)
+	// the actual work iteration (done in a loop)
+	onWork func(*phpThread)
+	// after the thread is done
+	onShutdown func(*phpThread)
+	// chan to signal the thread to stop the current work iteration
+	done chan struct{}
+	// exponential backoff for worker failures
+	backoff *exponentialBackoff
+	// known $_SERVER key names
 	knownVariableKeys map[string]*C.zend_string
 }
 
@@ -38,6 +48,7 @@ func (thread phpThread) getActiveRequest() *http.Request {
 	return thread.mainRequest
 }
 
+// TODO: Also consider this case: work => inactive => work
 func (thread *phpThread) setInactive() {
 	thread.isActive.Store(false)
 	thread.onWork = func(thread *phpThread) {
@@ -65,6 +76,7 @@ func (thread *phpThread) setHooks(onStartup func(*phpThread), onWork func(*phpTh
 		}
 	}
 
+	// we signal to the thread to stop it's current execution and call the onStartup hook
 	threadsReadyWG.Add(1)
 	close(thread.done)
 	thread.isReady.Store(false)
