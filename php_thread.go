@@ -76,7 +76,7 @@ func (thread *phpThread) setHooks(onStartup func(*phpThread), onWork func(*phpTh
 		}
 	}
 
-	// we signal to the thread to stop it's current execution and call the onStartup hook
+	// signal to the thread to stop it's current execution and call the onStartup hook
 	threadsReadyWG.Add(1)
 	close(thread.done)
 	thread.isReady.Store(false)

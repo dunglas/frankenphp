@@ -21,6 +21,7 @@ var (
 
 // reserve a fixed number of PHP threads on the go side
 func initPHPThreads(numThreads int) error {
+	threadsReadyWG = sync.WaitGroup{}
 	threadsAreDone.Store(false)
 	done = make(chan struct{})
 	phpThreads = make([]*phpThread, numThreads)
@@ -36,7 +37,7 @@ func initPHPThreads(numThreads int) error {
 	shutdownWG.Add(len(phpThreads))
 	for _, thread := range phpThreads {
 		thread.setInactive()
-		if !bool(C.frankenphp_new_php_thread(C.uintptr_t(thread.threadIndex))) {
+		if !C.frankenphp_new_php_thread(C.uintptr_t(thread.threadIndex)) {
 			panic(fmt.Sprintf("unable to create thread %d", thread.threadIndex))
 		}
 	}
