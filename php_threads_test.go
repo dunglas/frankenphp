@@ -13,7 +13,7 @@ import (
 
 func TestStartAndStopTheMainThreadWithOneInactiveThread(t *testing.T) {
 	logger = zap.NewNop() // the logger needs to not be nil
-	initPHPThreads(1)     // reserve 1 thread
+	assert.NoError(t, initPHPThreads(1))     // reserve 1 thread
 
 	assert.Len(t, phpThreads, 1)
 	assert.Equal(t, 0, phpThreads[0].threadIndex)
@@ -31,9 +31,10 @@ func TestStartAndStop100PHPThreadsThatDoNothing(t *testing.T) {
 	readyThreads := atomic.Uint64{}
 	finishedThreads := atomic.Uint64{}
 	workingThreads := atomic.Uint64{}
-	initPHPThreads(numThreads)
 	workWG := sync.WaitGroup{}
 	workWG.Add(numThreads)
+
+	assert.NoError(t, initPHPThreads(numThreads))
 
 	for i := 0; i < numThreads; i++ {
 		newThread := getInactivePHPThread()
@@ -77,9 +78,10 @@ func TestSleep10000TimesIn100Threads(t *testing.T) {
 	executionMutex := sync.Mutex{}
 	executionCount := 0
 	scriptPath, _ := filepath.Abs("./testdata/sleep.php")
-	initPHPThreads(numThreads)
 	workWG := sync.WaitGroup{}
 	workWG.Add(maxExecutions)
+
+	assert.NoError(t, initPHPThreads(numThreads))
 
 	for i := 0; i < numThreads; i++ {
 		getInactivePHPThread().setHooks(
@@ -118,6 +120,7 @@ func TestSleep10000TimesIn100Threads(t *testing.T) {
 	assert.Equal(t, maxExecutions, executionCount)
 }
 
+// TODO: Make this test more chaotic
 func TestStart100ThreadsAndConvertThemToDifferentThreads10Times(t *testing.T) {
 	logger = zap.NewNop() // the logger needs to not be nil
 	numThreads := 100
@@ -127,7 +130,7 @@ func TestStart100ThreadsAndConvertThemToDifferentThreads10Times(t *testing.T) {
 	shutdownTypes := make([]atomic.Uint64, numConversions)
 	workWG := sync.WaitGroup{}
 
-	initPHPThreads(numThreads)
+	assert.NoError(t, initPHPThreads(numThreads))
 
 	for i := 0; i < numConversions; i++ {
 		workWG.Add(numThreads)
