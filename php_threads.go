@@ -4,7 +4,9 @@ package frankenphp
 // #include "frankenphp.h"
 import "C"
 import (
+	"fmt"
 	"sync"
+	"sync/atomic"
 )
 
 var (
@@ -14,19 +16,39 @@ var (
 	threadsReadyWG       sync.WaitGroup
 	shutdownWG           sync.WaitGroup
 	done                 chan struct{}
+	threadsAreDone       atomic.Bool
 )
 
 // reserve a fixed number of PHP threads on the go side
 func initPHPThreads(numThreads int) error {
+	threadsAreDone.Store(false)
 	done = make(chan struct{})
 	phpThreads = make([]*phpThread, numThreads)
 	for i := 0; i < numThreads; i++ {
 		phpThreads[i] = &phpThread{threadIndex: i}
 	}
-	return startMainThread(numThreads)
+	logger.Warn("initializing main thread")
+	if err := startMainThread(numThreads); err != nil {
+		return err
+	}
+
+	// initialize all threads as inactive
+	threadsReadyWG.Add(len(phpThreads))
+	shutdownWG.Add(len(phpThreads))
+	for _, thread := range phpThreads {
+		logger.Warn("initializing thread")
+		thread.setInactive()
+		logger.Warn("thread initialized")
+		if C.frankenphp_new_php_thread(C.uintptr_t(thread.threadIndex)) != 0 {
+			return fmt.Errorf("unable to create thread %d", thread.threadIndex)
+		}
+	}
+	threadsReadyWG.Wait()
+	return nil
 }
 
 func drainPHPThreads() {
+	threadsAreDone.Store(true)
 	close(done)
 	shutdownWG.Wait()
 	mainThreadShutdownWG.Done()

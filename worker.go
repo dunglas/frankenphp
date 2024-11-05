@@ -28,7 +28,6 @@ var (
 	workers              map[string]*worker
 	workersDone          chan interface{}
 	watcherIsEnabled     bool
-	workersAreDone       atomic.Bool
 	workersAreRestarting atomic.Bool
 	workerRestartWG      sync.WaitGroup
 	workerShutdownWG     sync.WaitGroup
@@ -37,7 +36,6 @@ var (
 func initWorkers(opt []workerOpt) error {
 	workers = make(map[string]*worker, len(opt))
 	workersDone = make(chan interface{})
-	workersAreDone.Store(false)
 	directoriesToWatch := getDirectoriesToWatch(opt)
 	watcherIsEnabled = len(directoriesToWatch) > 0
 
@@ -48,9 +46,7 @@ func initWorkers(opt []workerOpt) error {
 			return err
 		}
 		for i := 0; i < worker.num; i++ {
-			if err := startNewWorkerThread(worker); err != nil {
-				return err
-			}
+			worker.startNewThread()
 		}
 	}
 
@@ -82,53 +78,42 @@ func newWorker(o workerOpt) (*worker, error) {
 	return w, nil
 }
 
-func startNewWorkerThread(worker *worker) error {
-	thread := getInactivePHPThread()
-
-	// onStartup => right before the thread is ready
-	thread.onStartup = func(thread *phpThread) {
-		thread.worker = worker
-		thread.requestChan = make(chan *http.Request)
-		metrics.ReadyWorker(worker.fileName)
-		thread.backoff = newExponentialBackoff()
-		worker.threadMutex.Lock()
-		worker.threads = append(worker.threads, thread)
-		worker.threadMutex.Unlock()
-	}
-
-	// onWork => while the thread is working (in a loop)
-	thread.onWork = func(thread *phpThread) bool {
-		if workersAreDone.Load() {
-			return false
-		}
-		if watcherIsEnabled && workersAreRestarting.Load() {
-			workerShutdownWG.Done()
-			workerRestartWG.Wait()
-		}
-		beforeWorkerScript(thread)
-		exitStatus := executeScriptCGI(thread.worker.fileName)
-		afterWorkerScript(thread, exitStatus)
-
-		return true
-	}
-
-	// onShutdown => after the thread is done
-	thread.onShutdown = func(thread *phpThread) {
-		thread.worker = nil
-		thread.backoff = nil
-	}
-
-	return thread.run()
+func (worker *worker) startNewThread() {
+	getInactivePHPThread().setHooks(
+		// onStartup => right before the thread is ready
+		func(thread *phpThread) {
+			thread.worker = worker
+			thread.requestChan = make(chan *http.Request)
+			metrics.ReadyWorker(worker.fileName)
+			thread.backoff = newExponentialBackoff()
+			worker.threadMutex.Lock()
+			worker.threads = append(worker.threads, thread)
+			worker.threadMutex.Unlock()
+		},
+		// onWork => while the thread is working (in a loop)
+		func(thread *phpThread) {
+			if watcherIsEnabled && workersAreRestarting.Load() {
+				workerShutdownWG.Done()
+				workerRestartWG.Wait()
+			}
+			beforeWorkerScript(thread)
+			exitStatus := executeScriptCGI(thread.worker.fileName)
+			afterWorkerScript(thread, exitStatus)
+		},
+		// onShutdown => after the thread is done
+		func(thread *phpThread) {
+			thread.worker = nil
+			thread.backoff = nil
+		},
+	)
 }
 
 func stopWorkers() {
-	workersAreDone.Store(true)
 	close(workersDone)
 }
 
 func drainWorkers() {
 	watcher.DrainWatcher()
-	watcherIsEnabled = false
 	stopWorkers()
 }
 

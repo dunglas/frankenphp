@@ -336,18 +336,12 @@ func Init(options ...Option) error {
 
 	for i := 0; i < totalThreadCount-workerThreadCount; i++ {
 		thread := getInactivePHPThread()
-		thread.onWork = handleRequest
-		if err := thread.run(); err != nil {
-			return err
-		}
+		thread.setHooks(nil, handleRequest, nil)
 	}
 
 	if err := initWorkers(opt.workers); err != nil {
 		return err
 	}
-
-	// wait for all regular and worker threads to be ready for requests
-	threadsReadyWG.Wait()
 
 	if c := logger.Check(zapcore.InfoLevel, "FrankenPHP started 🐘"); c != nil {
 		c.Write(zap.String("php_version", Version().Version), zap.Int("num_threads", totalThreadCount))
@@ -556,10 +550,10 @@ func go_getenv(threadIndex C.uintptr_t, name *C.go_string) (C.bool, *C.go_string
 	return true, value // Return 1 to indicate success
 }
 
-func handleRequest(thread *phpThread) bool {
+func handleRequest(thread *phpThread) {
 	select {
 	case <-done:
-		return false
+		return
 
 	case r := <-requestChan:
 		thread.mainRequest = r
@@ -576,12 +570,10 @@ func handleRequest(thread *phpThread) bool {
 
 		if err := updateServerContext(thread, r, true, false); err != nil {
 			rejectRequest(fc.responseWriter, err.Error())
-			return true
+			return
 		}
 
 		fc.exitStatus = executeScriptCGI(fc.scriptFilename)
-
-		return true
 	}
 }
 

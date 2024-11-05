@@ -6,7 +6,6 @@ package frankenphp
 // #include "frankenphp.h"
 import "C"
 import (
-	"fmt"
 	"net/http"
 	"runtime"
 	"sync/atomic"
@@ -20,12 +19,14 @@ type phpThread struct {
 	workerRequest     *http.Request
 	worker            *worker
 	requestChan       chan *http.Request
-	threadIndex       int                   // the index of the thread in the phpThreads slice
-	isActive          atomic.Bool           // whether the thread is currently running
-	onStartup         func(*phpThread)      // the function to run when ready
-	onWork            func(*phpThread) bool // the function to run in a loop when ready
-	onShutdown        func(*phpThread)      // the function to run after shutdown
-	backoff           *exponentialBackoff   // backoff for worker failures
+	done              chan struct{}       // to signal the thread to stop the
+	threadIndex       int                 // the index of the thread in the phpThreads slice
+	isActive          atomic.Bool         // whether the thread is currently running
+	isReady           atomic.Bool         // whether the thread is ready for work
+	onStartup         func(*phpThread)    // the function to run when ready
+	onWork            func(*phpThread)    // the function to run in a loop when ready
+	onShutdown        func(*phpThread)    // the function to run after shutdown
+	backoff           *exponentialBackoff // backoff for worker failures
 	knownVariableKeys map[string]*C.zend_string
 }
 
@@ -37,21 +38,36 @@ func (thread phpThread) getActiveRequest() *http.Request {
 	return thread.mainRequest
 }
 
-func (thread *phpThread) run() error {
-	if thread.isActive.Load() {
-		return fmt.Errorf("thread is already running %d", thread.threadIndex)
+func (thread *phpThread) setInactive() {
+	thread.isActive.Store(false)
+	thread.onWork = func(thread *phpThread) {
+		thread.requestChan = make(chan *http.Request)
+		select {
+		case <-done:
+		case <-thread.done:
+		}
 	}
-	if thread.onWork == nil {
-		return fmt.Errorf("thread.onWork must be defined %d", thread.threadIndex)
-	}
-	threadsReadyWG.Add(1)
-	shutdownWG.Add(1)
+}
+
+func (thread *phpThread) setHooks(onStartup func(*phpThread), onWork func(*phpThread), onShutdown func(*phpThread)) {
 	thread.isActive.Store(true)
-	if C.frankenphp_new_php_thread(C.uintptr_t(thread.threadIndex)) != 0 {
-		return fmt.Errorf("error creating thread %d", thread.threadIndex)
+
+	// to avoid race conditions, the thread sets its own hooks on startup
+	thread.onStartup = func(thread *phpThread) {
+		if thread.onShutdown != nil {
+			thread.onShutdown(thread)
+		}
+		thread.onStartup = onStartup
+		thread.onWork = onWork
+		thread.onShutdown = onShutdown
+		if thread.onStartup != nil {
+			thread.onStartup(thread)
+		}
 	}
 
-	return nil
+	threadsReadyWG.Add(1)
+	close(thread.done)
+	thread.isReady.Store(false)
 }
 
 // Pin a string that is not null-terminated
@@ -67,25 +83,32 @@ func (thread *phpThread) pinCString(s string) *C.char {
 	return thread.pinString(s + "\x00")
 }
 
-//export go_frankenphp_on_thread_startup
-func go_frankenphp_on_thread_startup(threadIndex C.uintptr_t) {
-	thread := phpThreads[threadIndex]
-	if thread.onStartup != nil {
-		thread.onStartup(thread)
-	}
-	threadsReadyWG.Done()
-}
-
 //export go_frankenphp_on_thread_work
 func go_frankenphp_on_thread_work(threadIndex C.uintptr_t) C.bool {
+	// first check if FrankPHP is shutting down
+	if threadsAreDone.Load() {
+		return C.bool(false)
+	}
 	thread := phpThreads[threadIndex]
-	return C.bool(thread.onWork(thread))
+
+	// if the thread is not ready, set it up
+	if !thread.isReady.Load() {
+		thread.isReady.Store(true)
+		thread.done = make(chan struct{})
+		if thread.onStartup != nil {
+			thread.onStartup(thread)
+		}
+		threadsReadyWG.Done()
+	}
+
+	// do the actual work
+	thread.onWork(thread)
+	return C.bool(true)
 }
 
 //export go_frankenphp_on_thread_shutdown
 func go_frankenphp_on_thread_shutdown(threadIndex C.uintptr_t) {
 	thread := phpThreads[threadIndex]
-	thread.isActive.Store(false)
 	thread.Unpin()
 	if thread.onShutdown != nil {
 		thread.onShutdown(thread)
