@@ -1,6 +1,6 @@
 # FrankenPHP: 适用于 PHP 的现代应用服务器
 
-<h1 align="center"><a href="https://frankenphp.dev"><img src="../../frankenphp.png" alt="FrankenPHP" width="600"></a></h1>
+<h1 align="center"><a href="https://frankenphp.dev"><img src="frankenphp.png" alt="FrankenPHP" width="600"></a></h1>
 
 FrankenPHP 是建立在 [Caddy](https://caddyserver.com/) Web 服务器之上的现代 PHP 应用程序服务器。
 

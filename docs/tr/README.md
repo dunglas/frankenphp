@@ -1,6 +1,6 @@
 # FrankenPHP: PHP için Modern Uygulama Sunucusu
 
-<h1 align="center"><a href="https://frankenphp.dev"><img src="../../frankenphp.png" alt="FrankenPHP" width="600"></a></h1>
+<h1 align="center"><a href="https://frankenphp.dev"><img src="frankenphp.png" alt="FrankenPHP" width="600"></a></h1>
 
 FrankenPHP, [Caddy](https://caddyserver.com/) web sunucusunun üzerine inşa edilmiş PHP için modern bir uygulama sunucusudur.
 
@@ -29,7 +29,7 @@ docker run -v $PWD:/app/public \
 > [!TIP]
 >
 > `https://127.0.0.1` kullanmaya çalışmayın. `https://localhost` kullanın ve kendinden imzalı sertifikayı kabul edin.
-> Kullanılacak alan adını değiştirmek için [`SERVER_NAME` ortam değişkenini](https://frankenphp.dev/tr/docs/config#ortam-değişkenleri) kullanın.
+> Kullanılacak alan adını değiştirmek için [`SERVER_NAME` ortam değişkenini](docs/config.md#environment-variables) kullanın.
 
 ### Binary Çıktısı
 
@@ -50,20 +50,20 @@ Ayrıca aşağıdaki tek komut satırı ile de çalıştırabilirsiniz:
 
 ## Docs
 
-* [Worker modu](worker.md)
-* [Early Hints desteği (103 HTTP durum kodu)](early-hints.md)
-* [Real-time](mercure.md)
-* [Konfigürasyon](config.md)
-* [Docker imajları](docker.md)
-* [Production'a dağıtım](production.md)
-* [**Bağımsız** kendiliğinden çalıştırılabilir PHP uygulamaları oluşturma](embed.md)
-* [Statik binary'leri oluşturma](static.md)
-* [Kaynak dosyalarından derleme](config.md)
-* [Laravel entegrasyonu](laravel.md)
-* [Bilinen sorunlar](known-issues.md)
+* [Worker modu](https://frankenphp.dev/docs/worker/)
+* [Early Hints desteği (103 HTTP durum kodu)](https://frankenphp.dev/docs/early-hints/)
+* [Real-time](https://frankenphp.dev/docs/mercure/)
+* [Konfigürasyon](https://frankenphp.dev/docs/config/)
+* [Docker imajları](https://frankenphp.dev/docs/docker/)
+* [Production'a dağıtım](docs/production.md)
+* [**Bağımsız** kendiliğinden çalıştırılabilir PHP uygulamaları oluşturma](https://frankenphp.dev/docs/embed/)
+* [Statik binary'leri oluşturma](https://frankenphp.dev/docs/static/)
+* [Kaynak dosyalarından derleme](https://frankenphp.dev/docs/compile/)
+* [Laravel entegrasyonu](https://frankenphp.dev/docs/laravel/)
+* [Bilinen sorunlar](https://frankenphp.dev/docs/known-issues/)
 * [Demo uygulama (Symfony) ve kıyaslamalar](https://github.com/dunglas/frankenphp-demo)
 * [Go kütüphane dokümantasonu](https://pkg.go.dev/github.com/dunglas/frankenphp)
-* [Katkıda bulunma ve hata ayıklama](CONTRIBUTING.md)
+* [Katkıda bulunma ve hata ayıklama](https://frankenphp.dev/docs/contributing/)
 
 ## Örnekler ve İskeletler
 

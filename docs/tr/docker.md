@@ -75,7 +75,7 @@ FrankenPHP tarafından sağlanan `builder` imajı `libphp`'nin derlenmiş bir s�
 > [!TIP]
 >
 > Eğer Alpine Linux ve Symfony kullanıyorsanız,
-> [varsayılan yığın boyutunu artırmanız](compile.md#xcaddy-kullanımı) gerekebilir.
+> [varsayılan yığın boyutunu artırmanız](compile.md#using-xcaddy) gerekebilir.
 
 ## Varsayılan Olarak Worker Modunun Etkinleştirilmesi
 

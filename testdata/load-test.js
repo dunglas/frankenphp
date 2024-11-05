@@ -41,7 +41,7 @@ export const options = {
   //     options: {
   //       browser: {
   //         // This is a mandatory parameter that instructs k6 to launch and
-  //         // connect to a Chromium-based browser, and use it to run UI-based
+  //         // connect to a chromium-based browser, and use it to run UI-based
   //         // tests.
   //         type: 'chromium',
   //       },

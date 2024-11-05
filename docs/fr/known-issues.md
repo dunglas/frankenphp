@@ -34,10 +34,10 @@ $fiber->resume();
 
 Les extensions suivantes sont connues pour ne pas être compatibles avec FrankenPHP :
 
-| Nom                                                                                                         | Raison          | Alternatives                                                                                                         |
-|-------------------------------------------------------------------------------------------------------------|-----------------|----------------------------------------------------------------------------------------------------------------------|
-| [imap](https://www.php.net/manual/en/imap.installation.php)                                                 | Non thread-safe | [javanile/php-imap2](https://github.com/javanile/php-imap2), [webklex/php-imap](https://github.com/Webklex/php-imap) |
-| [newrelic](https://docs.newrelic.com/docs/apm/agents/php-agent/getting-started/introduction-new-relic-php/) | Non thread-safe | -                                                                                                                    |
+| Nom                                                                                                       | Raison          | Alternatives                                                                                                         |
+| ---------------------------------------------------------------------------------------------------------- | --------------- | -------------------------------------------------------------------------------------------------------------------- |
+| [imap](https://www.php.net/manual/en/imap.installation.php)                                                | Non thread-safe | [javanile/php-imap2](https://github.com/javanile/php-imap2), [webklex/php-imap](https://github.com/Webklex/php-imap) |
+| [newrelic](https://docs.newrelic.com/docs/apm/agents/php-agent/getting-started/introduction-new-relic-php/)| Non thread-safe | -                                                                                                                    |
 
 ## Extensions PHP boguées
 
@@ -46,6 +46,7 @@ Les extensions suivantes ont des bugs connus ou des comportements inattendus lor
 | Nom                                                           | Problème                                                                                                                                                                                                                                                                                                                                      |
 |---------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | [ext-openssl](https://www.php.net/manual/fr/book.openssl.php) | Lors de l'utilisation d'une version statique de FrankenPHP (construite avec la libc musl), l'extension OpenSSL peut planter sous de fortes charges. Une solution consiste à utiliser une version liée dynamiquement (comme celle utilisée dans les images Docker). Ce bogue est [suivi par PHP](https://github.com/php/php-src/issues/13648). |
+| [parallel](https://github.com/krakjoe/parallel)               | `parallel` fait geler et planter FrankenPHP. [Rapport de bogue](https://github.com/krakjoe/parallel/issues/308)                                                                                                                                                                                                                               |
 
 ## get_browser
 

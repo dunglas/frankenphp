@@ -209,7 +209,7 @@ follow these steps:
 1. Create a new directory named with the language's 2-character ISO code in this repository's `docs/` directory
 2. Copy all the `.md` files in the root of the `docs/` directory into the new directory (always use the English version as source for translation, as it's always up to date)
 3. Copy the `README.md` and `CONTRIBUTING.md` files from the root directory to the new directory
-4. Translate the content of the files, but don't change the filenames, also don't translate strings starting with `> [!` (it's special markup for GitHub)
+4. Translate the content of the files, but don't change the filenames, also don't translates strings starting with `> [!` (it's special markup for GitHub)
 5. Create a Pull Request with the translations
 6. In the [site repository](https://github.com/dunglas/frankenphp-website/tree/main), copy and translate the translation files in the `content/`, `data/` and `i18n/` directories
 7. Translate the values in the created YAML file

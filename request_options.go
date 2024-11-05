@@ -37,7 +37,7 @@ func WithRequestDocumentRoot(documentRoot string, resolveSymlink bool) RequestOp
 }
 
 // WithRequestResolvedDocumentRoot is similar to WithRequestDocumentRoot
-// but doesn't do any checks or resolving on the path to improve performance.
+// but doesn't does any checks or resolving on the path to improve performance.
 func WithRequestResolvedDocumentRoot(documentRoot string) RequestOption {
 	return func(o *FrankenPHPContext) error {
 		o.documentRoot = documentRoot

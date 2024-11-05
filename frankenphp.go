@@ -416,7 +416,7 @@ func updateServerContext(thread *phpThread, request *http.Request, create bool, 
 		var err error
 		contentLength, err = strconv.Atoi(contentLengthStr)
 		if err != nil || contentLength < 0 {
-			return fmt.Errorf("invalid Content-Length header: %w", err)
+			return fmt.Errorf("Invalid Content-Length header: %w", err)
 		}
 	}
 
