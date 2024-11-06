@@ -66,6 +66,8 @@ var (
 	requestChan chan *http.Request
 	done        chan struct{}
 	shutdownWG  sync.WaitGroup
+	cachedEnv   map[string]string
+	envMu       sync.RWMutex
 
 	loggerMu sync.RWMutex
 	logger   *zap.Logger
@@ -331,6 +333,14 @@ func Init(options ...Option) error {
 		logger.Warn(`ZTS is not enabled, only 1 thread will be available, recompile PHP using the "--enable-zts" configuration option or performance will be degraded`)
 	}
 
+	// load the os environment once
+    // prevents potential segfaults if it's is accessed from anywhere else
+    cachedEnv = make(map[string]string, len(os.Environ()))
+    for _, envVar := range os.Environ() {
+        key, val, _ := strings.Cut(envVar, "=")
+        cachedEnv[key] = val
+    }
+
 	shutdownWG.Add(1)
 	done = make(chan struct{})
 	requestChan = make(chan *http.Request)
@@ -513,17 +523,15 @@ func go_putenv(str *C.char, length C.int) C.bool {
 	// Convert byte slice to string
 	envString := string(s)
 
+	envMu.Lock()
 	// Check if '=' is present in the string
 	if key, val, found := strings.Cut(envString, "="); found {
-		if os.Setenv(key, val) != nil {
-			return false // Failure
-		}
+		cachedEnv[key] = val
 	} else {
 		// No '=', unset the environment variable
-		if os.Unsetenv(envString) != nil {
-			return false // Failure
-		}
+		delete(cachedEnv, key)
 	}
+	envMu.Unlock()
 
 	return true // Success
 }
@@ -531,25 +539,21 @@ func go_putenv(str *C.char, length C.int) C.bool {
 //export go_getfullenv
 func go_getfullenv(threadIndex C.uintptr_t) (*C.go_string, C.size_t) {
 	thread := phpThreads[threadIndex]
+	envMu.RLock()
+	defer envMu.RUnlock()
+	goStrings := make([]C.go_string, len(cachedEnv)*2)
 
-	env := os.Environ()
-	goStrings := make([]C.go_string, len(env)*2)
-
-	for i, envVar := range env {
-		key, val, _ := strings.Cut(envVar, "=")
-		k := unsafe.StringData(key)
-		v := unsafe.StringData(val)
-		thread.Pin(k)
-		thread.Pin(v)
-
-		goStrings[i*2] = C.go_string{C.size_t(len(key)), (*C.char)(unsafe.Pointer(k))}
-		goStrings[i*2+1] = C.go_string{C.size_t(len(val)), (*C.char)(unsafe.Pointer(v))}
+	i := 0
+	for key, val := range cachedEnv {
+		goStrings[i*2] = C.go_string{C.size_t(len(key)), thread.pinString(key)}
+		goStrings[i*2+1] = C.go_string{C.size_t(len(val)), thread.pinString(val)}
+		i++
 	}
 
 	value := unsafe.SliceData(goStrings)
 	thread.Pin(value)
 
-	return value, C.size_t(len(env))
+	return value, C.size_t(len(cachedEnv))
 }
 
 //export go_getenv
@@ -560,16 +564,16 @@ func go_getenv(threadIndex C.uintptr_t, name *C.go_string) (C.bool, *C.go_string
 	envName := C.GoStringN(name.data, C.int(name.len))
 
 	// Get the environment variable value
-	envValue, exists := os.LookupEnv(envName)
+	envMu.RLock()
+	envValue, exists := cachedEnv[envName]
+	envMu.RUnlock()
 	if !exists {
 		// Environment variable does not exist
 		return false, nil // Return 0 to indicate failure
 	}
 
 	// Convert Go string to C string
-	val := unsafe.StringData(envValue)
-	thread.Pin(val)
-	value := &C.go_string{C.size_t(len(envValue)), (*C.char)(unsafe.Pointer(val))}
+	value := &C.go_string{C.size_t(len(envValue)), thread.pinString(envValue)}
 	thread.Pin(value)
 
 	return true, value // Return 1 to indicate success
