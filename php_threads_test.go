@@ -38,7 +38,7 @@ func TestStartAndStop100PHPThreadsThatDoNothing(t *testing.T) {
 
 	for i := 0; i < numThreads; i++ {
 		newThread := getInactivePHPThread()
-		newThread.setHooks(
+		newThread.setActive(
 			// onStartup  => before the thread is ready
 			func(thread *phpThread) {
 				if thread.threadIndex == newThread.threadIndex {
@@ -84,7 +84,7 @@ func TestSleep10000TimesIn100Threads(t *testing.T) {
 	assert.NoError(t, initPHPThreads(numThreads))
 
 	for i := 0; i < numThreads; i++ {
-		getInactivePHPThread().setHooks(
+		getInactivePHPThread().setActive(
 			// onStartup => fake a request on startup (like a worker would do)
 			func(thread *phpThread) {
 				r, _ := http.NewRequest(http.MethodGet, "sleep.php", nil)
@@ -136,7 +136,7 @@ func TestStart100ThreadsAndConvertThemToDifferentThreads10Times(t *testing.T) {
 		workWG.Add(numThreads)
 		numberOfConversion := i
 		for j := 0; j < numThreads; j++ {
-			getInactivePHPThread().setHooks(
+			getInactivePHPThread().setActive(
 				// onStartup  => before the thread is ready
 				func(thread *phpThread) {
 					startUpTypes[numberOfConversion].Add(1)

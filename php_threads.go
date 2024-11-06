@@ -17,6 +17,7 @@ var (
 	shutdownWG           sync.WaitGroup
 	done                 chan struct{}
 	threadsAreDone       atomic.Bool
+	threadsAreBooting    atomic.Bool
 )
 
 // reserve a fixed number of PHP threads on the go side
@@ -35,6 +36,8 @@ func initPHPThreads(numThreads int) error {
 	// initialize all threads as inactive
 	threadsReadyWG.Add(len(phpThreads))
 	shutdownWG.Add(len(phpThreads))
+	threadsAreBooting.Store(true)
+
 	for _, thread := range phpThreads {
 		thread.setInactive()
 		if !C.frankenphp_new_php_thread(C.uintptr_t(thread.threadIndex)) {
@@ -42,6 +45,8 @@ func initPHPThreads(numThreads int) error {
 		}
 	}
 	threadsReadyWG.Wait()
+	threadsAreBooting.Store(false)
+
 	return nil
 }
 

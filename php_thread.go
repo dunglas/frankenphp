@@ -40,7 +40,7 @@ type phpThread struct {
 	knownVariableKeys map[string]*C.zend_string
 }
 
-func (thread phpThread) getActiveRequest() *http.Request {
+func (thread *phpThread) getActiveRequest() *http.Request {
 	if thread.workerRequest != nil {
 		return thread.workerRequest
 	}
@@ -60,7 +60,7 @@ func (thread *phpThread) setInactive() {
 	}
 }
 
-func (thread *phpThread) setHooks(onStartup func(*phpThread), onWork func(*phpThread), onShutdown func(*phpThread)) {
+func (thread *phpThread) setActive(onStartup func(*phpThread), onWork func(*phpThread), onShutdown func(*phpThread)) {
 	thread.isActive.Store(true)
 
 	// to avoid race conditions, the thread sets its own hooks on startup
@@ -77,7 +77,6 @@ func (thread *phpThread) setHooks(onStartup func(*phpThread), onWork func(*phpTh
 	}
 
 	// signal to the thread to stop it's current execution and call the onStartup hook
-	threadsReadyWG.Add(1)
 	close(thread.done)
 	thread.isReady.Store(false)
 }
@@ -110,7 +109,10 @@ func go_frankenphp_on_thread_work(threadIndex C.uintptr_t) C.bool {
 		if thread.onStartup != nil {
 			thread.onStartup(thread)
 		}
-		threadsReadyWG.Done()
+		if threadsAreBooting.Load() {
+			threadsReadyWG.Done()
+			threadsReadyWG.Wait()
+		}
 	}
 
 	// do the actual work

@@ -79,7 +79,7 @@ func newWorker(o workerOpt) (*worker, error) {
 }
 
 func (worker *worker) startNewThread() {
-	getInactivePHPThread().setHooks(
+	getInactivePHPThread().setActive(
 		// onStartup => right before the thread is ready
 		func(thread *phpThread) {
 			thread.worker = worker
@@ -185,7 +185,7 @@ func afterWorkerScript(thread *phpThread, exitStatus C.int) {
 		// TODO: make the max restart configurable
 		metrics.StopWorker(thread.worker.fileName, StopReasonRestart)
 
-		if c := logger.Check(zapcore.InfoLevel, "restarting"); c != nil {
+		if c := logger.Check(zapcore.DebugLevel, "restarting"); c != nil {
 			c.Write(zap.String("worker", thread.worker.fileName))
 		}
 		return

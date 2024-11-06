@@ -335,8 +335,7 @@ func Init(options ...Option) error {
 	}
 
 	for i := 0; i < totalThreadCount-workerThreadCount; i++ {
-		thread := getInactivePHPThread()
-		thread.setHooks(nil, handleRequest, nil)
+		getInactivePHPThread().setActive(nil, handleRequest, nil)
 	}
 
 	if err := initWorkers(opt.workers); err != nil {
