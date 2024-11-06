@@ -334,12 +334,12 @@ func Init(options ...Option) error {
 	}
 
 	// load the os environment once
-    // prevents potential segfaults if it's is accessed from anywhere else
-    cachedEnv = make(map[string]string, len(os.Environ()))
-    for _, envVar := range os.Environ() {
-        key, val, _ := strings.Cut(envVar, "=")
-        cachedEnv[key] = val
-    }
+	// prevents potential segfaults if it's is accessed from anywhere else
+	cachedEnv = make(map[string]string, len(os.Environ()))
+	for _, envVar := range os.Environ() {
+		key, val, _ := strings.Cut(envVar, "=")
+		cachedEnv[key] = val
+	}
 
 	shutdownWG.Add(1)
 	done = make(chan struct{})
