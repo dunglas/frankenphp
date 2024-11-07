@@ -206,7 +206,6 @@ func afterWorkerScript(thread *phpThread, exitStatus C.int) {
 
 func (worker *worker) handleRequest(r *http.Request, fc *FrankenPHPContext) {
 	metrics.StartWorkerRequest(fc.scriptFilename)
-	defer metrics.StopWorkerRequest(fc.scriptFilename, time.Since(fc.startedAt))
 
 	// dispatch requests to all worker threads in order
 	worker.threadMutex.RLock()
@@ -215,15 +214,18 @@ func (worker *worker) handleRequest(r *http.Request, fc *FrankenPHPContext) {
 		case thread.requestChan <- r:
 			worker.threadMutex.RUnlock()
 			<-fc.done
+			metrics.StopWorkerRequest(worker.fileName, time.Since(fc.startedAt))
 			return
 		default:
 		}
 	}
 	worker.threadMutex.RUnlock()
+
 	// if no thread was available, fan the request out to all threads
 	// TODO: theoretically there could be autoscaling of threads here
 	worker.requestChan <- r
 	<-fc.done
+	metrics.StopWorkerRequest(worker.fileName, time.Since(fc.startedAt))
 }
 
 //export go_frankenphp_worker_handle_request_start
