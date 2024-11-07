@@ -575,6 +575,18 @@ func go_getenv(threadIndex C.uintptr_t, name *C.go_string) (C.bool, *C.go_string
 	return true, value // Return 1 to indicate success
 }
 
+//export go_sapi_getenv
+func go_sapi_getenv(threadIndex C.uintptr_t, name *C.go_string) *C.char {
+	envName := C.GoStringN(name.data, C.int(name.len))
+
+	envValue, exists := os.LookupEnv(envName)
+	if !exists {
+		return nil
+	}
+
+	return phpThreads[threadIndex].pinCString(envValue)
+}
+
 //export go_handle_request
 func go_handle_request(threadIndex C.uintptr_t) bool {
 	select {

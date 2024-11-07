@@ -752,6 +752,12 @@ static void frankenphp_log_message(const char *message, int syslog_type_int) {
   go_log((char *)message, syslog_type_int);
 }
 
+static char *frankenphp_getenv(const char *name, size_t name_len) {
+  go_string gname = {name_len, (char *)name};
+
+  return go_sapi_getenv(thread_index, &gname);
+}
+
 sapi_module_struct frankenphp_sapi_module = {
     "frankenphp", /* name */
     "FrankenPHP", /* pretty name */
@@ -765,7 +771,7 @@ sapi_module_struct frankenphp_sapi_module = {
     frankenphp_ub_write,   /* unbuffered write */
     frankenphp_sapi_flush, /* flush */
     NULL,                  /* get uid */
-    NULL,                  /* getenv */
+    frankenphp_getenv,     /* getenv */
 
     php_error, /* error handler */
 
