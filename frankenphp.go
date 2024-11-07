@@ -459,10 +459,7 @@ func ServeHTTP(responseWriter http.ResponseWriter, request *http.Request) error 
 
 	// Detect if a worker is available to handle this request
 	if worker, ok := workers[fc.scriptFilename]; ok {
-		metrics.StartWorkerRequest(fc.scriptFilename)
-		worker.handleRequest(request)
-		<-fc.done
-		metrics.StopWorkerRequest(fc.scriptFilename, time.Since(fc.startedAt))
+		worker.handleRequest(request, fc)
 		return nil
 	}
 
