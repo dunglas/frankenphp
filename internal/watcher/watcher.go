@@ -84,7 +84,7 @@ func retryWatching(watchPattern *watchPattern) {
 	if watchPattern.failureCount >= maxFailureCount {
 		return
 	}
-	logger.Warn("watcher was closed prematurely, retrying...", zap.String("dir", watchPattern.dir))
+	logger.Debug("watcher was closed prematurely, retrying...", zap.String("dir", watchPattern.dir))
 
 	watchPattern.failureCount++
 	session, err := startSession(watchPattern)
