@@ -133,8 +133,8 @@ func TestValidExtendedPatterns(t *testing.T) {
 	shouldMatch(t, "/path/**/{file.php,file.twig}", "/path/subpath/file.twig")
 	shouldMatch(t, "/path/{dir1,dir2}/file.php", "/path/dir1/file.php")
 	shouldMatch(t, "/path/{dir1,dir2}/file.php", "/path/dir2/file.php")
-	shouldMatch(t, "/path/{dir1,dir2}/**/*.php", "/path/dir1/subpath/file.php")
-	shouldMatch(t, "/path/{dir1,dir2}/**/*.php", "/path/dir2/subpath/file.php")
+	shouldMatch(t, "/app/{app,config,resources}/**/*.php", "/app/app/subpath/file.php")
+	shouldMatch(t, "/app/{app,config,resources}/**/*.php", "/app/config/subpath/file.php")
 }
 
 func TestInValidExtendedPatterns(t *testing.T) {

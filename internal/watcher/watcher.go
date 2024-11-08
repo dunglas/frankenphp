@@ -10,7 +10,9 @@ import "C"
 import (
 	"errors"
 	"runtime/cgo"
+	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 	"unsafe"
 
@@ -27,6 +29,13 @@ type watcher struct {
 // duration to wait before triggering a reload after a file change
 const debounceDuration = 150 * time.Millisecond
 
+// times to retry watching if the watcher was closed prematurely
+const maxFailureCount = 5
+const failureResetDuration = 5 * time.Second
+
+var failureMu = sync.Mutex{}
+var watcherIsActive = atomic.Bool{}
+
 var (
 	// the currently active file watcher
 	activeWatcher *watcher
@@ -42,9 +51,10 @@ func InitWatcher(filePatterns []string, callback func(), zapLogger *zap.Logger) 
 	if len(filePatterns) == 0 {
 		return nil
 	}
-	if activeWatcher != nil {
+	if watcherIsActive.Load() {
 		return AlreadyStartedError
 	}
+	watcherIsActive.Store(true)
 	logger = zapLogger
 	activeWatcher = &watcher{callback: callback}
 	err := activeWatcher.startWatching(filePatterns)
@@ -57,13 +67,40 @@ func InitWatcher(filePatterns []string, callback func(), zapLogger *zap.Logger) 
 }
 
 func DrainWatcher() {
-	if activeWatcher == nil {
+	if !watcherIsActive.Load() {
 		return
 	}
+	watcherIsActive.Store(false)
 	logger.Debug("stopping watcher")
 	activeWatcher.stopWatching()
 	reloadWaitGroup.Wait()
 	activeWatcher = nil
+}
+
+// TODO: how to test this?
+func retryWatching(watchPattern *watchPattern) {
+	failureMu.Lock()
+	defer failureMu.Unlock()
+	if watchPattern.failureCount >= maxFailureCount {
+		return
+	}
+	logger.Warn("watcher was closed prematurely, retrying...", zap.String("dir", watchPattern.dir))
+
+	watchPattern.failureCount++
+	session, err := startSession(watchPattern)
+	if err != nil {
+		activeWatcher.sessions = append(activeWatcher.sessions, session)
+	}
+
+	// reset the failure-count if the watcher hasn't reached max failures after 5 seconds
+	go func() {
+		time.Sleep(failureResetDuration * time.Second)
+		failureMu.Lock()
+		if watchPattern.failureCount < maxFailureCount {
+			watchPattern.failureCount = 0
+		}
+		failureMu.Unlock()
+	}()
 }
 
 func (w *watcher) startWatching(filePatterns []string) error {
@@ -117,8 +154,15 @@ func stopSession(session C.uintptr_t) {
 //export go_handle_file_watcher_event
 func go_handle_file_watcher_event(path *C.char, eventType C.int, pathType C.int, handle C.uintptr_t) {
 	watchPattern := cgo.Handle(handle).Value().(*watchPattern)
-	if watchPattern.allowReload(C.GoString(path), int(eventType), int(pathType)) {
+	goPath := C.GoString(path)
+
+	if watchPattern.allowReload(goPath, int(eventType), int(pathType)) {
 		watchPattern.trigger <- struct{}{}
+	}
+
+	// If the watcher prematurely sends the die@ event, retry watching
+	if pathType == 4 && strings.HasPrefix(goPath, "e/self/die@") && watcherIsActive.Load() {
+		retryWatching(watchPattern)
 	}
 }
 
