@@ -36,6 +36,7 @@ func TestWatchesCorrectDir(t *testing.T) {
 	hasDir(t, "/path/*.php", "/path")
 	hasDir(t, "/path/*/*.php", "/path")
 	hasDir(t, "/path/?dir/*.php", "/path")
+	hasDir(t, "/path/{dir1,dir2}/**/*.php", "/path")
 	hasDir(t, ".", relativeDir(t, ""))
 	hasDir(t, "./", relativeDir(t, ""))
 	hasDir(t, "./**", relativeDir(t, ""))
@@ -130,14 +131,18 @@ func TestValidExtendedPatterns(t *testing.T) {
 	shouldMatch(t, "/path/*.{php,twig}", "/path/file.php")
 	shouldMatch(t, "/path/*.{php,twig}", "/path/file.twig")
 	shouldMatch(t, "/path/**/{file.php,file.twig}", "/path/subpath/file.twig")
-	shouldMatch(t, "/path/{folder1,folder2}/file.php", "/path/folder1/file.php")
+	shouldMatch(t, "/path/{dir1,dir2}/file.php", "/path/dir1/file.php")
+	shouldMatch(t, "/path/{dir1,dir2}/file.php", "/path/dir2/file.php")
+	shouldMatch(t, "/path/{dir1,dir2}/**/*.php", "/path/dir1/subpath/file.php")
+	shouldMatch(t, "/path/{dir1,dir2}/**/*.php", "/path/dir2/subpath/file.php")
 }
 
 func TestInValidExtendedPatterns(t *testing.T) {
 	shouldNotMatch(t, "/path/*.{php}", "/path/file.txt")
 	shouldNotMatch(t, "/path/*.{php,twig}", "/path/file.txt")
 	shouldNotMatch(t, "/path/{file.php,file.twig}", "/path/file.txt")
-	shouldNotMatch(t, "/path/{folder1,folder2}/file.php", "/path/folder3/file.php")
+	shouldNotMatch(t, "/path/{dir1,dir2}/file.php", "/path/dir3/file.php")
+	shouldNotMatch(t, "/path/{dir1,dir2}/**/*.php", "/path/dir1/subpath/file.txt")
 }
 
 func relativeDir(t *testing.T, relativePath string) string {
