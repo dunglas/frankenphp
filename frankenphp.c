@@ -823,7 +823,19 @@ static void *php_thread(void *arg) {
   should_filter_var = default_filter != NULL;
 
   // perform work until go signals to stop
-  while (go_frankenphp_on_thread_work(thread_index)) {
+  while (true) {
+    char *scriptName = go_frankenphp_on_thread_work(thread_index);
+
+    // if the script name is NULL, the thread should exit
+    if (scriptName == NULL) {
+      break;
+    }
+
+    // if the script name is not empty, execute the PHP script
+    if (strlen(scriptName) != 0) {
+      int exit_status = frankenphp_execute_script(scriptName);
+      go_frankenphp_after_thread_work(thread_index, exit_status);
+    }
   }
 
   go_frankenphp_release_known_variable_keys(thread_index);
@@ -934,8 +946,6 @@ int frankenphp_request_startup() {
 
 int frankenphp_execute_script(char *file_name) {
   if (frankenphp_request_startup() == FAILURE) {
-    free(file_name);
-    file_name = NULL;
 
     return FAILURE;
   }
@@ -944,8 +954,6 @@ int frankenphp_execute_script(char *file_name) {
 
   zend_file_handle file_handle;
   zend_stream_init_filename(&file_handle, file_name);
-  free(file_name);
-  file_name = NULL;
 
   file_handle.primary_script = 1;
 

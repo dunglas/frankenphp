@@ -20,6 +20,8 @@ type phpThread struct {
 	requestChan   chan *http.Request
 	worker        *worker
 
+	// the script name for the current request
+	scriptName string
 	// the index in the phpThreads slice
 	threadIndex int
 	// whether the thread has work assigned to it
@@ -30,6 +32,8 @@ type phpThread struct {
 	onStartup func(*phpThread)
 	// the actual work iteration (done in a loop)
 	onWork func(*phpThread)
+	// after the work iteration is done
+	onWorkDone func(*phpThread, int)
 	// after the thread is done
 	onShutdown func(*phpThread)
 	// chan to signal the thread to stop the current work iteration
@@ -51,6 +55,7 @@ func (thread *phpThread) getActiveRequest() *http.Request {
 // TODO: Also consider this case: work => inactive => work
 func (thread *phpThread) setInactive() {
 	thread.isActive.Store(false)
+	thread.scriptName = ""
 	thread.onWork = func(thread *phpThread) {
 		thread.requestChan = make(chan *http.Request)
 		select {
@@ -60,7 +65,7 @@ func (thread *phpThread) setInactive() {
 	}
 }
 
-func (thread *phpThread) setActive(onStartup func(*phpThread), onWork func(*phpThread), onShutdown func(*phpThread)) {
+func (thread *phpThread) setActive(onStartup func(*phpThread), onWork func(*phpThread), onWorkDone func(*phpThread, int), onShutdown func(*phpThread)) {
 	thread.isActive.Store(true)
 
 	// to avoid race conditions, the thread sets its own hooks on startup
@@ -71,6 +76,7 @@ func (thread *phpThread) setActive(onStartup func(*phpThread), onWork func(*phpT
 		thread.onStartup = onStartup
 		thread.onWork = onWork
 		thread.onShutdown = onShutdown
+		thread.onWorkDone = onWorkDone
 		if thread.onStartup != nil {
 			thread.onStartup(thread)
 		}
@@ -95,10 +101,10 @@ func (thread *phpThread) pinCString(s string) *C.char {
 }
 
 //export go_frankenphp_on_thread_work
-func go_frankenphp_on_thread_work(threadIndex C.uintptr_t) C.bool {
+func go_frankenphp_on_thread_work(threadIndex C.uintptr_t) *C.char {
 	// first check if FrankPHP is shutting down
 	if threadsAreDone.Load() {
-		return C.bool(false)
+		return nil
 	}
 	thread := phpThreads[threadIndex]
 
@@ -117,7 +123,21 @@ func go_frankenphp_on_thread_work(threadIndex C.uintptr_t) C.bool {
 
 	// do the actual work
 	thread.onWork(thread)
-	return C.bool(true)
+
+	// return the name of the PHP script that should be executed
+	return thread.pinCString(thread.scriptName)
+}
+
+//export go_frankenphp_after_thread_work
+func go_frankenphp_after_thread_work(threadIndex C.uintptr_t, exitStatus C.int) {
+	thread := phpThreads[threadIndex]
+	if exitStatus < 0 {
+		panic(ScriptExecutionError)
+	}
+	if thread.onWorkDone != nil {
+		thread.onWorkDone(thread, int(exitStatus))
+	}
+	thread.Unpin()
 }
 
 //export go_frankenphp_on_thread_shutdown

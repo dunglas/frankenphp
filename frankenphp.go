@@ -121,7 +121,7 @@ type FrankenPHPContext struct {
 	closed sync.Once
 
 	responseWriter http.ResponseWriter
-	exitStatus     C.int
+	exitStatus     int
 
 	done      chan interface{}
 	startedAt time.Time
@@ -335,7 +335,7 @@ func Init(options ...Option) error {
 	}
 
 	for i := 0; i < totalThreadCount-workerThreadCount; i++ {
-		getInactivePHPThread().setActive(nil, handleRequest, nil)
+		getInactivePHPThread().setActive(nil, handleRequest, afterRequest, nil)
 	}
 
 	if err := initWorkers(opt.workers); err != nil {
@@ -549,28 +549,31 @@ func go_getenv(threadIndex C.uintptr_t, name *C.go_string) (C.bool, *C.go_string
 func handleRequest(thread *phpThread) {
 	select {
 	case <-done:
+		thread.scriptName = ""
 		return
 
 	case r := <-requestChan:
 		thread.mainRequest = r
-
-		fc, ok := FromContext(r.Context())
-		if !ok {
-			panic(InvalidRequestError)
-		}
-		defer func() {
-			maybeCloseContext(fc)
-			thread.mainRequest = nil
-			thread.Unpin()
-		}()
+		fc := r.Context().Value(contextKey).(*FrankenPHPContext)
 
 		if err := updateServerContext(thread, r, true, false); err != nil {
 			rejectRequest(fc.responseWriter, err.Error())
+			thread.scriptName = ""
+			afterRequest(thread, 0)
 			return
 		}
 
-		fc.exitStatus = executeScriptClassic(fc.scriptFilename)
+		// set the scriptName that should be executed
+		thread.scriptName = fc.scriptFilename
 	}
+}
+
+func afterRequest(thread *phpThread, exitStatus int) {
+	fc := thread.mainRequest.Context().Value(contextKey).(*FrankenPHPContext)
+	fc.exitStatus = exitStatus
+	maybeCloseContext(fc)
+	thread.mainRequest = nil
+	thread.Unpin()
 }
 
 func maybeCloseContext(fc *FrankenPHPContext) {
@@ -781,15 +784,6 @@ func go_log(message *C.char, level C.int) {
 			c.Write(zap.Stringer("syslog_level", syslogLevel(level)))
 		}
 	}
-}
-
-func executeScriptClassic(script string) C.int {
-	// scriptFilename is freed in frankenphp_execute_script()
-	exitStatus := C.frankenphp_execute_script(C.CString(script))
-	if exitStatus < 0 {
-		panic(ScriptExecutionError)
-	}
-	return exitStatus
 }
 
 // ExecuteScriptCLI executes the PHP script passed as parameter.

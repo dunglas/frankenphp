@@ -90,6 +90,7 @@ func (worker *worker) startNewThread() {
 			worker.threadMutex.Lock()
 			worker.threads = append(worker.threads, thread)
 			worker.threadMutex.Unlock()
+			thread.scriptName = worker.fileName
 		},
 		// onWork => while the thread is working (in a loop)
 		func(thread *phpThread) {
@@ -98,7 +99,9 @@ func (worker *worker) startNewThread() {
 				workerRestartWG.Wait()
 			}
 			beforeWorkerScript(thread)
-			exitStatus := executeScriptClassic(thread.worker.fileName)
+		},
+		// onWorkDone => after the work iteration is done
+		func(thread *phpThread, exitStatus int) {
 			afterWorkerScript(thread, exitStatus)
 		},
 		// onShutdown => after the thread is done
@@ -171,7 +174,7 @@ func beforeWorkerScript(thread *phpThread) {
 	}
 }
 
-func afterWorkerScript(thread *phpThread, exitStatus C.int) {
+func afterWorkerScript(thread *phpThread, exitStatus int) {
 	fc := thread.mainRequest.Context().Value(contextKey).(*FrankenPHPContext)
 	fc.exitStatus = exitStatus
 

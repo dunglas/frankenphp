@@ -53,6 +53,7 @@ func TestStartAndStop100PHPThreadsThatDoNothing(t *testing.T) {
 				workWG.Done()
 				newThread.setInactive()
 			},
+		    nil,
 			// onShutdown => after the thread is done
 			func(thread *phpThread) {
 				if thread.threadIndex == newThread.threadIndex {
@@ -91,6 +92,7 @@ func TestSleep10000TimesIn100Threads(t *testing.T) {
 				r, _ = NewRequestWithContext(r, WithRequestDocumentRoot("/", false))
 				assert.NoError(t, updateServerContext(thread, r, true, false))
 				thread.mainRequest = r
+				thread.scriptName = scriptPath
 			},
 			// onWork => execute the sleep.php script until we reach maxExecutions
 			func(thread *phpThread) {
@@ -103,9 +105,10 @@ func TestSleep10000TimesIn100Threads(t *testing.T) {
 				executionCount++
 				workWG.Done()
 				executionMutex.Unlock()
-
-				// exit the loop and fail the test if the script fails
-				if int(executeScriptClassic(scriptPath)) != 0 {
+			},
+			// onWorkDone => check the exit status of the script
+			func(thread *phpThread, existStatus int) {
+				if int(existStatus) != 0 {
 					panic("script execution failed: " + scriptPath)
 				}
 			},
@@ -147,6 +150,7 @@ func TestStart100ThreadsAndConvertThemToDifferentThreads10Times(t *testing.T) {
 					thread.setInactive()
 					workWG.Done()
 				},
+				nil,
 				// onShutdown => after the thread is done
 				func(thread *phpThread) {
 					shutdownTypes[numberOfConversion].Add(1)
