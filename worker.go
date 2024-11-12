@@ -5,6 +5,7 @@ package frankenphp
 import "C"
 import (
 	"fmt"
+	"github.com/dunglas/frankenphp/internal/fastabs"
 	"net/http"
 	"path/filepath"
 	"sync"
@@ -63,7 +64,7 @@ func initWorkers(opt []workerOpt) error {
 }
 
 func newWorker(o workerOpt) (*worker, error) {
-	absFileName, err := FastAbs(o.fileName)
+	absFileName, err := fastabs.FastAbs(o.fileName)
 	if err != nil {
 		return nil, fmt.Errorf("worker filename is invalid %q: %w", o.fileName, err)
 	}

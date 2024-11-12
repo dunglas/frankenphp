@@ -1,6 +1,7 @@
 package frankenphp
 
 import (
+	"github.com/dunglas/frankenphp/internal/fastabs"
 	"path/filepath"
 
 	"go.uber.org/zap"
@@ -19,7 +20,7 @@ type RequestOption func(h *FrankenPHPContext) error
 func WithRequestDocumentRoot(documentRoot string, resolveSymlink bool) RequestOption {
 	return func(o *FrankenPHPContext) error {
 		// make sure file root is absolute
-		root, err := FastAbs(documentRoot)
+		root, err := fastabs.FastAbs(documentRoot)
 		if err != nil {
 			return err
 		}

@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/dunglas/frankenphp/internal/fastabs"
 	"github.com/prometheus/client_golang/prometheus"
 	"net/http"
 	"path/filepath"
@@ -270,7 +271,7 @@ func (f *FrankenPHPModule) Provision(ctx caddy.Context) error {
 	}
 
 	if !needReplacement(f.Root) {
-		root, err := frankenphp.FastAbs(f.Root)
+		root, err := fastabs.FastAbs(f.Root)
 		if err != nil {
 			return fmt.Errorf("unable to make the root path absolute: %w", err)
 		}

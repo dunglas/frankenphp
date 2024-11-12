@@ -1,4 +1,6 @@
-package frankenphp
+//go:build !unix
+
+package fastabs
 
 import (
 	"path/filepath"
