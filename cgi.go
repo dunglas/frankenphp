@@ -279,7 +279,7 @@ func sanitizedPathJoin(root, reqPath string) string {
 
 	path := filepath.Join(root, filepath.Clean("/"+reqPath))
 
-	// fastabs.Join also cleans the path, and cleaning strips
+	// filepath.Join also cleans the path, and cleaning strips
 	// the trailing slash, so we need to re-add it afterward.
 	// if the length is 1, then it's a path to the root,
 	// and that should return ".", so we don't append the separator.

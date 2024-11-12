@@ -9,6 +9,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/dunglas/frankenphp/internal/fastabs"
 	"io"
 	"log"
 	"mime/multipart"
@@ -921,7 +922,7 @@ func testRejectInvalidHeaders(t *testing.T, opts *testOptions) {
 // To run this fuzzing test use: go test -fuzz FuzzRequest
 // TODO: Cover more potential cases
 func FuzzRequest(f *testing.F) {
-	absPath, _ := filepath.Abs("./testdata/")
+	absPath, _ := fastabs.FastAbs("./testdata/")
 
 	f.Add("hello world")
 	f.Add("😀😅🙃🤩🥲🤪😘😇😉🐘🧟")
