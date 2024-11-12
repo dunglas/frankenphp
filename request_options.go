@@ -2,12 +2,15 @@ package frankenphp
 
 import (
 	"path/filepath"
+	"sync"
 
 	"go.uber.org/zap"
 )
 
 // RequestOption instances allow to configure a FrankenPHP Request.
 type RequestOption func(h *FrankenPHPContext) error
+
+var documentRootCache sync.Map
 
 // WithRequestDocumentRoot sets the root directory of the PHP application.
 // if resolveSymlink is true, oath declared as root directory will be resolved
@@ -18,19 +21,25 @@ type RequestOption func(h *FrankenPHPContext) error
 // directive will set $_SERVER['DOCUMENT_ROOT'] to the real directory path.
 func WithRequestDocumentRoot(documentRoot string, resolveSymlink bool) RequestOption {
 	return func(o *FrankenPHPContext) error {
-		// make sure file root is absolute
-		root, err := filepath.Abs(documentRoot)
-		if err != nil {
-			return err
-		}
-
-		if resolveSymlink {
-			if root, err = filepath.EvalSymlinks(root); err != nil {
+		v, ok := documentRootCache.Load(documentRoot)
+		if !ok {
+			var err error
+			// make sure file root is absolute
+			v, err = filepath.Abs(documentRoot)
+			if err != nil {
 				return err
 			}
+
+			if resolveSymlink {
+				if v, err = filepath.EvalSymlinks(v.(string)); err != nil {
+					return err
+				}
+			}
+
+			documentRootCache.LoadOrStore(documentRoot, v)
 		}
 
-		o.documentRoot = root
+		o.documentRoot = v.(string)
 
 		return nil
 	}
