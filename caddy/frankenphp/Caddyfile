@@ -19,7 +19,7 @@
 	#	}
 	#}
 
-	root * public/
+	root public/
 	encode zstd br gzip
 
 	# Uncomment the following lines to enable Mercure and Vulcain modules
@@ -41,5 +41,7 @@
 
 	{$CADDY_SERVER_EXTRA_DIRECTIVES}
 
-	php_server
+	php_server {
+		root {$PWD}/public/
+	}
 }

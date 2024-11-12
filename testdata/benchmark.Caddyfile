@@ -8,6 +8,7 @@ http:// {
 
 		encode zstd br gzip
 		php_server {
+			root {$PWD}
 			file_server off
 			resolve_root_symlink false
 		}

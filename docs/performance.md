@@ -52,6 +52,37 @@ set the `GOMEMLIMIT` environment variable to the available amount of memory.
 
 For more details, [the Go documentation page dedicated to this subject](https://pkg.go.dev/runtime#hdr-Environment_Variables) is a must-read to get the most out of the runtime.
 
+## Explicitly Set The Root Directory
+
+> [!TIP]
+>
+> The default `Caddyfile` provided in the Docker images already contains this optimization.
+
+When not explicitly set, FrankenPHP sets the `root` option of the `php_server` directive to the `{http.vars.root}` placeholder.
+The value of this placeholder [can be configured using the `root` directive provided by Caddy](https://caddyserver.com/docs/caddyfile/directives/root)
+and can contain dynamic values.
+
+While convenient, this feature comes at a cost in terms of performance because the root directory is resolved at runtime,
+and, depending on your configuration, may change with each request.
+
+Explicitly set the root directory in the `php_server` directive to avoid this cost:
+
+```caddyfile
+php_server {
+    root /path/to/your/public/dir/
+}
+```
+
+Alternatively, you can use [the `PWD` environment variable](https://pubs.opengroup.org/onlinepubs/009604599/utilities/cd.html),
+which always contain the path to the current directory on POSIX systems (including on Linux, macOS and FreeBSD).
+This variable will only be resolved once, at Caddy startup:
+
+```caddyfile
+php_server {
+    root {$PWD}/public/
+}
+```
+
 ## `file_server`
 
 By default, the `php_server` directive automatically sets up a file server to
