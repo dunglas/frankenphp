@@ -63,7 +63,7 @@ func initWorkers(opt []workerOpt) error {
 }
 
 func newWorker(o workerOpt) (*worker, error) {
-	absFileName, err := filepath.Abs(o.fileName)
+	absFileName, err := FastAbs(o.fileName)
 	if err != nil {
 		return nil, fmt.Errorf("worker filename is invalid %q: %w", o.fileName, err)
 	}

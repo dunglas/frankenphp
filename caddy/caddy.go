@@ -270,7 +270,7 @@ func (f *FrankenPHPModule) Provision(ctx caddy.Context) error {
 	}
 
 	if !needReplacement(f.Root) {
-		root, err := filepath.Abs(f.Root)
+		root, err := frankenphp.FastAbs(f.Root)
 		if err != nil {
 			return fmt.Errorf("unable to make the root path absolute: %w", err)
 		}
