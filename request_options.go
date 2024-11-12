@@ -3,12 +3,19 @@ package frankenphp
 import (
 	"github.com/dunglas/frankenphp/internal/fastabs"
 	"path/filepath"
+	"sync"
+	"sync/atomic"
 
 	"go.uber.org/zap"
 )
 
 // RequestOption instances allow to configure a FrankenPHP Request.
 type RequestOption func(h *FrankenPHPContext) error
+
+var (
+	documentRootCache    sync.Map
+	documentRootCacheLen atomic.Uint32
+)
 
 // WithRequestDocumentRoot sets the root directory of the PHP application.
 // if resolveSymlink is true, oath declared as root directory will be resolved
@@ -18,20 +25,29 @@ type RequestOption func(h *FrankenPHPContext) error
 // symlink is changed without PHP being restarted; enabling this
 // directive will set $_SERVER['DOCUMENT_ROOT'] to the real directory path.
 func WithRequestDocumentRoot(documentRoot string, resolveSymlink bool) RequestOption {
-	return func(o *FrankenPHPContext) error {
-		// make sure file root is absolute
-		root, err := fastabs.FastAbs(documentRoot)
-		if err != nil {
-			return err
+	return func(o *FrankenPHPContext) (err error) {
+		v, ok := documentRootCache.Load(documentRoot)
+		if !ok {
+			// make sure file root is absolute
+			v, err = fastabs.FastAbs(documentRoot)
+			if err != nil {
+				return err
+			}
+
+			// prevent the cache to grow forever, this is a totally arbitrary value
+			if documentRootCacheLen.Load() < 1024 {
+				documentRootCache.LoadOrStore(documentRoot, v)
+				documentRootCacheLen.Add(1)
+			}
 		}
 
 		if resolveSymlink {
-			if root, err = filepath.EvalSymlinks(root); err != nil {
+			if v, err = filepath.EvalSymlinks(v.(string)); err != nil {
 				return err
 			}
 		}
 
-		o.documentRoot = root
+		o.documentRoot = v.(string)
 
 		return nil
 	}
