@@ -3,6 +3,7 @@
 package watcher
 
 import (
+	"github.com/dunglas/frankenphp/internal/fastabs"
 	"path/filepath"
 	"strings"
 
@@ -34,7 +35,7 @@ func parseFilePattern(filePattern string) (*watchPattern, error) {
 	w := &watchPattern{}
 
 	// first we clean the pattern
-	absPattern, err := filepath.Abs(filePattern)
+	absPattern, err := fastabs.FastAbs(filePattern)
 	if err != nil {
 		return nil, err
 	}

@@ -1,7 +1,7 @@
 package frankenphp
 
 import (
-	"path/filepath"
+	"github.com/dunglas/frankenphp/internal/fastabs"
 	"regexp"
 	"sync"
 	"time"
@@ -126,7 +126,7 @@ func (m *PrometheusMetrics) StopWorker(name string, reason StopReason) {
 }
 
 func (m *PrometheusMetrics) getIdentity(name string) (string, error) {
-	actualName, err := filepath.Abs(name)
+	actualName, err := fastabs.FastAbs(name)
 	if err != nil {
 		return name, err
 	}

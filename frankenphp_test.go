@@ -9,6 +9,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/dunglas/frankenphp/internal/fastabs"
 	"io"
 	"log"
 	"mime/multipart"
@@ -921,12 +922,13 @@ func testRejectInvalidHeaders(t *testing.T, opts *testOptions) {
 // To run this fuzzing test use: go test -fuzz FuzzRequest
 // TODO: Cover more potential cases
 func FuzzRequest(f *testing.F) {
+	absPath, _ := fastabs.FastAbs("./testdata/")
+
 	f.Add("hello world")
 	f.Add("😀😅🙃🤩🥲🤪😘😇😉🐘🧟")
 	f.Add("%00%11%%22%%33%%44%%55%%66%%77%%88%%99%%aa%%bb%%cc%%dd%%ee%%ff")
 	f.Add("\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f")
 	f.Fuzz(func(t *testing.T, fuzzedString string) {
-		absPath, _ := filepath.Abs("./testdata/")
 		runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, _ int) {
 			req := httptest.NewRequest("GET", "http://example.com/server-variable", nil)
 			req.URL = &url.URL{RawQuery: "test=" + fuzzedString, Path: "/server-variable.php/" + fuzzedString}
