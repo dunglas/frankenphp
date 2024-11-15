@@ -1,6 +1,5 @@
 package frankenphp
 
-// #include <stdlib.h>
 // #include "frankenphp.h"
 import "C"
 import (
@@ -80,39 +79,6 @@ func newWorker(o workerOpt) (*worker, error) {
 	return w, nil
 }
 
-func (worker *worker) startNewThread() {
-	getInactivePHPThread().setActive(
-		// onStartup => right before the thread is ready
-		func(thread *phpThread) {
-			thread.worker = worker
-			thread.requestChan = make(chan *http.Request)
-			metrics.ReadyWorker(worker.fileName)
-			thread.backoff = newExponentialBackoff()
-			worker.threadMutex.Lock()
-			worker.threads = append(worker.threads, thread)
-			worker.threadMutex.Unlock()
-			thread.scriptName = worker.fileName
-		},
-		// onWork => while the thread is working (in a loop)
-		func(thread *phpThread) {
-			if watcherIsEnabled && workersAreRestarting.Load() {
-				workerShutdownWG.Done()
-				workerRestartWG.Wait()
-			}
-			beforeWorkerScript(thread)
-		},
-		// onWorkDone => after the work iteration is done
-		func(thread *phpThread, exitStatus int) {
-			afterWorkerScript(thread, exitStatus)
-		},
-		// onShutdown => after the thread is done
-		func(thread *phpThread) {
-			thread.worker = nil
-			thread.backoff = nil
-		},
-	)
-}
-
 func stopWorkers() {
 	close(workersDone)
 }
@@ -129,7 +95,7 @@ func restartWorkers() {
 		workerShutdownWG.Add(worker.num)
 	}
 	workersAreRestarting.Store(true)
-	close(workersDone)
+	stopWorkers()
 	workerShutdownWG.Wait()
 	workersDone = make(chan interface{})
 	workersAreRestarting.Store(false)
@@ -143,10 +109,42 @@ func getDirectoriesToWatch(workerOpts []workerOpt) []string {
 	return directoriesToWatch
 }
 
-func beforeWorkerScript(thread *phpThread) {
-	worker := thread.worker
+func (worker *worker) startNewThread() {
+	getInactivePHPThread().setActive(
+		// onStartup => right before the thread is ready
+		func(thread *phpThread) {
+			thread.worker = worker
+			thread.scriptName = worker.fileName
+			thread.requestChan = make(chan *http.Request)
+			thread.backoff = newExponentialBackoff()
+			worker.threadMutex.Lock()
+			worker.threads = append(worker.threads, thread)
+			worker.threadMutex.Unlock()
+			metrics.ReadyWorker(worker.fileName)
+		},
+		// beforeScriptExecution => set up the worker with a fake request
+		func(thread *phpThread) {
+			worker.beforeScript(thread)
+		},
+		// afterScriptExecution => tear down the worker
+		func(thread *phpThread, exitStatus int) {
+			worker.afterScript(thread, exitStatus)
+		},
+		// onShutdown => after the thread is done
+		func(thread *phpThread) {
+			thread.worker = nil
+			thread.backoff = nil
+		},
+	)
+}
 
-	// if we are restarting the worker, reset the exponential failure backoff
+func (worker *worker) beforeScript(thread *phpThread) {
+	// if we are restarting due to file watching, wait for all workers to finish first
+	if watcherIsEnabled && workersAreRestarting.Load() {
+		workerShutdownWG.Done()
+		workerRestartWG.Wait()
+	}
+
 	thread.backoff.reset()
 	metrics.StartWorker(worker.fileName)
 
@@ -175,36 +173,35 @@ func beforeWorkerScript(thread *phpThread) {
 	}
 }
 
-func afterWorkerScript(thread *phpThread, exitStatus int) {
+func (worker *worker) afterScript(thread *phpThread, exitStatus int) {
 	fc := thread.mainRequest.Context().Value(contextKey).(*FrankenPHPContext)
 	fc.exitStatus = exitStatus
 
 	defer func() {
 		maybeCloseContext(fc)
 		thread.mainRequest = nil
-		thread.Unpin()
 	}()
 
 	// on exit status 0 we just run the worker script again
 	if fc.exitStatus == 0 {
 		// TODO: make the max restart configurable
-		metrics.StopWorker(thread.worker.fileName, StopReasonRestart)
+		metrics.StopWorker(worker.fileName, StopReasonRestart)
 
 		if c := logger.Check(zapcore.DebugLevel, "restarting"); c != nil {
-			c.Write(zap.String("worker", thread.worker.fileName))
+			c.Write(zap.String("worker", worker.fileName))
 		}
 		return
 	}
 
 	// on exit status 1 we apply an exponential backoff when restarting
-	metrics.StopWorker(thread.worker.fileName, StopReasonCrash)
+	metrics.StopWorker(worker.fileName, StopReasonCrash)
 	thread.backoff.trigger(func(failureCount int) {
 		// if we end up here, the worker has not been up for backoff*2
 		// this is probably due to a syntax error or another fatal error
 		if !watcherIsEnabled {
-			panic(fmt.Errorf("workers %q: too many consecutive failures", thread.worker.fileName))
+			panic(fmt.Errorf("workers %q: too many consecutive failures", worker.fileName))
 		}
-		logger.Warn("many consecutive worker failures", zap.String("worker", thread.worker.fileName), zap.Int("failures", failureCount))
+		logger.Warn("many consecutive worker failures", zap.String("worker", worker.fileName), zap.Int("failures", failureCount))
 	})
 }
 

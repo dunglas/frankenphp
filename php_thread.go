@@ -1,8 +1,5 @@
 package frankenphp
 
-// #include <stdint.h>
-// #include <stdbool.h>
-// #include <php_variables.h>
 // #include "frankenphp.h"
 import "C"
 import (
@@ -31,9 +28,9 @@ type phpThread struct {
 	// right before the first work iteration
 	onStartup func(*phpThread)
 	// the actual work iteration (done in a loop)
-	onWork func(*phpThread)
+	beforeScriptExecution func(*phpThread)
 	// after the work iteration is done
-	onWorkDone func(*phpThread, int)
+	afterScriptExecution func(*phpThread, int)
 	// after the thread is done
 	onShutdown func(*phpThread)
 	// chan to signal the thread to stop the current work iteration
@@ -56,7 +53,7 @@ func (thread *phpThread) getActiveRequest() *http.Request {
 func (thread *phpThread) setInactive() {
 	thread.isActive.Store(false)
 	thread.scriptName = ""
-	thread.onWork = func(thread *phpThread) {
+	thread.beforeScriptExecution = func(thread *phpThread) {
 		thread.requestChan = make(chan *http.Request)
 		select {
 		case <-done:
@@ -65,7 +62,12 @@ func (thread *phpThread) setInactive() {
 	}
 }
 
-func (thread *phpThread) setActive(onStartup func(*phpThread), onWork func(*phpThread), onWorkDone func(*phpThread, int), onShutdown func(*phpThread)) {
+func (thread *phpThread) setActive(
+	onStartup func(*phpThread),
+	beforeScriptExecution func(*phpThread),
+	afterScriptExecution func(*phpThread, int),
+	onShutdown func(*phpThread),
+) {
 	thread.isActive.Store(true)
 
 	// to avoid race conditions, the thread sets its own hooks on startup
@@ -74,9 +76,9 @@ func (thread *phpThread) setActive(onStartup func(*phpThread), onWork func(*phpT
 			thread.onShutdown(thread)
 		}
 		thread.onStartup = onStartup
-		thread.onWork = onWork
+		thread.beforeScriptExecution = beforeScriptExecution
 		thread.onShutdown = onShutdown
-		thread.onWorkDone = onWorkDone
+		thread.afterScriptExecution = afterScriptExecution
 		if thread.onStartup != nil {
 			thread.onStartup(thread)
 		}
@@ -100,9 +102,9 @@ func (thread *phpThread) pinCString(s string) *C.char {
 	return thread.pinString(s + "\x00")
 }
 
-//export go_frankenphp_on_thread_work
-func go_frankenphp_on_thread_work(threadIndex C.uintptr_t) *C.char {
-	// first check if FrankPHP is shutting down
+//export go_frankenphp_before_script_execution
+func go_frankenphp_before_script_execution(threadIndex C.uintptr_t) *C.char {
+	// returning nil signals the thread to stop
 	if threadsAreDone.Load() {
 		return nil
 	}
@@ -121,21 +123,21 @@ func go_frankenphp_on_thread_work(threadIndex C.uintptr_t) *C.char {
 		}
 	}
 
-	// do the actual work
-	thread.onWork(thread)
+	// execute a hook before the script is executed
+	thread.beforeScriptExecution(thread)
 
 	// return the name of the PHP script that should be executed
 	return thread.pinCString(thread.scriptName)
 }
 
-//export go_frankenphp_after_thread_work
-func go_frankenphp_after_thread_work(threadIndex C.uintptr_t, exitStatus C.int) {
+//export go_frankenphp_after_script_execution
+func go_frankenphp_after_script_execution(threadIndex C.uintptr_t, exitStatus C.int) {
 	thread := phpThreads[threadIndex]
 	if exitStatus < 0 {
 		panic(ScriptExecutionError)
 	}
-	if thread.onWorkDone != nil {
-		thread.onWorkDone(thread, int(exitStatus))
+	if thread.afterScriptExecution != nil {
+		thread.afterScriptExecution(thread, int(exitStatus))
 	}
 	thread.Unpin()
 }

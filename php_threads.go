@@ -1,6 +1,5 @@
 package frankenphp
 
-// #include <stdint.h>
 // #include "frankenphp.h"
 import "C"
 import (

@@ -45,7 +45,7 @@ func TestStartAndStop100PHPThreadsThatDoNothing(t *testing.T) {
 					readyThreads.Add(1)
 				}
 			},
-			// onWork => while the thread is running (we stop here immediately)
+			// beforeScriptExecution => we stop here immediately
 			func(thread *phpThread) {
 				if thread.threadIndex == newThread.threadIndex {
 					workingThreads.Add(1)
@@ -53,7 +53,10 @@ func TestStartAndStop100PHPThreadsThatDoNothing(t *testing.T) {
 				workWG.Done()
 				newThread.setInactive()
 			},
-			nil,
+			// afterScriptExecution => no script is executed, we shouldn't reach here
+			func(thread *phpThread, exitStatus int) {
+				panic("hook afterScriptExecution should not be called here")
+			},
 			// onShutdown => after the thread is done
 			func(thread *phpThread) {
 				if thread.threadIndex == newThread.threadIndex {
@@ -94,7 +97,7 @@ func TestSleep10000TimesIn100Threads(t *testing.T) {
 				thread.mainRequest = r
 				thread.scriptName = scriptPath
 			},
-			// onWork => execute the sleep.php script until we reach maxExecutions
+			// beforeScriptExecution => execute the sleep.php script until we reach maxExecutions
 			func(thread *phpThread) {
 				executionMutex.Lock()
 				if executionCount >= maxExecutions {
@@ -106,9 +109,9 @@ func TestSleep10000TimesIn100Threads(t *testing.T) {
 				workWG.Done()
 				executionMutex.Unlock()
 			},
-			// onWorkDone => check the exit status of the script
-			func(thread *phpThread, existStatus int) {
-				if int(existStatus) != 0 {
+			// afterScriptExecution => check the exit status of the script
+			func(thread *phpThread, exitStatus int) {
+				if int(exitStatus) != 0 {
 					panic("script execution failed: " + scriptPath)
 				}
 			},
@@ -144,12 +147,13 @@ func TestStart100ThreadsAndConvertThemToDifferentThreads10Times(t *testing.T) {
 				func(thread *phpThread) {
 					startUpTypes[numberOfConversion].Add(1)
 				},
-				// onWork => while the thread is running
+				// beforeScriptExecution => while the thread is running
 				func(thread *phpThread) {
 					workTypes[numberOfConversion].Add(1)
 					thread.setInactive()
 					workWG.Done()
 				},
+				// afterScriptExecution => we don't execute a script
 				nil,
 				// onShutdown => after the thread is done
 				func(thread *phpThread) {

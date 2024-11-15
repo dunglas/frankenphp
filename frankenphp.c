@@ -830,7 +830,7 @@ static void *php_thread(void *arg) {
 
   // perform work until go signals to stop
   while (true) {
-    char *scriptName = go_frankenphp_on_thread_work(thread_index);
+    char *scriptName = go_frankenphp_before_script_execution(thread_index);
 
     // if the script name is NULL, the thread should exit
     if (scriptName == NULL) {
@@ -840,7 +840,7 @@ static void *php_thread(void *arg) {
     // if the script name is not empty, execute the PHP script
     if (strlen(scriptName) != 0) {
       int exit_status = frankenphp_execute_script(scriptName);
-      go_frankenphp_after_thread_work(thread_index, exit_status);
+      go_frankenphp_after_script_execution(thread_index, exit_status);
     }
   }
 
