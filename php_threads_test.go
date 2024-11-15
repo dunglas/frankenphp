@@ -12,8 +12,8 @@ import (
 )
 
 func TestStartAndStopTheMainThreadWithOneInactiveThread(t *testing.T) {
-	logger = zap.NewNop() // the logger needs to not be nil
-	assert.NoError(t, initPHPThreads(1))     // reserve 1 thread
+	logger = zap.NewNop()                // the logger needs to not be nil
+	assert.NoError(t, initPHPThreads(1)) // reserve 1 thread
 
 	assert.Len(t, phpThreads, 1)
 	assert.Equal(t, 0, phpThreads[0].threadIndex)
@@ -53,7 +53,7 @@ func TestStartAndStop100PHPThreadsThatDoNothing(t *testing.T) {
 				workWG.Done()
 				newThread.setInactive()
 			},
-		    nil,
+			nil,
 			// onShutdown => after the thread is done
 			func(thread *phpThread) {
 				if thread.threadIndex == newThread.threadIndex {

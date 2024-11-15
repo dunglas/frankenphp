@@ -558,8 +558,7 @@ func go_sapi_getenv(threadIndex C.uintptr_t, name *C.go_string) *C.char {
 	return phpThreads[threadIndex].pinCString(envValue)
 }
 
-//export go_handle_request
-func go_handle_request(threadIndex C.uintptr_t) bool {
+func handleRequest(thread *phpThread) {
 	select {
 	case <-done:
 		thread.scriptName = ""
