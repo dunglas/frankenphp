@@ -19,7 +19,7 @@ FrankenPHP can also be used as a standalone Go library to embed PHP in any app u
 ### Docker
 
 ```console
-docker run -v $PWD:/app/public \
+docker run -v .:/app/public \
     -p 80:80 -p 443:443 -p 443:443/udp \
     dunglas/frankenphp
 ```
