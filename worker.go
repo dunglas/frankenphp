@@ -254,7 +254,6 @@ func restartWorkers(workerOpts []workerOpt) {
 
 func assignThreadToWorker(thread *phpThread) {
 	fc := thread.mainRequest.Context().Value(contextKey).(*FrankenPHPContext)
-	metrics.ReadyWorker(fc.scriptFilename)
 	worker, ok := workers[fc.scriptFilename]
 	if !ok {
 		panic("worker not found for script: " + fc.scriptFilename)
@@ -277,6 +276,8 @@ func go_frankenphp_worker_handle_request_start(threadIndex C.uintptr_t) C.bool {
 	if thread.worker == nil {
 		assignThreadToWorker(thread)
 	}
+	// inform metrics that the worker is ready
+	metrics.ReadyWorker(thread.worker.fileName)
 
 	if c := logger.Check(zapcore.DebugLevel, "waiting for request"); c != nil {
 		c.Write(zap.String("worker", thread.worker.fileName))
