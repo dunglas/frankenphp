@@ -17,7 +17,7 @@ cd php-*/
 ```
 
 Then, run the `configure` script with the options needed for your platform.
-The following `./configure` flags are mandatory, but you can add others, for example to compile extensions or additional features.
+The following `./configure` flags are mandatory, but you can add others, for example, to compile extensions or additional features.
 
 ### Linux
 
@@ -88,6 +88,8 @@ Alternatively, use [xcaddy](https://github.com/caddyserver/xcaddy) to compile Fr
 ```console
 CGO_ENABLED=1 \
 XCADDY_GO_BUILD_FLAGS="-ldflags='-w -s' -tags=nobadger,nomysql,nopgx" \
+CGO_CFLAGS=$(php-config --includes) \
+CGO_LDFLAGS="$(php-config --ldflags) $(php-config --libs)" \
 xcaddy build \
     --output frankenphp \
     --with github.com/dunglas/frankenphp/caddy \
@@ -104,4 +106,4 @@ xcaddy build \
 >
 > To do so, change the `XCADDY_GO_BUILD_FLAGS` environment variable to something like
 > `XCADDY_GO_BUILD_FLAGS=$'-ldflags "-w -s -extldflags \'-Wl,-z,stack-size=0x80000\'"'`
-> (change the value of the stack size according to your app needs).
+> (change the stack size value according to your app needs).

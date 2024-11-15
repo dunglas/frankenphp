@@ -3,6 +3,7 @@
 package watcher
 
 import (
+	"github.com/dunglas/frankenphp/internal/fastabs"
 	"path/filepath"
 	"strings"
 
@@ -10,9 +11,10 @@ import (
 )
 
 type watchPattern struct {
-	dir      string
-	patterns []string
-	trigger  chan struct{}
+	dir          string
+	patterns     []string
+	trigger      chan struct{}
+	failureCount int
 }
 
 func parseFilePatterns(filePatterns []string) ([]*watchPattern, error) {
@@ -33,7 +35,7 @@ func parseFilePattern(filePattern string) (*watchPattern, error) {
 	w := &watchPattern{}
 
 	// first we clean the pattern
-	absPattern, err := filepath.Abs(filePattern)
+	absPattern, err := fastabs.FastAbs(filePattern)
 	if err != nil {
 		return nil, err
 	}
@@ -90,7 +92,9 @@ func isValidPattern(fileName string, dir string, patterns []string) bool {
 	if !strings.HasPrefix(fileName, dir) {
 		return false
 	}
-	fileNameWithoutDir := strings.TrimLeft(fileName, dir+"/")
+
+	// remove the dir and '/' from the filename
+	fileNameWithoutDir := strings.TrimPrefix(strings.TrimPrefix(fileName, dir), "/")
 
 	// if the pattern has size 1 we can match it directly against the filename
 	if len(patterns) == 1 {

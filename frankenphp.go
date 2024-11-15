@@ -329,7 +329,7 @@ func Init(options ...Option) error {
 		logger.Warn(`ZTS is not enabled, only 1 thread will be available, recompile PHP using the "--enable-zts" configuration option or performance will be degraded`)
 	}
 
-	requestChan = make(chan *http.Request)
+	requestChan = make(chan *http.Request, opt.numThreads)
 	if err := initPHPThreads(totalThreadCount); err != nil {
 		return err
 	}
@@ -546,7 +546,20 @@ func go_getenv(threadIndex C.uintptr_t, name *C.go_string) (C.bool, *C.go_string
 	return true, value // Return 1 to indicate success
 }
 
-func handleRequest(thread *phpThread) {
+//export go_sapi_getenv
+func go_sapi_getenv(threadIndex C.uintptr_t, name *C.go_string) *C.char {
+	envName := C.GoStringN(name.data, C.int(name.len))
+
+	envValue, exists := os.LookupEnv(envName)
+	if !exists {
+		return nil
+	}
+
+	return phpThreads[threadIndex].pinCString(envValue)
+}
+
+//export go_handle_request
+func go_handle_request(threadIndex C.uintptr_t) bool {
 	select {
 	case <-done:
 		thread.scriptName = ""

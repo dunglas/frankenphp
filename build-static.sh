@@ -126,7 +126,7 @@ if [ "${GITHUB_TOKEN}" ]; then
 fi
 
 # Compile e-dant/watcher as a static library
-mkdir watcher
+mkdir -p watcher
 cd watcher
 curl -f --retry 5 "${curlGitHubHeaders[@]}" https://api.github.com/repos/e-dant/watcher/releases/latest |
 	grep tarball_url |
