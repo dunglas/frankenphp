@@ -191,12 +191,7 @@ func (worker *worker) startNewWorkerThread() {
 		metrics.StopWorker(worker.fileName, StopReasonCrash)
 	}
 
-	metrics.StopWorker(worker.fileName, StopReasonShutdown)
-
-	// TODO: check if the termination is expected
-	if c := logger.Check(zapcore.DebugLevel, "terminated"); c != nil {
-		c.Write(zap.String("worker", worker.fileName))
-	}
+	// unreachable
 }
 
 func (worker *worker) handleRequest(r *http.Request) {
