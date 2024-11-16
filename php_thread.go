@@ -111,8 +111,7 @@ func go_frankenphp_before_script_execution(threadIndex C.uintptr_t) *C.char {
 	thread := phpThreads[threadIndex]
 
 	// if the thread is not ready, set it up
-	if !thread.isReady.Load() {
-		thread.isReady.Store(true)
+	if thread.isReady.CompareAndSwap(false, true) {
 		thread.done = make(chan struct{})
 		if thread.onStartup != nil {
 			thread.onStartup(thread)
