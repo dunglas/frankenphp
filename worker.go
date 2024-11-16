@@ -148,6 +148,12 @@ func (worker *worker) startNewWorkerThread() {
 		select {
 		case _, ok := <-workersDone:
 			if !ok {
+				metrics.StopWorker(worker.fileName, StopReasonShutdown)
+
+				if c := logger.Check(zapcore.DebugLevel, "terminated"); c != nil {
+					c.Write(zap.String("worker", worker.fileName))
+				}
+
 				return
 			}
 			// continue on since the channel is still open
