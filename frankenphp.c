@@ -1171,7 +1171,8 @@ int frankenphp_execute_php_function(const char *php_function) {
 }
 
 int frankenphp_reset_opcache(void) {
-  if (zend_hash_str_exists(CG(function_table), "opcache_reset", sizeof("opcache_reset") - 1)) {
+  if (zend_hash_str_exists(CG(function_table), "opcache_reset",
+                           sizeof("opcache_reset") - 1)) {
     return frankenphp_execute_php_function("opcache_reset");
   }
   return 0;
