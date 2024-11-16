@@ -31,7 +31,6 @@ const maxWorkerConsecutiveFailures = 6
 
 var (
 	watcherIsEnabled bool
-	workersReadyWG   sync.WaitGroup
 	workerShutdownWG sync.WaitGroup
 	workersDone      chan interface{}
 	workers          = make(map[string]*worker)
@@ -46,13 +45,10 @@ func initWorkers(opt []workerOpt) error {
 		if err != nil {
 			return err
 		}
-		workersReadyWG.Add(worker.num)
 		for i := 0; i < worker.num; i++ {
 			go worker.startNewWorkerThread()
 		}
 	}
-
-	workersReadyWG.Wait()
 
 	return nil
 }
@@ -284,7 +280,6 @@ func go_frankenphp_worker_handle_request_start(threadIndex C.uintptr_t) C.bool {
 	thread.readiedOnce.Do(func() {
 		// inform metrics that the worker is ready
 		metrics.ReadyWorker(thread.worker.fileName)
-		workersReadyWG.Done()
 	})
 
 	if c := logger.Check(zapcore.DebugLevel, "waiting for request"); c != nil {
@@ -352,5 +347,15 @@ func go_frankenphp_finish_request(threadIndex C.uintptr_t, isWorkerRequest bool)
 
 	if isWorkerRequest {
 		thread.Unpin()
+		workers[fc.scriptFilename].threadMutex.Lock()
+		defer workers[fc.scriptFilename].threadMutex.Unlock()
+		for i, t := range workers[fc.scriptFilename].threads {
+			if t == thread {
+				logger.Error("Removing worker thread", zap.String("worker", fc.scriptFilename), zap.Int("thread", int(threadIndex)))
+				// remove thread from worker threads
+				workers[fc.scriptFilename].threads = append(workers[fc.scriptFilename].threads[:i], workers[fc.scriptFilename].threads[i+1:]...)
+				break
+			}
+		}
 	}
 }
