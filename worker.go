@@ -273,8 +273,10 @@ func go_frankenphp_worker_handle_request_start(threadIndex C.uintptr_t) C.bool {
 	if thread.worker == nil {
 		assignThreadToWorker(thread)
 	}
-	// inform metrics that the worker is ready
-	metrics.ReadyWorker(thread.worker.fileName)
+	thread.readiedOnce.Do(func() {
+		// inform metrics that the worker is ready
+		metrics.ReadyWorker(thread.worker.fileName)
+	})
 
 	if c := logger.Check(zapcore.DebugLevel, "waiting for request"); c != nil {
 		c.Write(zap.String("worker", thread.worker.fileName))

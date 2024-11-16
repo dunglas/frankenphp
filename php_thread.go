@@ -6,6 +6,7 @@ import "C"
 import (
 	"net/http"
 	"runtime"
+	"sync"
 	"unsafe"
 )
 
@@ -19,6 +20,7 @@ type phpThread struct {
 	worker            *worker
 	requestChan       chan *http.Request
 	knownVariableKeys map[string]*C.zend_string
+	readiedOnce       sync.Once
 }
 
 func initPHPThreads(numThreads int) {
@@ -28,7 +30,7 @@ func initPHPThreads(numThreads int) {
 	}
 }
 
-func (thread phpThread) getActiveRequest() *http.Request {
+func (thread *phpThread) getActiveRequest() *http.Request {
 	if thread.workerRequest != nil {
 		return thread.workerRequest
 	}
@@ -46,5 +48,5 @@ func (thread *phpThread) pinString(s string) *C.char {
 
 // C strings must be null-terminated
 func (thread *phpThread) pinCString(s string) *C.char {
-	return thread.pinString(s+"\x00")
+	return thread.pinString(s + "\x00")
 }
