@@ -258,7 +258,6 @@ func assignThreadToWorker(thread *phpThread) {
 		panic("worker not found for script: " + fc.scriptFilename)
 	}
 	thread.worker = worker
-	workersReadyWG.Done()
 	thread.requestChan = make(chan *http.Request)
 	worker.threadMutex.Lock()
 	worker.threads = append(worker.threads, thread)
@@ -269,6 +268,15 @@ func assignThreadToWorker(thread *phpThread) {
 func go_frankenphp_worker_handle_request_start(threadIndex C.uintptr_t) C.bool {
 	thread := phpThreads[threadIndex]
 
+	select {
+	case _, ok := <-workersDone:
+		if !ok {
+			// attempted to restart during shutdown
+			return C.bool(false)
+		}
+	default:
+	}
+
 	// we assign a worker to the thread if it doesn't have one already
 	if thread.worker == nil {
 		assignThreadToWorker(thread)
@@ -276,6 +284,7 @@ func go_frankenphp_worker_handle_request_start(threadIndex C.uintptr_t) C.bool {
 	thread.readiedOnce.Do(func() {
 		// inform metrics that the worker is ready
 		metrics.ReadyWorker(thread.worker.fileName)
+		workersReadyWG.Done()
 	})
 
 	if c := logger.Check(zapcore.DebugLevel, "waiting for request"); c != nil {
