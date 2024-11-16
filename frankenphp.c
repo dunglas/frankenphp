@@ -1171,16 +1171,8 @@ int frankenphp_execute_php_function(const char *php_function) {
 }
 
 int frankenphp_reset_opcache(void) {
-  if (zend_hash_str_exists(&module_registry, "Zend OPcache", sizeof("Zend OPcache") - 1)) {
-    // OPCache is available, so we can safely call `opcache_reset`
-    if (zend_hash_str_exists(CG(function_table), "opcache_reset", sizeof("opcache_reset") - 1)) {
-      zend_function *func;
-      func = zend_hash_str_find_ptr(CG(function_table), "opcache_reset", sizeof("opcache_reset") - 1);
-
-      if (func) {
-        return frankenphp_execute_php_function("opcache_reset");
-      }
-    }
+  if (zend_hash_str_exists(CG(function_table), "opcache_reset", sizeof("opcache_reset") - 1)) {
+    return frankenphp_execute_php_function("opcache_reset");
   }
   return 0;
 }
