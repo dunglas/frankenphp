@@ -356,7 +356,6 @@ func go_frankenphp_finish_request(threadIndex C.uintptr_t, isWorkerRequest bool)
 		defer workers[fc.scriptFilename].threadMutex.Unlock()
 		for i, t := range workers[fc.scriptFilename].threads {
 			if t == thread {
-				logger.Error("Removing worker thread", zap.String("worker", fc.scriptFilename), zap.Int("thread", int(threadIndex)))
 				// remove thread from worker threads
 				workers[fc.scriptFilename].threads = append(workers[fc.scriptFilename].threads[:i], workers[fc.scriptFilename].threads[i+1:]...)
 				break
