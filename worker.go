@@ -79,7 +79,7 @@ func newWorker(o workerOpt) (*worker, error) {
 		num:         o.num,
 		env:         o.env,
 		requestChan: make(chan *http.Request),
-		ready:       make(chan struct{}),
+		ready:       make(chan struct{}, o.num),
 	}
 	workers[absFileName] = w
 
@@ -102,7 +102,10 @@ func (worker *worker) startNewWorkerThread() {
 			wait := backoff * 2
 			backingOffLock.RUnlock()
 			time.Sleep(wait)
-			worker.ready <- struct{}{}
+			select {
+			case worker.ready <- struct{}{}:
+			default:
+			}
 			upFunc.Do(func() {
 				backingOffLock.Lock()
 				defer backingOffLock.Unlock()
