@@ -355,14 +355,5 @@ func go_frankenphp_finish_request(threadIndex C.uintptr_t, isWorkerRequest bool)
 
 	if isWorkerRequest {
 		thread.Unpin()
-		workers[fc.scriptFilename].threadMutex.Lock()
-		defer workers[fc.scriptFilename].threadMutex.Unlock()
-		for i, t := range workers[fc.scriptFilename].threads {
-			if t == thread {
-				// remove thread from worker threads
-				workers[fc.scriptFilename].threads = append(workers[fc.scriptFilename].threads[:i], workers[fc.scriptFilename].threads[i+1:]...)
-				break
-			}
-		}
 	}
 }
