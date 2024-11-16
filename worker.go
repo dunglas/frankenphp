@@ -40,6 +40,8 @@ var (
 func initWorkers(opt []workerOpt) error {
 	workersDone = make(chan interface{})
 
+	ready := sync.WaitGroup{}
+
 	for _, o := range opt {
 		worker, err := newWorker(o)
 		worker.threads = make([]*phpThread, 0, o.num)
@@ -49,10 +51,16 @@ func initWorkers(opt []workerOpt) error {
 		for i := 0; i < worker.num; i++ {
 			go worker.startNewWorkerThread()
 		}
-		for i := 0; i < worker.num; i++ {
-			<-worker.ready
-		}
+		ready.Add(1)
+		go func() {
+			for i := 0; i < worker.num; i++ {
+				<-worker.ready
+			}
+			ready.Done()
+		}()
 	}
+
+	ready.Wait()
 
 	return nil
 }
