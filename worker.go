@@ -23,6 +23,7 @@ type worker struct {
 	requestChan chan *http.Request
 	threads     []*phpThread
 	threadMutex sync.RWMutex
+	ready       chan struct{}
 }
 
 const maxWorkerErrorBackoff = 1 * time.Second
@@ -48,6 +49,9 @@ func initWorkers(opt []workerOpt) error {
 		for i := 0; i < worker.num; i++ {
 			go worker.startNewWorkerThread()
 		}
+		for i := 0; i < worker.num; i++ {
+			<-worker.ready
+		}
 	}
 
 	return nil
@@ -70,7 +74,13 @@ func newWorker(o workerOpt) (*worker, error) {
 	}
 
 	o.env["FRANKENPHP_WORKER\x00"] = "1"
-	w := &worker{fileName: absFileName, num: o.num, env: o.env, requestChan: make(chan *http.Request)}
+	w := &worker{
+		fileName:    absFileName,
+		num:         o.num,
+		env:         o.env,
+		requestChan: make(chan *http.Request),
+		ready:       make(chan struct{}),
+	}
 	workers[absFileName] = w
 
 	return w, nil
@@ -85,7 +95,6 @@ func (worker *worker) startNewWorkerThread() {
 	backingOffLock := sync.RWMutex{}
 
 	for {
-
 		// if the worker can stay up longer than backoff*2, it is probably an application error
 		upFunc := sync.Once{}
 		go func() {
@@ -93,6 +102,7 @@ func (worker *worker) startNewWorkerThread() {
 			wait := backoff * 2
 			backingOffLock.RUnlock()
 			time.Sleep(wait)
+			worker.ready <- struct{}{}
 			upFunc.Do(func() {
 				backingOffLock.Lock()
 				defer backingOffLock.Unlock()
