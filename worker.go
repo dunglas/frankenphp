@@ -140,7 +140,7 @@ func (worker *worker) startNewThread() {
 
 func (worker *worker) beforeScript(thread *phpThread) {
 	// if we are restarting due to file watching, wait for all workers to finish first
-	if watcherIsEnabled && workersAreRestarting.Load() {
+	if workersAreRestarting.Load() {
 		workerShutdownWG.Done()
 		workerRestartWG.Wait()
 	}
