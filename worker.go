@@ -102,10 +102,6 @@ func (worker *worker) startNewWorkerThread() {
 			wait := backoff * 2
 			backingOffLock.RUnlock()
 			time.Sleep(wait)
-			select {
-			case worker.ready <- struct{}{}:
-			default:
-			}
 			upFunc.Do(func() {
 				backingOffLock.Lock()
 				defer backingOffLock.Unlock()
@@ -272,15 +268,6 @@ func assignThreadToWorker(thread *phpThread) {
 func go_frankenphp_worker_handle_request_start(threadIndex C.uintptr_t) C.bool {
 	thread := phpThreads[threadIndex]
 
-	select {
-	case _, ok := <-workersDone:
-		if !ok {
-			// attempted to restart during shutdown
-			return C.bool(false)
-		}
-	default:
-	}
-
 	// we assign a worker to the thread if it doesn't have one already
 	if thread.worker == nil {
 		assignThreadToWorker(thread)
@@ -289,6 +276,11 @@ func go_frankenphp_worker_handle_request_start(threadIndex C.uintptr_t) C.bool {
 		// inform metrics that the worker is ready
 		metrics.ReadyWorker(thread.worker.fileName)
 	})
+
+	select {
+	case thread.worker.ready <- struct{}{}:
+	default:
+	}
 
 	if c := logger.Check(zapcore.DebugLevel, "waiting for request"); c != nil {
 		c.Write(zap.String("worker", thread.worker.fileName))
