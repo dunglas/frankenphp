@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"path/filepath"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/dunglas/frankenphp/internal/watcher"
@@ -34,16 +33,12 @@ var (
 	watcherIsEnabled bool
 	workersReadyWG   sync.WaitGroup
 	workerShutdownWG sync.WaitGroup
-	workersAreReady  atomic.Bool
-	workersAreDone   atomic.Bool
 	workersDone      chan interface{}
 	workers          = make(map[string]*worker)
 )
 
 func initWorkers(opt []workerOpt) error {
 	workersDone = make(chan interface{})
-	workersAreReady.Store(false)
-	workersAreDone.Store(false)
 
 	for _, o := range opt {
 		worker, err := newWorker(o)
@@ -58,7 +53,6 @@ func initWorkers(opt []workerOpt) error {
 	}
 
 	workersReadyWG.Wait()
-	workersAreReady.Store(true)
 
 	return nil
 }
@@ -146,8 +140,14 @@ func (worker *worker) startNewWorkerThread() {
 		fc := r.Context().Value(contextKey).(*FrankenPHPContext)
 
 		// if we are done, exit the loop that restarts the worker script
-		if workersAreDone.Load() {
-			break
+		select {
+		case _, ok := <-workersDone:
+			if !ok {
+				return
+			}
+			// continue on since the channel is still open
+		default:
+			// continue on since the channel is still open
 		}
 
 		// on exit status 0 we just run the worker script again
@@ -211,7 +211,6 @@ func (worker *worker) handleRequest(r *http.Request) {
 }
 
 func stopWorkers() {
-	workersAreDone.Store(true)
 	close(workersDone)
 }
 
@@ -259,9 +258,7 @@ func assignThreadToWorker(thread *phpThread) {
 		panic("worker not found for script: " + fc.scriptFilename)
 	}
 	thread.worker = worker
-	if !workersAreReady.Load() {
-		workersReadyWG.Done()
-	}
+	workersReadyWG.Done()
 	thread.requestChan = make(chan *http.Request)
 	worker.threadMutex.Lock()
 	worker.threads = append(worker.threads, thread)
