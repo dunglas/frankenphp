@@ -36,12 +36,6 @@ func (h *threadStateHandler) is(state threadState) bool {
 	return h.currentState == state
 }
 
-func (h *threadStateHandler) get() threadState {
-	h.mu.RLock()
-	defer h.mu.RUnlock()
-	return h.currentState
-}
-
 func (h *threadStateHandler) set(nextState threadState) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
