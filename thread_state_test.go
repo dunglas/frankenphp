@@ -38,6 +38,6 @@ func TestYieldToAWaitGroupPassedByThreadState(t *testing.T) {
 
 	threadState.waitFor(stateInactive)
 	threadState.set(stateActive)
-	// the state should be 'ready' since we are also yielding to the WaitGroup
+	// 'set' should have yielded to the wait group
 	assert.True(t, hasYielded)
 }
