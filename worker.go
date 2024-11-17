@@ -249,8 +249,8 @@ func go_frankenphp_worker_handle_request_start(threadIndex C.uintptr_t) C.bool {
 		}
 
 		// execute opcache_reset if the restart was triggered by the watcher
-		if watcherIsEnabled && thread.state.is(stateRestarting) && !executePHPFunction("opcache_reset") {
-			logger.Error("failed to call opcache_reset")
+		if watcherIsEnabled && thread.state.is(stateRestarting) {
+			C.frankenphp_reset_opcache()
 		}
 
 		return C.bool(false)
