@@ -17,7 +17,7 @@ func TestStartAndStopTheMainThreadWithOneInactiveThread(t *testing.T) {
 
 	assert.Len(t, phpThreads, 1)
 	assert.Equal(t, 0, phpThreads[0].threadIndex)
-	assert.False(t, phpThreads[0].isActive.Load())
+	assert.True(t, phpThreads[0].state.is(stateInactive))
 	assert.Nil(t, phpThreads[0].worker)
 
 	drainPHPThreads()
@@ -76,7 +76,7 @@ func TestStartAndStop100PHPThreadsThatDoNothing(t *testing.T) {
 
 // This test calls sleep() 10.000 times for 1ms in 100 PHP threads.
 func TestSleep10000TimesIn100Threads(t *testing.T) {
-	logger = zap.NewNop() // the logger needs to not be nil
+	logger, _ = zap.NewDevelopment() // the logger needs to not be nil
 	numThreads := 100
 	maxExecutions := 10000
 	executionMutex := sync.Mutex{}

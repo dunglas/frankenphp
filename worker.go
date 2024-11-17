@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"path/filepath"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/dunglas/frankenphp/internal/watcher"
@@ -26,12 +25,9 @@ type worker struct {
 }
 
 var (
-	workers              map[string]*worker
-	workersDone          chan interface{}
-	watcherIsEnabled     bool
-	workersAreRestarting atomic.Bool
-	workerRestartWG      sync.WaitGroup
-	workerShutdownWG     sync.WaitGroup
+	workers          map[string]*worker
+	workersDone      chan interface{}
+	watcherIsEnabled bool
 )
 
 func initWorkers(opt []workerOpt) error {
@@ -89,16 +85,25 @@ func drainWorkers() {
 }
 
 func restartWorkers() {
-	workerRestartWG.Add(1)
-	defer workerRestartWG.Done()
+	restart := sync.WaitGroup{}
+	restart.Add(1)
+	ready := sync.WaitGroup{}
 	for _, worker := range workers {
-		workerShutdownWG.Add(worker.num)
+		worker.threadMutex.RLock()
+		ready.Add(len(worker.threads))
+		for _, thread := range worker.threads {
+			thread.state.set(stateRestarting)
+			go func(thread *phpThread) {
+				thread.state.waitForAndYield(&restart, stateReady)
+				ready.Done()
+			}(thread)
+		}
+		worker.threadMutex.RUnlock()
 	}
-	workersAreRestarting.Store(true)
 	stopWorkers()
-	workerShutdownWG.Wait()
+	ready.Wait()
 	workersDone = make(chan interface{})
-	workersAreRestarting.Store(false)
+	restart.Done()
 }
 
 func getDirectoriesToWatch(workerOpts []workerOpt) []string {
@@ -139,10 +144,9 @@ func (worker *worker) startNewThread() {
 }
 
 func (worker *worker) beforeScript(thread *phpThread) {
-	// if we are restarting due to file watching, wait for all workers to finish first
-	if workersAreRestarting.Load() {
-		workerShutdownWG.Done()
-		workerRestartWG.Wait()
+	// if we are restarting due to file watching, set the state back to ready
+	if thread.state.is(stateRestarting) {
+		thread.state.set(stateReady)
 	}
 
 	thread.backoff.reset()
@@ -245,7 +249,7 @@ func go_frankenphp_worker_handle_request_start(threadIndex C.uintptr_t) C.bool {
 		}
 
 		// execute opcache_reset if the restart was triggered by the watcher
-		if watcherIsEnabled && workersAreRestarting.Load() && !executePHPFunction("opcache_reset") {
+		if watcherIsEnabled && thread.state.is(stateRestarting) && !executePHPFunction("opcache_reset") {
 			logger.Error("failed to call opcache_reset")
 		}
 

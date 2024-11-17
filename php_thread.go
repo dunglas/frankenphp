@@ -39,6 +39,8 @@ type phpThread struct {
 	backoff *exponentialBackoff
 	// known $_SERVER key names
 	knownVariableKeys map[string]*C.zend_string
+	// the state handler
+	state *threadStateHandler
 }
 
 func (thread *phpThread) getActiveRequest() *http.Request {
@@ -49,16 +51,11 @@ func (thread *phpThread) getActiveRequest() *http.Request {
 	return thread.mainRequest
 }
 
-// TODO: Also consider this case: work => inactive => work
 func (thread *phpThread) setInactive() {
-	thread.isActive.Store(false)
 	thread.scriptName = ""
-	thread.beforeScriptExecution = func(thread *phpThread) {
-		thread.requestChan = make(chan *http.Request)
-		select {
-		case <-done:
-		case <-thread.done:
-		}
+	// TODO: handle this in a state machine
+	if !thread.state.is(stateShuttingDown) {
+		thread.state.set(stateInactive)
 	}
 }
 
@@ -68,8 +65,6 @@ func (thread *phpThread) setActive(
 	afterScriptExecution func(*phpThread, int),
 	onShutdown func(*phpThread),
 ) {
-	thread.isActive.Store(true)
-
 	// to avoid race conditions, the thread sets its own hooks on startup
 	thread.onStartup = func(thread *phpThread) {
 		if thread.onShutdown != nil {
@@ -83,10 +78,7 @@ func (thread *phpThread) setActive(
 			thread.onStartup(thread)
 		}
 	}
-
-	// signal to the thread to stop it's current execution and call the onStartup hook
-	close(thread.done)
-	thread.isReady.Store(false)
+	thread.state.set(stateActive)
 }
 
 // Pin a string that is not null-terminated
@@ -102,23 +94,30 @@ func (thread *phpThread) pinCString(s string) *C.char {
 	return thread.pinString(s + "\x00")
 }
 
+//export go_frankenphp_on_thread_startup
+func go_frankenphp_on_thread_startup(threadIndex C.uintptr_t) {
+	phpThreads[threadIndex].setInactive()
+}
+
 //export go_frankenphp_before_script_execution
 func go_frankenphp_before_script_execution(threadIndex C.uintptr_t) *C.char {
-	// returning nil signals the thread to stop
-	if threadsAreDone.Load() {
-		return nil
-	}
 	thread := phpThreads[threadIndex]
 
-	// if the thread is not ready, set it up
-	if thread.isReady.CompareAndSwap(false, true) {
-		thread.done = make(chan struct{})
+	// if the state is inactive, wait for it to be active
+	if thread.state.is(stateInactive) {
+		thread.state.waitFor(stateActive, stateShuttingDown)
+	}
+
+	// returning nil signals the thread to stop
+	if thread.state.is(stateShuttingDown) {
+		return nil
+	}
+
+	// if the thread is not ready yet, set it up
+	if !thread.state.is(stateReady) {
+		thread.state.set(stateReady)
 		if thread.onStartup != nil {
 			thread.onStartup(thread)
-		}
-		if threadsAreBooting.Load() {
-			threadsReadyWG.Done()
-			threadsReadyWG.Wait()
 		}
 	}
 
@@ -148,5 +147,5 @@ func go_frankenphp_on_thread_shutdown(threadIndex C.uintptr_t) {
 	if thread.onShutdown != nil {
 		thread.onShutdown(thread)
 	}
-	shutdownWG.Done()
+	thread.state.set(stateDone)
 }
