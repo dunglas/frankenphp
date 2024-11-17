@@ -289,7 +289,7 @@ func go_frankenphp_worker_handle_request_start(threadIndex C.uintptr_t) C.bool {
 			c.Write(zap.String("worker", thread.worker.fileName))
 		}
 		thread.worker = nil
-		executePHPFunction("opcache_reset")
+		C.frankenphp_reset_opcache()
 
 		return C.bool(false)
 	case r = <-thread.worker.requestChan:
