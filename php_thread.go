@@ -5,7 +5,6 @@ import "C"
 import (
 	"net/http"
 	"runtime"
-	"sync/atomic"
 	"unsafe"
 )
 
@@ -21,10 +20,6 @@ type phpThread struct {
 	scriptName string
 	// the index in the phpThreads slice
 	threadIndex int
-	// whether the thread has work assigned to it
-	isActive atomic.Bool
-	// whether the thread is ready for work
-	isReady atomic.Bool
 	// right before the first work iteration
 	onStartup func(*phpThread)
 	// the actual work iteration (done in a loop)
@@ -33,8 +28,6 @@ type phpThread struct {
 	afterScriptExecution func(*phpThread, int)
 	// after the thread is done
 	onShutdown func(*phpThread)
-	// chan to signal the thread to stop the current work iteration
-	done chan struct{}
 	// exponential backoff for worker failures
 	backoff *exponentialBackoff
 	// known $_SERVER key names
