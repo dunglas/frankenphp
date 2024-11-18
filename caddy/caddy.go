@@ -546,32 +546,33 @@ func parsePhpServer(h httpcaddyfile.Helper) ([]httpcaddyfile.ConfigValue, error)
 
 	// if the index is turned off, we skip the redirect and try_files
 	if indexFile != "off" {
-		var disableDirRedir bool
+		dirRedir := false
+		dirIndex := "{http.request.uri.path}/" + indexFile
 
 		// if tryFiles wasn't overridden, use a reasonable default
 		if len(tryFiles) == 0 {
 			if disableFsrv {
-				tryFiles = []string{"{http.request.uri.path}/" + indexFile, indexFile}
+				tryFiles = []string{dirIndex, indexFile}
 			} else {
-				tryFiles = []string{"{http.request.uri.path}", "{http.request.uri.path}/" + indexFile, indexFile}
+				tryFiles = []string{"{http.request.uri.path}", dirIndex, indexFile}
 			}
+
+			dirRedir = true
 		} else {
-			longIndexPattern := "{http.request.uri.path}/" + indexFile
-			shortIndexPattern := "{path}/" + indexFile
 			for _, tf := range tryFiles {
-				if tf == longIndexPattern || tf == shortIndexPattern {
+				if tf == dirIndex {
+					dirRedir = true
+
 					break
 				}
 			}
-
-			disableDirRedir = true
 		}
 
 		// route to redirect to canonical path if index PHP file
-		if !disableDirRedir {
+		if dirRedir {
 			redirMatcherSet := caddy.ModuleMap{
 				"file": h.JSON(fileserver.MatchFile{
-					TryFiles: []string{"{http.request.uri.path}/" + indexFile},
+					TryFiles: []string{dirIndex},
 				}),
 				"not": h.JSON(caddyhttp.MatchNot{
 					MatcherSetsRaw: []caddy.ModuleMap{
