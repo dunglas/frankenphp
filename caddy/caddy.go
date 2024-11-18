@@ -448,7 +448,10 @@ func parsePhpServer(h httpcaddyfile.Helper) ([]httpcaddyfile.ConfigValue, error)
 	indexFile := "index.php"
 
 	// set up for explicitly overriding try_files
-	tryFiles := []string{}
+	var tryFiles []string
+
+	// disable redirections to directories containing an index file if not needed
+	disableDirRedir := false
 
 	// if the user specified a matcher token, use that
 	// matcher in a route that wraps both of our routes;
@@ -544,33 +547,51 @@ func parsePhpServer(h httpcaddyfile.Helper) ([]httpcaddyfile.ConfigValue, error)
 	// set the list of allowed path segments on which to split
 	phpsrv.SplitPath = extensions
 
+	// if tryFiles wasn't overridden, use a reasonable default
+	if len(tryFiles) == 0 {
+		if disableFsrv {
+			tryFiles = []string{"{http.request.uri.path}/" + indexFile, indexFile}
+		} else {
+			tryFiles = []string{"{http.request.uri.path}", "{http.request.uri.path}/" + indexFile, indexFile}
+		}
+	} else {
+		longIndexPattern := "{http.request.uri.path}/" + indexFile
+		shortIndexPattern := "{path}/" + indexFile
+		for _, tf := range tryFiles {
+			if tf == longIndexPattern || tf == shortIndexPattern {
+				break
+			}
+		}
+
+		disableDirRedir = true
+	}
+
 	// if the index is turned off, we skip the redirect and try_files
 	if indexFile != "off" {
 		// route to redirect to canonical path if index PHP file
-		redirMatcherSet := caddy.ModuleMap{
-			"file": h.JSON(fileserver.MatchFile{
-				TryFiles: []string{"{http.request.uri.path}/" + indexFile},
-			}),
-			"not": h.JSON(caddyhttp.MatchNot{
-				MatcherSetsRaw: []caddy.ModuleMap{
-					{
-						"path": h.JSON(caddyhttp.MatchPath{"*/"}),
+		if !disableDirRedir {
+			redirMatcherSet := caddy.ModuleMap{
+				"file": h.JSON(fileserver.MatchFile{
+					TryFiles: []string{"{http.request.uri.path}/" + indexFile},
+				}),
+				"not": h.JSON(caddyhttp.MatchNot{
+					MatcherSetsRaw: []caddy.ModuleMap{
+						{
+							"path": h.JSON(caddyhttp.MatchPath{"*/"}),
+						},
 					},
-				},
-			}),
-		}
-		redirHandler := caddyhttp.StaticResponse{
-			StatusCode: caddyhttp.WeakString(strconv.Itoa(http.StatusPermanentRedirect)),
-			Headers:    http.Header{"Location": []string{"{http.request.orig_uri.path}/"}},
-		}
-		redirRoute := caddyhttp.Route{
-			MatcherSetsRaw: []caddy.ModuleMap{redirMatcherSet},
-			HandlersRaw:    []json.RawMessage{caddyconfig.JSONModuleObject(redirHandler, "handler", "static_response", nil)},
-		}
+				}),
+			}
+			redirHandler := caddyhttp.StaticResponse{
+				StatusCode: caddyhttp.WeakString(strconv.Itoa(http.StatusPermanentRedirect)),
+				Headers:    http.Header{"Location": []string{"{http.request.orig_uri.path}/"}},
+			}
+			redirRoute := caddyhttp.Route{
+				MatcherSetsRaw: []caddy.ModuleMap{redirMatcherSet},
+				HandlersRaw:    []json.RawMessage{caddyconfig.JSONModuleObject(redirHandler, "handler", "static_response", nil)},
+			}
 
-		// if tryFiles wasn't overridden, use a reasonable default
-		if len(tryFiles) == 0 {
-			tryFiles = []string{"{http.request.uri.path}", "{http.request.uri.path}/" + indexFile, indexFile}
+			routes = append(routes, redirRoute)
 		}
 
 		// route to rewrite to PHP index file
@@ -588,7 +609,7 @@ func parsePhpServer(h httpcaddyfile.Helper) ([]httpcaddyfile.ConfigValue, error)
 			HandlersRaw:    []json.RawMessage{caddyconfig.JSONModuleObject(rewriteHandler, "handler", "rewrite", nil)},
 		}
 
-		routes = append(routes, redirRoute, rewriteRoute)
+		routes = append(routes, rewriteRoute)
 	}
 
 	// route to actually pass requests to PHP files;
