@@ -1177,3 +1177,59 @@ int frankenphp_reset_opcache(void) {
   }
   return 0;
 }
+
+
+
+PHP_FUNCTION(frankenphp_cache_put) /* {{{ */
+{
+  char *key;
+  size_t l_key;
+  char *value;
+  size_t l_value;
+
+  ZEND_PARSE_PARAMETERS_START(2, 2);
+  Z_PARAM_STRING(key, l_key);
+  Z_PARAM_STRING(value, l_value);
+  ZEND_PARSE_PARAMETERS_END();
+
+  //zvalue = frankenphp_init_persistent_string(value, l_value);
+
+  bool success = go_frankenphp_cache_put(key, value);
+  if(!success) {
+	zend_throw_exception(spl_ce_RuntimeException, "Failed to set cache", 0);
+	RETURN_THROWS();
+  }
+  RETURN_TRUE;
+}
+/* }}} */
+
+PHP_FUNCTION(frankenphp_cache_get) /* {{{ */
+{
+  char *key;
+  size_t l_key;
+
+  ZEND_PARSE_PARAMETERS_START(1, 1);
+  Z_PARAM_STRING(key, l_key);
+  ZEND_PARSE_PARAMETERS_END();
+
+  char *from_cache = go_frankenphp_cache_get(key);
+  if(from_cache == NULL) {
+  	RETURN_NULL();
+  }
+  RETURN_STRING(from_cache);
+
+}
+/* }}} */
+
+PHP_FUNCTION(frankenphp_cache_forget) /* {{{ */
+{
+  char *key;
+  size_t l_key;
+
+  ZEND_PARSE_PARAMETERS_START(1, 1);
+  Z_PARAM_STRING(key, l_key);
+  ZEND_PARSE_PARAMETERS_END();
+
+  go_frankenphp_cache_forget(key);
+}
+/* }}} */

@@ -348,6 +348,8 @@ func Init(options ...Option) error {
 		return err
 	}
 
+	initMemoryCache(1000)
+
 	if c := logger.Check(zapcore.InfoLevel, "FrankenPHP started 🐘"); c != nil {
 		c.Write(zap.String("php_version", Version().Version), zap.Int("num_threads", opt.numThreads))
 	}
@@ -364,6 +366,7 @@ func Init(options ...Option) error {
 func Shutdown() {
 	drainWorkers()
 	drainThreads()
+	drainMemoryCache()
 	metrics.Shutdown()
 	requestChan = nil
 
