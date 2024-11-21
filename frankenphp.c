@@ -1192,9 +1192,7 @@ PHP_FUNCTION(frankenphp_cache_put) /* {{{ */
   Z_PARAM_STRING(value, l_value);
   ZEND_PARSE_PARAMETERS_END();
 
-  //zvalue = frankenphp_init_persistent_string(value, l_value);
-
-  bool success = go_frankenphp_cache_put(key, value);
+  bool success = go_frankenphp_cache_put(key, value, (int)l_value);
   if(!success) {
 	zend_throw_exception(spl_ce_RuntimeException, "Failed to set cache", 0);
 	RETURN_THROWS();
@@ -1212,12 +1210,11 @@ PHP_FUNCTION(frankenphp_cache_get) /* {{{ */
   Z_PARAM_STRING(key, l_key);
   ZEND_PARSE_PARAMETERS_END();
 
-  char *from_cache = go_frankenphp_cache_get(key);
-  if(from_cache == NULL) {
+  struct go_frankenphp_cache_get_return from_cache = go_frankenphp_cache_get(key);
+  if(from_cache.r0 == NULL) {
   	RETURN_NULL();
   }
-  RETURN_STRING(from_cache);
-
+  RETURN_STRINGL(from_cache.r0, from_cache.r1);
 }
 /* }}} */
 

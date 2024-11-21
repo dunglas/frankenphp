@@ -4,67 +4,94 @@ package frankenphp
 import "C"
 import "sync"
 
+// TODO:delete oldest cache if maxCacheLength is reached
+
+type memoryCache struct {
+	maxCacheLength int
+	currentCacheLength int
+	cache map[string]string
+	mu sync.RWMutex
+	keys []string
+}
+
+var globalMemoryCache memoryCache
+
 var maxCacheLength int
 var cache = make(map[string]string)
 var cacheMutex sync.RWMutex
 
 func initMemoryCache(maxCacheLength int){
-	maxCacheLength = maxCacheLength
+	globalMemoryCache = memoryCache {
+		maxCacheLength: maxCacheLength,
+		currentCacheLength: 0,
+		cache: make(map[string]string),
+		mu: sync.RWMutex{},
+		keys: make([]string, 0),
+	}
 }
 
 func drainMemoryCache() {
-	memoryCacheClear()
+	globalMemoryCache.clear()
 }
 
-func memoryCacheGet(key string) (string, bool) {
-	cacheMutex.RLock()
-	defer cacheMutex.RUnlock()
-	value, ok := cache[key]
+func (m *memoryCache) get(key string) (string, bool) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	value, ok := m.cache[key]
 	return value, ok
 }
 
-func memoryCacheSet(key string, value string) {
-	cacheMutex.Lock()
-	defer cacheMutex.Unlock()
-	cache[key] = value
+func (m *memoryCache) set(key string, value string) {
+	m.mu.RLock()
+    defer m.mu.RUnlock()
+	m.cache[key] = value
+	m.currentCacheLength += len(value)
 }
 
-func memoryCacheDelete(key string) {
-	cacheMutex.Lock()
-	defer cacheMutex.Unlock()
-	delete(cache, key)
+func (m *memoryCache) delete(key string) {
+	m.mu.RLock()
+    defer m.mu.RUnlock()
+    value, ok := m.cache[key]
+    if !ok {
+    	return
+	}
+	m.currentCacheLength -= len(value)
+	delete(m.cache, key)
 }
 
-func memoryCacheClear() {
-	cacheMutex.Lock()
-	defer cacheMutex.Unlock()
-	cache = make(map[string]string)
+func (m *memoryCache) clear() {
+	m.mu.RLock()
+    defer m.mu.RUnlock()
+	m.cache = make(map[string]string)
+	m.currentCacheLength = 0
 }
 
 //export go_frankenphp_cache_put
-func go_frankenphp_cache_put(key *C.char, value *C.char) C.bool{
+func go_frankenphp_cache_put(key *C.char, value *C.char, valueLen C.int) C.bool{
     goKey := C.GoString(key)
     if value == nil {
-        memoryCacheDelete(goKey)
+        globalMemoryCache.delete(goKey)
     }
-    goValue := C.GoString(value)
-    memoryCacheSet(goKey, goValue)
+    goValue := C.GoStringN(value, valueLen)
+    globalMemoryCache.set(goKey, goValue)
     return C.bool(true)
 }
 
 //export go_frankenphp_cache_get
-func go_frankenphp_cache_get(key *C.char) *C.char {
+func go_frankenphp_cache_get(key *C.char) (*C.char, C.size_t) {
     goKey := C.GoString(key)
-    goValue, ok := memoryCacheGet(goKey)
+    goValue, ok := globalMemoryCache.get(goKey)
+
     if !ok {
-		return nil
+		return nil, 0
 	}
-    return C.CString(goValue)
+
+    // note: PHP handles freeing the memory of the returned string
+    return C.CString(goValue), C.size_t(len(goValue))
 }
 
-// TODO: forget and flush
 //export go_frankenphp_cache_forget
 func go_frankenphp_cache_forget(key *C.char) {
     goKey := C.GoString(key)
-    memoryCacheDelete(goKey)
+    globalMemoryCache.delete(goKey)
 }
