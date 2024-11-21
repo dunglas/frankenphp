@@ -53,7 +53,7 @@ func TestDoNotSaveEntryThatIsTooBig(t *testing.T) {
 	initMemoryCache(1)
 	defer drainMemoryCache()
 
-	success := globalMemoryCache.set("key", "value", 0)
+	success := globalMemoryCache.set("key", "value", -1)
 
 	_, ok := globalMemoryCache.get("key")
 
