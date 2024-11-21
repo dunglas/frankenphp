@@ -82,6 +82,6 @@ jobs:
       -
         name: Lint Go code
         uses: golangci/golangci-lint-action@v6
-        if: matrix.php-versions == '8.3'
+        if: matrix.php-versions == '8.4'
         with:
           version: latest

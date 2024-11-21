@@ -34,7 +34,7 @@ Rendez-vous sur `https://localhost`, c'est parti !
 ### Binaire autonome
 
 Si vous préférez ne pas utiliser Docker, nous fournissons des binaires autonomes de FrankenPHP pour Linux et macOS
-contenant [PHP 8.3](https://www.php.net/releases/8.3/fr.php) et la plupart des extensions PHP populaires.
+contenant [PHP 8.4](https://www.php.net/releases/8.4/fr.php) et la plupart des extensions PHP populaires.
 
 Sous Windows, utilisez [WSL](https://learn.microsoft.com/windows/wsl/) pour exécuter FrankenPHP.
 
