@@ -95,7 +95,6 @@ func (worker *worker) startNewWorkerThread() {
 	backingOffLock := sync.RWMutex{}
 
 	for {
-
 		// if the worker can stay up longer than backoff*2, it is probably an application error
 		upFunc := sync.Once{}
 		go func() {
