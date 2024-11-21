@@ -618,6 +618,13 @@ func go_handle_request(threadIndex C.uintptr_t) bool {
 			panic(ScriptExecutionError)
 		}
 
+		// if the script has errored or timed out, make sure any pending worker requests are closed
+		if fc.exitStatus > 0 && thread.workerRequest != nil {
+			fc := thread.workerRequest.Context().Value(contextKey).(*FrankenPHPContext)
+			maybeCloseContext(fc)
+			thread.workerRequest = nil
+		}
+
 		return true
 	}
 }
