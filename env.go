@@ -18,17 +18,11 @@ func go_putenv(str *C.char, length C.int) C.bool {
 
 	// Check if '=' is present in the string
 	if key, val, found := strings.Cut(envString, "="); found {
-		if os.Setenv(key, val) != nil {
-			return false // Failure
-		}
-	} else {
-		// No '=', unset the environment variable
-		if os.Unsetenv(envString) != nil {
-			return false // Failure
-		}
+		return os.Setenv(key, val) == nil
 	}
 
-	return true // Success
+	// No '=', unset the environment variable
+	return os.Unsetenv(envString) == nil
 }
 
 //export go_getfullenv
