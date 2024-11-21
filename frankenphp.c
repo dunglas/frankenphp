@@ -1178,8 +1178,6 @@ int frankenphp_reset_opcache(void) {
   return 0;
 }
 
-
-
 PHP_FUNCTION(frankenphp_cache_put) /* {{{ */
 {
   char *key;
@@ -1209,9 +1207,10 @@ PHP_FUNCTION(frankenphp_cache_get) /* {{{ */
   Z_PARAM_STRING(key, l_key);
   ZEND_PARSE_PARAMETERS_END();
 
-  struct go_frankenphp_cache_get_return from_cache = go_frankenphp_cache_get(key);
-  if(from_cache.r0 == NULL) {
-  	RETURN_NULL();
+  struct go_frankenphp_cache_get_return from_cache =
+      go_frankenphp_cache_get(key);
+  if (from_cache.r0 == NULL) {
+    RETURN_NULL();
   }
   RETURN_STRINGL(from_cache.r0, from_cache.r1);
 }
