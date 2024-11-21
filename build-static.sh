@@ -42,7 +42,7 @@ if ! echo "${PHP_EXTENSION_LIBS}" | grep -q "\bbrotli\b"; then
 fi
 
 if [ -z "${PHP_VERSION}" ]; then
-	export PHP_VERSION="8.4"
+	export PHP_VERSION="8.3"
 fi
 
 if [ -z "${FRANKENPHP_VERSION}" ]; then
