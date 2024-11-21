@@ -33,17 +33,16 @@ func (e *exponentialBackoff) recordSuccess() {
 
 // recordFailure increments the failure count and increases the backoff, it returns true if maxConsecutiveFailures has been reached
 func (e *exponentialBackoff) recordFailure() bool {
-	doTrigger := false
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	e.failureCount += 1
 	e.backoff = min(e.backoff*2, e.maxBackoff)
 
 	if e.failureCount >= e.maxConsecutiveFailures {
-		doTrigger = true
+		return true
 	}
 
-	return doTrigger
+	return false
 }
 
 // wait sleeps for the backoff duration if failureCount is non-zero.
