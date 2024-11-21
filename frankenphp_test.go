@@ -952,13 +952,10 @@ func FuzzRequest(f *testing.F) {
 			assert.Contains(t, string(body), fmt.Sprintf("[PATH_INFO] => /%s", fuzzedString))
 			assert.Contains(t, string(body), fmt.Sprintf("[PATH_TRANSLATED] => %s", filepath.Join(absPath, fuzzedString)))
 
-			// The header should only be present if the fuzzed string is not empty
-			if len(fuzzedString) > 0 {
-				assert.Contains(t, string(body), fmt.Sprintf("[CONTENT_TYPE] => %s", fuzzedString))
-				assert.Contains(t, string(body), fmt.Sprintf("[HTTP_FUZZED] => %s", fuzzedString))
-			} else {
-				assert.NotContains(t, string(body), "[HTTP_FUZZED]")
-			}
+			// Headers should always be present even if empty
+			assert.Contains(t, string(body), fmt.Sprintf("[CONTENT_TYPE] => %s", fuzzedString))
+			assert.Contains(t, string(body), fmt.Sprintf("[HTTP_FUZZED] => %s", fuzzedString))
+
 		}, &testOptions{workerScript: "request-headers.php"})
 	})
 }

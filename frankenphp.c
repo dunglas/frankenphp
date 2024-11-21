@@ -707,8 +707,11 @@ void frankenphp_register_variables_from_request_info(
  * see: php_variables.c -> php_register_variable_ex (#1106) */
 void frankenphp_register_variable_safe(char *key, char *val, size_t val_len,
                                        zval *track_vars_array) {
-  if (val == NULL || key == NULL) {
+  if (key == NULL) {
     return;
+  }
+  if (val == NULL) {
+	val = "";
   }
   size_t new_val_len = val_len;
   if (!should_filter_var ||
