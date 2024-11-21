@@ -7,7 +7,11 @@ import (
 )
 
 func TestExponentialBackoff_Reset(t *testing.T) {
-	e := newExponentialBackoff(500*time.Millisecond, 5*time.Second, 3)
+	e := &exponentialBackoff{
+		maxBackoff:             5 * time.Second,
+		minBackoff:             500 * time.Millisecond,
+		maxConsecutiveFailures: 3,
+	}
 
 	assert.False(t, e.recordFailure())
 	assert.False(t, e.recordFailure())
@@ -20,7 +24,11 @@ func TestExponentialBackoff_Reset(t *testing.T) {
 }
 
 func TestExponentialBackoff_Trigger(t *testing.T) {
-	e := newExponentialBackoff(500*time.Millisecond, 500*3*time.Millisecond, 3)
+	e := &exponentialBackoff{
+		maxBackoff:             500 * 3 * time.Millisecond,
+		minBackoff:             500 * time.Millisecond,
+		maxConsecutiveFailures: 3,
+	}
 
 	assert.False(t, e.recordFailure())
 	assert.False(t, e.recordFailure())

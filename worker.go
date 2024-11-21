@@ -93,7 +93,11 @@ func newWorker(o workerOpt) (*worker, error) {
 func (worker *worker) startNewWorkerThread() {
 	workerShutdownWG.Add(1)
 	defer workerShutdownWG.Done()
-	backoff := newExponentialBackoff(100*time.Millisecond, 1*time.Second, 6)
+	backoff := &exponentialBackoff{
+		maxBackoff:             1 * time.Second,
+		minBackoff:             100 * time.Millisecond,
+		maxConsecutiveFailures: 6,
+	}
 
 	for {
 		// if the worker can stay up longer than backoff*2, it is probably an application error

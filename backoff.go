@@ -14,15 +14,6 @@ type exponentialBackoff struct {
 	maxConsecutiveFailures int
 }
 
-func newExponentialBackoff(minBackoff time.Duration, maxBackoff time.Duration, maxConsecutiveFailures int) *exponentialBackoff {
-	return &exponentialBackoff{
-		backoff:                minBackoff,
-		minBackoff:             minBackoff,
-		maxBackoff:             maxBackoff,
-		maxConsecutiveFailures: maxConsecutiveFailures,
-	}
-}
-
 // recordSuccess resets the backoff and failureCount
 func (e *exponentialBackoff) recordSuccess() {
 	e.mu.Lock()
@@ -35,6 +26,10 @@ func (e *exponentialBackoff) recordSuccess() {
 func (e *exponentialBackoff) recordFailure() bool {
 	e.mu.Lock()
 	e.failureCount += 1
+	if e.backoff < e.minBackoff {
+		e.backoff = e.minBackoff
+	}
+
 	e.backoff = min(e.backoff*2, e.maxBackoff)
 
 	e.mu.Unlock()
