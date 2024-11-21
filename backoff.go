@@ -23,6 +23,7 @@ func newExponentialBackoff(minBackoff time.Duration, maxBackoff time.Duration, m
 	}
 }
 
+// recordSuccess resets the backoff and failureCount
 func (e *exponentialBackoff) recordSuccess() {
 	e.mu.Lock()
 	defer e.mu.Unlock()
@@ -30,6 +31,7 @@ func (e *exponentialBackoff) recordSuccess() {
 	e.backoff = e.minBackoff
 }
 
+// recordFailure increments the failure count and increases the backoff, it returns true if maxConsecutiveFailures has been reached
 func (e *exponentialBackoff) recordFailure() bool {
 	doTrigger := false
 	e.mu.Lock()
@@ -44,6 +46,8 @@ func (e *exponentialBackoff) recordFailure() bool {
 	return doTrigger
 }
 
+// wait sleeps for the backoff duration if failureCount is non-zero.
+// NOTE: this is not tested and should be kept 'obviously correct' (i.e., simple)
 func (e *exponentialBackoff) wait() {
 	e.mu.RLock()
 	defer e.mu.RUnlock()
