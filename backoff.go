@@ -5,56 +5,51 @@ import (
 	"time"
 )
 
-const maxBackoff = 1 * time.Second
-const minBackoff = 100 * time.Millisecond
-const maxConsecutiveFailures = 6
-
 type exponentialBackoff struct {
-	backoff      time.Duration
-	failureCount int
-	mu           sync.RWMutex
-	upFunc       sync.Once
+	backoff                time.Duration
+	failureCount           int
+	mu                     sync.RWMutex
+	maxBackoff             time.Duration
+	minBackoff             time.Duration
+	maxConsecutiveFailures int
 }
 
-func newExponentialBackoff() *exponentialBackoff {
-	return &exponentialBackoff{backoff: minBackoff}
+func newExponentialBackoff(minBackoff time.Duration, maxBackoff time.Duration, maxConsecutiveFailures int) *exponentialBackoff {
+	return &exponentialBackoff{
+		backoff:                minBackoff,
+		minBackoff:             minBackoff,
+		maxBackoff:             maxBackoff,
+		maxConsecutiveFailures: maxConsecutiveFailures,
+	}
 }
 
-func (e *exponentialBackoff) reset() {
+func (e *exponentialBackoff) recordSuccess() {
 	e.mu.Lock()
-	e.upFunc = sync.Once{}
-	wait := e.backoff * 2
-	e.mu.Unlock()
-	go func() {
-		time.Sleep(wait)
-		e.mu.Lock()
-		defer e.mu.Unlock()
-		e.upFunc.Do(func() {
-			// if we come back to a stable state, reset the failure count
-			if e.backoff == minBackoff {
-				e.failureCount = 0
-			}
-
-			// earn back the backoff over time
-			if e.failureCount > 0 {
-				e.backoff = max(e.backoff/2, minBackoff)
-			}
-		})
-	}()
+	defer e.mu.Unlock()
+	e.failureCount = 0
+	e.backoff = e.minBackoff
 }
 
-func (e *exponentialBackoff) trigger(onMaxFailures func(failureCount int)) {
+func (e *exponentialBackoff) recordFailure() bool {
+	doTrigger := false
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	e.failureCount += 1
+	e.backoff = min(e.backoff*2, e.maxBackoff)
+
+	if e.failureCount >= e.maxConsecutiveFailures {
+		doTrigger = true
+	}
+
+	return doTrigger
+}
+
+func (e *exponentialBackoff) wait() {
 	e.mu.RLock()
-	e.upFunc.Do(func() {
-		if e.failureCount >= maxConsecutiveFailures {
-			onMaxFailures(e.failureCount)
-		}
-		e.failureCount += 1
-	})
-	wait := e.backoff
-	e.mu.RUnlock()
-	time.Sleep(wait)
-	e.mu.Lock()
-	e.backoff = min(e.backoff*2, maxBackoff)
-	e.mu.Unlock()
+	defer e.mu.RUnlock()
+	if e.failureCount == 0 {
+		return
+	}
+
+	time.Sleep(e.backoff)
 }
