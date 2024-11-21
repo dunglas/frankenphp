@@ -15,7 +15,7 @@ func TestWorkerWithInactiveWatcher(t *testing.T) {
 		{
 			skip_install_trust
 			admin localhost:2999
-			http_port 9080
+			http_port `+testPort+`
 
 			frankenphp {
 				worker {
@@ -26,13 +26,13 @@ func TestWorkerWithInactiveWatcher(t *testing.T) {
 			}
 		}
 
-		localhost:9080 {
+		localhost:`+testPort+` {
 			root ../testdata
 			rewrite worker-with-watcher.php
 			php
 		}
 		`, "caddyfile")
 
-	tester.AssertGetResponse("http://localhost:9080", http.StatusOK, "requests:1")
-	tester.AssertGetResponse("http://localhost:9080", http.StatusOK, "requests:2")
+	tester.AssertGetResponse("http://localhost:"+testPort, http.StatusOK, "requests:1")
+	tester.AssertGetResponse("http://localhost:"+testPort, http.StatusOK, "requests:2")
 }

@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"path/filepath"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/dunglas/frankenphp/internal/watcher"
@@ -24,6 +23,7 @@ type worker struct {
 	requestChan chan *http.Request
 	threads     []*phpThread
 	threadMutex sync.RWMutex
+	ready       chan struct{}
 }
 
 const maxWorkerErrorBackoff = 1 * time.Second
@@ -32,18 +32,15 @@ const maxWorkerConsecutiveFailures = 6
 
 var (
 	watcherIsEnabled bool
-	workersReadyWG   sync.WaitGroup
 	workerShutdownWG sync.WaitGroup
-	workersAreReady  atomic.Bool
-	workersAreDone   atomic.Bool
 	workersDone      chan interface{}
 	workers          = make(map[string]*worker)
 )
 
 func initWorkers(opt []workerOpt) error {
 	workersDone = make(chan interface{})
-	workersAreReady.Store(false)
-	workersAreDone.Store(false)
+
+	ready := sync.WaitGroup{}
 
 	for _, o := range opt {
 		worker, err := newWorker(o)
@@ -51,14 +48,19 @@ func initWorkers(opt []workerOpt) error {
 		if err != nil {
 			return err
 		}
-		workersReadyWG.Add(worker.num)
 		for i := 0; i < worker.num; i++ {
 			go worker.startNewWorkerThread()
 		}
+		ready.Add(1)
+		go func() {
+			for i := 0; i < worker.num; i++ {
+				<-worker.ready
+			}
+			ready.Done()
+		}()
 	}
 
-	workersReadyWG.Wait()
-	workersAreReady.Store(true)
+	ready.Wait()
 
 	return nil
 }
@@ -80,7 +82,13 @@ func newWorker(o workerOpt) (*worker, error) {
 	}
 
 	o.env["FRANKENPHP_WORKER\x00"] = "1"
-	w := &worker{fileName: absFileName, num: o.num, env: o.env, requestChan: make(chan *http.Request)}
+	w := &worker{
+		fileName:    absFileName,
+		num:         o.num,
+		env:         o.env,
+		requestChan: make(chan *http.Request),
+		ready:       make(chan struct{}, o.num),
+	}
 	workers[absFileName] = w
 
 	return w, nil
@@ -145,8 +153,20 @@ func (worker *worker) startNewWorkerThread() {
 		fc := r.Context().Value(contextKey).(*FrankenPHPContext)
 
 		// if we are done, exit the loop that restarts the worker script
-		if workersAreDone.Load() {
-			break
+		select {
+		case _, ok := <-workersDone:
+			if !ok {
+				metrics.StopWorker(worker.fileName, StopReasonShutdown)
+
+				if c := logger.Check(zapcore.DebugLevel, "terminated"); c != nil {
+					c.Write(zap.String("worker", worker.fileName))
+				}
+
+				return
+			}
+			// continue on since the channel is still open
+		default:
+			// continue on since the channel is still open
 		}
 
 		// on exit status 0 we just run the worker script again
@@ -184,12 +204,7 @@ func (worker *worker) startNewWorkerThread() {
 		metrics.StopWorker(worker.fileName, StopReasonCrash)
 	}
 
-	metrics.StopWorker(worker.fileName, StopReasonShutdown)
-
-	// TODO: check if the termination is expected
-	if c := logger.Check(zapcore.DebugLevel, "terminated"); c != nil {
-		c.Write(zap.String("worker", worker.fileName))
-	}
+	// unreachable
 }
 
 func (worker *worker) handleRequest(r *http.Request) {
@@ -210,7 +225,6 @@ func (worker *worker) handleRequest(r *http.Request) {
 }
 
 func stopWorkers() {
-	workersAreDone.Store(true)
 	close(workersDone)
 }
 
@@ -253,15 +267,11 @@ func restartWorkers(workerOpts []workerOpt) {
 
 func assignThreadToWorker(thread *phpThread) {
 	fc := thread.mainRequest.Context().Value(contextKey).(*FrankenPHPContext)
-	metrics.ReadyWorker(fc.scriptFilename)
 	worker, ok := workers[fc.scriptFilename]
 	if !ok {
 		panic("worker not found for script: " + fc.scriptFilename)
 	}
 	thread.worker = worker
-	if !workersAreReady.Load() {
-		workersReadyWG.Done()
-	}
 	thread.requestChan = make(chan *http.Request)
 	worker.threadMutex.Lock()
 	worker.threads = append(worker.threads, thread)
@@ -275,6 +285,15 @@ func go_frankenphp_worker_handle_request_start(threadIndex C.uintptr_t) C.bool {
 	// we assign a worker to the thread if it doesn't have one already
 	if thread.worker == nil {
 		assignThreadToWorker(thread)
+	}
+	thread.readiedOnce.Do(func() {
+		// inform metrics that the worker is ready
+		metrics.ReadyWorker(thread.worker.fileName)
+	})
+
+	select {
+	case thread.worker.ready <- struct{}{}:
+	default:
 	}
 
 	if c := logger.Check(zapcore.DebugLevel, "waiting for request"); c != nil {
