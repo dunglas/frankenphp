@@ -348,7 +348,9 @@ func Init(options ...Option) error {
 		return err
 	}
 
-	initMemoryCache(1000)
+	// TODO:make this configurable
+	maxCacheSizeInMegaBytes := 10
+	initMemoryCache(maxCacheSizeInMegaBytes * 1024 * 1024)
 
 	if c := logger.Check(zapcore.InfoLevel, "FrankenPHP started 🐘"); c != nil {
 		c.Write(zap.String("php_version", Version().Version), zap.Int("num_threads", opt.numThreads))
