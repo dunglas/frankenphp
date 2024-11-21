@@ -26,9 +26,9 @@ func newExponentialBackoff(minBackoff time.Duration, maxBackoff time.Duration, m
 // recordSuccess resets the backoff and failureCount
 func (e *exponentialBackoff) recordSuccess() {
 	e.mu.Lock()
-	defer e.mu.Unlock()
 	e.failureCount = 0
 	e.backoff = e.minBackoff
+	e.mu.Unlock()
 }
 
 // recordFailure increments the failure count and increases the backoff, it returns true if maxConsecutiveFailures has been reached
