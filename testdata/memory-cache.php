@@ -1,13 +1,14 @@
 <?php
 
-require_once __DIR__.'/_executor.php';
+require_once __DIR__ . '/_executor.php';
 
-return function () {
+return function () use (&$requests) {
+    $key = $_GET['key'] ?? 'key';
     if (isset($_GET['remember'])) {
-        frankenphp_cache_put('remember', $_GET['remember']);
+        frankenphp_cache_put($key, $_GET['remember']);
     }
     if (isset($_GET['forget'])) {
-        frankenphp_cache_forget('remember');
+        frankenphp_cache_forget($key);
     }
-    echo frankenphp_cache_get('remember') ?? 'nothing';
+    echo frankenphp_cache_get($key) ?? 'nothing';
 };

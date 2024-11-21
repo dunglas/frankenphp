@@ -38,9 +38,11 @@ ZEND_FUNCTION(frankenphp_response_headers);
 
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_MASK_EX(arginfo_frankenphp_cache_put, 0,
-                                        0, MAY_BE_ARRAY | MAY_BE_BOOL)
+                                        0, MAY_BE_BOOL)
 ZEND_ARG_TYPE_INFO(0, key, IS_STRING, 0)
 ZEND_ARG_TYPE_INFO(0, value, IS_STRING, 1)
+// pass_by_ref, name, type_hint, allow_null, default_value
+ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, ttl, IS_LONG, 0, "-1")
 ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_MASK_EX(arginfo_frankenphp_cache_get, 0,

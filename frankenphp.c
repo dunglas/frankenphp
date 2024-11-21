@@ -1186,18 +1186,17 @@ PHP_FUNCTION(frankenphp_cache_put) /* {{{ */
   size_t l_key;
   char *value;
   size_t l_value;
+  zend_long ttl = 0;
 
-  ZEND_PARSE_PARAMETERS_START(2, 2);
+  ZEND_PARSE_PARAMETERS_START(2, 3);
   Z_PARAM_STRING(key, l_key);
   Z_PARAM_STRING(value, l_value);
+  Z_PARAM_OPTIONAL
+  Z_PARAM_LONG(ttl);
   ZEND_PARSE_PARAMETERS_END();
 
-  bool success = go_frankenphp_cache_put(key, value, (int)l_value);
-  if(!success) {
-	zend_throw_exception(spl_ce_RuntimeException, "Failed to set cache", 0);
-	RETURN_THROWS();
-  }
-  RETURN_TRUE;
+  bool success = go_frankenphp_cache_put(key, value, (int)l_value, ttl);
+  RETURN_BOOL(success);
 }
 /* }}} */
 
