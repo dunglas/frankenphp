@@ -607,6 +607,7 @@ func TestAllDefinedServerVars(t *testing.T) {
 			"Content-Length: 14", // maliciously set to 14
 			"Special-Chars: <%00>",
 			"Host: Malicous Host",
+			"X-Empty-Header:",
 		},
 		bytes.NewBufferString("foo=bar"),
 		http.StatusOK,

@@ -33,6 +33,7 @@ foreach ([
              'REMOTE_USER',
              'REQUEST_METHOD',
              'REQUEST_URI',
+             'HTTP_X_EMPTY_HEADER',
          ] as $name) {
     echo "$name:" . $_SERVER[$name] . "\n";
 }
