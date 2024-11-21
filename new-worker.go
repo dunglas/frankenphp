@@ -44,6 +44,10 @@ func go_frankenphp_worker_handle_request_start(threadIndex C.uintptr_t) C.bool {
 //
 //export go_frankenphp_finish_request
 func go_frankenphp_finish_request(threadIndex C.uintptr_t, isWorkerRequest bool) {
+	thread := phpThreads[threadIndex]
+	r := thread.getActiveRequest()
+	fc := r.Context().Value(contextKey).(*FrankenPHPContext)
+	maybeCloseContext(fc)
 }
 
 // restartWorkersOnFileChanges restarts the workers on file changes.
