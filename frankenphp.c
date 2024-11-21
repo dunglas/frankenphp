@@ -711,7 +711,7 @@ void frankenphp_register_variable_safe(char *key, char *val, size_t val_len,
     return;
   }
   if (val == NULL) {
-	val = "";
+    val = "";
   }
   size_t new_val_len = val_len;
   if (!should_filter_var ||
