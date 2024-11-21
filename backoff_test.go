@@ -15,12 +15,8 @@ func TestExponentialBackoff_Reset(t *testing.T) {
 
 	e.mu.RLock()
 	defer e.mu.RUnlock()
-	if e.failureCount != 0 {
-		t.Errorf("expected failureCount to be reset to 0, got %d", e.failureCount)
-	}
-	if e.backoff != e.minBackoff {
-		t.Errorf("expected backoff to be reset to minBackoff, got %v", e.backoff)
-	}
+	assert.Equal(t, 0, e.failureCount, "expected failureCount to be reset to 0")
+	assert.Equal(t, e.backoff, e.minBackoff, "expected backoff to be reset to minBackoff")
 }
 
 func TestExponentialBackoff_Trigger(t *testing.T) {
@@ -32,10 +28,6 @@ func TestExponentialBackoff_Trigger(t *testing.T) {
 
 	e.mu.RLock()
 	defer e.mu.RUnlock()
-	if e.failureCount != e.maxConsecutiveFailures {
-		t.Errorf("expected failureCount to be %d, got %d", e.maxConsecutiveFailures, e.failureCount)
-	}
-	if e.backoff != e.maxBackoff {
-		t.Errorf("expected backoff to be maxBackoff, got %v", e.backoff)
-	}
+	assert.Equal(t, e.failureCount, e.maxConsecutiveFailures, "expected failureCount to be maxConsecutiveFailures")
+	assert.Equal(t, e.backoff, e.maxBackoff, "expected backoff to be maxBackoff")
 }
