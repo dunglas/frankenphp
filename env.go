@@ -10,11 +10,7 @@ import (
 
 //export go_putenv
 func go_putenv(str *C.char, length C.int) C.bool {
-	// Create a byte slice from C string with a specified length
-	s := C.GoBytes(unsafe.Pointer(str), length)
-
-	// Convert byte slice to string
-	envString := string(s)
+	envString := C.GoStringN(str, length)
 
 	// Check if '=' is present in the string
 	if key, val, found := strings.Cut(envString, "="); found {
