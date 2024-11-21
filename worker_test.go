@@ -1,3 +1,5 @@
+//go:build !newworker
+
 package frankenphp_test
 
 import (
