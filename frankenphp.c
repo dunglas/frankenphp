@@ -243,7 +243,11 @@ PHP_FUNCTION(frankenphp_finish_request) { /* {{{ */
   php_header();
 
   if (ctx->has_active_request) {
+#ifdef NEW_WORKER
+    go_frankenphp_finish_php_request(thread_index);
+#else
     go_frankenphp_finish_request(thread_index, false);
+#endif
   }
 
   ctx->finished = true;
@@ -443,7 +447,11 @@ PHP_FUNCTION(frankenphp_handle_request) {
 
   frankenphp_worker_request_shutdown();
   ctx->has_active_request = false;
+#ifdef NEW_WORKER
+  go_frankenphp_finish_worker_request(thread_index);
+#else
   go_frankenphp_finish_request(thread_index, true);
+#endif
 
   RETURN_TRUE;
 }
@@ -832,13 +840,33 @@ static void *php_thread(void *arg) {
   cfg_get_string("filter.default", &default_filter);
   should_filter_var = default_filter != NULL;
 
+#ifdef NEW_WORKER
+  go_frankenphp_on_thread_startup(thread_index);
+
+  while(true) {
+    char *scriptName = go_frankenphp_before_script_execution(thread_index);
+
+    // if the script name is NULL, the thread should exit
+    if (scriptName == NULL || scriptName[0] == '\0') {
+      break;
+    }
+
+    int exit_status = frankenphp_execute_script(scriptName);
+    go_frankenphp_after_script_execution(thread_index, exit_status);
+  }
+#else
   while (go_handle_request(thread_index)) {
   }
+#endif
 
   go_frankenphp_release_known_variable_keys(thread_index);
 
 #ifdef ZTS
   ts_free_thread();
+#endif
+
+#ifdef NEW_WORKER
+  go_frankenphp_on_thread_shutdown(thread_index);
 #endif
 
   return NULL;
