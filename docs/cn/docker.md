@@ -1,7 +1,7 @@
 # 构建自定义 Docker 镜像
 
 [FrankenPHP Docker 镜像](https://hub.docker.com/r/dunglas/frankenphp) 基于 [官方 PHP 镜像](https://hub.docker.com/_/php/)。
-Alpine Linux 和 Debian 衍生版适用于常见的处理器架构，且支持 PHP 8.2 和 PHP 8.3。[查看 Tags](https://hub.docker.com/r/dunglas/frankenphp/tags)。
+Alpine Linux 和 Debian 衍生版适用于常见的处理器架构，支持 PHP 8.2、8.3 和 8.4。。[查看 Tags](https://hub.docker.com/r/dunglas/frankenphp/tags)。
 
 ## 如何使用镜像
 
