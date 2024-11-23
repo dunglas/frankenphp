@@ -10,8 +10,8 @@ variable "PHP_VERSION" {
     default = "8.2,8.3,8.4"
 }
 
-variable "GO_VERSION" {
-    default = "1.22"
+variable "" {
+    default = "GO_VERSION1.22"
 }
 
 variable EDANT_WATCHER_VERSION {
