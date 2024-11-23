@@ -26,10 +26,6 @@ type worker struct {
 	ready       chan struct{}
 }
 
-const maxWorkerErrorBackoff = 1 * time.Second
-const minWorkerErrorBackoff = 100 * time.Millisecond
-const maxWorkerConsecutiveFailures = 6
-
 var (
 	watcherIsEnabled bool
 	workerShutdownWG sync.WaitGroup
@@ -97,33 +93,15 @@ func newWorker(o workerOpt) (*worker, error) {
 func (worker *worker) startNewWorkerThread() {
 	workerShutdownWG.Add(1)
 	defer workerShutdownWG.Done()
-
-	backoff := minWorkerErrorBackoff
-	failureCount := 0
-	backingOffLock := sync.RWMutex{}
+	backoff := &exponentialBackoff{
+		maxBackoff:             1 * time.Second,
+		minBackoff:             100 * time.Millisecond,
+		maxConsecutiveFailures: 6,
+	}
 
 	for {
 		// if the worker can stay up longer than backoff*2, it is probably an application error
-		upFunc := sync.Once{}
-		go func() {
-			backingOffLock.RLock()
-			wait := backoff * 2
-			backingOffLock.RUnlock()
-			time.Sleep(wait)
-			upFunc.Do(func() {
-				backingOffLock.Lock()
-				defer backingOffLock.Unlock()
-				// if we come back to a stable state, reset the failure count
-				if backoff == minWorkerErrorBackoff {
-					failureCount = 0
-				}
-
-				// earn back the backoff over time
-				if failureCount > 0 {
-					backoff = max(backoff/2, 100*time.Millisecond)
-				}
-			})
-		}()
+		backoff.wait()
 
 		metrics.StartWorker(worker.fileName)
 
@@ -176,31 +154,17 @@ func (worker *worker) startNewWorkerThread() {
 				c.Write(zap.String("worker", worker.fileName))
 			}
 			metrics.StopWorker(worker.fileName, StopReasonRestart)
+			backoff.recordSuccess()
 			continue
 		}
 
 		// on exit status 1 we log the error and apply an exponential backoff when restarting
-		upFunc.Do(func() {
-			backingOffLock.Lock()
-			defer backingOffLock.Unlock()
-			// if we end up here, the worker has not been up for backoff*2
-			// this is probably due to a syntax error or another fatal error
-			if failureCount >= maxWorkerConsecutiveFailures {
-				if !watcherIsEnabled {
-					panic(fmt.Errorf("workers %q: too many consecutive failures", worker.fileName))
-				}
-				logger.Warn("many consecutive worker failures", zap.String("worker", worker.fileName), zap.Int("failures", failureCount))
+		if backoff.recordFailure() {
+			if !watcherIsEnabled {
+				panic(fmt.Errorf("workers %q: too many consecutive failures", worker.fileName))
 			}
-			failureCount += 1
-		})
-		backingOffLock.RLock()
-		wait := backoff
-		backingOffLock.RUnlock()
-		time.Sleep(wait)
-		backingOffLock.Lock()
-		backoff *= 2
-		backoff = min(backoff, maxWorkerErrorBackoff)
-		backingOffLock.Unlock()
+			logger.Warn("many consecutive worker failures", zap.String("worker", worker.fileName), zap.Int("failures", backoff.failureCount))
+		}
 		metrics.StopWorker(worker.fileName, StopReasonCrash)
 	}
 
