@@ -34,7 +34,7 @@ docker run -v $PWD:/app/public \
 ### 独立二进制
 
 如果您不想使用 Docker，我们为 Linux 和 macOS 提供独立的 FrankenPHP 二进制文件
-，其中包含 [PHP 8.3](https://www.php.net/releases/8.3/en.php) 和最流行的 PHP 扩展：[下载 FrankenPHP](https://github.com/dunglas/frankenphp/releases)。
+，其中包含 [PHP 8.4](https://www.php.net/releases/8.4/en.php) 和最流行的 PHP 扩展：[下载 FrankenPHP](https://github.com/dunglas/frankenphp/releases)。
 
 若要启动当前目录的内容，请运行：
 
