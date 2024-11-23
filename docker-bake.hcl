@@ -11,7 +11,7 @@ variable "PHP_VERSION" {
 }
 
 variable "GO_VERSION" {
-    default = "1.22"
+    default = "1.23"
 }
 
 variable EDANT_WATCHER_VERSION {
