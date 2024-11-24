@@ -74,7 +74,7 @@ body:
     attributes:
       label: PHP configuration
       description: |
-        Please copy and paste the output of the `phpinfo()` function.
+        Please copy and paste the output of the `phpinfo()` function -- remember to remove **sensitive information** like passwords, API keys, etc.
       render: shell
     validations:
       required: true
