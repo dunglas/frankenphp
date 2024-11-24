@@ -24,6 +24,13 @@ type threadStateHandler struct {
 	subscribers  []stateSubscriber
 }
 
+type threadStateMachine interface {
+	onStartup(*phpThread)
+    beforeScriptExecution(*phpThread)
+    afterScriptExecution(*phpThread, int)
+    onShutdown(*phpThread)
+}
+
 type stateSubscriber struct {
 	states   []threadState
 	ch       chan struct{}
