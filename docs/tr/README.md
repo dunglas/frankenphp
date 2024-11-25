@@ -34,7 +34,7 @@ docker run -v $PWD:/app/public \
 ### Binary Çıktısı
 
 Docker kullanmayı tercih etmiyorsanız, Linux ve macOS için bağımsız FrankenPHP binary dosyası sağlıyoruz
-[PHP 8.3](https://www.php.net/releases/8.3/en.php) ve en popüler PHP eklentilerini de içermekte: [FrankenPHP](https://github.com/dunglas/frankenphp/releases) indirin
+[PHP 8.4](https://www.php.net/releases/8.4/en.php) ve en popüler PHP eklentilerini de içermekte: [FrankenPHP](https://github.com/dunglas/frankenphp/releases) indirin
 
 Geçerli dizinin içeriğini başlatmak için çalıştırın:
 

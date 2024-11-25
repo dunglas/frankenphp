@@ -42,7 +42,7 @@ if ! echo "${PHP_EXTENSION_LIBS}" | grep -q "\bbrotli\b"; then
 fi
 
 if [ -z "${PHP_VERSION}" ]; then
-	export PHP_VERSION="8.3"
+	export PHP_VERSION="8.4"
 fi
 
 if [ -z "${FRANKENPHP_VERSION}" ]; then
@@ -157,6 +157,11 @@ if [ "${os}" = "mac" ]; then
 	export CGO_LDFLAGS="-framework CoreFoundation -framework SystemConfiguration"
 elif [ "${os}" = "linux" ] && [ -z "${DEBUG_SYMBOLS}" ]; then
 	CGO_LDFLAGS="-Wl,-O1 -pie"
+fi
+
+# Temporary workaround for https://github.com/crazywhalecc/static-php-cli/issues/560
+if [[ "${PHP_EXTENSIONS}" == *"pgsql"* ]]; then
+	CGO_LDFLAGS="${CGO_LDFLAGS} ${PWD}/buildroot/lib/libpgcommon.a ${PWD}/buildroot/lib/libpgport.a ${PWD}/buildroot/lib/libpq.a"
 fi
 
 CGO_LDFLAGS="${CGO_LDFLAGS} ${PWD}/buildroot/lib/libbrotlicommon.a ${PWD}/buildroot/lib/libbrotlienc.a ${PWD}/buildroot/lib/libbrotlidec.a ${PWD}/buildroot/lib/libwatcher-c.a $(./buildroot/bin/php-config --ldflags || true) $(./buildroot/bin/php-config --libs | sed -e 's/-lgcc_s//g' || true)"
