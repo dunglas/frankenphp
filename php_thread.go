@@ -34,6 +34,7 @@ type phpThread struct {
 	knownVariableKeys map[string]*C.zend_string
 	// the state handler
 	state *threadStateHandler
+	stateMachine *workerStateMachine
 }
 
 func (thread *phpThread) getActiveRequest() *http.Request {
@@ -89,34 +90,38 @@ func (thread *phpThread) pinCString(s string) *C.char {
 
 //export go_frankenphp_on_thread_startup
 func go_frankenphp_on_thread_startup(threadIndex C.uintptr_t) {
-	phpThreads[threadIndex].setInactive()
+	phpThreads[threadIndex].state.set(stateInactive)
 }
 
 //export go_frankenphp_before_script_execution
 func go_frankenphp_before_script_execution(threadIndex C.uintptr_t) *C.char {
 	thread := phpThreads[threadIndex]
+	thread.state.set(stateReady)
 
 	// if the state is inactive, wait for it to be active
-	if thread.state.is(stateInactive) {
-		thread.state.waitFor(stateActive, stateShuttingDown)
-	}
+	//if thread.state.is(stateInactive) {
+	//	thread.state.waitFor(stateActive, stateShuttingDown)
+	//}
 
 	// returning nil signals the thread to stop
-	if thread.state.is(stateShuttingDown) {
-		return nil
-	}
+	//if thread.state.is(stateShuttingDown) {
+	//	return nil
+	//}
 
 	// if the thread is not ready yet, set it up
-	if !thread.state.is(stateReady) {
-		thread.state.set(stateReady)
-		if thread.onStartup != nil {
-			thread.onStartup(thread)
-		}
-	}
+	//if !thread.state.is(stateReady) {
+	//	thread.state.set(stateReady)
+	//	if thread.onStartup != nil {
+	//		thread.onStartup(thread)
+	//	}
+	//}
 
 	// execute a hook before the script is executed
-	thread.beforeScriptExecution(thread)
+	//thread.beforeScriptExecution(thread)
 
+	if thread.stateMachine.done {
+		return nil
+	}
 	// return the name of the PHP script that should be executed
 	return thread.pinCString(thread.scriptName)
 }
@@ -127,18 +132,10 @@ func go_frankenphp_after_script_execution(threadIndex C.uintptr_t, exitStatus C.
 	if exitStatus < 0 {
 		panic(ScriptExecutionError)
 	}
-	if thread.afterScriptExecution != nil {
-		thread.afterScriptExecution(thread, int(exitStatus))
-	}
 	thread.Unpin()
 }
 
 //export go_frankenphp_on_thread_shutdown
 func go_frankenphp_on_thread_shutdown(threadIndex C.uintptr_t) {
-	thread := phpThreads[threadIndex]
-	thread.Unpin()
-	if thread.onShutdown != nil {
-		thread.onShutdown(thread)
-	}
 	thread.state.set(stateDone)
 }

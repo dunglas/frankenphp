@@ -24,6 +24,7 @@ type worker struct {
 	threadMutex sync.RWMutex
 }
 
+
 var (
 	workers          map[string]*worker
 	workersDone      chan interface{}
@@ -141,72 +142,6 @@ func (worker *worker) startNewThread() {
 			thread.backoff = nil
 		},
 	)
-}
-
-func (worker *worker) beforeScript(thread *phpThread) {
-	// if we are restarting due to file watching, set the state back to ready
-	if thread.state.is(stateRestarting) {
-		thread.state.set(stateReady)
-	}
-
-	thread.backoff.reset()
-	metrics.StartWorker(worker.fileName)
-
-	// Create a dummy request to set up the worker
-	r, err := http.NewRequest(http.MethodGet, filepath.Base(worker.fileName), nil)
-	if err != nil {
-		panic(err)
-	}
-
-	r, err = NewRequestWithContext(
-		r,
-		WithRequestDocumentRoot(filepath.Dir(worker.fileName), false),
-		WithRequestPreparedEnv(worker.env),
-	)
-	if err != nil {
-		panic(err)
-	}
-
-	if err := updateServerContext(thread, r, true, false); err != nil {
-		panic(err)
-	}
-
-	thread.mainRequest = r
-	if c := logger.Check(zapcore.DebugLevel, "starting"); c != nil {
-		c.Write(zap.String("worker", worker.fileName), zap.Int("thread", thread.threadIndex))
-	}
-}
-
-func (worker *worker) afterScript(thread *phpThread, exitStatus int) {
-	fc := thread.mainRequest.Context().Value(contextKey).(*FrankenPHPContext)
-	fc.exitStatus = exitStatus
-
-	defer func() {
-		maybeCloseContext(fc)
-		thread.mainRequest = nil
-	}()
-
-	// on exit status 0 we just run the worker script again
-	if fc.exitStatus == 0 {
-		// TODO: make the max restart configurable
-		metrics.StopWorker(worker.fileName, StopReasonRestart)
-
-		if c := logger.Check(zapcore.DebugLevel, "restarting"); c != nil {
-			c.Write(zap.String("worker", worker.fileName))
-		}
-		return
-	}
-
-	// on exit status 1 we apply an exponential backoff when restarting
-	metrics.StopWorker(worker.fileName, StopReasonCrash)
-	thread.backoff.trigger(func(failureCount int) {
-		// if we end up here, the worker has not been up for backoff*2
-		// this is probably due to a syntax error or another fatal error
-		if !watcherIsEnabled {
-			panic(fmt.Errorf("workers %q: too many consecutive failures", worker.fileName))
-		}
-		logger.Warn("many consecutive worker failures", zap.String("worker", worker.fileName), zap.Int("failures", failureCount))
-	})
 }
 
 func (worker *worker) handleRequest(r *http.Request, fc *FrankenPHPContext) {

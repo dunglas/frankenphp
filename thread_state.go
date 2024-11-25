@@ -12,7 +12,7 @@ const (
 	stateInactive
 	stateActive
 	stateReady
-	stateWorking
+	stateBusy
 	stateShuttingDown
 	stateDone
 	stateRestarting
@@ -25,10 +25,8 @@ type threadStateHandler struct {
 }
 
 type threadStateMachine interface {
-	onStartup(*phpThread)
-    beforeScriptExecution(*phpThread)
-    afterScriptExecution(*phpThread, int)
-    onShutdown(*phpThread)
+	handleState(state threadState)
+	isDone() bool
 }
 
 type stateSubscriber struct {
@@ -41,6 +39,12 @@ func (h *threadStateHandler) is(state threadState) bool {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 	return h.currentState == state
+}
+
+func (h *threadStateHandler) get(state threadState) threadState {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	return h.currentState
 }
 
 func (h *threadStateHandler) set(nextState threadState) {
