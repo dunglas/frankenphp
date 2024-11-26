@@ -262,10 +262,22 @@ if [ -n "${EMBED}" ] && [ -d "${EMBED}" ]; then
 	${md5binary} app.tar | awk '{printf $1}' >app_checksum.txt
 fi
 
-cd caddy/frankenphp/
+if [ -z "${XCADDY_ARGS}" ]; then
+    XCADDY_ARGS="--with github.com/dunglas/mercure/caddy --with github.com/dunglas/vulcain/caddy"
+fi
+
 go env
-go build -buildmode=pie -tags "cgo,netgo,osusergo,static_build,nobadger,nomysql,nopgx" -ldflags "-linkmode=external -extldflags '-static-pie ${extraExtldflags}' ${extraLdflags} -X 'github.com/caddyserver/caddy/v2.CustomVersion=FrankenPHP ${FRANKENPHP_VERSION} PHP ${LIBPHP_VERSION} Caddy'" -o "../../dist/${bin}"
-cd ../..
+cd caddy/
+go install github.com/caddyserver/xcaddy/cmd/xcaddy@latest
+# shellcheck disable=SC2086
+CGO_ENABLED=1 \
+XCADDY_GO_BUILD_FLAGS="-buildmode=pie -tags cgo,netgo,osusergo,static_build,nobadger,nomysql,nopgx -ldflags \"-linkmode=external -extldflags '-static-pie ${extraExtldflags}' ${extraLdflags} -X 'github.com/caddyserver/caddy/v2.CustomVersion=FrankenPHP ${FRANKENPHP_VERSION} PHP ${LIBPHP_VERSION} Caddy'\"" \
+xcaddy build \
+    --output "../../dist/${bin}" \
+    ${XCADDY_ARGS} \
+    --with github.com/dunglas/frankenphp=.. \
+    --with github.com/dunglas/frankenphp/caddy=.
+cd ..
 
 if [ -d "${EMBED}" ]; then
 	truncate -s 0 app.tar
