@@ -43,6 +43,24 @@ docker buildx bake \
   static-builder
 ```
 
+### Extra Caddy Modules
+
+To add extra Caddy modules or pass other arguments to [xcaddy](https://github.com/caddyserver/xcaddy), use the `XCADDY_ARGS` Docker ARG:
+
+```console
+docker buildx bake \
+  --load \
+  --set static-builder.args.XCADDY_ARGS="--with github.com/darkweak/souin/plugins/caddy --with github.com/dunglas/mercure/caddy --with github.com/dunglas/vulcain/caddy" \
+  static-builder
+```
+
+In this example, we add the [Souin](https://souin.io) HTTP cache module for Caddy as well as the [Mercure](https://mercure.rocks) and [Vulcain](https://vulcain.rocks) modules.
+
+> [!TIP]
+>
+> The Mercure and Vulcain modules are included by default if `XCADDY_ARGS` is empty or not set.
+> If you customize the value of `XCADDY_ARGS`, you must include them explicitly if you want them to be included.
+
 See also how to [customize the build](#customizing-the-build)
 
 ### GitHub Token
@@ -75,6 +93,7 @@ script to customize the static build:
 * `PHP_VERSION`: the version of PHP to use
 * `PHP_EXTENSIONS`: the PHP extensions to build ([list of supported extensions](https://static-php.dev/en/guide/extensions.html))
 * `PHP_EXTENSION_LIBS`: extra libraries to build that add features to the extensions
+* `XCADDY_ARGS`: arguments to pass to [xcaddy](https://github.com/caddyserver/xcaddy), for instance to add extra Caddy modules
 * `EMBED`: path of the PHP application to embed in the binary
 * `CLEAN`: when set, libphp and all its dependencies are built from scratch (no cache)
 * `NO_COMPRESS`: don't compress the resulting binary using UPX
