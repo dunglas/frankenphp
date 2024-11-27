@@ -43,6 +43,24 @@ docker buildx bake \
   static-builder
 ```
 
+### 额外的 Caddy 模块
+
+要向 [xcaddy](https://github.com/caddyserver/xcaddy) 添加额外的 Caddy 模块或传递其他参数，请使用 `XCADDY_ARGS` Docker 参数：
+
+```console
+docker buildx bake \
+  --load \
+  --set static-builder.args.XCADDY_ARGS="--with github.com/darkweak/souin/plugins/caddy --with github.com/dunglas/mercure/caddy --with github.com/dunglas/vulcain/caddy" \
+  static-builder
+```
+
+在本例中，我们为 Caddy 添加了 [Souin](https://souin.io) HTTP 缓存模块，以及 [Mercure](https://mercure.rocks) 和 [Vulcain](https://vulcain.rocks) 模块。
+
+> [!TIP]
+>
+> 如果 `XCADDY_ARGS` 为空或未设置，则默认包含 Mercure 和 Vulcain 模块。
+> 如果自定义了 `XCADDY_ARGS` 的值，则必须显式地包含它们。
+
 参见：[自定义构建](#自定义构建)
 
 ### GitHub Token
@@ -75,6 +93,7 @@ cd frankenphp
 * `PHP_VERSION`: 要使用的 PHP 版本
 * `PHP_EXTENSIONS`: 要构建的 PHP 扩展（[支持的扩展列表](https://static-php.dev/zh/guide/extensions.html)）
 * `PHP_EXTENSION_LIBS`: 要构建的额外库，为扩展添加额外的功能
+* `XCADDY_ARGS`：传递给 [xcaddy](https://github.com/caddyserver/xcaddy) 的参数，例如用于添加额外的 Caddy 模块
 * `EMBED`: 要嵌入二进制文件的 PHP 应用程序的路径
 * `CLEAN`: 设置后，libphp 及其所有依赖项都是重新构建的（不使用缓存）
 * `DEBUG_SYMBOLS`: 设置后，调试符号将被保留在二进制文件内
