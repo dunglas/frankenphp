@@ -173,8 +173,11 @@ fi
 
 export CGO_LDFLAGS
 
-LIBPHP_VERSION="$(./buildroot/bin/php-config --version)"
-export LIBPHP_VERSION
+#LIBPHP_VERSION="$(./buildroot/bin/php-config --version)"
+# Temporary workaround for https://github.com/crazywhalecc/static-php-cli/issues/563
+if [[ $(cat buildroot/include/php/main/php_version.h) =~ (define PHP_VERSION \"([0-9\.]+)) ]]; then
+	export LIBPHP_VERSION=${BASH_REMATCH[2]}
+fi
 
 cd ../
 
