@@ -67,9 +67,8 @@ RUN git clone --branch=PHP-8.4 https://github.com/php/php-src.git . && \
 	php --version
 
 # Install e-dant/watcher (necessary for file watching)
-ARG EDANT_WATCHER_VERSION=release
 WORKDIR /usr/local/src/watcher
-RUN git clone --branch=$EDANT_WATCHER_VERSION https://github.com/e-dant/watcher . && \
+RUN git clone https://github.com/e-dant/watcher . && \
 	cmake -S . -B build -DCMAKE_BUILD_TYPE=Release && \
 	cmake --build build/ && \
 	cmake --install build
