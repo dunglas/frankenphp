@@ -24,10 +24,6 @@ type threadStateHandler struct {
 	subscribers  []stateSubscriber
 }
 
-type threadStateMachine interface {
-	handleState(state threadState)
-	isDone() bool
-}
 
 type stateSubscriber struct {
 	states   []threadState

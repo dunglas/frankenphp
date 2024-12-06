@@ -8,6 +8,17 @@ import (
 	"unsafe"
 )
 
+type phpThread interface {
+	onStartup()
+    beforeScriptExecution() string
+    afterScriptExecution(exitStatus int) bool
+    onShutdown()
+    pinner() *runtime.Pinner
+    getActiveRequest() *http.Request
+    getKnownVariableKeys() map[string]*C.zend_string
+    setKnownVariableKeys(map[string]*C.zend_string)
+}
+
 type phpThread struct {
 	runtime.Pinner
 
@@ -43,14 +54,6 @@ func (thread *phpThread) getActiveRequest() *http.Request {
 	}
 
 	return thread.mainRequest
-}
-
-func (thread *phpThread) setInactive() {
-	thread.scriptName = ""
-	// TODO: handle this in a state machine
-	if !thread.state.is(stateShuttingDown) {
-		thread.state.set(stateInactive)
-	}
 }
 
 func (thread *phpThread) setActive(
@@ -90,40 +93,15 @@ func (thread *phpThread) pinCString(s string) *C.char {
 
 //export go_frankenphp_on_thread_startup
 func go_frankenphp_on_thread_startup(threadIndex C.uintptr_t) {
-	phpThreads[threadIndex].state.set(stateInactive)
+	phpThreads[threadIndex].stateMachine.onStartup()
 }
 
 //export go_frankenphp_before_script_execution
 func go_frankenphp_before_script_execution(threadIndex C.uintptr_t) *C.char {
 	thread := phpThreads[threadIndex]
-	thread.state.set(stateReady)
-
-	// if the state is inactive, wait for it to be active
-	//if thread.state.is(stateInactive) {
-	//	thread.state.waitFor(stateActive, stateShuttingDown)
-	//}
-
-	// returning nil signals the thread to stop
-	//if thread.state.is(stateShuttingDown) {
-	//	return nil
-	//}
-
-	// if the thread is not ready yet, set it up
-	//if !thread.state.is(stateReady) {
-	//	thread.state.set(stateReady)
-	//	if thread.onStartup != nil {
-	//		thread.onStartup(thread)
-	//	}
-	//}
-
-	// execute a hook before the script is executed
-	//thread.beforeScriptExecution(thread)
-
-	if thread.stateMachine.done {
-		return nil
-	}
+	scriptName := thread.stateMachine.beforeScriptExecution()
 	// return the name of the PHP script that should be executed
-	return thread.pinCString(thread.scriptName)
+	return thread.pinCString(scriptName)
 }
 
 //export go_frankenphp_after_script_execution
@@ -132,10 +110,11 @@ func go_frankenphp_after_script_execution(threadIndex C.uintptr_t, exitStatus C.
 	if exitStatus < 0 {
 		panic(ScriptExecutionError)
 	}
+	thread.stateMachine.afterScriptExecution(int(exitStatus))
 	thread.Unpin()
 }
 
 //export go_frankenphp_on_thread_shutdown
 func go_frankenphp_on_thread_shutdown(threadIndex C.uintptr_t) {
-	thread.state.set(stateDone)
+	thread.stateMachine.onShutdown()
 }

@@ -477,28 +477,7 @@ func ServeHTTP(responseWriter http.ResponseWriter, request *http.Request) error 
 }
 
 func handleRequest(thread *phpThread) {
-	select {
-	case <-done:
-		// no script should be executed if the server is shutting down
-		thread.scriptName = ""
-		return
 
-	case r := <-requestChan:
-		thread.mainRequest = r
-		fc := r.Context().Value(contextKey).(*FrankenPHPContext)
-
-		if err := updateServerContext(thread, r, true, false); err != nil {
-			rejectRequest(fc.responseWriter, err.Error())
-			afterRequest(thread, 0)
-			thread.Unpin()
-			// no script should be executed if the request was rejected
-			thread.scriptName = ""
-			return
-		}
-
-		// set the scriptName that should be executed
-		thread.scriptName = fc.scriptFilename
-	}
 }
 
 func afterRequest(thread *phpThread, exitStatus int) {

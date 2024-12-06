@@ -170,49 +170,8 @@ func (worker *worker) handleRequest(r *http.Request, fc *FrankenPHPContext) {
 
 //export go_frankenphp_worker_handle_request_start
 func go_frankenphp_worker_handle_request_start(threadIndex C.uintptr_t) C.bool {
-	thread := phpThreads[threadIndex]
-
-	if c := logger.Check(zapcore.DebugLevel, "waiting for request"); c != nil {
-		c.Write(zap.String("worker", thread.worker.fileName))
-	}
-
-	var r *http.Request
-	select {
-	case <-workersDone:
-		if c := logger.Check(zapcore.DebugLevel, "shutting down"); c != nil {
-			c.Write(zap.String("worker", thread.worker.fileName))
-		}
-
-		// execute opcache_reset if the restart was triggered by the watcher
-		if watcherIsEnabled && thread.state.is(stateRestarting) {
-			C.frankenphp_reset_opcache()
-		}
-
-		return C.bool(false)
-	case r = <-thread.requestChan:
-	case r = <-thread.worker.requestChan:
-	}
-
-	thread.workerRequest = r
-
-	if c := logger.Check(zapcore.DebugLevel, "request handling started"); c != nil {
-		c.Write(zap.String("worker", thread.worker.fileName), zap.String("url", r.RequestURI))
-	}
-
-	if err := updateServerContext(thread, r, false, true); err != nil {
-		// Unexpected error
-		if c := logger.Check(zapcore.DebugLevel, "unexpected error"); c != nil {
-			c.Write(zap.String("worker", thread.worker.fileName), zap.String("url", r.RequestURI), zap.Error(err))
-		}
-		fc := r.Context().Value(contextKey).(*FrankenPHPContext)
-		rejectRequest(fc.responseWriter, err.Error())
-		maybeCloseContext(fc)
-		thread.workerRequest = nil
-		thread.Unpin()
-
-		return go_frankenphp_worker_handle_request_start(threadIndex)
-	}
-	return C.bool(true)
+	thread := phpWorkerThread(phpThreads[threadIndex])
+	return C.bool(thread.stateMachine.waitForWorkerRequest(stateReady))
 }
 
 //export go_frankenphp_finish_worker_request
