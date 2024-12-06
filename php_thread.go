@@ -16,6 +16,7 @@ type phpThread struct {
 	threadIndex int
 	knownVariableKeys map[string]*C.zend_string
 	requestChan chan *http.Request
+	drainChan chan struct{}
 	handler	threadHandler
 	state *stateHandler
 }
@@ -66,13 +67,14 @@ func go_frankenphp_before_script_execution(threadIndex C.uintptr_t) *C.char {
 }
 
 //export go_frankenphp_after_script_execution
-func go_frankenphp_after_script_execution(threadIndex C.uintptr_t, exitStatus C.int) {
+func go_frankenphp_after_script_execution(threadIndex C.uintptr_t, exitStatus C.int) C.bool {
 	thread := phpThreads[threadIndex]
 	if exitStatus < 0 {
 		panic(ScriptExecutionError)
 	}
-	thread.handler.afterScriptExecution(int(exitStatus))
+	shouldContinueExecution := thread.handler.afterScriptExecution(int(exitStatus))
 	thread.Unpin()
+	return C.bool(shouldContinueExecution)
 }
 
 //export go_frankenphp_on_thread_shutdown

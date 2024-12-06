@@ -12,6 +12,7 @@ import (
 	"github.com/dunglas/frankenphp/internal/watcher"
 )
 
+// represents a worker script and can have many threads assigned to it
 type worker struct {
 	fileName    string
 	num         int
@@ -89,6 +90,7 @@ func restartWorkers() {
 		ready.Add(len(worker.threads))
 		for _, thread := range worker.threads {
 			thread.state.set(stateRestarting)
+			close(thread.drainChan)
 			go func(thread *phpThread) {
 				thread.state.waitFor(stateYielding)
 				ready.Done()
@@ -100,6 +102,7 @@ func restartWorkers() {
 	ready.Wait()
 	for _, worker := range workers {
         for _, thread := range worker.threads {
+            thread.drainChan = make(chan struct{})
             thread.state.set(stateReady)
         }
     }

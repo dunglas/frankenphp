@@ -4,6 +4,7 @@ package frankenphp
 import "C"
 import (
 	"net/http"
+	"go.uber.org/zap"
 )
 
 type phpRegularThread struct {
@@ -39,11 +40,14 @@ func (thread *phpRegularThread) beforeScriptExecution() string {
 	currentState := thread.state.get()
 	switch currentState {
 	case stateInactive:
+		logger.Info("waiting for activation", zap.Int("threadIndex", thread.thread.threadIndex),zap.Int("state", int(thread.state.get())))
 		thread.state.waitFor(stateActive, stateShuttingDown)
+		logger.Info("activated", zap.Int("threadIndex", thread.thread.threadIndex),zap.Int("state", int(thread.state.get())))
 		return thread.beforeScriptExecution()
 	case stateShuttingDown:
 		return ""
     case stateReady, stateActive:
+		logger.Info("beforeScriptExecution", zap.Int("state", int(thread.state.get())))
 		return waitForScriptExecution(thread)
 	}
 	return ""
@@ -67,20 +71,21 @@ func (thread *phpRegularThread) onShutdown(){
     thread.state.set(stateDone)
 }
 
-func waitForScriptExecution(thread *phpRegularThread) string {
+func waitForScriptExecution(handler *phpRegularThread) string {
 	select {
-    case <-done:
+    case <-handler.thread.drainChan:
+		logger.Info("drainChan", zap.Int("threadIndex", handler.thread.threadIndex))
         // no script should be executed if the server is shutting down
         return ""
 
     case r := <-requestChan:
-        thread.activeRequest = r
+        handler.activeRequest = r
         fc := r.Context().Value(contextKey).(*FrankenPHPContext)
 
-        if err := updateServerContext(thread.thread, r, true, false); err != nil {
+        if err := updateServerContext(handler.thread, r, true, false); err != nil {
             rejectRequest(fc.responseWriter, err.Error())
-            thread.afterRequest(0)
-            thread.thread.Unpin()
+            handler.afterRequest(0)
+            handler.thread.Unpin()
             // no script should be executed if the request was rejected
             return ""
         }
@@ -91,6 +96,12 @@ func waitForScriptExecution(thread *phpRegularThread) string {
 }
 
 func (thread *phpRegularThread) afterRequest(exitStatus int) {
+
+	// if the request is nil, no script was executed
+	if thread.activeRequest == nil {
+		return
+	}
+
 	fc := thread.activeRequest.Context().Value(contextKey).(*FrankenPHPContext)
 	fc.exitStatus = exitStatus
 	maybeCloseContext(fc)

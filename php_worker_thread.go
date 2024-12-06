@@ -15,7 +15,7 @@ type phpWorkerThread struct {
 	state  *stateHandler
 	thread *phpThread
 	worker *worker
-	mainRequest *http.Request
+	fakeRequest *http.Request
 	workerRequest *http.Request
 	backoff *exponentialBackoff
 }
@@ -44,7 +44,7 @@ func (handler *phpWorkerThread) getActiveRequest() *http.Request {
 		return handler.workerRequest
 	}
 
-	return handler.mainRequest
+	return handler.fakeRequest
 }
 
 func (t *phpWorkerThread) isReadyToTransition() bool {
@@ -78,14 +78,14 @@ func (handler *phpWorkerThread) waitForWorkerRequest() bool {
         c.Write(zap.String("worker", handler.worker.fileName))
     }
 
-	if !handler.state.is(stateReady) {
+	if handler.state.is(stateActive) {
 		metrics.ReadyWorker(handler.worker.fileName)
 		handler.state.set(stateReady)
 	}
 
     var r *http.Request
     select {
-    case <-workersDone:
+    case <-handler.thread.drainChan:
         if c := logger.Check(zapcore.DebugLevel, "shutting down"); c != nil {
             c.Write(zap.String("worker", handler.worker.fileName))
         }
@@ -163,20 +163,32 @@ func setUpWorkerScript(handler *phpWorkerThread, worker *worker) {
 		panic(err)
 	}
 
-	handler.mainRequest = r
+	handler.fakeRequest = r
 	if c := logger.Check(zapcore.DebugLevel, "starting"); c != nil {
 		c.Write(zap.String("worker", worker.fileName), zap.Int("thread", handler.thread.threadIndex))
 	}
 }
 
 func tearDownWorkerScript(handler *phpWorkerThread, exitStatus int) {
-	fc := handler.mainRequest.Context().Value(contextKey).(*FrankenPHPContext)
+
+	// if the fake request is nil, no script was executed
+	if handler.fakeRequest == nil {
+		return
+	}
+
+	// if the worker request is not nil, the script might have crashed
+	// make sure to close the worker request context
+	if handler.workerRequest != nil {
+		fc := handler.workerRequest.Context().Value(contextKey).(*FrankenPHPContext)
+		maybeCloseContext(fc)
+		handler.workerRequest = nil
+	}
+
+	fc := handler.fakeRequest.Context().Value(contextKey).(*FrankenPHPContext)
 	fc.exitStatus = exitStatus
 
 	defer func() {
-		maybeCloseContext(fc)
-		handler.mainRequest = nil
-		handler.workerRequest = nil
+		handler.fakeRequest = nil
 	}()
 
 	// on exit status 0 we just run the worker script again

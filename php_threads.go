@@ -20,7 +20,8 @@ func initPHPThreads(numThreads int) error {
 	for i := 0; i < numThreads; i++ {
 		phpThreads[i] = &phpThread{
 			threadIndex: i,
-			state: newStateHandler(),
+			drainChan:   make(chan struct{}),
+			state:       newStateHandler(),
 		}
 		convertToInactiveThread(phpThreads[i])
 	}
@@ -52,6 +53,7 @@ func drainPHPThreads() {
 	doneWG.Add(len(phpThreads))
 	for _, thread := range phpThreads {
 		thread.state.set(stateShuttingDown)
+		close(thread.drainChan)
 	}
 	close(done)
 	for _, thread := range phpThreads {
