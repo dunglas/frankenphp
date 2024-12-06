@@ -16,9 +16,11 @@ const (
 	stateShuttingDown
 	stateDone
 	stateRestarting
+	stateDrain
+	stateYielding
 )
 
-type threadStateHandler struct {
+type stateHandler struct {
 	currentState threadState
 	mu           sync.RWMutex
 	subscribers  []stateSubscriber
@@ -31,19 +33,27 @@ type stateSubscriber struct {
 	yieldFor *sync.WaitGroup
 }
 
-func (h *threadStateHandler) is(state threadState) bool {
+func newStateHandler() *stateHandler {
+	return &stateHandler{
+		currentState: stateBooting,
+		subscribers:  []stateSubscriber{},
+		mu: sync.RWMutex{},
+	}
+}
+
+func (h *stateHandler) is(state threadState) bool {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 	return h.currentState == state
 }
 
-func (h *threadStateHandler) get(state threadState) threadState {
+func (h *stateHandler) get() threadState {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 	return h.currentState
 }
 
-func (h *threadStateHandler) set(nextState threadState) {
+func (h *stateHandler) set(nextState threadState) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	if h.currentState == nextState {
@@ -76,18 +86,18 @@ func (h *threadStateHandler) set(nextState threadState) {
 }
 
 // wait for the thread to reach a certain state
-func (h *threadStateHandler) waitFor(states ...threadState) {
+func (h *stateHandler) waitFor(states ...threadState) {
 	h.waitForStates(states, nil)
 }
 
 // make the thread yield to a WaitGroup once it reaches the state
 // this makes sure all threads are in sync both ways
-func (h *threadStateHandler) waitForAndYield(yieldFor *sync.WaitGroup, states ...threadState) {
+func (h *stateHandler) waitForAndYield(yieldFor *sync.WaitGroup, states ...threadState) {
 	h.waitForStates(states, yieldFor)
 }
 
 // subscribe to a state and wait until the thread reaches it
-func (h *threadStateHandler) waitForStates(states []threadState, yieldFor *sync.WaitGroup) {
+func (h *stateHandler) waitForStates(states []threadState, yieldFor *sync.WaitGroup) {
 	h.mu.Lock()
 	if slices.Contains(states, h.currentState) {
 		h.mu.Unlock()

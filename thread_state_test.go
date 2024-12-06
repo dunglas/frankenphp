@@ -9,7 +9,7 @@ import (
 )
 
 func TestYieldToEachOtherViaThreadStates(t *testing.T) {
-	threadState := &threadStateHandler{currentState: stateBooting}
+	threadState := &stateHandler{currentState: stateBooting}
 
 	go func() {
 		threadState.waitFor(stateInactive)
@@ -24,7 +24,7 @@ func TestYieldToEachOtherViaThreadStates(t *testing.T) {
 
 func TestYieldToAWaitGroupPassedByThreadState(t *testing.T) {
 	logger, _ = zap.NewDevelopment()
-	threadState := &threadStateHandler{currentState: stateBooting}
+	threadState := &stateHandler{currentState: stateBooting}
 	hasYielded := false
 	wg := sync.WaitGroup{}
 	wg.Add(1)

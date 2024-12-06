@@ -6,13 +6,10 @@ import (
 	"fmt"
 	"github.com/dunglas/frankenphp/internal/fastabs"
 	"net/http"
-	"path/filepath"
 	"sync"
 	"time"
 
 	"github.com/dunglas/frankenphp/internal/watcher"
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
 )
 
 type worker struct {
@@ -86,8 +83,6 @@ func drainWorkers() {
 }
 
 func restartWorkers() {
-	restart := sync.WaitGroup{}
-	restart.Add(1)
 	ready := sync.WaitGroup{}
 	for _, worker := range workers {
 		worker.threadMutex.RLock()
@@ -95,7 +90,7 @@ func restartWorkers() {
 		for _, thread := range worker.threads {
 			thread.state.set(stateRestarting)
 			go func(thread *phpThread) {
-				thread.state.waitForAndYield(&restart, stateReady)
+				thread.state.waitFor(stateYielding)
 				ready.Done()
 			}(thread)
 		}
@@ -103,8 +98,12 @@ func restartWorkers() {
 	}
 	stopWorkers()
 	ready.Wait()
+	for _, worker := range workers {
+        for _, thread := range worker.threads {
+            thread.state.set(stateReady)
+        }
+    }
 	workersDone = make(chan interface{})
-	restart.Done()
 }
 
 func getDirectoriesToWatch(workerOpts []workerOpt) []string {
@@ -116,32 +115,8 @@ func getDirectoriesToWatch(workerOpts []workerOpt) []string {
 }
 
 func (worker *worker) startNewThread() {
-	getInactivePHPThread().setActive(
-		// onStartup => right before the thread is ready
-		func(thread *phpThread) {
-			thread.worker = worker
-			thread.scriptName = worker.fileName
-			thread.requestChan = make(chan *http.Request)
-			thread.backoff = newExponentialBackoff()
-			worker.threadMutex.Lock()
-			worker.threads = append(worker.threads, thread)
-			worker.threadMutex.Unlock()
-			metrics.ReadyWorker(worker.fileName)
-		},
-		// beforeScriptExecution => set up the worker with a fake request
-		func(thread *phpThread) {
-			worker.beforeScript(thread)
-		},
-		// afterScriptExecution => tear down the worker
-		func(thread *phpThread, exitStatus int) {
-			worker.afterScript(thread, exitStatus)
-		},
-		// onShutdown => after the thread is done
-		func(thread *phpThread) {
-			thread.worker = nil
-			thread.backoff = nil
-		},
-	)
+	thread := getInactivePHPThread()
+	convertToWorkerThread(thread, worker)
 }
 
 func (worker *worker) handleRequest(r *http.Request, fc *FrankenPHPContext) {
@@ -168,36 +143,3 @@ func (worker *worker) handleRequest(r *http.Request, fc *FrankenPHPContext) {
 	metrics.StopWorkerRequest(worker.fileName, time.Since(fc.startedAt))
 }
 
-//export go_frankenphp_worker_handle_request_start
-func go_frankenphp_worker_handle_request_start(threadIndex C.uintptr_t) C.bool {
-	thread := phpWorkerThread(phpThreads[threadIndex])
-	return C.bool(thread.stateMachine.waitForWorkerRequest(stateReady))
-}
-
-//export go_frankenphp_finish_worker_request
-func go_frankenphp_finish_worker_request(threadIndex C.uintptr_t) {
-	thread := phpThreads[threadIndex]
-	r := thread.getActiveRequest()
-	fc := r.Context().Value(contextKey).(*FrankenPHPContext)
-
-	maybeCloseContext(fc)
-	thread.workerRequest = nil
-	thread.Unpin()
-
-	if c := fc.logger.Check(zapcore.DebugLevel, "request handling finished"); c != nil {
-		c.Write(zap.String("worker", fc.scriptFilename), zap.String("url", r.RequestURI))
-	}
-}
-
-// when frankenphp_finish_request() is directly called from PHP
-//
-//export go_frankenphp_finish_php_request
-func go_frankenphp_finish_php_request(threadIndex C.uintptr_t) {
-	r := phpThreads[threadIndex].getActiveRequest()
-	fc := r.Context().Value(contextKey).(*FrankenPHPContext)
-	maybeCloseContext(fc)
-
-	if c := fc.logger.Check(zapcore.DebugLevel, "request handling finished"); c != nil {
-		c.Write(zap.String("url", r.RequestURI))
-	}
-}

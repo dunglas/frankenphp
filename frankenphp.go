@@ -335,7 +335,8 @@ func Init(options ...Option) error {
 	}
 
 	for i := 0; i < totalThreadCount-workerThreadCount; i++ {
-		getInactivePHPThread().setActive(nil, handleRequest, afterRequest, nil)
+		thread := getInactivePHPThread()
+		convertToRegularThread(thread)
 	}
 
 	if err := initWorkers(opt.workers); err != nil {
@@ -480,13 +481,6 @@ func handleRequest(thread *phpThread) {
 
 }
 
-func afterRequest(thread *phpThread, exitStatus int) {
-	fc := thread.mainRequest.Context().Value(contextKey).(*FrankenPHPContext)
-	fc.exitStatus = exitStatus
-	maybeCloseContext(fc)
-	thread.mainRequest = nil
-}
-
 func maybeCloseContext(fc *FrankenPHPContext) {
 	fc.closed.Do(func() {
 		close(fc.done)
@@ -538,7 +532,7 @@ func go_apache_request_headers(threadIndex C.uintptr_t, hasActiveRequest bool) (
 
 	if !hasActiveRequest {
 		// worker mode, not handling a request
-		mfc := thread.mainRequest.Context().Value(contextKey).(*FrankenPHPContext)
+		mfc := thread.getActiveRequest().Context().Value(contextKey).(*FrankenPHPContext)
 
 		if c := mfc.logger.Check(zapcore.DebugLevel, "apache_request_headers() called in non-HTTP context"); c != nil {
 			c.Write(zap.String("worker", mfc.scriptFilename))

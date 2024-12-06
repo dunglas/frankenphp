@@ -10,7 +10,7 @@ import (
 var (
 	phpThreads      []*phpThread
 	done            chan struct{}
-	mainThreadState *threadStateHandler
+	mainThreadState *stateHandler
 )
 
 // reserve a fixed number of PHP threads on the go side
@@ -20,8 +20,9 @@ func initPHPThreads(numThreads int) error {
 	for i := 0; i < numThreads; i++ {
 		phpThreads[i] = &phpThread{
 			threadIndex: i,
-			state:       &threadStateHandler{currentState: stateBooting},
+			state: newStateHandler(),
 		}
+		convertToInactiveThread(phpThreads[i])
 	}
 	if err := startMainThread(numThreads); err != nil {
 		return err
@@ -66,7 +67,7 @@ func drainPHPThreads() {
 }
 
 func startMainThread(numThreads int) error {
-	mainThreadState = &threadStateHandler{currentState: stateBooting}
+	mainThreadState = newStateHandler()
 	if C.frankenphp_new_main_thread(C.int(numThreads)) != 0 {
 		return MainThreadCreationError
 	}
@@ -76,7 +77,7 @@ func startMainThread(numThreads int) error {
 
 func getInactivePHPThread() *phpThread {
 	for _, thread := range phpThreads {
-		if thread.state.is(stateInactive) {
+		if thread.handler.isReadyToTransition() {
 			return thread
 		}
 	}

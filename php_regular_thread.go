@@ -1,39 +1,42 @@
 package frankenphp
 
+// #include "frankenphp.h"
+import "C"
 import (
 	"net/http"
-	"sync"
-	"strconv"
-
-	"go.uber.org/zap"
 )
 
 type phpRegularThread struct {
-	state  *threadStateHandler
+	state  *stateHandler
 	thread *phpThread
-	worker *worker
-	isDone   bool
-	pinner   *runtime.Pinner
-	getActiveRequest *http.Request
-	knownVariableKeys map[string]*C.zend_string
+	activeRequest *http.Request
+}
+
+func convertToRegularThread(thread *phpThread) {
+	thread.handler = &phpRegularThread{
+		thread: thread,
+		state: thread.state,
+	}
+	thread.handler.onStartup()
+	thread.state.set(stateActive)
+}
+
+func (t *phpRegularThread) isReadyToTransition() bool {
+	return false
 }
 
 // this is done once
-func (thread *phpWorkerThread) onStartup(){
+func (thread *phpRegularThread) onStartup(){
     // do nothing
 }
 
-func (thread *phpWorkerThread) pinner() *runtime.Pinner {
-	return thread.pinner
-}
-
-func (thread *phpWorkerThread) getActiveRequest() *http.Request {
+func (thread *phpRegularThread) getActiveRequest() *http.Request {
 	return thread.activeRequest
 }
 
 // return the name of the script or an empty string if no script should be executed
-func (thread *phpWorkerThread) beforeScriptExecution() string {
-	currentState := w.state.get()
+func (thread *phpRegularThread) beforeScriptExecution() string {
+	currentState := thread.state.get()
 	switch currentState {
 	case stateInactive:
 		thread.state.waitFor(stateActive, stateShuttingDown)
@@ -43,15 +46,16 @@ func (thread *phpWorkerThread) beforeScriptExecution() string {
     case stateReady, stateActive:
 		return waitForScriptExecution(thread)
 	}
+	return ""
 }
 
 // return true if the worker should continue to run
-func (thread *phpWorkerThread) afterScriptExecution() bool {
-	tearDownWorkerScript(thread, thread.worker)
-	currentState := w.state.get()
+func (thread *phpRegularThread) afterScriptExecution(exitStatus int) bool {
+	thread.afterRequest(exitStatus)
+
+	currentState := thread.state.get()
 	switch currentState {
 	case stateDrain:
-		thread.requestChan = make(chan *http.Request)
         return true
 	case stateShuttingDown:
 		return false
@@ -59,25 +63,24 @@ func (thread *phpWorkerThread) afterScriptExecution() bool {
 	return true
 }
 
-func (thread *phpWorkerThread) onShutdown(){
-    state.set(stateDone)
+func (thread *phpRegularThread) onShutdown(){
+    thread.state.set(stateDone)
 }
 
-func waitForScriptExecution(thread *phpThread) string {
+func waitForScriptExecution(thread *phpRegularThread) string {
 	select {
     case <-done:
         // no script should be executed if the server is shutting down
-        thread.scriptName = ""
-        return
+        return ""
 
     case r := <-requestChan:
-        thread.mainRequest = r
+        thread.activeRequest = r
         fc := r.Context().Value(contextKey).(*FrankenPHPContext)
 
-        if err := updateServerContext(thread, r, true, false); err != nil {
+        if err := updateServerContext(thread.thread, r, true, false); err != nil {
             rejectRequest(fc.responseWriter, err.Error())
-            afterRequest(thread, 0)
-            thread.Unpin()
+            thread.afterRequest(0)
+            thread.thread.Unpin()
             // no script should be executed if the request was rejected
             return ""
         }
@@ -87,42 +90,9 @@ func waitForScriptExecution(thread *phpThread) string {
     }
 }
 
-func tearDownWorkerScript(thread *phpThread, exitStatus int) {
-	fc := thread.mainRequest.Context().Value(contextKey).(*FrankenPHPContext)
+func (thread *phpRegularThread) afterRequest(exitStatus int) {
+	fc := thread.activeRequest.Context().Value(contextKey).(*FrankenPHPContext)
 	fc.exitStatus = exitStatus
-
-	defer func() {
-		maybeCloseContext(fc)
-		thread.mainRequest = nil
-	}()
-
-	// on exit status 0 we just run the worker script again
-	worker := thread.worker
-	if fc.exitStatus == 0 {
-		// TODO: make the max restart configurable
-		metrics.StopWorker(worker.fileName, StopReasonRestart)
-
-		if c := logger.Check(zapcore.DebugLevel, "restarting"); c != nil {
-			c.Write(zap.String("worker", worker.fileName))
-		}
-		return
-	}
-
-	// on exit status 1 we apply an exponential backoff when restarting
-	metrics.StopWorker(worker.fileName, StopReasonCrash)
-	thread.backoff.trigger(func(failureCount int) {
-		// if we end up here, the worker has not been up for backoff*2
-		// this is probably due to a syntax error or another fatal error
-		if !watcherIsEnabled {
-			panic(fmt.Errorf("workers %q: too many consecutive failures", worker.fileName))
-		}
-		logger.Warn("many consecutive worker failures", zap.String("worker", worker.fileName), zap.Int("failures", failureCount))
-	})
-}
-
-func (thread *phpWorkerThread) getKnownVariableKeys() map[string]*C.zend_string{
-	return thread.knownVariableKeys
-}
-func (thread *phpWorkerThread) setKnownVariableKeys(map[string]*C.zend_string){
-	thread.knownVariableKeys = knownVariableKeys
+	maybeCloseContext(fc)
+	thread.activeRequest = nil
 }
