@@ -42,9 +42,9 @@ func TestTransitionRegularThreadToWorkerThread(t *testing.T) {
 	assert.IsType(t, &workerThread{}, phpThreads[0].handler)
 	assert.Len(t, worker.threads, 1)
 
-	// transition back to regular thread
-	convertToRegularThread(phpThreads[0])
-	assert.IsType(t, &regularThread{}, phpThreads[0].handler)
+	// transition back to inactive thread
+	convertToInactiveThread(phpThreads[0])
+	assert.IsType(t, &inactiveThread{}, phpThreads[0].handler)
 	assert.Len(t, worker.threads, 0)
 
 	drainPHPThreads()

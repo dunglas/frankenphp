@@ -9,7 +9,7 @@ import (
 type stateID int
 
 const (
-	// initial state
+	// livecycle states of a thread
 	stateBooting stateID = iota
 	stateInactive
 	stateReady
@@ -20,7 +20,7 @@ const (
 	stateRestarting
 	stateYielding
 
-	// states necessary for transitioning
+	// states necessary for transitioning between different handlers
 	stateTransitionRequested
 	stateTransitionInProgress
 	stateTransitionComplete
@@ -89,6 +89,7 @@ func (h *threadState) set(nextState stateID) {
 }
 
 func (ts *threadState) name() string {
+	// TODO: return the actual name for logging/metrics
 	return "state:" + strconv.Itoa(int(ts.get()))
 }
 
