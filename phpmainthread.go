@@ -3,8 +3,9 @@ package frankenphp
 // #include "frankenphp.h"
 import "C"
 import (
-	"fmt"
 	"sync"
+
+	"go.uber.org/zap"
 )
 
 // represents the main PHP thread
@@ -20,7 +21,7 @@ var (
 	mainThread *phpMainThread
 )
 
-// reserve a fixed number of PHP threads on the go side
+// reserve a fixed number of PHP threads on the Go side
 func initPHPThreads(numThreads int) error {
 	mainThread = &phpMainThread{
 		state:      newThreadState(),
@@ -45,7 +46,7 @@ func initPHPThreads(numThreads int) error {
 	for _, thread := range phpThreads {
 		go func() {
 			if !C.frankenphp_new_php_thread(C.uintptr_t(thread.threadIndex)) {
-				panic(fmt.Sprintf("unable to create thread %d", thread.threadIndex))
+				logger.Panic("unable to create thread", zap.Int("threadIndex", thread.threadIndex))
 			}
 			thread.state.waitFor(stateInactive)
 			ready.Done()

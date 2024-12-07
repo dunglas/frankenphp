@@ -823,6 +823,7 @@ static void *php_thread(void *arg) {
   ZEND_TSRMLS_CACHE_UPDATE();
 #endif
 #endif
+
   local_ctx = malloc(sizeof(frankenphp_server_context));
 
   /* check if a default filter is set in php.ini and only filter if
@@ -928,6 +929,7 @@ int frankenphp_new_main_thread(int num_threads) {
       0) {
     return -1;
   }
+
   return pthread_detach(thread);
 }
 
