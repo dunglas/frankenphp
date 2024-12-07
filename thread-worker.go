@@ -35,7 +35,7 @@ func convertToWorkerThread(thread *phpThread, worker *worker) {
 			maxConsecutiveFailures: 6,
 		},
 	})
-	worker.addThread(thread)
+	worker.attachThread(thread)
 	if worker.fileName == "" {
 		panic("worker script is empty")
 	}
@@ -54,7 +54,7 @@ func (handler *workerThread) beforeScriptExecution() string {
 	switch handler.state.get() {
 	case stateTransitionRequested:
 		thread := handler.thread
-		handler.worker.removeThread(handler.thread)
+		handler.worker.detachThread(handler.thread)
 		thread.state.set(stateTransitionInProgress)
 		thread.state.waitFor(stateTransitionComplete, stateShuttingDown)
 
