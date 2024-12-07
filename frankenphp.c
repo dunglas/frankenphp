@@ -835,15 +835,15 @@ static void *php_thread(void *arg) {
   while (true) {
     char *scriptName = go_frankenphp_before_script_execution(thread_index);
 
-	int exit_status = 0;
+    int exit_status = 0;
     // if the script name is not empty, execute the PHP script
     if (strlen(scriptName) != 0) {
       exit_status = frankenphp_execute_script(scriptName);
     }
 
     // if go signals to stop, break the loop
-    if(!go_frankenphp_after_script_execution(thread_index, exit_status)){
-        break;
+    if (!go_frankenphp_after_script_execution(thread_index, exit_status)) {
+      break;
     }
   }
 
