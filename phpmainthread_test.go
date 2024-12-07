@@ -84,24 +84,26 @@ func TestTransitionThreadsWhileDoingRequests(t *testing.T) {
 	worker1Path := testDataPath + "/transition-worker-1.php"
 	worker2Path := testDataPath + "/transition-worker-2.php"
 
-	Init(
+	assert.NoError(t, Init(
 		WithNumThreads(numThreads),
-		WithWorkers(worker1Path, 4, map[string]string{"ENV1": "foo"}, []string{}),
-		WithWorkers(worker2Path, 4, map[string]string{"ENV1": "foo"}, []string{}),
+		WithWorkers(worker1Path, 1, map[string]string{"ENV1": "foo"}, []string{}),
+		WithWorkers(worker2Path, 1, map[string]string{"ENV1": "foo"}, []string{}),
 		WithLogger(zap.NewNop()),
-	)
+	))
 
-	// randomly transition threads between regular and 2 worker threads
+	// randomly transition threads between regular, inactive and 2 worker threads
 	go func() {
 		for {
 			for i := 0; i < numThreads; i++ {
-				switch rand.IntN(3) {
+				switch rand.IntN(4) {
 				case 0:
 					convertToRegularThread(phpThreads[i])
 				case 1:
 					convertToWorkerThread(phpThreads[i], workers[worker1Path])
 				case 2:
 					convertToWorkerThread(phpThreads[i], workers[worker2Path])
+				case 3:
+                	convertToInactiveThread(phpThreads[i])
 				}
 				time.Sleep(time.Millisecond)
 				if !isRunning.Load() {
