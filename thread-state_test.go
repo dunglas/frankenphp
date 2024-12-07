@@ -19,4 +19,3 @@ func TestYieldToEachOtherViaThreadStates(t *testing.T) {
 	threadState.waitFor(stateActive)
 	assert.True(t, threadState.is(stateActive))
 }
-

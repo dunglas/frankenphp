@@ -13,12 +13,12 @@ import (
 type phpThread struct {
 	runtime.Pinner
 
-	threadIndex int
+	threadIndex       int
 	knownVariableKeys map[string]*C.zend_string
-	requestChan chan *http.Request
-	drainChan chan struct{}
-	handler	threadHandler
-	state *threadState
+	requestChan       chan *http.Request
+	drainChan         chan struct{}
+	handler           threadHandler
+	state             *threadState
 }
 
 // interface that defines how the callbacks from the C thread should be handled

@@ -10,15 +10,15 @@ import (
 // executes PHP scripts in a web context
 // implements the threadHandler interface
 type regularThread struct {
-	state  *threadState
-	thread *phpThread
+	state         *threadState
+	thread        *phpThread
 	activeRequest *http.Request
 }
 
 func convertToRegularThread(thread *phpThread) {
 	thread.handler = &regularThread{
 		thread: thread,
-		state: thread.state,
+		state:  thread.state,
 	}
 	thread.state.set(stateActive)
 }
@@ -40,7 +40,7 @@ func (handler *regularThread) beforeScriptExecution() string {
 		return handler.beforeScriptExecution()
 	case stateShuttingDown:
 		return ""
-    case stateReady, stateActive:
+	case stateReady, stateActive:
 		return handler.waitForScriptExecution()
 	}
 	return ""
@@ -53,38 +53,38 @@ func (handler *regularThread) afterScriptExecution(exitStatus int) bool {
 	currentState := handler.state.get()
 	switch currentState {
 	case stateDrain:
-        return true
+		return true
 	case stateShuttingDown:
 		return false
 	}
 	return true
 }
 
-func (handler *regularThread) onShutdown(){
-    handler.state.set(stateDone)
+func (handler *regularThread) onShutdown() {
+	handler.state.set(stateDone)
 }
 
 func (handler *regularThread) waitForScriptExecution() string {
 	select {
-    case <-handler.thread.drainChan:
-        // no script should be executed if the server is shutting down
-        return ""
+	case <-handler.thread.drainChan:
+		// no script should be executed if the server is shutting down
+		return ""
 
-    case r := <-requestChan:
-        handler.activeRequest = r
-        fc := r.Context().Value(contextKey).(*FrankenPHPContext)
+	case r := <-requestChan:
+		handler.activeRequest = r
+		fc := r.Context().Value(contextKey).(*FrankenPHPContext)
 
-        if err := updateServerContext(handler.thread, r, true, false); err != nil {
-            rejectRequest(fc.responseWriter, err.Error())
-            handler.afterRequest(0)
-            handler.thread.Unpin()
-            // no script should be executed if the request was rejected
-            return ""
-        }
+		if err := updateServerContext(handler.thread, r, true, false); err != nil {
+			rejectRequest(fc.responseWriter, err.Error())
+			handler.afterRequest(0)
+			handler.thread.Unpin()
+			// no script should be executed if the request was rejected
+			return ""
+		}
 
-        // set the scriptName that should be executed
-        return fc.scriptFilename
-    }
+		// set the scriptName that should be executed
+		return fc.scriptFilename
+	}
 }
 
 func (handler *regularThread) afterRequest(exitStatus int) {

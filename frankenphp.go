@@ -467,7 +467,7 @@ func ServeHTTP(responseWriter http.ResponseWriter, request *http.Request) error 
 	metrics.StartRequest()
 
 	select {
-	case <-done:
+	case <-mainThread.done:
 	case requestChan <- request:
 		<-fc.done
 	}

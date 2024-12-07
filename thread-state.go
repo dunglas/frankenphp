@@ -26,17 +26,16 @@ type threadState struct {
 	subscribers  []stateSubscriber
 }
 
-
 type stateSubscriber struct {
-	states   []stateID
-	ch       chan struct{}
+	states []stateID
+	ch     chan struct{}
 }
 
 func newThreadState() *threadState {
 	return &threadState{
 		currentState: stateBooting,
 		subscribers:  []stateSubscriber{},
-		mu: sync.RWMutex{},
+		mu:           sync.RWMutex{},
 	}
 }
 
@@ -76,15 +75,15 @@ func (h *threadState) set(nextState stateID) {
 // block until the thread reaches a certain state
 func (h *threadState) waitFor(states ...stateID) {
 	h.mu.Lock()
-    if slices.Contains(states, h.currentState) {
-        h.mu.Unlock()
-        return
-    }
-    sub := stateSubscriber{
-        states:   states,
-        ch:       make(chan struct{}),
-    }
-    h.subscribers = append(h.subscribers, sub)
-    h.mu.Unlock()
-    <-sub.ch
+	if slices.Contains(states, h.currentState) {
+		h.mu.Unlock()
+		return
+	}
+	sub := stateSubscriber{
+		states: states,
+		ch:     make(chan struct{}),
+	}
+	h.subscribers = append(h.subscribers, sub)
+	h.mu.Unlock()
+	<-sub.ch
 }

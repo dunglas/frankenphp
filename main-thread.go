@@ -7,16 +7,26 @@ import (
 	"sync"
 )
 
+type mainPHPThread struct {
+	state      *threadState
+	done       chan struct{}
+	numThreads int
+}
+
 var (
-	phpThreads      []*phpThread
-	done            chan struct{}
-	mainThreadState *threadState
+	phpThreads []*phpThread
+	mainThread *mainPHPThread
 )
 
 // reserve a fixed number of PHP threads on the go side
 func initPHPThreads(numThreads int) error {
-	done = make(chan struct{})
+	mainThread = &mainPHPThread{
+		state:      newThreadState(),
+		done:       make(chan struct{}),
+		numThreads: numThreads,
+	}
 	phpThreads = make([]*phpThread, numThreads)
+
 	for i := 0; i < numThreads; i++ {
 		phpThreads[i] = &phpThread{
 			threadIndex: i,
@@ -25,13 +35,13 @@ func initPHPThreads(numThreads int) error {
 		}
 		convertToInactiveThread(phpThreads[i])
 	}
-	if err := startMainThread(numThreads); err != nil {
+	if err := mainThread.start(); err != nil {
 		return err
 	}
 
 	// initialize all threads as inactive
 	ready := sync.WaitGroup{}
-	ready.Add(len(phpThreads))
+	ready.Add(numThreads)
 
 	for _, thread := range phpThreads {
 		go func() {
@@ -55,7 +65,7 @@ func drainPHPThreads() {
 		thread.state.set(stateShuttingDown)
 		close(thread.drainChan)
 	}
-	close(done)
+	close(mainThread.done)
 	for _, thread := range phpThreads {
 		go func(thread *phpThread) {
 			thread.state.waitFor(stateDone)
@@ -63,17 +73,16 @@ func drainPHPThreads() {
 		}(thread)
 	}
 	doneWG.Wait()
-	mainThreadState.set(stateShuttingDown)
-	mainThreadState.waitFor(stateDone)
+	mainThread.state.set(stateShuttingDown)
+	mainThread.state.waitFor(stateDone)
 	phpThreads = nil
 }
 
-func startMainThread(numThreads int) error {
-	mainThreadState = newThreadState()
-	if C.frankenphp_new_main_thread(C.int(numThreads)) != 0 {
+func (mainThread *mainPHPThread) start() error {
+	if C.frankenphp_new_main_thread(C.int(mainThread.numThreads)) != 0 {
 		return MainThreadCreationError
 	}
-	mainThreadState.waitFor(stateActive)
+	mainThread.state.waitFor(stateActive)
 	return nil
 }
 
@@ -88,11 +97,11 @@ func getInactivePHPThread() *phpThread {
 
 //export go_frankenphp_main_thread_is_ready
 func go_frankenphp_main_thread_is_ready() {
-	mainThreadState.set(stateActive)
-	mainThreadState.waitFor(stateShuttingDown)
+	mainThread.state.set(stateActive)
+	mainThread.state.waitFor(stateShuttingDown)
 }
 
 //export go_frankenphp_shutdown_main_thread
 func go_frankenphp_shutdown_main_thread() {
-	mainThreadState.set(stateDone)
+	mainThread.state.set(stateDone)
 }

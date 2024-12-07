@@ -3,9 +3,9 @@ package frankenphp
 // #include "frankenphp.h"
 import "C"
 import (
+	"fmt"
 	"net/http"
 	"path/filepath"
-	"fmt"
 	"time"
 
 	"go.uber.org/zap"
@@ -16,30 +16,30 @@ import (
 // executes the PHP worker script in a loop
 // implements the threadHandler interface
 type workerThread struct {
-	state  *threadState
-	thread *phpThread
-	worker *worker
-	fakeRequest *http.Request
+	state         *threadState
+	thread        *phpThread
+	worker        *worker
+	fakeRequest   *http.Request
 	workerRequest *http.Request
-	backoff *exponentialBackoff
+	backoff       *exponentialBackoff
 }
 
 func convertToWorkerThread(thread *phpThread, worker *worker) {
 	handler := &workerThread{
-		state: thread.state,
+		state:  thread.state,
 		thread: thread,
 		worker: worker,
 		backoff: &exponentialBackoff{
-            maxBackoff:             1 * time.Second,
-            minBackoff:             100 * time.Millisecond,
-            maxConsecutiveFailures: 6,
-        },
+			maxBackoff:             1 * time.Second,
+			minBackoff:             100 * time.Millisecond,
+			maxConsecutiveFailures: 6,
+		},
 	}
 	thread.handler = handler
 	thread.requestChan = make(chan *http.Request)
 	worker.threadMutex.Lock()
-    worker.threads = append(worker.threads, thread)
-    worker.threadMutex.Unlock()
+	worker.threads = append(worker.threads, thread)
+	worker.threadMutex.Unlock()
 
 	thread.state.set(stateActive)
 }
@@ -68,63 +68,13 @@ func (handler *workerThread) beforeScriptExecution() string {
 	case stateRestarting:
 		handler.state.set(stateYielding)
 		handler.state.waitFor(stateReady, stateShuttingDown)
-        return handler.beforeScriptExecution()
-    case stateReady, stateActive:
+		return handler.beforeScriptExecution()
+	case stateReady, stateActive:
 		setUpWorkerScript(handler, handler.worker)
 		return handler.worker.fileName
 	}
-    // TODO: panic?
+	// TODO: panic?
 	return ""
-}
-
-func (handler *workerThread) waitForWorkerRequest() bool {
-
-    if c := logger.Check(zapcore.DebugLevel, "waiting for request"); c != nil {
-        c.Write(zap.String("worker", handler.worker.fileName))
-    }
-
-	if handler.state.is(stateActive) {
-		metrics.ReadyWorker(handler.worker.fileName)
-		handler.state.set(stateReady)
-	}
-
-    var r *http.Request
-    select {
-    case <-handler.thread.drainChan:
-        if c := logger.Check(zapcore.DebugLevel, "shutting down"); c != nil {
-            c.Write(zap.String("worker", handler.worker.fileName))
-        }
-
-        // execute opcache_reset if the restart was triggered by the watcher
-        if watcherIsEnabled && handler.state.is(stateRestarting) {
-            C.frankenphp_reset_opcache()
-        }
-
-        return false
-    case r = <-handler.thread.requestChan:
-    case r = <-handler.worker.requestChan:
-    }
-
-    handler.workerRequest = r
-
-    if c := logger.Check(zapcore.DebugLevel, "request handling started"); c != nil {
-        c.Write(zap.String("worker", handler.worker.fileName), zap.String("url", r.RequestURI))
-    }
-
-    if err := updateServerContext(handler.thread, r, false, true); err != nil {
-        // Unexpected error
-        if c := logger.Check(zapcore.DebugLevel, "unexpected error"); c != nil {
-            c.Write(zap.String("worker", handler.worker.fileName), zap.String("url", r.RequestURI), zap.Error(err))
-        }
-        fc := r.Context().Value(contextKey).(*FrankenPHPContext)
-        rejectRequest(fc.responseWriter, err.Error())
-        maybeCloseContext(fc)
-        handler.workerRequest = nil
-        handler.thread.Unpin()
-
-        return handler.waitForWorkerRequest()
-    }
-    return true
 }
 
 // return true if the worker should continue to run
@@ -134,15 +84,15 @@ func (handler *workerThread) afterScriptExecution(exitStatus int) bool {
 	switch currentState {
 	case stateDrain:
 		handler.thread.requestChan = make(chan *http.Request)
-        return true
+		return true
 	case stateShuttingDown:
 		return false
 	}
 	return true
 }
 
-func (handler *workerThread) onShutdown(){
-    handler.state.set(stateDone)
+func (handler *workerThread) onShutdown() {
+	handler.state.set(stateDone)
 }
 
 func setUpWorkerScript(handler *workerThread, worker *worker) {
@@ -213,11 +163,61 @@ func tearDownWorkerScript(handler *workerThread, exitStatus int) {
 	// on exit status 1 we apply an exponential backoff when restarting
 	metrics.StopWorker(worker.fileName, StopReasonCrash)
 	if handler.backoff.recordFailure() {
-        if !watcherIsEnabled {
-            panic(fmt.Errorf("workers %q: too many consecutive failures", worker.fileName))
-        }
-        logger.Warn("many consecutive worker failures", zap.String("worker", worker.fileName), zap.Int("failures", handler.backoff.failureCount))
-    }
+		if !watcherIsEnabled {
+			panic(fmt.Errorf("workers %q: too many consecutive failures", worker.fileName))
+		}
+		logger.Warn("many consecutive worker failures", zap.String("worker", worker.fileName), zap.Int("failures", handler.backoff.failureCount))
+	}
+}
+
+func (handler *workerThread) waitForWorkerRequest() bool {
+
+	if c := logger.Check(zapcore.DebugLevel, "waiting for request"); c != nil {
+		c.Write(zap.String("worker", handler.worker.fileName))
+	}
+
+	if handler.state.is(stateActive) {
+		metrics.ReadyWorker(handler.worker.fileName)
+		handler.state.set(stateReady)
+	}
+
+	var r *http.Request
+	select {
+	case <-handler.thread.drainChan:
+		if c := logger.Check(zapcore.DebugLevel, "shutting down"); c != nil {
+			c.Write(zap.String("worker", handler.worker.fileName))
+		}
+
+		// execute opcache_reset if the restart was triggered by the watcher
+		if watcherIsEnabled && handler.state.is(stateRestarting) {
+			C.frankenphp_reset_opcache()
+		}
+
+		return false
+	case r = <-handler.thread.requestChan:
+	case r = <-handler.worker.requestChan:
+	}
+
+	handler.workerRequest = r
+
+	if c := logger.Check(zapcore.DebugLevel, "request handling started"); c != nil {
+		c.Write(zap.String("worker", handler.worker.fileName), zap.String("url", r.RequestURI))
+	}
+
+	if err := updateServerContext(handler.thread, r, false, true); err != nil {
+		// Unexpected error
+		if c := logger.Check(zapcore.DebugLevel, "unexpected error"); c != nil {
+			c.Write(zap.String("worker", handler.worker.fileName), zap.String("url", r.RequestURI), zap.Error(err))
+		}
+		fc := r.Context().Value(contextKey).(*FrankenPHPContext)
+		rejectRequest(fc.responseWriter, err.Error())
+		maybeCloseContext(fc)
+		handler.workerRequest = nil
+		handler.thread.Unpin()
+
+		return handler.waitForWorkerRequest()
+	}
+	return true
 }
 
 //export go_frankenphp_worker_handle_request_start

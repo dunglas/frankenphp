@@ -8,7 +8,7 @@ import (
 // representation of a thread with no work assigned to it
 // implements the threadHandler interface
 type inactiveThread struct {
-	state  *threadState
+	state *threadState
 }
 
 func convertToInactiveThread(thread *phpThread) {
@@ -38,10 +38,9 @@ func (thread *inactiveThread) afterScriptExecution(exitStatus int) bool {
 	case stateShuttingDown:
 		return false
 	}
-	panic("unexpected state: "+strconv.Itoa(int(thread.state.get())))
+	panic("unexpected state: " + strconv.Itoa(int(thread.state.get())))
 }
 
-func (thread *inactiveThread) onShutdown(){
-    thread.state.set(stateDone)
+func (thread *inactiveThread) onShutdown() {
+	thread.state.set(stateDone)
 }
-

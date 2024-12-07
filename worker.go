@@ -22,7 +22,6 @@ type worker struct {
 	threadMutex sync.RWMutex
 }
 
-
 var (
 	workers          map[string]*worker
 	workersDone      chan interface{}
@@ -105,12 +104,12 @@ func restartWorkers() {
 	stopWorkers()
 	ready.Wait()
 	for _, worker := range workers {
-        for _, thread := range worker.threads {
-            thread.drainChan = make(chan struct{})
-            thread.state.set(stateReady)
-        }
+		for _, thread := range worker.threads {
+			thread.drainChan = make(chan struct{})
+			thread.state.set(stateReady)
+		}
 		worker.threadMutex.RUnlock()
-    }
+	}
 	workersDone = make(chan interface{})
 }
 
@@ -150,4 +149,3 @@ func (worker *worker) handleRequest(r *http.Request, fc *FrankenPHPContext) {
 	<-fc.done
 	metrics.StopWorkerRequest(worker.fileName, time.Since(fc.startedAt))
 }
-
