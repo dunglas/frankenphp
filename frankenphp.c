@@ -837,8 +837,8 @@ static void *php_thread(void *arg) {
 
     // if go signals to stop, break the loop
     if (scriptName == NULL) {
-	  break;
-	}
+      break;
+    }
 
     int exit_status = frankenphp_execute_script(scriptName);
     go_frankenphp_after_script_execution(thread_index, exit_status);
