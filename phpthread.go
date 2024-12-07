@@ -40,10 +40,6 @@ func newPHPThread(threadIndex int) *phpThread {
 	}
 }
 
-func (thread *phpThread) getActiveRequest() *http.Request {
-	return thread.handler.getActiveRequest()
-}
-
 // change the thread handler safely
 func (thread *phpThread) setHandler(handler threadHandler) {
 	thread.mu.Lock()
@@ -57,6 +53,10 @@ func (thread *phpThread) setHandler(handler threadHandler) {
 	thread.handler = handler
 	thread.drainChan = make(chan struct{})
 	thread.state.set(stateTransitionComplete)
+}
+
+func (thread *phpThread) getActiveRequest() *http.Request {
+	return thread.handler.getActiveRequest()
 }
 
 // Pin a string that is not null-terminated

@@ -103,7 +103,7 @@ func TestTransitionThreadsWhileDoingRequests(t *testing.T) {
 				case 2:
 					convertToWorkerThread(phpThreads[i], workers[worker2Path])
 				case 3:
-                	convertToInactiveThread(phpThreads[i])
+					convertToInactiveThread(phpThreads[i])
 				}
 				time.Sleep(time.Millisecond)
 				if !isRunning.Load() {

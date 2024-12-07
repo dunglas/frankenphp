@@ -61,6 +61,11 @@ func (ts *threadState) compareAndSwap(compareTo stateID, swapTo stateID) bool {
 	return false
 }
 
+func (ts *threadState) name() string {
+	// TODO: return the actual name for logging/metrics
+	return "state:" + strconv.Itoa(int(ts.get()))
+}
+
 func (ts *threadState) get() stateID {
 	ts.mu.RLock()
 	defer ts.mu.RUnlock()
@@ -86,11 +91,6 @@ func (h *threadState) set(nextState stateID) {
 		close(sub.ch)
 	}
 	h.subscribers = newSubscribers
-}
-
-func (ts *threadState) name() string {
-	// TODO: return the actual name for logging/metrics
-	return "state:" + strconv.Itoa(int(ts.get()))
 }
 
 // block until the thread reaches a certain state

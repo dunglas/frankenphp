@@ -18,10 +18,6 @@ func convertToInactiveThread(thread *phpThread) {
 	thread.setHandler(&inactiveThread{thread: thread})
 }
 
-func (thread *inactiveThread) getActiveRequest() *http.Request {
-	panic("inactive threads have no requests")
-}
-
 func (handler *inactiveThread) beforeScriptExecution() string {
 	thread := handler.thread
 
@@ -46,4 +42,8 @@ func (handler *inactiveThread) beforeScriptExecution() string {
 
 func (thread *inactiveThread) afterScriptExecution(exitStatus int) {
 	panic("inactive threads should not execute scripts")
+}
+
+func (thread *inactiveThread) getActiveRequest() *http.Request {
+	panic("inactive threads have no requests")
 }

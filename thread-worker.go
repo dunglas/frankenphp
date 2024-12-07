@@ -41,14 +41,6 @@ func convertToWorkerThread(thread *phpThread, worker *worker) {
 	}
 }
 
-func (handler *workerThread) getActiveRequest() *http.Request {
-	if handler.workerRequest != nil {
-		return handler.workerRequest
-	}
-
-	return handler.fakeRequest
-}
-
 // return the name of the script or an empty string if no script should be executed
 func (handler *workerThread) beforeScriptExecution() string {
 	switch handler.state.get() {
@@ -68,7 +60,7 @@ func (handler *workerThread) beforeScriptExecution() string {
 		handler.state.waitFor(stateReady, stateShuttingDown)
 		return handler.beforeScriptExecution()
 	case stateReady, stateTransitionComplete:
-		setUpWorkerScript(handler, handler.worker)
+		setupWorkerScript(handler, handler.worker)
 		return handler.worker.fileName
 	}
 	panic("unexpected state: " + handler.state.name())
@@ -78,7 +70,15 @@ func (handler *workerThread) afterScriptExecution(exitStatus int) {
 	tearDownWorkerScript(handler, exitStatus)
 }
 
-func setUpWorkerScript(handler *workerThread, worker *worker) {
+func (handler *workerThread) getActiveRequest() *http.Request {
+	if handler.workerRequest != nil {
+		return handler.workerRequest
+	}
+
+	return handler.fakeRequest
+}
+
+func setupWorkerScript(handler *workerThread, worker *worker) {
 	handler.backoff.wait()
 	metrics.StartWorker(worker.fileName)
 
