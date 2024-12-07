@@ -36,9 +36,6 @@ func convertToWorkerThread(thread *phpThread, worker *worker) {
 		},
 	})
 	worker.attachThread(thread)
-	if worker.fileName == "" {
-		panic("worker script is empty")
-	}
 }
 
 // return the name of the script or an empty string if no script should be executed
