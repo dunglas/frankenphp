@@ -24,13 +24,11 @@ type worker struct {
 
 var (
 	workers          map[string]*worker
-	workersDone      chan interface{}
 	watcherIsEnabled bool
 )
 
 func initWorkers(opt []workerOpt) error {
 	workers = make(map[string]*worker, len(opt))
-	workersDone = make(chan interface{})
 	directoriesToWatch := getDirectoriesToWatch(opt)
 	watcherIsEnabled = len(directoriesToWatch) > 0
 
@@ -45,7 +43,7 @@ func initWorkers(opt []workerOpt) error {
 		}
 	}
 
-	if len(directoriesToWatch) == 0 {
+	if !watcherIsEnabled {
 		return nil
 	}
 
@@ -78,13 +76,8 @@ func newWorker(o workerOpt) (*worker, error) {
 	return w, nil
 }
 
-func stopWorkers() {
-	close(workersDone)
-}
-
 func drainWorkers() {
 	watcher.DrainWatcher()
-	stopWorkers()
 }
 
 func restartWorkers() {
@@ -101,7 +94,6 @@ func restartWorkers() {
 			}(thread)
 		}
 	}
-	stopWorkers()
 	ready.Wait()
 	for _, worker := range workers {
 		for _, thread := range worker.threads {
@@ -110,7 +102,6 @@ func restartWorkers() {
 		}
 		worker.threadMutex.RUnlock()
 	}
-	workersDone = make(chan interface{})
 }
 
 func getDirectoriesToWatch(workerOpts []workerOpt) []string {

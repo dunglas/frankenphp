@@ -477,10 +477,6 @@ func ServeHTTP(responseWriter http.ResponseWriter, request *http.Request) error 
 	return nil
 }
 
-func handleRequest(thread *phpThread) {
-
-}
-
 func maybeCloseContext(fc *FrankenPHPContext) {
 	fc.closed.Do(func() {
 		close(fc.done)

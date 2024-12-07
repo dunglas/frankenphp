@@ -7,6 +7,8 @@ import (
 	"sync"
 )
 
+// represents the main PHP thread
+// the thread needs to keep running as long as all other threads are running
 type mainPHPThread struct {
 	state      *threadState
 	done       chan struct{}
