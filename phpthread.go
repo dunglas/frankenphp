@@ -41,6 +41,7 @@ func newPHPThread(threadIndex int) *phpThread {
 }
 
 // change the thread handler safely
+// must be called from outside of the PHP thread
 func (thread *phpThread) setHandler(handler threadHandler) {
 	thread.mu.Lock()
 	defer thread.mu.Unlock()
@@ -53,6 +54,15 @@ func (thread *phpThread) setHandler(handler threadHandler) {
 	thread.handler = handler
 	thread.drainChan = make(chan struct{})
 	thread.state.set(stateTransitionComplete)
+}
+
+// transition to a new handler safely
+// is triggered by setHandler and executed on the PHP thread
+func (thread *phpThread) transitionToNewHandler() string {
+	thread.state.set(stateTransitionInProgress)
+	thread.state.waitFor(stateTransitionComplete, stateShuttingDown)
+	// execute beforeScriptExecution of the new handler
+	return thread.handler.beforeScriptExecution()
 }
 
 func (thread *phpThread) getActiveRequest() *http.Request {

@@ -26,19 +26,15 @@ func convertToRegularThread(thread *phpThread) {
 func (handler *regularThread) beforeScriptExecution() string {
 	switch handler.state.get() {
 	case stateTransitionRequested:
-		thread := handler.thread
-		thread.state.set(stateTransitionInProgress)
-		thread.state.waitFor(stateTransitionComplete, stateShuttingDown)
-		// execute beforeScriptExecution of the new handler
-		return thread.handler.beforeScriptExecution()
+		return handler.thread.transitionToNewHandler()
 	case stateTransitionComplete:
 		handler.state.set(stateReady)
+		return handler.waitForRequest()
+	case stateReady:
 		return handler.waitForRequest()
 	case stateShuttingDown:
 		// signal to stop
 		return ""
-	case stateReady:
-		return handler.waitForRequest()
 	}
 	panic("unexpected state: " + handler.state.name())
 }

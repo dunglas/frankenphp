@@ -45,16 +45,8 @@ func convertToWorkerThread(thread *phpThread, worker *worker) {
 func (handler *workerThread) beforeScriptExecution() string {
 	switch handler.state.get() {
 	case stateTransitionRequested:
-		thread := handler.thread
 		handler.worker.detachThread(handler.thread)
-		thread.state.set(stateTransitionInProgress)
-		thread.state.waitFor(stateTransitionComplete, stateShuttingDown)
-
-		// execute beforeScriptExecution of the new handler
-		return thread.handler.beforeScriptExecution()
-	case stateShuttingDown:
-		// signal to stop
-		return ""
+		return handler.thread.transitionToNewHandler()
 	case stateRestarting:
 		handler.state.set(stateYielding)
 		handler.state.waitFor(stateReady, stateShuttingDown)
@@ -62,6 +54,9 @@ func (handler *workerThread) beforeScriptExecution() string {
 	case stateReady, stateTransitionComplete:
 		setupWorkerScript(handler, handler.worker)
 		return handler.worker.fileName
+	case stateShuttingDown:
+		// signal to stop
+		return ""
 	}
 	panic("unexpected state: " + handler.state.name())
 }

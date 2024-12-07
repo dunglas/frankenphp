@@ -23,10 +23,7 @@ func (handler *inactiveThread) beforeScriptExecution() string {
 
 	switch thread.state.get() {
 	case stateTransitionRequested:
-		thread.state.set(stateTransitionInProgress)
-		thread.state.waitFor(stateTransitionComplete, stateShuttingDown)
-		// execute beforeScriptExecution of the new handler
-		return thread.handler.beforeScriptExecution()
+		return thread.transitionToNewHandler()
 	case stateBooting, stateTransitionComplete:
 		// TODO: there's a tiny race condition here between checking and setting
 		thread.state.set(stateInactive)
