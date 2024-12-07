@@ -1,8 +1,14 @@
 package frankenphp
 
 import (
+	"io"
+	"math/rand/v2"
+	"net/http/httptest"
 	"path/filepath"
+	"sync"
+	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
@@ -20,30 +26,23 @@ func TestStartAndStopTheMainThreadWithOneInactiveThread(t *testing.T) {
 	assert.Nil(t, phpThreads)
 }
 
-func TestTransition2RegularThreadsToWorkerThreadsAndBack(t *testing.T) {
-	numThreads := 2
-	logger, _ = zap.NewDevelopment()
-	assert.NoError(t, initPHPThreads(numThreads))
+func TestTransitionRegularThreadToWorkerThread(t *testing.T) {
+	logger = zap.NewNop()
+	assert.NoError(t, initPHPThreads(1))
+
+	// transition to regular thread
+	convertToRegularThread(phpThreads[0])
+	assert.IsType(t, &regularThread{}, phpThreads[0].handler)
 
 	// transition to worker thread
-	for i := 0; i < numThreads; i++ {
-		convertToRegularThread(phpThreads[i])
-		assert.IsType(t, &regularThread{}, phpThreads[i].handler)
-	}
-
-	// transition to worker thread
-	worker := getDummyWorker()
-	for i := 0; i < numThreads; i++ {
-		convertToWorkerThread(phpThreads[i], worker)
-		assert.IsType(t, &workerThread{}, phpThreads[i].handler)
-	}
-	assert.Len(t, worker.threads, numThreads)
+	worker := getDummyWorker("worker-transition-1.php")
+	convertToWorkerThread(phpThreads[0], worker)
+	assert.IsType(t, &workerThread{}, phpThreads[0].handler)
+	assert.Len(t, worker.threads, 1)
 
 	// transition back to regular thread
-	for i := 0; i < numThreads; i++ {
-		convertToRegularThread(phpThreads[i])
-		assert.IsType(t, &regularThread{}, phpThreads[i].handler)
-	}
+	convertToRegularThread(phpThreads[0])
+	assert.IsType(t, &regularThread{}, phpThreads[0].handler)
 	assert.Len(t, worker.threads, 0)
 
 	drainPHPThreads()
@@ -51,26 +50,108 @@ func TestTransition2RegularThreadsToWorkerThreadsAndBack(t *testing.T) {
 }
 
 func TestTransitionAThreadBetween2DifferentWorkers(t *testing.T) {
-	logger, _ = zap.NewDevelopment()
+	logger = zap.NewNop()
 	assert.NoError(t, initPHPThreads(1))
+	firstWorker := getDummyWorker("worker-transition-1.php")
+	secondWorker := getDummyWorker("worker-transition-2.php")
 
 	// convert to first worker thread
-	firstWorker := getDummyWorker()
 	convertToWorkerThread(phpThreads[0], firstWorker)
 	firstHandler := phpThreads[0].handler.(*workerThread)
 	assert.Same(t, firstWorker, firstHandler.worker)
+	assert.Len(t, firstWorker.threads, 1)
+	assert.Len(t, secondWorker.threads, 0)
 
 	// convert to second worker thread
-	secondWorker := getDummyWorker()
 	convertToWorkerThread(phpThreads[0], secondWorker)
 	secondHandler := phpThreads[0].handler.(*workerThread)
 	assert.Same(t, secondWorker, secondHandler.worker)
+	assert.Len(t, firstWorker.threads, 0)
+	assert.Len(t, secondWorker.threads, 1)
 
 	drainPHPThreads()
 	assert.Nil(t, phpThreads)
 }
 
-func getDummyWorker() *worker {
-	path, _ := filepath.Abs("./testdata/index.php")
-	return &worker{fileName: path}
+func TestTransitionThreadsWhileDoingRequests(t *testing.T) {
+	numThreads := 10
+	numRequestsPerThread := 100
+	isRunning := atomic.Bool{}
+	isRunning.Store(true)
+	wg := sync.WaitGroup{}
+	worker1Path, _ := filepath.Abs("./testdata/transition-worker-1.php")
+	worker2Path, _ := filepath.Abs("./testdata/transition-worker-2.php")
+
+	Init(
+		WithNumThreads(numThreads),
+		WithWorkers(worker1Path, 4, map[string]string{"ENV1": "foo"}, []string{}),
+		WithWorkers(worker2Path, 4, map[string]string{"ENV1": "foo"}, []string{}),
+		WithLogger(zap.NewNop()),
+	)
+
+	// randomly transition threads between regular and 2 worker threads
+	go func() {
+		for {
+			for i := 0; i < numThreads; i++ {
+				switch rand.IntN(3) {
+				case 0:
+					convertToRegularThread(phpThreads[i])
+				case 1:
+					convertToWorkerThread(phpThreads[i], workers[worker1Path])
+				case 2:
+					convertToWorkerThread(phpThreads[i], workers[worker2Path])
+				}
+				time.Sleep(time.Millisecond)
+				if !isRunning.Load() {
+					return
+				}
+			}
+		}
+	}()
+
+	// randomly do requests to the 3 endpoints
+	wg.Add(numThreads)
+	for i := 0; i < numThreads; i++ {
+		go func(i int) {
+			for j := 0; j < numRequestsPerThread; j++ {
+				switch rand.IntN(3) {
+				case 0:
+					assertRequestBody(t, "http://localhost/transition-worker-1.php", "Hello from worker 1")
+				case 1:
+					assertRequestBody(t, "http://localhost/transition-worker-2.php", "Hello from worker 2")
+				case 2:
+					assertRequestBody(t, "http://localhost/transition-regular.php", "Hello from regular thread")
+				}
+			}
+			wg.Done()
+		}(i)
+	}
+
+	wg.Wait()
+	isRunning.Store(false)
+	Shutdown()
+}
+
+func getDummyWorker(fileName string) *worker {
+	if workers == nil {
+		workers = make(map[string]*worker)
+	}
+	absFileName, _ := filepath.Abs("./testdata/" + fileName)
+	worker, _ := newWorker(workerOpt{
+		fileName: absFileName,
+		num:      1,
+	})
+	return worker
+}
+
+func assertRequestBody(t *testing.T, url string, expected string) {
+	r := httptest.NewRequest("GET", url, nil)
+	w := httptest.NewRecorder()
+	req, err := NewRequestWithContext(r, WithRequestDocumentRoot("/go/src/app/testdata", false))
+	assert.NoError(t, err)
+	err = ServeHTTP(w, req)
+	assert.NoError(t, err)
+	resp := w.Result()
+	body, _ := io.ReadAll(resp.Body)
+	assert.Equal(t, expected, string(body))
 }

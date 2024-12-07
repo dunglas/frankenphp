@@ -4,7 +4,6 @@ package frankenphp
 import "C"
 import (
 	"fmt"
-	"net/http"
 	"sync"
 )
 
@@ -36,12 +35,7 @@ func initPHPThreads(numThreads int) error {
 
 	// initialize all threads as inactive
 	for i := 0; i < numThreads; i++ {
-		phpThreads[i] = &phpThread{
-			threadIndex: i,
-			drainChan:   make(chan struct{}),
-			requestChan: make(chan *http.Request),
-			state:       newThreadState(),
-		}
+		phpThreads[i] = newPHPThread(i)
 		convertToInactiveThread(phpThreads[i])
 	}
 
@@ -66,6 +60,7 @@ func drainPHPThreads() {
 	doneWG := sync.WaitGroup{}
 	doneWG.Add(len(phpThreads))
 	for _, thread := range phpThreads {
+		thread.mu.Lock()
 		thread.state.set(stateShuttingDown)
 		close(thread.drainChan)
 	}
@@ -73,6 +68,7 @@ func drainPHPThreads() {
 	for _, thread := range phpThreads {
 		go func(thread *phpThread) {
 			thread.state.waitFor(stateDone)
+			thread.mu.Unlock()
 			doneWG.Done()
 		}(thread)
 	}

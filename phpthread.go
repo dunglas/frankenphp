@@ -5,9 +5,8 @@ import "C"
 import (
 	"net/http"
 	"runtime"
+	"sync"
 	"unsafe"
-
-	"go.uber.org/zap"
 )
 
 // representation of the actual underlying PHP thread
@@ -21,6 +20,7 @@ type phpThread struct {
 	drainChan         chan struct{}
 	handler           threadHandler
 	state             *threadState
+	mu                *sync.Mutex
 }
 
 // interface that defines how the callbacks from the C thread should be handled
@@ -30,16 +30,30 @@ type threadHandler interface {
 	getActiveRequest() *http.Request
 }
 
+func newPHPThread(threadIndex int) *phpThread {
+	return &phpThread{
+		threadIndex: threadIndex,
+		drainChan:   make(chan struct{}),
+		requestChan: make(chan *http.Request),
+		mu:          &sync.Mutex{},
+		state:       newThreadState(),
+	}
+}
+
 func (thread *phpThread) getActiveRequest() *http.Request {
 	return thread.handler.getActiveRequest()
 }
 
 // change the thread handler safely
 func (thread *phpThread) setHandler(handler threadHandler) {
-	logger.Debug("transitioning thread", zap.Int("threadIndex", thread.threadIndex))
+	thread.mu.Lock()
+	defer thread.mu.Unlock()
+	if thread.state.is(stateShuttingDown) {
+		return
+	}
 	thread.state.set(stateTransitionRequested)
 	close(thread.drainChan)
-	thread.state.waitFor(stateTransitionInProgress)
+	thread.state.waitFor(stateTransitionInProgress, stateShuttingDown)
 	thread.handler = handler
 	thread.drainChan = make(chan struct{})
 	thread.state.set(stateTransitionComplete)
