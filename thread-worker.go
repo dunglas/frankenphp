@@ -25,7 +25,7 @@ type workerThread struct {
 }
 
 func convertToWorkerThread(thread *phpThread, worker *worker) {
-	handler := &workerThread{
+	thread.setHandler(&workerThread{
 		state:  thread.state,
 		thread: thread,
 		worker: worker,
@@ -34,14 +34,11 @@ func convertToWorkerThread(thread *phpThread, worker *worker) {
 			minBackoff:             100 * time.Millisecond,
 			maxConsecutiveFailures: 6,
 		},
+	})
+	worker.addThread(thread)
+	if worker.fileName == "" {
+		panic("worker script is empty")
 	}
-	thread.handler = handler
-	thread.requestChan = make(chan *http.Request)
-	worker.threadMutex.Lock()
-	worker.threads = append(worker.threads, thread)
-	worker.threadMutex.Unlock()
-
-	thread.state.set(stateActive)
 }
 
 func (handler *workerThread) getActiveRequest() *http.Request {
@@ -52,47 +49,33 @@ func (handler *workerThread) getActiveRequest() *http.Request {
 	return handler.fakeRequest
 }
 
-func (t *workerThread) isReadyToTransition() bool {
-	return false
-}
-
 // return the name of the script or an empty string if no script should be executed
 func (handler *workerThread) beforeScriptExecution() string {
-	currentState := handler.state.get()
-	switch currentState {
-	case stateInactive:
-		handler.state.waitFor(stateActive, stateShuttingDown)
-		return handler.beforeScriptExecution()
+	switch handler.state.get() {
+	case stateTransitionRequested:
+		thread := handler.thread
+		handler.worker.removeThread(handler.thread)
+		thread.state.set(stateTransitionInProgress)
+		thread.state.waitFor(stateTransitionComplete, stateShuttingDown)
+
+		// execute beforeScriptExecution of the new handler
+		return thread.handler.beforeScriptExecution()
 	case stateShuttingDown:
+		// signal to stop
 		return ""
 	case stateRestarting:
 		handler.state.set(stateYielding)
 		handler.state.waitFor(stateReady, stateShuttingDown)
 		return handler.beforeScriptExecution()
-	case stateReady, stateActive:
+	case stateReady, stateTransitionComplete:
 		setUpWorkerScript(handler, handler.worker)
 		return handler.worker.fileName
 	}
-	// TODO: panic?
-	return ""
+	panic("unexpected state: " + handler.state.name())
 }
 
-// return true if the worker should continue to run
-func (handler *workerThread) afterScriptExecution(exitStatus int) bool {
+func (handler *workerThread) afterScriptExecution(exitStatus int) {
 	tearDownWorkerScript(handler, exitStatus)
-	currentState := handler.state.get()
-	switch currentState {
-	case stateDrain:
-		handler.thread.requestChan = make(chan *http.Request)
-		return true
-	case stateShuttingDown:
-		return false
-	}
-	return true
-}
-
-func (handler *workerThread) onShutdown() {
-	handler.state.set(stateDone)
 }
 
 func setUpWorkerScript(handler *workerThread, worker *worker) {
@@ -126,11 +109,7 @@ func setUpWorkerScript(handler *workerThread, worker *worker) {
 
 func tearDownWorkerScript(handler *workerThread, exitStatus int) {
 
-	// if the fake request is nil, no script was executed
-	if handler.fakeRequest == nil {
-		return
-	}
-
+	logger.Info("tear down worker script")
 	// if the worker request is not nil, the script might have crashed
 	// make sure to close the worker request context
 	if handler.workerRequest != nil {
@@ -171,14 +150,12 @@ func tearDownWorkerScript(handler *workerThread, exitStatus int) {
 }
 
 func (handler *workerThread) waitForWorkerRequest() bool {
-
 	if c := logger.Check(zapcore.DebugLevel, "waiting for request"); c != nil {
 		c.Write(zap.String("worker", handler.worker.fileName))
 	}
 
-	if handler.state.is(stateActive) {
+	if handler.state.compareAndSwap(stateTransitionComplete, stateReady) {
 		metrics.ReadyWorker(handler.worker.fileName)
-		handler.state.set(stateReady)
 	}
 
 	var r *http.Request
@@ -205,7 +182,7 @@ func (handler *workerThread) waitForWorkerRequest() bool {
 	}
 
 	if err := updateServerContext(handler.thread, r, false, true); err != nil {
-		// Unexpected error
+		// Unexpected error or invalid request
 		if c := logger.Check(zapcore.DebugLevel, "unexpected error"); c != nil {
 			c.Write(zap.String("worker", handler.worker.fileName), zap.String("url", r.RequestURI), zap.Error(err))
 		}

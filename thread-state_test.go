@@ -12,10 +12,10 @@ func TestYieldToEachOtherViaThreadStates(t *testing.T) {
 	go func() {
 		threadState.waitFor(stateInactive)
 		assert.True(t, threadState.is(stateInactive))
-		threadState.set(stateActive)
+		threadState.set(stateReady)
 	}()
 
 	threadState.set(stateInactive)
-	threadState.waitFor(stateActive)
-	assert.True(t, threadState.is(stateActive))
+	threadState.waitFor(stateReady)
+	assert.True(t, threadState.is(stateReady))
 }

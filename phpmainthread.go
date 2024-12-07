@@ -4,12 +4,13 @@ package frankenphp
 import "C"
 import (
 	"fmt"
+	"net/http"
 	"sync"
 )
 
 // represents the main PHP thread
 // the thread needs to keep running as long as all other threads are running
-type mainPHPThread struct {
+type phpMainThread struct {
 	state      *threadState
 	done       chan struct{}
 	numThreads int
@@ -17,34 +18,36 @@ type mainPHPThread struct {
 
 var (
 	phpThreads []*phpThread
-	mainThread *mainPHPThread
+	mainThread *phpMainThread
 )
 
 // reserve a fixed number of PHP threads on the go side
 func initPHPThreads(numThreads int) error {
-	mainThread = &mainPHPThread{
+	mainThread = &phpMainThread{
 		state:      newThreadState(),
 		done:       make(chan struct{}),
 		numThreads: numThreads,
 	}
 	phpThreads = make([]*phpThread, numThreads)
 
-	for i := 0; i < numThreads; i++ {
-		phpThreads[i] = &phpThread{
-			threadIndex: i,
-			drainChan:   make(chan struct{}),
-			state:       newThreadState(),
-		}
-		convertToInactiveThread(phpThreads[i])
-	}
 	if err := mainThread.start(); err != nil {
 		return err
 	}
 
 	// initialize all threads as inactive
+	for i := 0; i < numThreads; i++ {
+		phpThreads[i] = &phpThread{
+			threadIndex: i,
+			drainChan:   make(chan struct{}),
+			requestChan: make(chan *http.Request),
+			state:       newThreadState(),
+		}
+		convertToInactiveThread(phpThreads[i])
+	}
+
+	// start the underlying C threads
 	ready := sync.WaitGroup{}
 	ready.Add(numThreads)
-
 	for _, thread := range phpThreads {
 		go func() {
 			if !C.frankenphp_new_php_thread(C.uintptr_t(thread.threadIndex)) {
@@ -54,7 +57,6 @@ func initPHPThreads(numThreads int) error {
 			ready.Done()
 		}()
 	}
-
 	ready.Wait()
 
 	return nil
@@ -80,17 +82,17 @@ func drainPHPThreads() {
 	phpThreads = nil
 }
 
-func (mainThread *mainPHPThread) start() error {
+func (mainThread *phpMainThread) start() error {
 	if C.frankenphp_new_main_thread(C.int(mainThread.numThreads)) != 0 {
 		return MainThreadCreationError
 	}
-	mainThread.state.waitFor(stateActive)
+	mainThread.state.waitFor(stateReady)
 	return nil
 }
 
 func getInactivePHPThread() *phpThread {
 	for _, thread := range phpThreads {
-		if thread.handler.isReadyToTransition() {
+		if thread.state.is(stateInactive) {
 			return thread
 		}
 	}
@@ -99,7 +101,7 @@ func getInactivePHPThread() *phpThread {
 
 //export go_frankenphp_main_thread_is_ready
 func go_frankenphp_main_thread_is_ready() {
-	mainThread.state.set(stateActive)
+	mainThread.state.set(stateReady)
 	mainThread.state.waitFor(stateShuttingDown)
 }
 

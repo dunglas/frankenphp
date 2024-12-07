@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"runtime"
 	"unsafe"
+
+	"go.uber.org/zap"
 )
 
 // representation of the actual underlying PHP thread
@@ -24,19 +26,23 @@ type phpThread struct {
 // interface that defines how the callbacks from the C thread should be handled
 type threadHandler interface {
 	beforeScriptExecution() string
-	afterScriptExecution(exitStatus int) bool
-	onShutdown()
+	afterScriptExecution(exitStatus int)
 	getActiveRequest() *http.Request
-	isReadyToTransition() bool
 }
 
 func (thread *phpThread) getActiveRequest() *http.Request {
 	return thread.handler.getActiveRequest()
 }
 
+// change the thread handler safely
 func (thread *phpThread) setHandler(handler threadHandler) {
+	logger.Debug("transitioning thread", zap.Int("threadIndex", thread.threadIndex))
+	thread.state.set(stateTransitionRequested)
+	close(thread.drainChan)
+	thread.state.waitFor(stateTransitionInProgress)
 	thread.handler = handler
-	thread.state.set(stateActive)
+	thread.drainChan = make(chan struct{})
+	thread.state.set(stateTransitionComplete)
 }
 
 // Pin a string that is not null-terminated
@@ -56,19 +62,23 @@ func (thread *phpThread) pinCString(s string) *C.char {
 func go_frankenphp_before_script_execution(threadIndex C.uintptr_t) *C.char {
 	thread := phpThreads[threadIndex]
 	scriptName := thread.handler.beforeScriptExecution()
+
+	// if no scriptName is passed, shut down
+	if scriptName == "" {
+		return nil
+	}
 	// return the name of the PHP script that should be executed
 	return thread.pinCString(scriptName)
 }
 
 //export go_frankenphp_after_script_execution
-func go_frankenphp_after_script_execution(threadIndex C.uintptr_t, exitStatus C.int) C.bool {
+func go_frankenphp_after_script_execution(threadIndex C.uintptr_t, exitStatus C.int) {
 	thread := phpThreads[threadIndex]
 	if exitStatus < 0 {
 		panic(ScriptExecutionError)
 	}
-	shouldContinueExecution := thread.handler.afterScriptExecution(int(exitStatus))
+	thread.handler.afterScriptExecution(int(exitStatus))
 	thread.Unpin()
-	return C.bool(shouldContinueExecution)
 }
 
 //export go_frankenphp_on_thread_shutdown

@@ -140,3 +140,20 @@ func (worker *worker) handleRequest(r *http.Request, fc *FrankenPHPContext) {
 	<-fc.done
 	metrics.StopWorkerRequest(worker.fileName, time.Since(fc.startedAt))
 }
+
+func (worker *worker) addThread(thread *phpThread) {
+	worker.threadMutex.Lock()
+	worker.threads = append(worker.threads, thread)
+	worker.threadMutex.Unlock()
+}
+
+func (worker *worker) removeThread(thread *phpThread) {
+	worker.threadMutex.Lock()
+	for i, t := range worker.threads {
+		if t == thread {
+			worker.threads = append(worker.threads[:i], worker.threads[i+1:]...)
+			break
+		}
+	}
+	worker.threadMutex.Unlock()
+}

@@ -2,22 +2,28 @@ package frankenphp
 
 import (
 	"slices"
+	"strconv"
 	"sync"
 )
 
 type stateID int
 
 const (
+	// initial state
 	stateBooting stateID = iota
 	stateInactive
-	stateActive
 	stateReady
-	stateBusy
 	stateShuttingDown
 	stateDone
+
+	// states necessary for restarting workers
 	stateRestarting
-	stateDrain
 	stateYielding
+
+	// states necessary for transitioning
+	stateTransitionRequested
+	stateTransitionInProgress
+	stateTransitionComplete
 )
 
 type threadState struct {
@@ -39,16 +45,26 @@ func newThreadState() *threadState {
 	}
 }
 
-func (h *threadState) is(state stateID) bool {
-	h.mu.RLock()
-	defer h.mu.RUnlock()
-	return h.currentState == state
+func (ts *threadState) is(state stateID) bool {
+	ts.mu.RLock()
+	defer ts.mu.RUnlock()
+	return ts.currentState == state
 }
 
-func (h *threadState) get() stateID {
-	h.mu.RLock()
-	defer h.mu.RUnlock()
-	return h.currentState
+func (ts *threadState) compareAndSwap(compareTo stateID, swapTo stateID) bool {
+	ts.mu.Lock()
+	defer ts.mu.Unlock()
+	if ts.currentState == compareTo {
+		ts.currentState = swapTo
+		return true
+	}
+	return false
+}
+
+func (ts *threadState) get() stateID {
+	ts.mu.RLock()
+	defer ts.mu.RUnlock()
+	return ts.currentState
 }
 
 func (h *threadState) set(nextState stateID) {
@@ -70,6 +86,10 @@ func (h *threadState) set(nextState stateID) {
 		close(sub.ch)
 	}
 	h.subscribers = newSubscribers
+}
+
+func (ts *threadState) name() string {
+	return "state:" + strconv.Itoa(int(ts.get()))
 }
 
 // block until the thread reaches a certain state

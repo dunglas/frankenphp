@@ -16,59 +16,47 @@ type regularThread struct {
 }
 
 func convertToRegularThread(thread *phpThread) {
-	thread.handler = &regularThread{
+	thread.setHandler(&regularThread{
 		thread: thread,
 		state:  thread.state,
-	}
-	thread.state.set(stateActive)
+	})
 }
 
-func (t *regularThread) isReadyToTransition() bool {
-	return false
+// return the name of the script or an empty string if no script should be executed
+func (handler *regularThread) beforeScriptExecution() string {
+	switch handler.state.get() {
+	case stateTransitionRequested:
+		thread := handler.thread
+		thread.state.set(stateTransitionInProgress)
+		thread.state.waitFor(stateTransitionComplete, stateShuttingDown)
+		// execute beforeScriptExecution of the new handler
+		return thread.handler.beforeScriptExecution()
+	case stateTransitionComplete:
+		handler.state.set(stateReady)
+		return handler.waitForRequest()
+	case stateShuttingDown:
+		// signal to stop
+		return ""
+	case stateReady:
+		return handler.waitForRequest()
+	}
+	panic("unexpected state: " + handler.state.name())
+}
+
+// return true if the worker should continue to run
+func (handler *regularThread) afterScriptExecution(exitStatus int) {
+	handler.afterRequest(exitStatus)
 }
 
 func (handler *regularThread) getActiveRequest() *http.Request {
 	return handler.activeRequest
 }
 
-// return the name of the script or an empty string if no script should be executed
-func (handler *regularThread) beforeScriptExecution() string {
-	currentState := handler.state.get()
-	switch currentState {
-	case stateInactive:
-		handler.state.waitFor(stateActive, stateShuttingDown)
-		return handler.beforeScriptExecution()
-	case stateShuttingDown:
-		return ""
-	case stateReady, stateActive:
-		return handler.waitForScriptExecution()
-	}
-	return ""
-}
-
-// return true if the worker should continue to run
-func (handler *regularThread) afterScriptExecution(exitStatus int) bool {
-	handler.afterRequest(exitStatus)
-
-	currentState := handler.state.get()
-	switch currentState {
-	case stateDrain:
-		return true
-	case stateShuttingDown:
-		return false
-	}
-	return true
-}
-
-func (handler *regularThread) onShutdown() {
-	handler.state.set(stateDone)
-}
-
-func (handler *regularThread) waitForScriptExecution() string {
+func (handler *regularThread) waitForRequest() string {
 	select {
 	case <-handler.thread.drainChan:
-		// no script should be executed if the server is shutting down
-		return ""
+		// go back to beforeScriptExecution
+		return handler.beforeScriptExecution()
 
 	case r := <-requestChan:
 		handler.activeRequest = r
@@ -78,8 +66,8 @@ func (handler *regularThread) waitForScriptExecution() string {
 			rejectRequest(fc.responseWriter, err.Error())
 			handler.afterRequest(0)
 			handler.thread.Unpin()
-			// no script should be executed if the request was rejected
-			return ""
+			// go back to beforeScriptExecution
+			return handler.beforeScriptExecution()
 		}
 
 		// set the scriptName that should be executed
@@ -88,12 +76,6 @@ func (handler *regularThread) waitForScriptExecution() string {
 }
 
 func (handler *regularThread) afterRequest(exitStatus int) {
-
-	// if the request is nil, no script was executed
-	if handler.activeRequest == nil {
-		return
-	}
-
 	fc := handler.activeRequest.Context().Value(contextKey).(*FrankenPHPContext)
 	fc.exitStatus = exitStatus
 	maybeCloseContext(fc)
