@@ -14,6 +14,8 @@ import (
 	"go.uber.org/zap"
 )
 
+var testDataPath, _ = filepath.Abs("./testdata")
+
 func TestStartAndStopTheMainThreadWithOneInactiveThread(t *testing.T) {
 	logger = zap.NewNop()                // the logger needs to not be nil
 	assert.NoError(t, initPHPThreads(1)) // reserve 1 thread
@@ -79,8 +81,8 @@ func TestTransitionThreadsWhileDoingRequests(t *testing.T) {
 	isRunning := atomic.Bool{}
 	isRunning.Store(true)
 	wg := sync.WaitGroup{}
-	worker1Path, _ := filepath.Abs("./testdata/transition-worker-1.php")
-	worker2Path, _ := filepath.Abs("./testdata/transition-worker-2.php")
+	worker1Path := testDataPath + "/transition-worker-1.php"
+	worker2Path := testDataPath + "/transition-worker-2.php"
 
 	Init(
 		WithNumThreads(numThreads),
@@ -136,9 +138,8 @@ func getDummyWorker(fileName string) *worker {
 	if workers == nil {
 		workers = make(map[string]*worker)
 	}
-	absFileName, _ := filepath.Abs("./testdata/" + fileName)
 	worker, _ := newWorker(workerOpt{
-		fileName: absFileName,
+		fileName: testDataPath + "/" + fileName,
 		num:      1,
 	})
 	return worker
@@ -147,7 +148,8 @@ func getDummyWorker(fileName string) *worker {
 func assertRequestBody(t *testing.T, url string, expected string) {
 	r := httptest.NewRequest("GET", url, nil)
 	w := httptest.NewRecorder()
-	req, err := NewRequestWithContext(r, WithRequestDocumentRoot("/go/src/app/testdata", false))
+
+	req, err := NewRequestWithContext(r, WithRequestDocumentRoot(testDataPath, false))
 	assert.NoError(t, err)
 	err = ServeHTTP(w, req)
 	assert.NoError(t, err)
