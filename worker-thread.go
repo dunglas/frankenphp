@@ -11,8 +11,11 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-type phpWorkerThread struct {
-	state  *stateHandler
+// representation of a thread assigned to a worker script
+// executes the PHP worker script in a loop
+// implements the threadHandler interface
+type workerThread struct {
+	state  *threadState
 	thread *phpThread
 	worker *worker
 	fakeRequest *http.Request
@@ -21,25 +24,22 @@ type phpWorkerThread struct {
 }
 
 func convertToWorkerThread(thread *phpThread, worker *worker) {
-	thread.handler = &phpWorkerThread{
+	handler := &workerThread{
 		state: thread.state,
 		thread: thread,
 		worker: worker,
+		backoff: newExponentialBackoff(),
 	}
-	thread.handler.onStartup()
+	thread.handler = handler
+	thread.requestChan = make(chan *http.Request)
+	worker.threadMutex.Lock()
+    worker.threads = append(worker.threads, thread)
+    worker.threadMutex.Unlock()
+
 	thread.state.set(stateActive)
 }
 
-// this is done once
-func (handler *phpWorkerThread) onStartup(){
-    handler.thread.requestChan = make(chan *http.Request)
-    handler.backoff = newExponentialBackoff()
-    handler.worker.threadMutex.Lock()
-    handler.worker.threads = append(handler.worker.threads, handler.thread)
-    handler.worker.threadMutex.Unlock()
-}
-
-func (handler *phpWorkerThread) getActiveRequest() *http.Request {
+func (handler *workerThread) getActiveRequest() *http.Request {
 	if handler.workerRequest != nil {
 		return handler.workerRequest
 	}
@@ -47,12 +47,12 @@ func (handler *phpWorkerThread) getActiveRequest() *http.Request {
 	return handler.fakeRequest
 }
 
-func (t *phpWorkerThread) isReadyToTransition() bool {
+func (t *workerThread) isReadyToTransition() bool {
 	return false
 }
 
 // return the name of the script or an empty string if no script should be executed
-func (handler *phpWorkerThread) beforeScriptExecution() string {
+func (handler *workerThread) beforeScriptExecution() string {
 	currentState := handler.state.get()
 	switch currentState {
 	case stateInactive:
@@ -72,7 +72,7 @@ func (handler *phpWorkerThread) beforeScriptExecution() string {
 	return ""
 }
 
-func (handler *phpWorkerThread) waitForWorkerRequest() bool {
+func (handler *workerThread) waitForWorkerRequest() bool {
 
     if c := logger.Check(zapcore.DebugLevel, "waiting for request"); c != nil {
         c.Write(zap.String("worker", handler.worker.fileName))
@@ -123,7 +123,7 @@ func (handler *phpWorkerThread) waitForWorkerRequest() bool {
 }
 
 // return true if the worker should continue to run
-func (handler *phpWorkerThread) afterScriptExecution(exitStatus int) bool {
+func (handler *workerThread) afterScriptExecution(exitStatus int) bool {
 	tearDownWorkerScript(handler, exitStatus)
 	currentState := handler.state.get()
 	switch currentState {
@@ -136,11 +136,11 @@ func (handler *phpWorkerThread) afterScriptExecution(exitStatus int) bool {
 	return true
 }
 
-func (handler *phpWorkerThread) onShutdown(){
+func (handler *workerThread) onShutdown(){
     handler.state.set(stateDone)
 }
 
-func setUpWorkerScript(handler *phpWorkerThread, worker *worker) {
+func setUpWorkerScript(handler *workerThread, worker *worker) {
 	handler.backoff.reset()
 	metrics.StartWorker(worker.fileName)
 
@@ -169,7 +169,7 @@ func setUpWorkerScript(handler *phpWorkerThread, worker *worker) {
 	}
 }
 
-func tearDownWorkerScript(handler *phpWorkerThread, exitStatus int) {
+func tearDownWorkerScript(handler *workerThread, exitStatus int) {
 
 	// if the fake request is nil, no script was executed
 	if handler.fakeRequest == nil {
@@ -219,7 +219,7 @@ func tearDownWorkerScript(handler *phpWorkerThread, exitStatus int) {
 
 //export go_frankenphp_worker_handle_request_start
 func go_frankenphp_worker_handle_request_start(threadIndex C.uintptr_t) C.bool {
-	handler := phpThreads[threadIndex].handler.(*phpWorkerThread)
+	handler := phpThreads[threadIndex].handler.(*workerThread)
 	return C.bool(handler.waitForWorkerRequest())
 }
 
@@ -230,7 +230,7 @@ func go_frankenphp_finish_worker_request(threadIndex C.uintptr_t) {
 	fc := r.Context().Value(contextKey).(*FrankenPHPContext)
 
 	maybeCloseContext(fc)
-	thread.handler.(*phpWorkerThread).workerRequest = nil
+	thread.handler.(*workerThread).workerRequest = nil
 	thread.Unpin()
 
 	if c := fc.logger.Check(zapcore.DebugLevel, "request handling finished"); c != nil {

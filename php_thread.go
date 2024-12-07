@@ -18,12 +18,11 @@ type phpThread struct {
 	requestChan chan *http.Request
 	drainChan chan struct{}
 	handler	threadHandler
-	state *stateHandler
+	state *threadState
 }
 
 // interface that defines how the callbacks from the C thread should be handled
 type threadHandler interface {
-	onStartup()
 	beforeScriptExecution() string
 	afterScriptExecution(exitStatus int) bool
 	onShutdown()
@@ -53,11 +52,6 @@ func (thread *phpThread) pinCString(s string) *C.char {
 	return thread.pinString(s + "\x00")
 }
 
-//export go_frankenphp_on_thread_startup
-func go_frankenphp_on_thread_startup(threadIndex C.uintptr_t) {
-	phpThreads[threadIndex].handler.onStartup()
-}
-
 //export go_frankenphp_before_script_execution
 func go_frankenphp_before_script_execution(threadIndex C.uintptr_t) *C.char {
 	thread := phpThreads[threadIndex]
@@ -79,5 +73,5 @@ func go_frankenphp_after_script_execution(threadIndex C.uintptr_t, exitStatus C.
 
 //export go_frankenphp_on_thread_shutdown
 func go_frankenphp_on_thread_shutdown(threadIndex C.uintptr_t) {
-	phpThreads[threadIndex].handler.onShutdown()
+	phpThreads[threadIndex].state.set(stateDone)
 }

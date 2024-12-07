@@ -828,8 +828,6 @@ static void *php_thread(void *arg) {
   cfg_get_string("filter.default", &default_filter);
   should_filter_var = default_filter != NULL;
 
-  go_frankenphp_on_thread_startup(thread_index);
-
   // perform work until go signals to stop
   while (true) {
     char *scriptName = go_frankenphp_before_script_execution(thread_index);
