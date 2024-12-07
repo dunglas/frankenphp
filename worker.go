@@ -87,6 +87,7 @@ func restartWorkers() {
 		worker.threadMutex.RLock()
 		ready.Add(len(worker.threads))
 		for _, thread := range worker.threads {
+			thread.handlerMu.Lock()
 			thread.state.set(stateRestarting)
 			close(thread.drainChan)
 			go func(thread *phpThread) {
@@ -100,6 +101,7 @@ func restartWorkers() {
 		for _, thread := range worker.threads {
 			thread.drainChan = make(chan struct{})
 			thread.state.set(stateReady)
+			thread.handlerMu.Unlock()
 		}
 		worker.threadMutex.RUnlock()
 	}

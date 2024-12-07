@@ -18,9 +18,9 @@ type phpThread struct {
 	knownVariableKeys map[string]*C.zend_string
 	requestChan       chan *http.Request
 	drainChan         chan struct{}
+	handlerMu         *sync.Mutex
 	handler           threadHandler
 	state             *threadState
-	mu                *sync.Mutex
 }
 
 // interface that defines how the callbacks from the C thread should be handled
@@ -35,7 +35,7 @@ func newPHPThread(threadIndex int) *phpThread {
 		threadIndex: threadIndex,
 		drainChan:   make(chan struct{}),
 		requestChan: make(chan *http.Request),
-		mu:          &sync.Mutex{},
+		handlerMu:   &sync.Mutex{},
 		state:       newThreadState(),
 	}
 }
@@ -43,8 +43,8 @@ func newPHPThread(threadIndex int) *phpThread {
 // change the thread handler safely
 // must be called from outside of the PHP thread
 func (thread *phpThread) setHandler(handler threadHandler) {
-	thread.mu.Lock()
-	defer thread.mu.Unlock()
+	thread.handlerMu.Lock()
+	defer thread.handlerMu.Unlock()
 	if thread.state.is(stateShuttingDown) {
 		return
 	}

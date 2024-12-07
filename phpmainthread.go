@@ -61,7 +61,7 @@ func drainPHPThreads() {
 	doneWG := sync.WaitGroup{}
 	doneWG.Add(len(phpThreads))
 	for _, thread := range phpThreads {
-		thread.mu.Lock()
+		thread.handlerMu.Lock()
 		thread.state.set(stateShuttingDown)
 		close(thread.drainChan)
 	}
@@ -69,7 +69,7 @@ func drainPHPThreads() {
 	for _, thread := range phpThreads {
 		go func(thread *phpThread) {
 			thread.state.waitFor(stateDone)
-			thread.mu.Unlock()
+			thread.handlerMu.Unlock()
 			doneWG.Done()
 		}(thread)
 	}
