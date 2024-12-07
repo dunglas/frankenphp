@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"path/filepath"
 	"fmt"
+	"time"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -28,7 +29,11 @@ func convertToWorkerThread(thread *phpThread, worker *worker) {
 		state: thread.state,
 		thread: thread,
 		worker: worker,
-		backoff: newExponentialBackoff(),
+		backoff: &exponentialBackoff{
+            maxBackoff:             1 * time.Second,
+            minBackoff:             100 * time.Millisecond,
+            maxConsecutiveFailures: 6,
+        },
 	}
 	thread.handler = handler
 	thread.requestChan = make(chan *http.Request)
@@ -141,7 +146,7 @@ func (handler *workerThread) onShutdown(){
 }
 
 func setUpWorkerScript(handler *workerThread, worker *worker) {
-	handler.backoff.reset()
+	handler.backoff.wait()
 	metrics.StartWorker(worker.fileName)
 
 	// Create a dummy request to set up the worker
@@ -196,7 +201,7 @@ func tearDownWorkerScript(handler *workerThread, exitStatus int) {
 	if fc.exitStatus == 0 {
 		// TODO: make the max restart configurable
 		metrics.StopWorker(worker.fileName, StopReasonRestart)
-
+		handler.backoff.recordSuccess()
 		if c := logger.Check(zapcore.DebugLevel, "restarting"); c != nil {
 			c.Write(zap.String("worker", worker.fileName))
 		}
@@ -207,14 +212,12 @@ func tearDownWorkerScript(handler *workerThread, exitStatus int) {
 
 	// on exit status 1 we apply an exponential backoff when restarting
 	metrics.StopWorker(worker.fileName, StopReasonCrash)
-	handler.backoff.trigger(func(failureCount int) {
-		// if we end up here, the worker has not been up for backoff*2
-		// this is probably due to a syntax error or another fatal error
-		if !watcherIsEnabled {
-			panic(fmt.Errorf("workers %q: too many consecutive failures", worker.fileName))
-		}
-		logger.Warn("many consecutive worker failures", zap.String("worker", worker.fileName), zap.Int("failures", failureCount))
-	})
+	if handler.backoff.recordFailure() {
+        if !watcherIsEnabled {
+            panic(fmt.Errorf("workers %q: too many consecutive failures", worker.fileName))
+        }
+        logger.Warn("many consecutive worker failures", zap.String("worker", worker.fileName), zap.Int("failures", handler.backoff.failureCount))
+    }
 }
 
 //export go_frankenphp_worker_handle_request_start

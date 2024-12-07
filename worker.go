@@ -73,7 +73,6 @@ func newWorker(o workerOpt) (*worker, error) {
 		num:         o.num,
 		env:         o.env,
 		requestChan: make(chan *http.Request),
-		ready:       make(chan struct{}, o.num),
 	}
 	workers[absFileName] = w
 
@@ -102,7 +101,6 @@ func restartWorkers() {
 				ready.Done()
 			}(thread)
 		}
-		worker.threadMutex.RUnlock()
 	}
 	stopWorkers()
 	ready.Wait()
@@ -111,6 +109,7 @@ func restartWorkers() {
             thread.drainChan = make(chan struct{})
             thread.state.set(stateReady)
         }
+		worker.threadMutex.RUnlock()
     }
 	workersDone = make(chan interface{})
 }
