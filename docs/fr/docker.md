@@ -2,7 +2,7 @@
 
 Les images Docker de [FrankenPHP](https://hub.docker.com/r/dunglas/frankenphp) sont basées sur les [images PHP officielles](https://hub.docker.com/_/php/). Des variantes Debian et Alpine Linux sont fournies pour les architectures populaires. Les variantes Debian sont recommandées.
 
-Des variantes pour PHP 8.2 et PHP 8.3 sont disponibles. [Parcourir les tags](https://hub.docker.com/r/dunglas/frankenphp/tags).
+Des variantes pour PHP 8.2, 8.3 et 8.4 sont disponibles. [Parcourir les tags](https://hub.docker.com/r/dunglas/frankenphp/tags).
 
 ## Comment utiliser les images
 
@@ -51,16 +51,20 @@ FROM dunglas/frankenphp:builder AS builder
 COPY --from=caddy:builder /usr/bin/xcaddy /usr/bin/xcaddy
 
 # CGO doit être activé pour construire FrankenPHP
-ENV CGO_ENABLED=1 XCADDY_SETCAP=1 XCADDY_GO_BUILD_FLAGS="-ldflags '-w -s'"
-RUN xcaddy build \
-	--output /usr/local/bin/frankenphp \
-	--with github.com/dunglas/frankenphp=./ \
-	--with github.com/dunglas/frankenphp/caddy=./caddy/ \
-  --with github.com/dunglas/caddy-cbrotli \
-	# Mercure et Vulcain sont inclus dans la construction officielle, mais n'hésitez pas à les retirer
-	--with github.com/dunglas/mercure/caddy \
-	--with github.com/dunglas/vulcain/caddy
-	# Ajoutez des modules Caddy supplémentaires ici
+RUN CGO_ENABLED=1 \
+    XCADDY_SETCAP=1 \
+    XCADDY_GO_BUILD_FLAGS="-ldflags='-w -s' -tags=nobadger,nomysql,nopgx" \
+    CGO_CFLAGS=$(php-config --includes) \
+    CGO_LDFLAGS="$(php-config --ldflags) $(php-config --libs)" \
+    xcaddy build \
+        --output /usr/local/bin/frankenphp \
+        --with github.com/dunglas/frankenphp=./ \
+        --with github.com/dunglas/frankenphp/caddy=./caddy/ \
+        --with github.com/dunglas/caddy-cbrotli \
+        # Mercure et Vulcain sont inclus dans la construction officielle, mais n'hésitez pas à les retirer
+        --with github.com/dunglas/mercure/caddy \
+        --with github.com/dunglas/vulcain/caddy
+        # Ajoutez des modules Caddy supplémentaires ici
 
 FROM dunglas/frankenphp AS runner
 

@@ -2,11 +2,11 @@
 
 [FrankenPHP Docker images](https://hub.docker.com/r/dunglas/frankenphp) are based on [official PHP images](https://hub.docker.com/_/php/). Debian and Alpine Linux variants are provided for popular architectures. Debian variants are recommended.
 
-Variants for PHP 8.2 and PHP 8.3 are provided.
+Variants for PHP 8.2, 8.3 and 8.4 are provided.
 
 The tags follow this pattern: `dunglas/frankenphp:<frankenphp-version>-php<php-version>-<os>`
 
-* `<frankenphp-version>` and `<php-version>` are version numbers of FrankenPHP and PHP respectively, with specifities ranging from major (e.g. `1`), minor (e.g. `1.2`) to patch versions (e.g. `1.2.3`).
+* `<frankenphp-version>` and `<php-version>` are version numbers of FrankenPHP and PHP respectively, ranging from major (e.g. `1`), minor (e.g. `1.2`) to patch versions (e.g. `1.2.3`).
 * `<os>` is either `bookworm` (for Debian Bookworm) or `alpine` (for the latest stable version of Alpine).
 
 [Browse tags](https://hub.docker.com/r/dunglas/frankenphp/tags).
@@ -58,16 +58,20 @@ FROM dunglas/frankenphp:builder AS builder
 COPY --from=caddy:builder /usr/bin/xcaddy /usr/bin/xcaddy
 
 # CGO must be enabled to build FrankenPHP
-ENV CGO_ENABLED=1 XCADDY_SETCAP=1 XCADDY_GO_BUILD_FLAGS="-ldflags '-w -s'"
-RUN xcaddy build \
-	--output /usr/local/bin/frankenphp \
-	--with github.com/dunglas/frankenphp=./ \
-	--with github.com/dunglas/frankenphp/caddy=./caddy/ \
-	--with github.com/dunglas/caddy-cbrotli \
-	# Mercure and Vulcain are included in the official build, but feel free to remove them
-	--with github.com/dunglas/mercure/caddy \
-	--with github.com/dunglas/vulcain/caddy
-	# Add extra Caddy modules here
+RUN CGO_ENABLED=1 \
+    XCADDY_SETCAP=1 \
+    XCADDY_GO_BUILD_FLAGS="-ldflags='-w -s' -tags=nobadger,nomysql,nopgx" \
+    CGO_CFLAGS=$(php-config --includes) \
+    CGO_LDFLAGS="$(php-config --ldflags) $(php-config --libs)" \
+    xcaddy build \
+        --output /usr/local/bin/frankenphp \
+        --with github.com/dunglas/frankenphp=./ \
+        --with github.com/dunglas/frankenphp/caddy=./caddy/ \
+        --with github.com/dunglas/caddy-cbrotli \
+        # Mercure and Vulcain are included in the official build, but feel free to remove them
+        --with github.com/dunglas/mercure/caddy \
+        --with github.com/dunglas/vulcain/caddy
+        # Add extra Caddy modules here
 
 FROM dunglas/frankenphp AS runner
 

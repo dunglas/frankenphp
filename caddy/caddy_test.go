@@ -312,7 +312,7 @@ func TestPHPServerDirectiveDisableFileServer(t *testing.T) {
 		`, "caddyfile")
 
 	tester.AssertGetResponse("http://localhost:"+testPort, http.StatusOK, "I am by birth a Genevese (i not set)")
-	tester.AssertGetResponse("http://localhost:"+testPort+"/hello.txt", http.StatusNotFound, "Not found")
+	tester.AssertGetResponse("http://localhost:"+testPort+"/not-found.txt", http.StatusOK, "I am by birth a Genevese (i not set)")
 }
 
 func TestMetrics(t *testing.T) {
@@ -607,6 +607,7 @@ func TestAllDefinedServerVars(t *testing.T) {
 			"Content-Length: 14", // maliciously set to 14
 			"Special-Chars: <%00>",
 			"Host: Malicous Host",
+			"X-Empty-Header:",
 		},
 		bytes.NewBufferString("foo=bar"),
 		http.StatusOK,

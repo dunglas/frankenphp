@@ -47,7 +47,7 @@ RUN apk add --no-cache \
 	echo 'set auto-load safe-path /' > /root/.gdbinit
 
 WORKDIR /usr/local/src/php
-RUN git clone --branch=PHP-8.3 https://github.com/php/php-src.git . && \
+RUN git clone --branch=PHP-8.4 https://github.com/php/php-src.git . && \
 	# --enable-embed is only necessary to generate libphp.so, we don't use this SAPI directly
 	./buildconf --force && \
 	./configure \
@@ -65,9 +65,8 @@ RUN git clone --branch=PHP-8.3 https://github.com/php/php-src.git . && \
 	php --version
 
 # Install e-dant/watcher (necessary for file watching)
-ARG EDANT_WATCHER_VERSION=release
 WORKDIR /usr/local/src/watcher
-RUN git clone --branch=$EDANT_WATCHER_VERSION https://github.com/e-dant/watcher . && \
+RUN git clone https://github.com/e-dant/watcher . && \
     cmake -S . -B build -DCMAKE_BUILD_TYPE=Release && \
 	cmake --build build/ && \
 	cmake --install build

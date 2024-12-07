@@ -30,4 +30,5 @@ QUERY_STRING:specialChars=%3E\x00%00</>
 REMOTE_USER:user
 REQUEST_METHOD:POST
 REQUEST_URI:/server-all-vars-ordered.php/path?specialChars=%3E\x00%00</>
+HTTP_X_EMPTY_HEADER:
 </pre>

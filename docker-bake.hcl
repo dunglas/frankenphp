@@ -7,15 +7,11 @@ variable "VERSION" {
 }
 
 variable "PHP_VERSION" {
-    default = "8.2,8.3"
+    default = "8.2,8.3,8.4"
 }
 
 variable "GO_VERSION" {
-    default = "1.22"
-}
-
-variable EDANT_WATCHER_VERSION {
-	default = "next"
+    default = "1.23"
 }
 
 variable "SHA" {}
@@ -29,7 +25,7 @@ variable "CACHE" {
 }
 
 variable DEFAULT_PHP_VERSION {
-    default = "8.3"
+    default = "8.4"
 }
 
 function "tag" {
@@ -119,7 +115,6 @@ target "default" {
     }
     args = {
         FRANKENPHP_VERSION = VERSION
-        EDANT_WATCHER_VERSION = EDANT_WATCHER_VERSION
     }
 }
 
@@ -145,7 +140,6 @@ target "static-builder" {
     }
     args = {
         FRANKENPHP_VERSION = VERSION
-        EDANT_WATCHER_VERSION = EDANT_WATCHER_VERSION
     }
     secret = ["id=github-token,env=GITHUB_TOKEN"]
 }

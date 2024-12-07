@@ -2,7 +2,7 @@
 
 [Resmi PHP imajları](https://hub.docker.com/_/php/) temel alınarak [FrankenPHP Docker imajları](https://hub.docker.com/r/dunglas/frankenphp) hazırlanmıştır. Popüler mimariler için Debian ve Alpine Linux varyantları sağlanmıştır. Debian dağıtımı tavsiye edilir.
 
-PHP 8.2 ve PHP 8.3 için varyantlar sağlanmıştır. [Etiketlere göz atın](https://hub.docker.com/r/dunglas/frankenphp/tags).
+PHP 8.2, 8.3 ve 8.4 için varyantlar sağlanmıştır. [Etiketlere göz atın](https://hub.docker.com/r/dunglas/frankenphp/tags).
 
 ## İmajlar Nasıl Kullanılır
 
@@ -51,17 +51,20 @@ FROM dunglas/frankenphp:builder AS builder
 COPY --from=caddy:builder /usr/bin/xcaddy /usr/bin/xcaddy
 
 # FrankenPHP oluşturmak için CGO etkinleştirilmelidir
-ENV CGO_ENABLED=1 XCADDY_SETCAP=1 XCADDY_GO_BUILD_FLAGS="-ldflags '-w -s'"
-RUN xcaddy build \
-	--output /usr/local/bin/frankenphp \
-	--with github.com/dunglas/frankenphp=./ \
-	--with github.com/dunglas/frankenphp/caddy=./caddy/ \
-	--with github.com/dunglas/caddy-cbrotli \
-	--with github.com/dunglas/caddy-cbrotli \
-	# Mercure ve Vulcain resmi yapıya dahil edilmiştir, ancak bunları kaldırmaktan çekinmeyin
-	--with github.com/dunglas/mercure/caddy \
-	--with github.com/dunglas/vulcain/caddy
-	# Buraya ekstra Caddy modülleri ekleyin
+RUN CGO_ENABLED=1 \
+    XCADDY_SETCAP=1 \
+    XCADDY_GO_BUILD_FLAGS="-ldflags='-w -s' -tags=nobadger,nomysql,nopgx" \
+    CGO_CFLAGS=$(php-config --includes) \
+    CGO_LDFLAGS="$(php-config --ldflags) $(php-config --libs)" \
+    xcaddy build \
+        --output /usr/local/bin/frankenphp \
+        --with github.com/dunglas/frankenphp=./ \
+        --with github.com/dunglas/frankenphp/caddy=./caddy/ \
+        --with github.com/dunglas/caddy-cbrotli \
+        # Mercure ve Vulcain resmi yapıya dahil edilmiştir, ancak bunları kaldırmaktan çekinmeyin
+        --with github.com/dunglas/mercure/caddy \
+        --with github.com/dunglas/vulcain/caddy
+        # Buraya ekstra Caddy modülleri ekleyin
 
 FROM dunglas/frankenphp AS runner
 
