@@ -19,7 +19,7 @@ func TestWorkerWithInactiveWatcher(t *testing.T) {
 
 			frankenphp {
 				worker {
-					file ../testdata/worker-with-watcher.php
+					file ../testdata/worker-with-counter.php
 					num 1
 					watch ./**/*.php
 				}
@@ -28,7 +28,7 @@ func TestWorkerWithInactiveWatcher(t *testing.T) {
 
 		localhost:`+testPort+` {
 			root ../testdata
-			rewrite worker-with-watcher.php
+			rewrite worker-with-counter.php
 			php
 		}
 		`, "caddyfile")
