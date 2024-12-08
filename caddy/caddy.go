@@ -30,6 +30,7 @@ const defaultDocumentRoot = "public"
 func init() {
 	caddy.RegisterModule(FrankenPHPApp{})
 	caddy.RegisterModule(FrankenPHPModule{})
+	caddy.RegisterModule(FrankenPHPAdmin{})
 
 	httpcaddyfile.RegisterGlobalOption("frankenphp", parseGlobalOption)
 

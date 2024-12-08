@@ -3,10 +3,12 @@ package frankenphp
 // #include "frankenphp.h"
 import "C"
 import (
+	"errors"
 	"fmt"
 	"github.com/dunglas/frankenphp/internal/fastabs"
 	"net/http"
 	"sync"
+	"strings"
 	"time"
 
 	"github.com/dunglas/frankenphp/internal/watcher"
@@ -48,7 +50,7 @@ func initWorkers(opt []workerOpt) error {
 		return nil
 	}
 
-	if err := watcher.InitWatcher(directoriesToWatch, restartWorkers, getLogger()); err != nil {
+	if err := watcher.InitWatcher(directoriesToWatch, RestartWorkers, getLogger()); err != nil {
 		return err
 	}
 
@@ -81,7 +83,48 @@ func drainWorkers() {
 	watcher.DrainWatcher()
 }
 
-func restartWorkers() {
+func AddWorkerThread(pattern string) (string, int, error) {
+	worker := getWorkerByFilePattern(pattern)
+	if worker == nil {
+        return "", 0, errors.New("worker not found")
+    }
+	thread := getInactivePHPThread()
+	if thread == nil {
+		return "", 0, errors.New("no inactive threads available")
+	}
+    convertToWorkerThread(thread, worker)
+    return worker.fileName, worker.countThreads(), nil
+}
+
+func RemoveWorkerThread(pattern string) (string, int, error) {
+	worker := getWorkerByFilePattern(pattern)
+	if worker == nil {
+        return "", 0, errors.New("worker not found")
+    }
+
+	worker.threadMutex.RLock()
+    if len(worker.threads) <= 1 {
+        worker.threadMutex.RUnlock()
+        return worker.fileName, 0, errors.New("cannot remove last thread")
+    }
+    thread := worker.threads[len(worker.threads)-1]
+    worker.threadMutex.RUnlock()
+    convertToInactiveThread(thread)
+
+    return worker.fileName, worker.countThreads(), nil
+}
+
+func getWorkerByFilePattern(pattern string) *worker {
+	for _, worker := range workers {
+		if pattern == "" || strings.HasSuffix(worker.fileName, pattern) {
+			return worker
+		}
+	}
+
+	return nil
+}
+
+func RestartWorkers() {
 	ready := sync.WaitGroup{}
 	for _, worker := range workers {
 		worker.threadMutex.RLock()
@@ -130,6 +173,13 @@ func (worker *worker) detachThread(thread *phpThread) {
 		}
 	}
 	worker.threadMutex.Unlock()
+}
+
+func (worker *worker) countThreads() int {
+	worker.threadMutex.RLock()
+	defer worker.threadMutex.RUnlock()
+
+	return len(worker.threads)
 }
 
 func (worker *worker) handleRequest(r *http.Request, fc *FrankenPHPContext) {
