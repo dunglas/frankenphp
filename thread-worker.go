@@ -100,8 +100,6 @@ func setupWorkerScript(handler *workerThread, worker *worker) {
 }
 
 func tearDownWorkerScript(handler *workerThread, exitStatus int) {
-
-	logger.Info("tear down worker script")
 	// if the worker request is not nil, the script might have crashed
 	// make sure to close the worker request context
 	if handler.workerRequest != nil {
