@@ -62,10 +62,7 @@ func (admin *FrankenPHPAdmin) showThreadStatus(w http.ResponseWriter, r *http.Re
 
 func (admin *FrankenPHPAdmin) addWorkerThreads(w http.ResponseWriter, r *http.Request) error {
 	if r.Method != http.MethodPost {
-		return caddy.APIError{
-			HTTPStatus: http.StatusMethodNotAllowed,
-			Err:        fmt.Errorf("method not allowed"),
-		}
+		return caddy.APIError{HTTPStatus: http.StatusMethodNotAllowed, Err: fmt.Errorf("method not allowed")}
 	}
 
 	workerPattern := r.URL.Query().Get("file")
@@ -73,10 +70,7 @@ func (admin *FrankenPHPAdmin) addWorkerThreads(w http.ResponseWriter, r *http.Re
 	for i := 0; i < admin.getCountFromRequest(r); i++ {
 		workerFilename, threadCount, err := frankenphp.AddWorkerThread(workerPattern)
 		if err != nil {
-			return caddy.APIError{
-				HTTPStatus: http.StatusBadRequest,
-				Err:        err,
-			}
+			return caddy.APIError{HTTPStatus: http.StatusBadRequest, Err: err}
 		}
 		message = fmt.Sprintf("New thread count: %d %s\n", threadCount, workerFilename)
 	}
@@ -87,10 +81,7 @@ func (admin *FrankenPHPAdmin) addWorkerThreads(w http.ResponseWriter, r *http.Re
 
 func (admin *FrankenPHPAdmin) removeWorkerThreads(w http.ResponseWriter, r *http.Request) error {
 	if r.Method != http.MethodPost {
-		return caddy.APIError{
-			HTTPStatus: http.StatusMethodNotAllowed,
-			Err:        fmt.Errorf("method not allowed"),
-		}
+		return caddy.APIError{HTTPStatus: http.StatusMethodNotAllowed, Err: fmt.Errorf("method not allowed")}
 	}
 
 	workerPattern := r.URL.Query().Get("file")
@@ -98,10 +89,7 @@ func (admin *FrankenPHPAdmin) removeWorkerThreads(w http.ResponseWriter, r *http
 	for i := 0; i < admin.getCountFromRequest(r); i++ {
 		workerFilename, threadCount, err := frankenphp.RemoveWorkerThread(workerPattern)
 		if err != nil {
-			return caddy.APIError{
-				HTTPStatus: http.StatusBadRequest,
-				Err:        err,
-			}
+			return caddy.APIError{HTTPStatus: http.StatusBadRequest, Err: err}
 		}
 		message = fmt.Sprintf("New thread count: %d %s\n", threadCount, workerFilename)
 	}

@@ -155,8 +155,9 @@ func (handler *workerThread) waitForWorkerRequest() bool {
 			c.Write(zap.String("worker", handler.worker.fileName))
 		}
 
-		// execute opcache_reset if the restart was triggered by the watcher
-		if watcherIsEnabled && handler.state.is(stateRestarting) {
+		// flush the opcache when restarting due to watcher or admin api
+		// note: this is done right before frankenphp_handle_request() returns 'false'
+		if handler.state.is(stateRestarting) {
 			C.frankenphp_reset_opcache()
 		}
 
