@@ -91,7 +91,16 @@ func (mainThread *phpMainThread) start() error {
 }
 
 func getInactivePHPThread() *phpThread {
-	return getPHPThreadAtState(stateInactive)
+	thread := getPHPThreadAtState(stateInactive)
+	if thread != nil {
+		return thread
+	}
+	thread = getPHPThreadAtState(stateReserved)
+	if thread == nil {
+		return nil
+	}
+	thread.boot()
+	return thread
 }
 
 func getPHPThreadAtState(state stateID) *phpThread {

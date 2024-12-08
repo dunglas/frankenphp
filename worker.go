@@ -83,25 +83,21 @@ func drainWorkers() {
 	watcher.DrainWatcher()
 }
 
-func AddWorkerThread(pattern string) (string, int, error) {
-	worker := getWorkerByFilePattern(pattern)
+func AddWorkerThread(workerFileName string) (string, int, error) {
+	worker := getWorkerByFilePattern(workerFileName)
 	if worker == nil {
 		return "", 0, errors.New("worker not found")
 	}
 	thread := getInactivePHPThread()
 	if thread == nil {
-		thread = getPHPThreadAtState(stateReserved)
-		if thread == nil {
-			return "", 0, fmt.Errorf("not enough threads reserved: %d", len(phpThreads))
-		}
-		thread.boot()
+		return "", 0, fmt.Errorf("max amount of threads reached: %d", len(phpThreads))
 	}
 	convertToWorkerThread(thread, worker)
 	return worker.fileName, worker.countThreads(), nil
 }
 
-func RemoveWorkerThread(pattern string) (string, int, error) {
-	worker := getWorkerByFilePattern(pattern)
+func RemoveWorkerThread(workerFileName string) (string, int, error) {
+	worker := getWorkerByFilePattern(workerFileName)
 	if worker == nil {
 		return "", 0, errors.New("worker not found")
 	}
@@ -118,6 +114,7 @@ func RemoveWorkerThread(pattern string) (string, int, error) {
 	return worker.fileName, worker.countThreads(), nil
 }
 
+// get the first worker ending in the given pattern
 func getWorkerByFilePattern(pattern string) *worker {
 	for _, worker := range workers {
 		if pattern == "" || strings.HasSuffix(worker.fileName, pattern) {
