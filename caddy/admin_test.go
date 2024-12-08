@@ -15,7 +15,6 @@ func TestRestartingWorkerViaAdminApi(t *testing.T) {
 			skip_install_trust
 			admin localhost:2999
 			http_port `+testPort+`
-			https_port 9443
 
 			frankenphp {
 				worker ../testdata/worker-with-watcher.php 1
@@ -47,7 +46,6 @@ func TestRemoveThreadsViaAdminApi(t *testing.T) {
 			skip_install_trust
 			admin localhost:2999
 			http_port `+testPort+`
-			https_port 9443
 
 			frankenphp {
 				worker ../testdata/worker-with-watcher.php 4
@@ -89,7 +87,6 @@ func TestAddThreadsViaAdminApi(t *testing.T) {
 			skip_install_trust
 			admin localhost:2999
 			http_port `+testPort+`
-			https_port 9443
 
 			frankenphp {
 				worker ../testdata/worker-with-watcher.php 1
