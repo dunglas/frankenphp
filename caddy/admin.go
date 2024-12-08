@@ -25,6 +25,10 @@ func (admin FrankenPHPAdmin) Routes() []caddy.AdminRoute {
 			Handler: caddy.AdminHandlerFunc(admin.restartWorkers),
 		},
 		{
+			Pattern: "/frankenphp/threads/status",
+			Handler: caddy.AdminHandlerFunc(admin.showThreadStatus),
+		},
+		{
 			Pattern: "/frankenphp/workers/add",
 			Handler: caddy.AdminHandlerFunc(admin.addWorkerThreads),
 		},
@@ -50,7 +54,12 @@ func (admin *FrankenPHPAdmin) restartWorkers(w http.ResponseWriter, r *http.Requ
 	return nil
 }
 
-// experimental
+func (admin *FrankenPHPAdmin) showThreadStatus(w http.ResponseWriter, r *http.Request) error {
+	admin.respond(w, http.StatusOK, frankenphp.ThreadDebugStatus())
+
+	return nil
+}
+
 func (admin *FrankenPHPAdmin) addWorkerThreads(w http.ResponseWriter, r *http.Request) error {
 	if r.Method != http.MethodPost {
 		return caddy.APIError{

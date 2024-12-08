@@ -71,6 +71,8 @@ type workerConfig struct {
 type FrankenPHPApp struct {
 	// NumThreads sets the number of PHP threads to start. Default: 2x the number of available CPUs.
 	NumThreads int `json:"num_threads,omitempty"`
+	// MaxThreads limits how many threads can be started at runtime. Default 2x NumThreads
+	MaxThreads int `json:"max_threads,omitempty"`
 	// Workers configures the worker scripts to start.
 	Workers []workerConfig `json:"workers,omitempty"`
 }
@@ -87,7 +89,12 @@ func (f *FrankenPHPApp) Start() error {
 	repl := caddy.NewReplacer()
 	logger := caddy.Log()
 
-	opts := []frankenphp.Option{frankenphp.WithNumThreads(f.NumThreads), frankenphp.WithLogger(logger), frankenphp.WithMetrics(metrics)}
+	opts := []frankenphp.Option{
+		frankenphp.WithNumThreads(f.NumThreads),
+		frankenphp.WithMaxThreads(f.MaxThreads),
+		frankenphp.WithLogger(logger),
+		frankenphp.WithMetrics(metrics),
+	}
 	for _, w := range f.Workers {
 		opts = append(opts, frankenphp.WithWorkers(repl.ReplaceKnown(w.FileName, ""), w.Num, w.Env, w.Watch))
 	}
@@ -138,6 +145,17 @@ func (f *FrankenPHPApp) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 				}
 
 				f.NumThreads = v
+			case "max_threads":
+				if !d.NextArg() {
+					return d.ArgErr()
+				}
+
+				v, err := strconv.Atoi(d.Val())
+				if err != nil {
+					return err
+				}
+
+				f.MaxThreads = v
 			case "worker":
 				wc := workerConfig{}
 				if d.NextArg() {

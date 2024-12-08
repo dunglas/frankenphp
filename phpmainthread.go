@@ -3,6 +3,7 @@ package frankenphp
 // #include "frankenphp.h"
 import "C"
 import (
+	"fmt"
 	"sync"
 )
 
@@ -19,21 +20,23 @@ var (
 	mainThread *phpMainThread
 )
 
-// reserve a fixed number of PHP threads on the Go side
-func initPHPThreads(numThreads int, numReservedThreads int) error {
+// start the main PHP thread
+// start a fixed number of inactive PHP threads
+// reserve a fixed number of possible PHP threads
+func initPHPThreads(numThreads int, numMaxThreads int) error {
 	mainThread = &phpMainThread{
 		state:      newThreadState(),
 		done:       make(chan struct{}),
 		numThreads: numThreads,
 	}
-	phpThreads = make([]*phpThread, numThreads+numReservedThreads)
+	phpThreads = make([]*phpThread, numMaxThreads)
 
 	if err := mainThread.start(); err != nil {
 		return err
 	}
 
 	// initialize all threads as inactive
-	for i := 0; i < numThreads+numReservedThreads; i++ {
+	for i := 0; i < numMaxThreads; i++ {
 		phpThreads[i] = newPHPThread(i)
 		convertToInactiveThread(phpThreads[i])
 	}
@@ -51,6 +54,20 @@ func initPHPThreads(numThreads int, numReservedThreads int) error {
 	ready.Wait()
 
 	return nil
+}
+
+func ThreadDebugStatus() string {
+	statusMessage := ""
+	reservedThreadCount := 0
+	for _, thread := range phpThreads {
+		if thread.state.is(stateReserved) {
+			reservedThreadCount++
+			continue
+		}
+		statusMessage += thread.debugStatus() + "\n"
+	}
+	statusMessage += fmt.Sprintf("%d additional threads can be started at runtime\n", reservedThreadCount)
+	return statusMessage
 }
 
 func drainPHPThreads() {

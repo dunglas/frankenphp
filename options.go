@@ -12,6 +12,7 @@ type Option func(h *opt) error
 // If you change this, also update the Caddy module and the documentation.
 type opt struct {
 	numThreads int
+	maxThreads int
 	workers    []workerOpt
 	logger     *zap.Logger
 	metrics    Metrics
@@ -28,6 +29,14 @@ type workerOpt struct {
 func WithNumThreads(numThreads int) Option {
 	return func(o *opt) error {
 		o.numThreads = numThreads
+
+		return nil
+	}
+}
+
+func WithMaxThreads(maxThreads int) Option {
+	return func(o *opt) error {
+		o.maxThreads = maxThreads
 
 		return nil
 	}

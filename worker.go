@@ -131,6 +131,7 @@ func RestartWorkers() {
 		worker.threadMutex.RLock()
 		ready.Add(len(worker.threads))
 		for _, thread := range worker.threads {
+			// disallow changing handler while restarting
 			thread.handlerMu.Lock()
 			thread.state.set(stateRestarting)
 			close(thread.drainChan)

@@ -2,7 +2,6 @@ package frankenphp
 
 import (
 	"slices"
-	"strconv"
 	"sync"
 )
 
@@ -26,6 +25,20 @@ const (
 	stateTransitionInProgress
 	stateTransitionComplete
 )
+
+var stateNames = map[stateID]string{
+	stateReserved:             "reserved",
+	stateBooting:              "booting",
+	stateInactive:             "inactive",
+	stateReady:                "ready",
+	stateShuttingDown:         "shutting down",
+	stateDone:                 "done",
+	stateRestarting:           "restarting",
+	stateYielding:             "yielding",
+	stateTransitionRequested:  "transition requested",
+	stateTransitionInProgress: "transition in progress",
+	stateTransitionComplete:   "transition complete",
+}
 
 type threadState struct {
 	currentState stateID
@@ -63,8 +76,7 @@ func (ts *threadState) compareAndSwap(compareTo stateID, swapTo stateID) bool {
 }
 
 func (ts *threadState) name() string {
-	// TODO: return the actual name for logging/metrics
-	return "state:" + strconv.Itoa(int(ts.get()))
+	return stateNames[ts.get()]
 }
 
 func (ts *threadState) get() stateID {

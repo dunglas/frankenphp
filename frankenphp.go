@@ -242,7 +242,7 @@ func Config() PHPConfig {
 // MaxThreads is internally used during tests. It is written to, but never read and may go away in the future.
 var MaxThreads int
 
-func calculateMaxThreads(opt *opt) (int, int, error) {
+func calculateMaxThreads(opt *opt) (int, int, int, error) {
 	maxProcs := runtime.GOMAXPROCS(0) * 2
 
 	var numWorkers int
@@ -264,13 +264,21 @@ func calculateMaxThreads(opt *opt) (int, int, error) {
 			opt.numThreads = maxProcs
 		}
 	} else if opt.numThreads <= numWorkers {
-		return opt.numThreads, numWorkers, NotEnoughThreads
+		return opt.numThreads, numWorkers, opt.maxThreads, NotEnoughThreads
+	}
+
+	// default maxThreads to 2x the number of threads
+	if opt.maxThreads == 0 {
+		opt.maxThreads = 2 * opt.numThreads
+	}
+	if opt.maxThreads < opt.numThreads {
+		opt.maxThreads = opt.numThreads
 	}
 
 	metrics.TotalThreads(opt.numThreads)
 	MaxThreads = opt.numThreads
 
-	return opt.numThreads, numWorkers, nil
+	return opt.numThreads, numWorkers, opt.maxThreads, nil
 }
 
 // Init starts the PHP runtime and the configured workers.
@@ -309,7 +317,7 @@ func Init(options ...Option) error {
 		metrics = opt.metrics
 	}
 
-	totalThreadCount, workerThreadCount, err := calculateMaxThreads(opt)
+	totalThreadCount, workerThreadCount, maxThreadCount, err := calculateMaxThreads(opt)
 	if err != nil {
 		return err
 	}
@@ -330,7 +338,7 @@ func Init(options ...Option) error {
 	}
 
 	requestChan = make(chan *http.Request, opt.numThreads)
-	if err := initPHPThreads(totalThreadCount, totalThreadCount); err != nil {
+	if err := initPHPThreads(totalThreadCount, maxThreadCount); err != nil {
 		return err
 	}
 
