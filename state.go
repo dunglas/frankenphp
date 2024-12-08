@@ -10,7 +10,8 @@ type stateID int
 
 const (
 	// livecycle states of a thread
-	stateBooting stateID = iota
+	stateReserved stateID = iota
+	stateBooting
 	stateInactive
 	stateReady
 	stateShuttingDown
@@ -39,7 +40,7 @@ type stateSubscriber struct {
 
 func newThreadState() *threadState {
 	return &threadState{
-		currentState: stateBooting,
+		currentState: stateReserved,
 		subscribers:  []stateSubscriber{},
 		mu:           sync.RWMutex{},
 	}

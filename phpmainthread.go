@@ -4,8 +4,6 @@ package frankenphp
 import "C"
 import (
 	"sync"
-
-	"go.uber.org/zap"
 )
 
 // represents the main PHP thread
@@ -22,20 +20,20 @@ var (
 )
 
 // reserve a fixed number of PHP threads on the Go side
-func initPHPThreads(numThreads int) error {
+func initPHPThreads(numThreads int, numReservedThreads int) error {
 	mainThread = &phpMainThread{
 		state:      newThreadState(),
 		done:       make(chan struct{}),
 		numThreads: numThreads,
 	}
-	phpThreads = make([]*phpThread, numThreads)
+	phpThreads = make([]*phpThread, numThreads+numReservedThreads)
 
 	if err := mainThread.start(); err != nil {
 		return err
 	}
 
 	// initialize all threads as inactive
-	for i := 0; i < numThreads; i++ {
+	for i := 0; i < numThreads+numReservedThreads; i++ {
 		phpThreads[i] = newPHPThread(i)
 		convertToInactiveThread(phpThreads[i])
 	}
@@ -43,12 +41,10 @@ func initPHPThreads(numThreads int) error {
 	// start the underlying C threads
 	ready := sync.WaitGroup{}
 	ready.Add(numThreads)
-	for _, thread := range phpThreads {
+	for i := 0; i < numThreads; i++ {
+		thread := phpThreads[i]
 		go func() {
-			if !C.frankenphp_new_php_thread(C.uintptr_t(thread.threadIndex)) {
-				logger.Panic("unable to create thread", zap.Int("threadIndex", thread.threadIndex))
-			}
-			thread.state.waitFor(stateInactive)
+			thread.boot()
 			ready.Done()
 		}()
 	}
@@ -61,12 +57,19 @@ func drainPHPThreads() {
 	doneWG := sync.WaitGroup{}
 	doneWG.Add(len(phpThreads))
 	for _, thread := range phpThreads {
+		if thread.state.is(stateReserved) {
+			doneWG.Done()
+			continue
+		}
 		thread.handlerMu.Lock()
 		thread.state.set(stateShuttingDown)
 		close(thread.drainChan)
 	}
 	close(mainThread.done)
 	for _, thread := range phpThreads {
+		if thread.state.is(stateReserved) {
+			continue
+		}
 		go func(thread *phpThread) {
 			thread.state.waitFor(stateDone)
 			thread.handlerMu.Unlock()
@@ -88,8 +91,12 @@ func (mainThread *phpMainThread) start() error {
 }
 
 func getInactivePHPThread() *phpThread {
+	return getPHPThreadAtState(stateInactive)
+}
+
+func getPHPThreadAtState(state stateID) *phpThread {
 	for _, thread := range phpThreads {
-		if thread.state.is(stateInactive) {
+		if thread.state.is(state) {
 			return thread
 		}
 	}

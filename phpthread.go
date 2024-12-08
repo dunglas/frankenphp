@@ -7,6 +7,8 @@ import (
 	"runtime"
 	"sync"
 	"unsafe"
+
+	"go.uber.org/zap"
 )
 
 // representation of the actual underlying PHP thread
@@ -38,6 +40,19 @@ func newPHPThread(threadIndex int) *phpThread {
 		handlerMu:   &sync.Mutex{},
 		state:       newThreadState(),
 	}
+}
+
+// boot the underlying PHP thread
+func (thread *phpThread) boot() {
+	// thread must be in reserved state to boot
+	if !thread.state.compareAndSwap(stateReserved, stateBooting) {
+		logger.Error("thread is not in reserved state", zap.Int("threadIndex", thread.threadIndex), zap.Int("state", int(thread.state.get())))
+		return
+	}
+	if !C.frankenphp_new_php_thread(C.uintptr_t(thread.threadIndex)) {
+		logger.Panic("unable to create thread", zap.Int("threadIndex", thread.threadIndex))
+	}
+	thread.state.waitFor(stateInactive)
 }
 
 // change the thread handler safely

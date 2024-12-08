@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"github.com/dunglas/frankenphp/internal/fastabs"
 	"net/http"
-	"sync"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/dunglas/frankenphp/internal/watcher"
@@ -86,32 +86,36 @@ func drainWorkers() {
 func AddWorkerThread(pattern string) (string, int, error) {
 	worker := getWorkerByFilePattern(pattern)
 	if worker == nil {
-        return "", 0, errors.New("worker not found")
-    }
+		return "", 0, errors.New("worker not found")
+	}
 	thread := getInactivePHPThread()
 	if thread == nil {
-		return "", 0, errors.New("no inactive threads available")
+		thread = getPHPThreadAtState(stateReserved)
+		if thread == nil {
+			return "", 0, fmt.Errorf("not enough threads reserved: %d", len(phpThreads))
+		}
+		thread.boot()
 	}
-    convertToWorkerThread(thread, worker)
-    return worker.fileName, worker.countThreads(), nil
+	convertToWorkerThread(thread, worker)
+	return worker.fileName, worker.countThreads(), nil
 }
 
 func RemoveWorkerThread(pattern string) (string, int, error) {
 	worker := getWorkerByFilePattern(pattern)
 	if worker == nil {
-        return "", 0, errors.New("worker not found")
-    }
+		return "", 0, errors.New("worker not found")
+	}
 
 	worker.threadMutex.RLock()
-    if len(worker.threads) <= 1 {
-        worker.threadMutex.RUnlock()
-        return worker.fileName, 0, errors.New("cannot remove last thread")
-    }
-    thread := worker.threads[len(worker.threads)-1]
-    worker.threadMutex.RUnlock()
-    convertToInactiveThread(thread)
+	if len(worker.threads) <= 1 {
+		worker.threadMutex.RUnlock()
+		return worker.fileName, 0, errors.New("cannot remove last thread")
+	}
+	thread := worker.threads[len(worker.threads)-1]
+	worker.threadMutex.RUnlock()
+	convertToInactiveThread(thread)
 
-    return worker.fileName, worker.countThreads(), nil
+	return worker.fileName, worker.countThreads(), nil
 }
 
 func getWorkerByFilePattern(pattern string) *worker {
