@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-func TestRestartingWorkerViaAdminApi(t *testing.T) {
+func TestRestartWorkerViaAdminApi(t *testing.T) {
 	tester := caddytest.NewTester(t)
 	tester.InitServer(`
 		{
@@ -38,7 +38,7 @@ func TestRestartingWorkerViaAdminApi(t *testing.T) {
 	tester.AssertGetResponse("http://localhost:"+testPort+"/", http.StatusOK, "requests:1")
 }
 
-func TestRemoveThreadsViaAdminApi(t *testing.T) {
+func TestRemoveWorkerThreadsViaAdminApi(t *testing.T) {
 	absWorkerPath, _ := filepath.Abs("../testdata/worker-with-counter.php")
 	tester := caddytest.NewTester(t)
 	tester.InitServer(`
@@ -79,7 +79,7 @@ func TestRemoveThreadsViaAdminApi(t *testing.T) {
 	tester.AssertGetResponse("http://localhost:"+testPort+"/", http.StatusOK, "requests:2")
 }
 
-func TestAddThreadsViaAdminApi(t *testing.T) {
+func TestAddWorkerThreadsViaAdminApi(t *testing.T) {
 	absWorkerPath, _ := filepath.Abs("../testdata/worker-with-counter.php")
 	tester := caddytest.NewTester(t)
 	tester.InitServer(`
@@ -151,16 +151,22 @@ func TestShowTheCorrectThreadDebugStatus(t *testing.T) {
 		`, "caddyfile")
 
 	assertAdminResponse(tester, "POST", "workers/remove?file=index.php", http.StatusOK, "")
+	assertAdminResponse(tester, "POST", "threads/remove", http.StatusOK, "")
 
 	// assert that all threads are in the right state via debug message
-	assertAdminResponse(tester, "GET", "threads/status", http.StatusOK, `Thread 0 (ready) Regular PHP Thread
-Thread 1 (ready) Regular PHP Thread
+	assertAdminResponse(
+		tester,
+		"GET",
+		"threads/status",
+		http.StatusOK, `Thread 0 (ready) Regular PHP Thread
+Thread 1 (inactive)
 Thread 2 (ready) Worker PHP Thread - `+absWorker1Path+`
 Thread 3 (ready) Worker PHP Thread - `+absWorker1Path+`
 Thread 4 (ready) Worker PHP Thread - `+absWorker2Path+`
-Thread 5 (inactive) Thread
+Thread 5 (inactive)
 6 additional threads can be started at runtime
-`)
+`,
+	)
 }
 
 func assertAdminResponse(tester *caddytest.Tester, method string, path string, expectedStatus int, expectedBody string) {

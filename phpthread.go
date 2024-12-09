@@ -87,15 +87,15 @@ func (thread *phpThread) getActiveRequest() *http.Request {
 
 // small status message for debugging
 func (thread *phpThread) debugStatus() string {
-	threadType := "Thread"
+	threadType := ""
 	thread.handlerMu.Lock()
 	if handler, ok := thread.handler.(*workerThread); ok {
-		threadType = "Worker PHP Thread - " + handler.worker.fileName
+		threadType = " Worker PHP Thread - " + handler.worker.fileName
 	} else if _, ok := thread.handler.(*regularThread); ok {
-		threadType = "Regular PHP Thread"
+		threadType = " Regular PHP Thread"
 	}
 	thread.handlerMu.Unlock()
-	return fmt.Sprintf("Thread %d (%s) %s", thread.threadIndex, thread.state.name(), threadType)
+	return fmt.Sprintf("Thread %d (%s)%s", thread.threadIndex, thread.state.name(), threadType)
 }
 
 // Pin a string that is not null-terminated

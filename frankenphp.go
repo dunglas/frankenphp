@@ -63,7 +63,7 @@ var (
 	RequestContextCreationError = errors.New("error during request context creation")
 	ScriptExecutionError        = errors.New("error during PHP script execution")
 
-	requestChan chan *http.Request
+	isRunning bool
 
 	loggerMu sync.RWMutex
 	logger   *zap.Logger
@@ -283,9 +283,10 @@ func calculateMaxThreads(opt *opt) (int, int, int, error) {
 
 // Init starts the PHP runtime and the configured workers.
 func Init(options ...Option) error {
-	if requestChan != nil {
+	if isRunning {
 		return AlreadyStartedError
 	}
+	isRunning = true
 
 	// Ignore all SIGPIPE signals to prevent weird issues with systemd: https://github.com/dunglas/frankenphp/issues/1020
 	// Docker/Moby has a similar hack: https://github.com/moby/moby/blob/d828b032a87606ae34267e349bf7f7ccb1f6495a/cmd/dockerd/docker.go#L87-L90
@@ -337,11 +338,12 @@ func Init(options ...Option) error {
 		logger.Warn(`ZTS is not enabled, only 1 thread will be available, recompile PHP using the "--enable-zts" configuration option or performance will be degraded`)
 	}
 
-	requestChan = make(chan *http.Request, opt.numThreads)
 	if err := initPHPThreads(totalThreadCount, maxThreadCount); err != nil {
 		return err
 	}
 
+	regularRequestChan = make(chan *http.Request, totalThreadCount-workerThreadCount)
+	regularThreads = make([]*phpThread, 0, totalThreadCount-workerThreadCount)
 	for i := 0; i < totalThreadCount-workerThreadCount; i++ {
 		thread := getInactivePHPThread()
 		convertToRegularThread(thread)
@@ -368,13 +370,13 @@ func Shutdown() {
 	drainWorkers()
 	drainPHPThreads()
 	metrics.Shutdown()
-	requestChan = nil
 
 	// Remove the installed app
 	if EmbeddedAppPath != "" {
 		_ = os.RemoveAll(EmbeddedAppPath)
 	}
 
+	isRunning = false
 	logger.Debug("FrankenPHP shut down")
 }
 
@@ -472,15 +474,8 @@ func ServeHTTP(responseWriter http.ResponseWriter, request *http.Request) error 
 		return nil
 	}
 
-	metrics.StartRequest()
-
-	select {
-	case <-mainThread.done:
-	case requestChan <- request:
-		<-fc.done
-	}
-
-	metrics.StopRequest()
+	// If no worker was availabe send the request to non-worker threads
+	handleRequestWithRegularPHPThreads(request, fc)
 
 	return nil
 }

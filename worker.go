@@ -3,11 +3,9 @@ package frankenphp
 // #include "frankenphp.h"
 import "C"
 import (
-	"errors"
 	"fmt"
 	"github.com/dunglas/frankenphp/internal/fastabs"
 	"net/http"
-	"strings"
 	"sync"
 	"time"
 
@@ -83,48 +81,6 @@ func drainWorkers() {
 	watcher.DrainWatcher()
 }
 
-func AddWorkerThread(workerFileName string) (string, int, error) {
-	worker := getWorkerByFilePattern(workerFileName)
-	if worker == nil {
-		return "", 0, errors.New("worker not found")
-	}
-	thread := getInactivePHPThread()
-	if thread == nil {
-		return "", 0, fmt.Errorf("max amount of threads reached: %d", len(phpThreads))
-	}
-	convertToWorkerThread(thread, worker)
-	return worker.fileName, worker.countThreads(), nil
-}
-
-func RemoveWorkerThread(workerFileName string) (string, int, error) {
-	worker := getWorkerByFilePattern(workerFileName)
-	if worker == nil {
-		return "", 0, errors.New("worker not found")
-	}
-
-	worker.threadMutex.RLock()
-	if len(worker.threads) <= 1 {
-		worker.threadMutex.RUnlock()
-		return worker.fileName, 0, errors.New("cannot remove last thread")
-	}
-	thread := worker.threads[len(worker.threads)-1]
-	worker.threadMutex.RUnlock()
-	convertToInactiveThread(thread)
-
-	return worker.fileName, worker.countThreads(), nil
-}
-
-// get the first worker ending in the given pattern
-func getWorkerByFilePattern(pattern string) *worker {
-	for _, worker := range workers {
-		if pattern == "" || strings.HasSuffix(worker.fileName, pattern) {
-			return worker
-		}
-	}
-
-	return nil
-}
-
 func RestartWorkers() {
 	ready := sync.WaitGroup{}
 	for _, worker := range workers {
@@ -197,6 +153,7 @@ func (worker *worker) handleRequest(r *http.Request, fc *FrankenPHPContext) {
 			metrics.StopWorkerRequest(worker.fileName, time.Since(fc.startedAt))
 			return
 		default:
+			// thread is busy, continue
 		}
 	}
 	worker.threadMutex.RUnlock()

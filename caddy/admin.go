@@ -29,6 +29,14 @@ func (admin FrankenPHPAdmin) Routes() []caddy.AdminRoute {
 			Handler: caddy.AdminHandlerFunc(admin.showThreadStatus),
 		},
 		{
+			Pattern: "/frankenphp/threads/remove",
+			Handler: caddy.AdminHandlerFunc(admin.removeRegularThreads),
+		},
+		{
+			Pattern: "/frankenphp/threads/add",
+			Handler: caddy.AdminHandlerFunc(admin.addRegularThreads),
+		},
+		{
 			Pattern: "/frankenphp/workers/add",
 			Handler: caddy.AdminHandlerFunc(admin.addWorkerThreads),
 		},
@@ -41,28 +49,25 @@ func (admin FrankenPHPAdmin) Routes() []caddy.AdminRoute {
 
 func (admin *FrankenPHPAdmin) restartWorkers(w http.ResponseWriter, r *http.Request) error {
 	if r.Method != http.MethodPost {
-		return caddy.APIError{
-			HTTPStatus: http.StatusMethodNotAllowed,
-			Err:        fmt.Errorf("method not allowed"),
-		}
+		return admin.error(http.StatusMethodNotAllowed, fmt.Errorf("method not allowed"))
 	}
 
 	frankenphp.RestartWorkers()
 	caddy.Log().Info("workers restarted from admin api")
-	admin.respond(w, http.StatusOK, "workers restarted successfully\n")
+	admin.success(w, "workers restarted successfully\n")
 
 	return nil
 }
 
 func (admin *FrankenPHPAdmin) showThreadStatus(w http.ResponseWriter, r *http.Request) error {
-	admin.respond(w, http.StatusOK, frankenphp.ThreadDebugStatus())
+	admin.success(w, frankenphp.ThreadDebugStatus())
 
 	return nil
 }
 
 func (admin *FrankenPHPAdmin) addWorkerThreads(w http.ResponseWriter, r *http.Request) error {
 	if r.Method != http.MethodPost {
-		return caddy.APIError{HTTPStatus: http.StatusMethodNotAllowed, Err: fmt.Errorf("method not allowed")}
+		return admin.error(http.StatusMethodNotAllowed, fmt.Errorf("method not allowed"))
 	}
 
 	workerPattern := r.URL.Query().Get("file")
@@ -70,18 +75,18 @@ func (admin *FrankenPHPAdmin) addWorkerThreads(w http.ResponseWriter, r *http.Re
 	for i := 0; i < admin.getCountFromRequest(r); i++ {
 		workerFilename, threadCount, err := frankenphp.AddWorkerThread(workerPattern)
 		if err != nil {
-			return caddy.APIError{HTTPStatus: http.StatusBadRequest, Err: err}
+			return admin.error(http.StatusBadRequest, err)
 		}
 		message = fmt.Sprintf("New thread count: %d %s\n", threadCount, workerFilename)
 	}
 
 	caddy.Log().Debug(message)
-	return admin.respond(w, http.StatusOK, message)
+	return admin.success(w, message)
 }
 
 func (admin *FrankenPHPAdmin) removeWorkerThreads(w http.ResponseWriter, r *http.Request) error {
 	if r.Method != http.MethodPost {
-		return caddy.APIError{HTTPStatus: http.StatusMethodNotAllowed, Err: fmt.Errorf("method not allowed")}
+		return admin.error(http.StatusMethodNotAllowed, fmt.Errorf("method not allowed"))
 	}
 
 	workerPattern := r.URL.Query().Get("file")
@@ -89,19 +94,51 @@ func (admin *FrankenPHPAdmin) removeWorkerThreads(w http.ResponseWriter, r *http
 	for i := 0; i < admin.getCountFromRequest(r); i++ {
 		workerFilename, threadCount, err := frankenphp.RemoveWorkerThread(workerPattern)
 		if err != nil {
-			return caddy.APIError{HTTPStatus: http.StatusBadRequest, Err: err}
+			return admin.error(http.StatusBadRequest, err)
 		}
 		message = fmt.Sprintf("New thread count: %d %s\n", threadCount, workerFilename)
 	}
 
 	caddy.Log().Debug(message)
-	return admin.respond(w, http.StatusOK, message)
+	return admin.success(w, message)
 }
 
-func (admin *FrankenPHPAdmin) respond(w http.ResponseWriter, statusCode int, message string) error {
-	w.WriteHeader(statusCode)
+func (admin *FrankenPHPAdmin) addRegularThreads(w http.ResponseWriter, r *http.Request) error {
+	message := ""
+	for i := 0; i < admin.getCountFromRequest(r); i++ {
+		threadCount, err := frankenphp.AddRegularThread()
+		if err != nil {
+			return admin.error(http.StatusBadRequest, err)
+		}
+		message = fmt.Sprintf("New thread count: %d \n", threadCount)
+	}
+
+	caddy.Log().Debug(message)
+	return admin.success(w, message)
+}
+
+func (admin *FrankenPHPAdmin) removeRegularThreads(w http.ResponseWriter, r *http.Request) error {
+	message := ""
+	for i := 0; i < admin.getCountFromRequest(r); i++ {
+		threadCount, err := frankenphp.RemoveRegularThread()
+		if err != nil {
+			return admin.error(http.StatusBadRequest, err)
+		}
+		message = fmt.Sprintf("New thread count: %d \n", threadCount)
+	}
+
+	caddy.Log().Debug(message)
+	return admin.success(w, message)
+}
+
+func (admin *FrankenPHPAdmin) success(w http.ResponseWriter, message string) error {
+	w.WriteHeader(http.StatusOK)
 	_, err := w.Write([]byte(message))
 	return err
+}
+
+func (admin *FrankenPHPAdmin) error(statusCode int, err error) error {
+	return caddy.APIError{HTTPStatus: statusCode, Err: err}
 }
 
 func (admin *FrankenPHPAdmin) getCountFromRequest(r *http.Request) int {

@@ -4,6 +4,7 @@ package frankenphp
 import "C"
 import (
 	"net/http"
+	"sync"
 )
 
 // representation of a non-worker PHP thread
@@ -15,17 +16,25 @@ type regularThread struct {
 	activeRequest *http.Request
 }
 
+var (
+	regularThreads     []*phpThread
+	regularThreadMu    = &sync.RWMutex{}
+	regularRequestChan chan *http.Request
+)
+
 func convertToRegularThread(thread *phpThread) {
 	thread.setHandler(&regularThread{
 		thread: thread,
 		state:  thread.state,
 	})
+	attachRegularThread(thread)
 }
 
 // return the name of the script or an empty string if no script should be executed
 func (handler *regularThread) beforeScriptExecution() string {
 	switch handler.state.get() {
 	case stateTransitionRequested:
+		detachRegularThread(handler.thread)
 		return handler.thread.transitionToNewHandler()
 	case stateTransitionComplete:
 		handler.state.set(stateReady)
@@ -49,26 +58,29 @@ func (handler *regularThread) getActiveRequest() *http.Request {
 }
 
 func (handler *regularThread) waitForRequest() string {
+	var r *http.Request
 	select {
 	case <-handler.thread.drainChan:
 		// go back to beforeScriptExecution
 		return handler.beforeScriptExecution()
 
-	case r := <-requestChan:
-		handler.activeRequest = r
-		fc := r.Context().Value(contextKey).(*FrankenPHPContext)
-
-		if err := updateServerContext(handler.thread, r, true, false); err != nil {
-			rejectRequest(fc.responseWriter, err.Error())
-			handler.afterRequest(0)
-			handler.thread.Unpin()
-			// go back to beforeScriptExecution
-			return handler.beforeScriptExecution()
-		}
-
-		// set the scriptName that should be executed
-		return fc.scriptFilename
+	case r = <-handler.thread.requestChan:
+	case r = <-regularRequestChan:
 	}
+
+	handler.activeRequest = r
+	fc := r.Context().Value(contextKey).(*FrankenPHPContext)
+
+	if err := updateServerContext(handler.thread, r, true, false); err != nil {
+		rejectRequest(fc.responseWriter, err.Error())
+		handler.afterRequest(0)
+		handler.thread.Unpin()
+		// go back to beforeScriptExecution
+		return handler.beforeScriptExecution()
+	}
+
+	// set the scriptName that should be executed
+	return fc.scriptFilename
 }
 
 func (handler *regularThread) afterRequest(exitStatus int) {
@@ -76,4 +88,59 @@ func (handler *regularThread) afterRequest(exitStatus int) {
 	fc.exitStatus = exitStatus
 	maybeCloseContext(fc)
 	handler.activeRequest = nil
+}
+
+func handleRequestWithRegularPHPThreads(r *http.Request, fc *FrankenPHPContext) {
+	metrics.StartRequest()
+	regularThreadMu.RLock()
+
+	// dispatch to all threads in order
+	for _, thread := range regularThreads {
+		select {
+		case thread.requestChan <- r:
+			regularThreadMu.RUnlock()
+			<-fc.done
+			metrics.StopRequest()
+			return
+		default:
+			// thread is busy, continue
+		}
+	}
+	regularThreadMu.RUnlock()
+
+	// TODO: there can be possible auto-scaling here
+
+	// if no thread was available, fan out to all threads
+	select {
+	case <-mainThread.done:
+	case regularRequestChan <- r:
+		<-fc.done
+	}
+	metrics.StopRequest()
+}
+
+func attachRegularThread(thread *phpThread) {
+	regularThreadMu.Lock()
+	defer regularThreadMu.Unlock()
+
+	regularThreads = append(regularThreads, thread)
+}
+
+func detachRegularThread(thread *phpThread) {
+	regularThreadMu.Lock()
+	defer regularThreadMu.Unlock()
+
+	for i, t := range regularThreads {
+		if t == thread {
+			regularThreads = append(regularThreads[:i], regularThreads[i+1:]...)
+			break
+		}
+	}
+}
+
+func countRegularThreads() int {
+	regularThreadMu.RLock()
+	defer regularThreadMu.RUnlock()
+
+	return len(regularThreads)
 }
