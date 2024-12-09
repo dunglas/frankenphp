@@ -25,7 +25,7 @@ func (admin FrankenPHPAdmin) Routes() []caddy.AdminRoute {
 			Handler: caddy.AdminHandlerFunc(admin.restartWorkers),
 		},
 		{
-			Pattern: "/frankenphp/threads/status",
+			Pattern: "/frankenphp/threads",
 			Handler: caddy.AdminHandlerFunc(admin.showThreadStatus),
 		},
 		{
@@ -104,6 +104,10 @@ func (admin *FrankenPHPAdmin) removeWorkerThreads(w http.ResponseWriter, r *http
 }
 
 func (admin *FrankenPHPAdmin) addRegularThreads(w http.ResponseWriter, r *http.Request) error {
+	if r.Method != http.MethodPost {
+		return admin.error(http.StatusMethodNotAllowed, fmt.Errorf("method not allowed"))
+	}
+
 	message := ""
 	for i := 0; i < admin.getCountFromRequest(r); i++ {
 		threadCount, err := frankenphp.AddRegularThread()
@@ -118,6 +122,10 @@ func (admin *FrankenPHPAdmin) addRegularThreads(w http.ResponseWriter, r *http.R
 }
 
 func (admin *FrankenPHPAdmin) removeRegularThreads(w http.ResponseWriter, r *http.Request) error {
+	if r.Method != http.MethodPost {
+		return admin.error(http.StatusMethodNotAllowed, fmt.Errorf("method not allowed"))
+	}
+
 	message := ""
 	for i := 0; i < admin.getCountFromRequest(r); i++ {
 		threadCount, err := frankenphp.RemoveRegularThread()
