@@ -89,7 +89,7 @@ static void frankenphp_free_request_context() {
   free(ctx->cookie_data);
   ctx->cookie_data = NULL;
 
-  /* Is freed via thread.Unpin() at the end of each request */
+  /* Is freed via thread.Unpin() */
   SG(request_info).auth_password = NULL;
   SG(request_info).auth_user = NULL;
   SG(request_info).request_method = NULL;

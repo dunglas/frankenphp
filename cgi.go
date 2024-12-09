@@ -227,8 +227,6 @@ func go_frankenphp_release_known_variable_keys(threadIndex C.uintptr_t) {
 	for _, v := range thread.knownVariableKeys {
 		C.frankenphp_release_zend_string(v)
 	}
-	// release everything that might still be pinned to the thread
-	thread.Unpin()
 	thread.knownVariableKeys = nil
 }
 

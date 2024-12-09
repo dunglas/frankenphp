@@ -61,7 +61,6 @@ func (handler *regularThread) waitForRequest() string {
 		if err := updateServerContext(handler.thread, r, true, false); err != nil {
 			rejectRequest(fc.responseWriter, err.Error())
 			handler.afterRequest(0)
-			handler.thread.Unpin()
 			// go back to beforeScriptExecution
 			return handler.beforeScriptExecution()
 		}

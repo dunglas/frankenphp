@@ -140,6 +140,9 @@ func tearDownWorkerScript(handler *workerThread, exitStatus int) {
 }
 
 func (handler *workerThread) waitForWorkerRequest() bool {
+	// unpin any memory left over from previous requests
+	handler.thread.Unpin()
+
 	if c := logger.Check(zapcore.DebugLevel, "waiting for request"); c != nil {
 		c.Write(zap.String("worker", handler.worker.fileName))
 	}
@@ -180,7 +183,6 @@ func (handler *workerThread) waitForWorkerRequest() bool {
 		rejectRequest(fc.responseWriter, err.Error())
 		maybeCloseContext(fc)
 		handler.workerRequest = nil
-		handler.thread.Unpin()
 
 		return handler.waitForWorkerRequest()
 	}
@@ -201,7 +203,6 @@ func go_frankenphp_finish_worker_request(threadIndex C.uintptr_t) {
 
 	maybeCloseContext(fc)
 	thread.handler.(*workerThread).workerRequest = nil
-	thread.Unpin()
 
 	if c := fc.logger.Check(zapcore.DebugLevel, "request handling finished"); c != nil {
 		c.Write(zap.String("worker", fc.scriptFilename), zap.String("url", r.RequestURI))

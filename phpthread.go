@@ -102,10 +102,13 @@ func go_frankenphp_after_script_execution(threadIndex C.uintptr_t, exitStatus C.
 		panic(ScriptExecutionError)
 	}
 	thread.handler.afterScriptExecution(int(exitStatus))
+
+	// unpin all memory used during script execution
 	thread.Unpin()
 }
 
 //export go_frankenphp_on_thread_shutdown
 func go_frankenphp_on_thread_shutdown(threadIndex C.uintptr_t) {
+	phpThreads[threadIndex].Unpin()
 	phpThreads[threadIndex].state.set(stateDone)
 }
