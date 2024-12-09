@@ -159,11 +159,6 @@ elif [ "${os}" = "linux" ] && [ -z "${DEBUG_SYMBOLS}" ]; then
 	CGO_LDFLAGS="-Wl,-O1 -pie"
 fi
 
-# Temporary workaround for https://github.com/crazywhalecc/static-php-cli/issues/560
-if [[ "${PHP_EXTENSIONS}" == *"pgsql"* ]]; then
-	CGO_LDFLAGS="${CGO_LDFLAGS} ${PWD}/buildroot/lib/libpgcommon.a ${PWD}/buildroot/lib/libpgport.a ${PWD}/buildroot/lib/libpq.a"
-fi
-
 CGO_LDFLAGS="${CGO_LDFLAGS} ${PWD}/buildroot/lib/libbrotlicommon.a ${PWD}/buildroot/lib/libbrotlienc.a ${PWD}/buildroot/lib/libbrotlidec.a ${PWD}/buildroot/lib/libwatcher-c.a $(./buildroot/bin/php-config --ldflags || true) $(./buildroot/bin/php-config --libs | sed -e 's/-lgcc_s//g' || true)"
 if [ "${os}" = "linux" ]; then
 	if echo "${PHP_EXTENSIONS}" | grep -qE "\b(intl|imagick|grpc|v8js|protobuf|mongodb|tbb)\b"; then
@@ -173,11 +168,7 @@ fi
 
 export CGO_LDFLAGS
 
-#LIBPHP_VERSION="$(./buildroot/bin/php-config --version)"
-# Temporary workaround for https://github.com/crazywhalecc/static-php-cli/issues/563
-if [[ $(cat buildroot/include/php/main/php_version.h) =~ (define PHP_VERSION \"([0-9\.]+)) ]]; then
-	export LIBPHP_VERSION=${BASH_REMATCH[2]}
-fi
+LIBPHP_VERSION="$(./buildroot/bin/php-config --version)"
 
 cd ../
 
