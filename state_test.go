@@ -1,0 +1,48 @@
+package frankenphp
+
+import (
+	"testing"
+	"time"
+
+	"github.com/stretchr/testify/assert"
+)
+
+func Test2GoroutinesYieldToEachOtherViaStates(t *testing.T) {
+	threadState := &threadState{currentState: stateBooting}
+
+	go func() {
+		threadState.waitFor(stateInactive)
+		assert.True(t, threadState.is(stateInactive))
+		threadState.set(stateReady)
+	}()
+
+	threadState.set(stateInactive)
+	threadState.waitFor(stateReady)
+	assert.True(t, threadState.is(stateReady))
+}
+
+func TestStateShouldHaveCorrectAmountOfSubscribers(t *testing.T) {
+	threadState := &threadState{currentState: stateBooting}
+
+	// 3 subscribers waiting for different states
+	go threadState.waitFor(stateInactive)
+	go threadState.waitFor(stateInactive, stateShuttingDown)
+	go threadState.waitFor(stateShuttingDown)
+
+	time.Sleep(1 * time.Millisecond)
+	assertNumberOfSubscribers(t, threadState, 3)
+
+	threadState.set(stateInactive)
+	time.Sleep(1 * time.Millisecond)
+	assertNumberOfSubscribers(t, threadState, 1)
+
+	threadState.set(stateShuttingDown)
+	time.Sleep(1 * time.Millisecond)
+	assertNumberOfSubscribers(t, threadState, 0)
+}
+
+func assertNumberOfSubscribers(t *testing.T, threadState *threadState, expected int) {
+	threadState.mu.RLock()
+	assert.Len(t, threadState.subscribers, expected)
+	threadState.mu.RUnlock()
+}
