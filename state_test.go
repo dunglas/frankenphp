@@ -34,7 +34,7 @@ func TestStateShouldHaveCorrectAmountOfSubscribers(t *testing.T) {
 	threadState.set(stateInactive)
 	assertNumberOfSubscribers(t, threadState, 1)
 
-	threadState.set(stateShuttingDown)
+	assert.True(t, threadState.compareAndSwap(stateInactive, stateShuttingDown))
 	assertNumberOfSubscribers(t, threadState, 0)
 }
 
