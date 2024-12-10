@@ -79,7 +79,7 @@ func drainPHPThreads() {
 			continue
 		}
 		thread.handlerMu.Lock()
-		thread.state.set(stateShuttingDown)
+		_ = thread.state.requestSafeStateChange(stateShuttingDown)
 		close(thread.drainChan)
 	}
 	close(mainThread.done)

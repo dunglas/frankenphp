@@ -89,7 +89,7 @@ static void frankenphp_free_request_context() {
   free(ctx->cookie_data);
   ctx->cookie_data = NULL;
 
-  /* Is freed via thread.Unpin() at the end of each request */
+  /* Is freed via thread.Unpin() */
   SG(request_info).auth_password = NULL;
   SG(request_info).auth_user = NULL;
   SG(request_info).request_method = NULL;
@@ -832,17 +832,11 @@ static void *php_thread(void *arg) {
   cfg_get_string("filter.default", &default_filter);
   should_filter_var = default_filter != NULL;
 
-  // perform work until go signals to stop
-  while (true) {
-    char *scriptName = go_frankenphp_before_script_execution(thread_index);
-
-    // if go signals to stop, break the loop
-    if (scriptName == NULL) {
-      break;
-    }
-
-    int exit_status = frankenphp_execute_script(scriptName);
-    go_frankenphp_after_script_execution(thread_index, exit_status);
+  // loop until Go signals to stop
+  char *scriptName = NULL;
+  while ((scriptName = go_frankenphp_before_script_execution(thread_index))) {
+    go_frankenphp_after_script_execution(thread_index,
+                                         frankenphp_execute_script(scriptName));
   }
 
   go_frankenphp_release_known_variable_keys(thread_index);

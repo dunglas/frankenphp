@@ -3,7 +3,6 @@ package frankenphp
 // #include "frankenphp.h"
 import "C"
 import (
-	"fmt"
 	"net/http"
 	"path/filepath"
 	"time"
@@ -38,7 +37,7 @@ func convertToWorkerThread(thread *phpThread, worker *worker) {
 	worker.attachThread(thread)
 }
 
-// return the name of the script or an empty string if no script should be executed
+// beforeScriptExecution returns the name of the script or an empty string on shutdown
 func (handler *workerThread) beforeScriptExecution() string {
 	switch handler.state.get() {
 	case stateTransitionRequested:
@@ -133,13 +132,16 @@ func tearDownWorkerScript(handler *workerThread, exitStatus int) {
 	metrics.StopWorker(worker.fileName, StopReasonCrash)
 	if handler.backoff.recordFailure() {
 		if !watcherIsEnabled {
-			panic(fmt.Errorf("workers %q: too many consecutive failures", worker.fileName))
+			logger.Panic("too many consecutive worker failures", zap.String("worker", worker.fileName), zap.Int("failures", handler.backoff.failureCount))
 		}
 		logger.Warn("many consecutive worker failures", zap.String("worker", worker.fileName), zap.Int("failures", handler.backoff.failureCount))
 	}
 }
 
 func (handler *workerThread) waitForWorkerRequest() bool {
+	// unpin any memory left over from previous requests
+	handler.thread.Unpin()
+
 	if c := logger.Check(zapcore.DebugLevel, "waiting for request"); c != nil {
 		c.Write(zap.String("worker", handler.worker.fileName))
 	}
@@ -181,7 +183,6 @@ func (handler *workerThread) waitForWorkerRequest() bool {
 		rejectRequest(fc.responseWriter, err.Error())
 		maybeCloseContext(fc)
 		handler.workerRequest = nil
-		handler.thread.Unpin()
 
 		return handler.waitForWorkerRequest()
 	}
@@ -202,7 +203,6 @@ func go_frankenphp_finish_worker_request(threadIndex C.uintptr_t) {
 
 	maybeCloseContext(fc)
 	thread.handler.(*workerThread).workerRequest = nil
-	thread.Unpin()
 
 	if c := fc.logger.Check(zapcore.DebugLevel, "request handling finished"); c != nil {
 		c.Write(zap.String("worker", fc.scriptFilename), zap.String("url", r.RequestURI))

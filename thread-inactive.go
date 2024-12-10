@@ -25,7 +25,6 @@ func (handler *inactiveThread) beforeScriptExecution() string {
 	case stateTransitionRequested:
 		return thread.transitionToNewHandler()
 	case stateBooting, stateTransitionComplete:
-		// TODO: there's a tiny race condition here between checking and setting
 		thread.state.set(stateInactive)
 		// wait for external signal to start or shut down
 		thread.state.waitFor(stateTransitionRequested, stateShuttingDown)

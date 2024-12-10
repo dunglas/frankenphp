@@ -59,14 +59,15 @@ func (thread *phpThread) boot() {
 // change the thread handler safely
 // must be called from outside of the PHP thread
 func (thread *phpThread) setHandler(handler threadHandler) {
+	logger.Debug("setHandler")
 	thread.handlerMu.Lock()
 	defer thread.handlerMu.Unlock()
-	if thread.state.is(stateShuttingDown) {
+	if !thread.state.requestSafeStateChange(stateTransitionRequested) {
+		// no state change allowed == shutdown
 		return
 	}
-	thread.state.set(stateTransitionRequested)
 	close(thread.drainChan)
-	thread.state.waitFor(stateTransitionInProgress, stateShuttingDown)
+	thread.state.waitFor(stateTransitionInProgress)
 	thread.handler = handler
 	thread.drainChan = make(chan struct{})
 	thread.state.set(stateTransitionComplete)
@@ -76,7 +77,7 @@ func (thread *phpThread) setHandler(handler threadHandler) {
 // is triggered by setHandler and executed on the PHP thread
 func (thread *phpThread) transitionToNewHandler() string {
 	thread.state.set(stateTransitionInProgress)
-	thread.state.waitFor(stateTransitionComplete, stateShuttingDown)
+	thread.state.waitFor(stateTransitionComplete)
 	// execute beforeScriptExecution of the new handler
 	return thread.handler.beforeScriptExecution()
 }
@@ -131,10 +132,13 @@ func go_frankenphp_after_script_execution(threadIndex C.uintptr_t, exitStatus C.
 		panic(ScriptExecutionError)
 	}
 	thread.handler.afterScriptExecution(int(exitStatus))
+
+	// unpin all memory used during script execution
 	thread.Unpin()
 }
 
 //export go_frankenphp_on_thread_shutdown
 func go_frankenphp_on_thread_shutdown(threadIndex C.uintptr_t) {
+	phpThreads[threadIndex].Unpin()
 	phpThreads[threadIndex].state.set(stateDone)
 }

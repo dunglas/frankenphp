@@ -29,19 +29,27 @@ func TestStateShouldHaveCorrectAmountOfSubscribers(t *testing.T) {
 	go threadState.waitFor(stateInactive, stateShuttingDown)
 	go threadState.waitFor(stateShuttingDown)
 
-	time.Sleep(1 * time.Millisecond)
 	assertNumberOfSubscribers(t, threadState, 3)
 
 	threadState.set(stateInactive)
-	time.Sleep(1 * time.Millisecond)
 	assertNumberOfSubscribers(t, threadState, 1)
 
 	threadState.set(stateShuttingDown)
-	time.Sleep(1 * time.Millisecond)
 	assertNumberOfSubscribers(t, threadState, 0)
 }
 
 func assertNumberOfSubscribers(t *testing.T, threadState *threadState, expected int) {
+	maxWaits := 10_000 // wait for 1 second max
+
+	for i := 0; i < maxWaits; i++ {
+		time.Sleep(100 * time.Microsecond)
+		threadState.mu.RLock()
+		if len(threadState.subscribers) == expected {
+			threadState.mu.RUnlock()
+			break
+		}
+		threadState.mu.RUnlock()
+	}
 	threadState.mu.RLock()
 	assert.Len(t, threadState.subscribers, expected)
 	threadState.mu.RUnlock()
