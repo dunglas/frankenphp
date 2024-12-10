@@ -29,25 +29,33 @@ var (
 
 func initWorkers(opt []workerOpt) error {
 	workers = make(map[string]*worker, len(opt))
-	directoriesToWatch := getDirectoriesToWatch(opt)
-	watcherIsEnabled = len(directoriesToWatch) > 0
+	workersReady := sync.WaitGroup{}
 
 	for _, o := range opt {
 		worker, err := newWorker(o)
 		worker.threads = make([]*phpThread, 0, o.num)
+		workersReady.Add(o.num)
 		if err != nil {
 			return err
 		}
 		for i := 0; i < worker.num; i++ {
 			thread := getInactivePHPThread()
 			convertToWorkerThread(thread, worker)
+			go func() {
+				thread.state.waitFor(stateReady)
+				workersReady.Done()
+			}()
 		}
 	}
 
-	if !watcherIsEnabled {
+	workersReady.Wait()
+
+	directoriesToWatch := getDirectoriesToWatch(opt)
+	if len(directoriesToWatch) == 0 {
 		return nil
 	}
 
+	watcherIsEnabled = true
 	if err := watcher.InitWatcher(directoriesToWatch, restartWorkers, getLogger()); err != nil {
 		return err
 	}
