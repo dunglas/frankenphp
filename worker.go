@@ -30,6 +30,8 @@ var (
 func initWorkers(opt []workerOpt) error {
 	workers = make(map[string]*worker, len(opt))
 	workersReady := sync.WaitGroup{}
+	directoriesToWatch := getDirectoriesToWatch(opt)
+	watcherIsEnabled = len(directoriesToWatch) > 0
 
 	for _, o := range opt {
 		worker, err := newWorker(o)
@@ -50,12 +52,10 @@ func initWorkers(opt []workerOpt) error {
 
 	workersReady.Wait()
 
-	directoriesToWatch := getDirectoriesToWatch(opt)
-	if len(directoriesToWatch) == 0 {
+	if !watcherIsEnabled {
 		return nil
 	}
 
-	watcherIsEnabled = true
 	if err := watcher.InitWatcher(directoriesToWatch, restartWorkers, getLogger()); err != nil {
 		return err
 	}
