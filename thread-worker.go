@@ -3,7 +3,6 @@ package frankenphp
 // #include "frankenphp.h"
 import "C"
 import (
-	"fmt"
 	"net/http"
 	"path/filepath"
 	"time"
@@ -38,7 +37,7 @@ func convertToWorkerThread(thread *phpThread, worker *worker) {
 	worker.attachThread(thread)
 }
 
-// return the name of the script or an empty string if no script should be executed
+// beforeScriptExecution returns the name of the script or an empty string on shutdown
 func (handler *workerThread) beforeScriptExecution() string {
 	switch handler.state.get() {
 	case stateTransitionRequested:
@@ -133,7 +132,7 @@ func tearDownWorkerScript(handler *workerThread, exitStatus int) {
 	metrics.StopWorker(worker.fileName, StopReasonCrash)
 	if handler.backoff.recordFailure() {
 		if !watcherIsEnabled {
-			panic(fmt.Errorf("workers %q: too many consecutive failures", worker.fileName))
+			logger.Panic("too many consecutive worker failures", zap.String("worker", worker.fileName), zap.Int("failures", handler.backoff.failureCount))
 		}
 		logger.Warn("many consecutive worker failures", zap.String("worker", worker.fileName), zap.Int("failures", handler.backoff.failureCount))
 	}

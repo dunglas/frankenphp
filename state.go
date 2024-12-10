@@ -6,15 +6,17 @@ import (
 	"sync"
 )
 
-type stateID int
+type stateID uint8
 
 const (
-	// livecycle states of a thread
+	// lifecycle states of a thread
 	stateBooting stateID = iota
-	stateInactive
-	stateReady
 	stateShuttingDown
 	stateDone
+
+	// these states are safe to transition from at any time
+	stateInactive
+	stateReady
 
 	// states necessary for restarting workers
 	stateRestarting
@@ -47,18 +49,22 @@ func newThreadState() *threadState {
 
 func (ts *threadState) is(state stateID) bool {
 	ts.mu.RLock()
-	defer ts.mu.RUnlock()
-	return ts.currentState == state
+	ok := ts.currentState == state
+	ts.mu.RUnlock()
+
+	return ok
 }
 
 func (ts *threadState) compareAndSwap(compareTo stateID, swapTo stateID) bool {
 	ts.mu.Lock()
-	defer ts.mu.Unlock()
-	if ts.currentState == compareTo {
+	ok := ts.currentState == compareTo
+	if ok {
 		ts.currentState = swapTo
-		return true
+		ts.notifySubscribers(swapTo)
 	}
-	return false
+	ts.mu.Unlock()
+
+	return ok
 }
 
 func (ts *threadState) name() string {
@@ -68,43 +74,69 @@ func (ts *threadState) name() string {
 
 func (ts *threadState) get() stateID {
 	ts.mu.RLock()
-	defer ts.mu.RUnlock()
-	return ts.currentState
+	id := ts.currentState
+	ts.mu.RUnlock()
+
+	return id
 }
 
-func (h *threadState) set(nextState stateID) {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-	h.currentState = nextState
+func (ts *threadState) set(nextState stateID) {
+	ts.mu.Lock()
+	ts.currentState = nextState
+	ts.notifySubscribers(nextState)
+	ts.mu.Unlock()
+}
 
-	if len(h.subscribers) == 0 {
+func (ts *threadState) notifySubscribers(nextState stateID) {
+	if len(ts.subscribers) == 0 {
 		return
 	}
-
 	newSubscribers := []stateSubscriber{}
 	// notify subscribers to the state change
-	for _, sub := range h.subscribers {
+	for _, sub := range ts.subscribers {
 		if !slices.Contains(sub.states, nextState) {
 			newSubscribers = append(newSubscribers, sub)
 			continue
 		}
 		close(sub.ch)
 	}
-	h.subscribers = newSubscribers
+	ts.subscribers = newSubscribers
 }
 
 // block until the thread reaches a certain state
-func (h *threadState) waitFor(states ...stateID) {
-	h.mu.Lock()
-	if slices.Contains(states, h.currentState) {
-		h.mu.Unlock()
+func (ts *threadState) waitFor(states ...stateID) {
+	ts.mu.Lock()
+	if slices.Contains(states, ts.currentState) {
+		ts.mu.Unlock()
 		return
 	}
 	sub := stateSubscriber{
 		states: states,
 		ch:     make(chan struct{}),
 	}
-	h.subscribers = append(h.subscribers, sub)
-	h.mu.Unlock()
+	ts.subscribers = append(ts.subscribers, sub)
+	ts.mu.Unlock()
 	<-sub.ch
+}
+
+// safely request a state change from a different goroutine
+func (ts *threadState) requestSafeStateChange(nextState stateID) bool {
+	ts.mu.Lock()
+	switch ts.currentState {
+	// disallow state changes if shutting down
+	case stateShuttingDown:
+		ts.mu.Unlock()
+		return false
+	// ready and inactive are safe states to transition from
+	case stateReady, stateInactive:
+		ts.currentState = nextState
+		ts.notifySubscribers(nextState)
+		ts.mu.Unlock()
+		return true
+	}
+	ts.mu.Unlock()
+
+	// wait for the state to change to a safe state
+	ts.waitFor(stateReady, stateInactive, stateShuttingDown)
+	return ts.requestSafeStateChange(nextState)
 }

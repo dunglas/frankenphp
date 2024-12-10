@@ -62,7 +62,7 @@ func drainPHPThreads() {
 	doneWG.Add(len(phpThreads))
 	for _, thread := range phpThreads {
 		thread.handlerMu.Lock()
-		thread.state.set(stateShuttingDown)
+		_ = thread.state.requestSafeStateChange(stateShuttingDown)
 		close(thread.drainChan)
 	}
 	close(mainThread.done)

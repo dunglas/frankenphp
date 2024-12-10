@@ -22,7 +22,7 @@ func convertToRegularThread(thread *phpThread) {
 	})
 }
 
-// return the name of the script or an empty string if no script should be executed
+// beforeScriptExecution returns the name of the script or an empty string on shutdown
 func (handler *regularThread) beforeScriptExecution() string {
 	switch handler.state.get() {
 	case stateTransitionRequested:
@@ -65,7 +65,7 @@ func (handler *regularThread) waitForRequest() string {
 			return handler.beforeScriptExecution()
 		}
 
-		// set the scriptName that should be executed
+		// set the scriptFilename that should be executed
 		return fc.scriptFilename
 	}
 }

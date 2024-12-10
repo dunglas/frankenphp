@@ -37,7 +37,7 @@ func TestTransitionRegularThreadToWorkerThread(t *testing.T) {
 	assert.IsType(t, &regularThread{}, phpThreads[0].handler)
 
 	// transition to worker thread
-	worker := getDummyWorker("worker-transition-1.php")
+	worker := getDummyWorker("transition-worker-1.php")
 	convertToWorkerThread(phpThreads[0], worker)
 	assert.IsType(t, &workerThread{}, phpThreads[0].handler)
 	assert.Len(t, worker.threads, 1)
@@ -54,8 +54,8 @@ func TestTransitionRegularThreadToWorkerThread(t *testing.T) {
 func TestTransitionAThreadBetween2DifferentWorkers(t *testing.T) {
 	logger = zap.NewNop()
 	assert.NoError(t, initPHPThreads(1))
-	firstWorker := getDummyWorker("worker-transition-1.php")
-	secondWorker := getDummyWorker("worker-transition-2.php")
+	firstWorker := getDummyWorker("transition-worker-1.php")
+	secondWorker := getDummyWorker("transition-worker-2.php")
 
 	// convert to first worker thread
 	convertToWorkerThread(phpThreads[0], firstWorker)
