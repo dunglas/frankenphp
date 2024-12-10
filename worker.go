@@ -83,6 +83,7 @@ func drainWorkers() {
 
 func restartWorkers() {
 	ready := sync.WaitGroup{}
+	threadsToRestart := make([]*phpThread, 0)
 	for _, worker := range workers {
 		worker.threadMutex.RLock()
 		ready.Add(len(worker.threads))
@@ -92,20 +93,20 @@ func restartWorkers() {
 				continue
 			}
 			close(thread.drainChan)
+			threadsToRestart = append(threadsToRestart, thread)
 			go func(thread *phpThread) {
 				thread.state.waitFor(stateYielding)
 				ready.Done()
 			}(thread)
 		}
-	}
-	ready.Wait()
-	for _, worker := range workers {
-		for _, thread := range worker.threads {
-			if thread.state.compareAndSwap(stateYielding, stateReady) {
-				thread.drainChan = make(chan struct{})
-			}
-		}
 		worker.threadMutex.RUnlock()
+	}
+
+	ready.Wait()
+
+	for _, thread := range threadsToRestart {
+		thread.drainChan = make(chan struct{})
+		thread.state.set(stateReady)
 	}
 }
 

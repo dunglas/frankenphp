@@ -124,7 +124,7 @@ func (ts *threadState) requestSafeStateChange(nextState stateID) bool {
 	ts.mu.Lock()
 	switch ts.currentState {
 	// disallow state changes if shutting down
-	case stateShuttingDown:
+	case stateShuttingDown, stateDone:
 		ts.mu.Unlock()
 		return false
 	// ready and inactive are safe states to transition from
