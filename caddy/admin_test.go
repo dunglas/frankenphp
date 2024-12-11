@@ -48,6 +48,8 @@ func TestRemoveWorkerThreadsViaAdminApi(t *testing.T) {
 			http_port `+testPort+`
 
 			frankenphp {
+				num_threads 6
+				max_threads 6
 				worker ../testdata/worker-with-counter.php 4
 			}
 		}
@@ -89,6 +91,8 @@ func TestAddWorkerThreadsViaAdminApi(t *testing.T) {
 			http_port `+testPort+`
 
 			frankenphp {
+				max_threads 10
+				num_threads 3
 				worker ../testdata/worker-with-counter.php 1
 			}
 		}
