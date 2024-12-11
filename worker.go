@@ -119,6 +119,14 @@ func RestartWorkers() {
 	}
 }
 
+func WorkerFileNames() []string {
+	workerNames := make([]string, 0, len(workers))
+	for fileName, _ := range workers {
+		workerNames = append(workerNames, fileName)
+	}
+	return workerNames
+}
+
 func getDirectoriesToWatch(workerOpts []workerOpt) []string {
 	directoriesToWatch := []string{}
 	for _, w := range workerOpts {

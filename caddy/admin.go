@@ -6,6 +6,7 @@ import (
 	"github.com/dunglas/frankenphp"
 	"net/http"
 	"strconv"
+	"strings"
 )
 
 type FrankenPHPAdmin struct{}
@@ -26,23 +27,7 @@ func (admin FrankenPHPAdmin) Routes() []caddy.AdminRoute {
 		},
 		{
 			Pattern: "/frankenphp/threads",
-			Handler: caddy.AdminHandlerFunc(admin.showThreadStatus),
-		},
-		{
-			Pattern: "/frankenphp/threads/remove",
-			Handler: caddy.AdminHandlerFunc(admin.removeRegularThreads),
-		},
-		{
-			Pattern: "/frankenphp/threads/add",
-			Handler: caddy.AdminHandlerFunc(admin.addRegularThreads),
-		},
-		{
-			Pattern: "/frankenphp/workers/add",
-			Handler: caddy.AdminHandlerFunc(admin.addWorkerThreads),
-		},
-		{
-			Pattern: "/frankenphp/workers/remove",
-			Handler: caddy.AdminHandlerFunc(admin.removeWorkerThreads),
+			Handler: caddy.AdminHandlerFunc(admin.threads),
 		},
 	}
 }
@@ -59,83 +44,60 @@ func (admin *FrankenPHPAdmin) restartWorkers(w http.ResponseWriter, r *http.Requ
 	return nil
 }
 
-func (admin *FrankenPHPAdmin) showThreadStatus(w http.ResponseWriter, r *http.Request) error {
-	admin.success(w, frankenphp.ThreadDebugStatus())
-
-	return nil
-}
-
-func (admin *FrankenPHPAdmin) addWorkerThreads(w http.ResponseWriter, r *http.Request) error {
-	if r.Method != http.MethodPost {
-		return admin.error(http.StatusMethodNotAllowed, fmt.Errorf("method not allowed"))
+func (admin *FrankenPHPAdmin) threads(w http.ResponseWriter, r *http.Request) error {
+	if r.Method == http.MethodPut {
+		return admin.changeThreads(w, r, admin.getCountFromRequest(r))
+	}
+	if r.Method == http.MethodDelete {
+		return admin.changeThreads(w, r, -admin.getCountFromRequest(r))
+	}
+	if r.Method == http.MethodGet {
+		return admin.success(w, frankenphp.ThreadDebugStatus())
 	}
 
-	workerPattern := r.URL.Query().Get("file")
+	return admin.error(http.StatusMethodNotAllowed, fmt.Errorf("method not allowed, try: GET,PUT,DELETE"))
+}
+
+func (admin *FrankenPHPAdmin) changeThreads(w http.ResponseWriter, r *http.Request, count int) error {
+	if !r.URL.Query().Has("worker") {
+		return admin.changeRegularThreads(w, count)
+	}
+	workerFilename := admin.getWorkerByPattern(r.URL.Query().Get("worker"))
+
+	return admin.changeWorkerThreads(w, count, workerFilename)
+}
+
+func (admin *FrankenPHPAdmin) changeWorkerThreads(w http.ResponseWriter, num int, workerFilename string) error {
+	method := frankenphp.AddWorkerThread
+	if num < 0 {
+		num = -num
+		method = frankenphp.RemoveWorkerThread
+	}
 	message := ""
-	for i := 0; i < admin.getCountFromRequest(r); i++ {
-		workerFilename, threadCount, err := frankenphp.AddWorkerThread(workerPattern)
+	for i := 0; i < num; i++ {
+		threadCount, err := method(workerFilename)
 		if err != nil {
 			return admin.error(http.StatusBadRequest, err)
 		}
 		message = fmt.Sprintf("New thread count: %d %s\n", threadCount, workerFilename)
 	}
-
-	caddy.Log().Debug(message)
 	return admin.success(w, message)
 }
 
-func (admin *FrankenPHPAdmin) removeWorkerThreads(w http.ResponseWriter, r *http.Request) error {
-	if r.Method != http.MethodPost {
-		return admin.error(http.StatusMethodNotAllowed, fmt.Errorf("method not allowed"))
+func (admin *FrankenPHPAdmin) changeRegularThreads(w http.ResponseWriter, num int) error {
+	method := frankenphp.AddRegularThread
+	if num < 0 {
+		num = -num
+		method = frankenphp.RemoveRegularThread
 	}
-
-	workerPattern := r.URL.Query().Get("file")
 	message := ""
-	for i := 0; i < admin.getCountFromRequest(r); i++ {
-		workerFilename, threadCount, err := frankenphp.RemoveWorkerThread(workerPattern)
+	for i := 0; i < num; i++ {
+		threadCount, err := method()
 		if err != nil {
 			return admin.error(http.StatusBadRequest, err)
 		}
-		message = fmt.Sprintf("New thread count: %d %s\n", threadCount, workerFilename)
+		message = fmt.Sprintf("New thread count: %d Regular Threads\n", threadCount)
 	}
-
-	caddy.Log().Debug(message)
-	return admin.success(w, message)
-}
-
-func (admin *FrankenPHPAdmin) addRegularThreads(w http.ResponseWriter, r *http.Request) error {
-	if r.Method != http.MethodPost {
-		return admin.error(http.StatusMethodNotAllowed, fmt.Errorf("method not allowed"))
-	}
-
-	message := ""
-	for i := 0; i < admin.getCountFromRequest(r); i++ {
-		threadCount, err := frankenphp.AddRegularThread()
-		if err != nil {
-			return admin.error(http.StatusBadRequest, err)
-		}
-		message = fmt.Sprintf("New thread count: %d \n", threadCount)
-	}
-
-	caddy.Log().Debug(message)
-	return admin.success(w, message)
-}
-
-func (admin *FrankenPHPAdmin) removeRegularThreads(w http.ResponseWriter, r *http.Request) error {
-	if r.Method != http.MethodPost {
-		return admin.error(http.StatusMethodNotAllowed, fmt.Errorf("method not allowed"))
-	}
-
-	message := ""
-	for i := 0; i < admin.getCountFromRequest(r); i++ {
-		threadCount, err := frankenphp.RemoveRegularThread()
-		if err != nil {
-			return admin.error(http.StatusBadRequest, err)
-		}
-		message = fmt.Sprintf("New thread count: %d \n", threadCount)
-	}
-
-	caddy.Log().Debug(message)
 	return admin.success(w, message)
 }
 
@@ -159,4 +121,13 @@ func (admin *FrankenPHPAdmin) getCountFromRequest(r *http.Request) int {
 		return 1
 	}
 	return i
+}
+
+func (admin *FrankenPHPAdmin) getWorkerByPattern(pattern string) string {
+	for _, workerFilename := range frankenphp.WorkerFileNames() {
+		if strings.HasSuffix(workerFilename, pattern) {
+			return workerFilename
+		}
+	}
+	return ""
 }

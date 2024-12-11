@@ -10,7 +10,7 @@ type stateID uint8
 const (
 	// livecycle states of a thread
 	stateReserved stateID = iota
-    stateBooting
+	stateBooting
 	stateShuttingDown
 	stateDone
 
