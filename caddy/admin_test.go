@@ -150,6 +150,7 @@ func TestShowTheCorrectThreadDebugStatus(t *testing.T) {
 		}
 		`, "caddyfile")
 
+	assertAdminResponse(tester, "PUT", "threads?worker=counter.php", http.StatusOK, "")
 	assertAdminResponse(tester, "DELETE", "threads?worker=index.php", http.StatusOK, "")
 	assertAdminResponse(tester, "DELETE", "threads", http.StatusOK, "")
 
@@ -164,7 +165,8 @@ Thread 2 (ready) Worker PHP Thread - `+absWorker1Path+`
 Thread 3 (ready) Worker PHP Thread - `+absWorker1Path+`
 Thread 4 (ready) Worker PHP Thread - `+absWorker2Path+`
 Thread 5 (inactive)
-6 additional threads can be started at runtime
+Thread 6 (ready) Worker PHP Thread - `+absWorker1Path+`
+5 additional threads can be started at runtime
 `,
 	)
 }
