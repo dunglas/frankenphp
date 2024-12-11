@@ -66,14 +66,14 @@ func TestRemoveWorkerThreadsViaAdminApi(t *testing.T) {
 
 	// remove a thread
 	expectedMessage := fmt.Sprintf("New thread count: 3 %s\n", absWorkerPath)
-	assertAdminResponse(tester, "POST", "workers/remove", http.StatusOK, expectedMessage)
+	assertAdminResponse(tester, "DELETE", "threads?worker", http.StatusOK, expectedMessage)
 
 	// remove 2 threads
 	expectedMessage = fmt.Sprintf("New thread count: 1 %s\n", absWorkerPath)
-	assertAdminResponse(tester, "POST", "workers/remove?count=2", http.StatusOK, expectedMessage)
+	assertAdminResponse(tester, "DELETE", "threads?worker&count=2", http.StatusOK, expectedMessage)
 
 	// get 400 status if removing the last thread
-	assertAdminResponse(tester, "POST", "workers/remove", http.StatusBadRequest, "")
+	assertAdminResponse(tester, "DELETE", "threads?worker", http.StatusBadRequest, "")
 
 	// make a request to the worker to make sure it's still running
 	tester.AssertGetResponse("http://localhost:"+testPort+"/", http.StatusOK, "requests:2")
@@ -106,18 +106,18 @@ func TestAddWorkerThreadsViaAdminApi(t *testing.T) {
 	tester.AssertGetResponse("http://localhost:"+testPort+"/", http.StatusOK, "requests:1")
 
 	// get 400 status if the filename is wrong
-	assertAdminResponse(tester, "POST", "workers/add?file=wrong.php", http.StatusBadRequest, "")
+	assertAdminResponse(tester, "PUT", "threads?worker=wrong.php", http.StatusBadRequest, "")
 
 	// add a thread
 	expectedMessage := fmt.Sprintf("New thread count: 2 %s\n", absWorkerPath)
-	assertAdminResponse(tester, "POST", "workers/add", http.StatusOK, expectedMessage)
+	assertAdminResponse(tester, "PUT", "threads?worker=counter.php", http.StatusOK, expectedMessage)
 
 	// add 2 threads
 	expectedMessage = fmt.Sprintf("New thread count: 4 %s\n", absWorkerPath)
-	assertAdminResponse(tester, "POST", "workers/add?count=2", http.StatusOK, expectedMessage)
+	assertAdminResponse(tester, "PUT", "threads?worker&=counter.php&count=2", http.StatusOK, expectedMessage)
 
 	// get 400 status if adding too many threads
-	assertAdminResponse(tester, "POST", "workers/add?count=100", http.StatusBadRequest, "")
+	assertAdminResponse(tester, "PUT", "threads?worker&=counter.php&count=100", http.StatusBadRequest, "")
 
 	// make a request to the worker to make sure it's still running
 	tester.AssertGetResponse("http://localhost:"+testPort+"/", http.StatusOK, "requests:2")
@@ -150,14 +150,14 @@ func TestShowTheCorrectThreadDebugStatus(t *testing.T) {
 		}
 		`, "caddyfile")
 
-	assertAdminResponse(tester, "POST", "workers/remove?file=index.php", http.StatusOK, "")
-	assertAdminResponse(tester, "POST", "threads/remove", http.StatusOK, "")
+	assertAdminResponse(tester, "DELETE", "threads?worker=index.php", http.StatusOK, "")
+	assertAdminResponse(tester, "DELETE", "threads", http.StatusOK, "")
 
 	// assert that all threads are in the right state via debug message
 	assertAdminResponse(
 		tester,
 		"GET",
-		"threads/status",
+		"threads",
 		http.StatusOK, `Thread 0 (ready) Regular PHP Thread
 Thread 1 (inactive)
 Thread 2 (ready) Worker PHP Thread - `+absWorker1Path+`
