@@ -378,8 +378,8 @@ func Shutdown() {
 		_ = os.RemoveAll(EmbeddedAppPath)
 	}
 
-	isRunning = false
 	logger.Debug("FrankenPHP shut down")
+	isRunning = false
 }
 
 //export go_shutdown
