@@ -10,7 +10,7 @@ import (
 func AddRegularThread() (int, error) {
 	thread := getInactivePHPThread()
 	if thread == nil {
-		return countRegularThreads(), fmt.Errorf("max amount of threads reached: %d", len(phpThreads))
+		return countRegularThreads(), fmt.Errorf("max amount of overall threads reached: %d", len(phpThreads))
 	}
 	convertToRegularThread(thread)
 	return countRegularThreads(), nil

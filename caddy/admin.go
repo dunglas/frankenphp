@@ -62,7 +62,7 @@ func (admin *FrankenPHPAdmin) changeThreads(w http.ResponseWriter, r *http.Reque
 	if !r.URL.Query().Has("worker") {
 		return admin.changeRegularThreads(w, count)
 	}
-	workerFilename := admin.getWorkerByPattern(r.URL.Query().Get("worker"))
+	workerFilename := admin.getWorkerBySuffix(r.URL.Query().Get("worker"))
 
 	return admin.changeWorkerThreads(w, count, workerFilename)
 }
@@ -123,7 +123,7 @@ func (admin *FrankenPHPAdmin) getCountFromRequest(r *http.Request) int {
 	return i
 }
 
-func (admin *FrankenPHPAdmin) getWorkerByPattern(pattern string) string {
+func (admin *FrankenPHPAdmin) getWorkerBySuffix(pattern string) string {
 	for _, workerFilename := range frankenphp.WorkerFileNames() {
 		if strings.HasSuffix(workerFilename, pattern) {
 			return workerFilename
