@@ -36,7 +36,6 @@ type threadHandler interface {
 func newPHPThread(threadIndex int) *phpThread {
 	return &phpThread{
 		threadIndex: threadIndex,
-		drainChan:   make(chan struct{}),
 		requestChan: make(chan *http.Request),
 		handlerMu:   &sync.Mutex{},
 		state:       newThreadState(),
@@ -50,20 +49,41 @@ func (thread *phpThread) boot() {
 		logger.Error("thread is not in reserved state", zap.Int("threadIndex", thread.threadIndex), zap.Int("state", int(thread.state.get())))
 		return
 	}
+
+	// boot threads as inactive
+	thread.handlerMu.Lock()
+	thread.handler = &inactiveThread{thread: thread}
+	thread.drainChan = make(chan struct{})
+	thread.handlerMu.Unlock()
+
+	// start the actual posix thread - TODO: try this with go threads instead
 	if !C.frankenphp_new_php_thread(C.uintptr_t(thread.threadIndex)) {
 		logger.Panic("unable to create thread", zap.Int("threadIndex", thread.threadIndex))
 	}
 	thread.state.waitFor(stateInactive)
 }
 
+// shutdown the underlying PHP thread
+func (thread *phpThread) shutdown() {
+	if !thread.state.requestSafeStateChange(stateShuttingDown) {
+		// already shutting down or done
+		return
+	}
+	close(thread.drainChan)
+	thread.state.waitFor(stateDone)
+	thread.drainChan = make(chan struct{})
+
+	// threads go back to the reserved state from which they can be booted again
+	thread.state.set(stateReserved)
+}
+
 // change the thread handler safely
 // must be called from outside of the PHP thread
 func (thread *phpThread) setHandler(handler threadHandler) {
-	logger.Debug("setHandler")
 	thread.handlerMu.Lock()
 	defer thread.handlerMu.Unlock()
 	if !thread.state.requestSafeStateChange(stateTransitionRequested) {
-		// no state change allowed == shutdown
+		// no state change allowed == shutdown or done
 		return
 	}
 	close(thread.drainChan)
@@ -90,6 +110,7 @@ func (thread *phpThread) getActiveRequest() *http.Request {
 func (thread *phpThread) debugStatus() string {
 	threadType := ""
 	thread.handlerMu.Lock()
+	// TODO: this can also be put into the handler interface if required elsewhere
 	if handler, ok := thread.handler.(*workerThread); ok {
 		threadType = " Worker PHP Thread - " + handler.worker.fileName
 	} else if _, ok := thread.handler.(*regularThread); ok {

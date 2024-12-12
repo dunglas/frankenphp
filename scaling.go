@@ -24,7 +24,7 @@ func RemoveRegularThread() (int, error) {
 	}
 	thread := regularThreads[len(regularThreads)-1]
 	regularThreadMu.RUnlock()
-	convertToInactiveThread(thread)
+	thread.shutdown()
 	return countRegularThreads(), nil
 }
 
@@ -55,7 +55,7 @@ func RemoveWorkerThread(workerFileName string) (int, error) {
 	}
 	thread := worker.threads[len(worker.threads)-1]
 	worker.threadMutex.RUnlock()
-	convertToInactiveThread(thread)
+	thread.shutdown()
 
 	return worker.countThreads(), nil
 }

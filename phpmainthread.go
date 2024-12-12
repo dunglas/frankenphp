@@ -38,7 +38,6 @@ func initPHPThreads(numThreads int, numMaxThreads int) error {
 	// initialize all threads as inactive
 	for i := 0; i < numMaxThreads; i++ {
 		phpThreads[i] = newPHPThread(i)
-		convertToInactiveThread(phpThreads[i])
 	}
 
 	// start the underlying C threads
@@ -73,26 +72,14 @@ func ThreadDebugStatus() string {
 func drainPHPThreads() {
 	doneWG := sync.WaitGroup{}
 	doneWG.Add(len(phpThreads))
-	for _, thread := range phpThreads {
-		if thread.state.is(stateReserved) {
-			doneWG.Done()
-			continue
-		}
-		thread.handlerMu.Lock()
-		_ = thread.state.requestSafeStateChange(stateShuttingDown)
-		close(thread.drainChan)
-	}
 	close(mainThread.done)
 	for _, thread := range phpThreads {
-		if thread.state.is(stateReserved) {
-			continue
-		}
 		go func(thread *phpThread) {
-			thread.state.waitFor(stateDone)
-			thread.handlerMu.Unlock()
+			thread.shutdown()
 			doneWG.Done()
 		}(thread)
 	}
+
 	doneWG.Wait()
 	mainThread.state.set(stateShuttingDown)
 	mainThread.state.waitFor(stateDone)

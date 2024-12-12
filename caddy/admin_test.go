@@ -164,13 +164,11 @@ func TestShowTheCorrectThreadDebugStatus(t *testing.T) {
 		"GET",
 		"threads",
 		http.StatusOK, `Thread 0 (ready) Regular PHP Thread
-Thread 1 (inactive)
 Thread 2 (ready) Worker PHP Thread - `+absWorker1Path+`
 Thread 3 (ready) Worker PHP Thread - `+absWorker1Path+`
 Thread 4 (ready) Worker PHP Thread - `+absWorker2Path+`
-Thread 5 (inactive)
 Thread 6 (ready) Worker PHP Thread - `+absWorker1Path+`
-5 additional threads can be started at runtime
+7 additional threads can be started at runtime
 `,
 	)
 }

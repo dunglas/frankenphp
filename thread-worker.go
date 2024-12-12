@@ -51,6 +51,7 @@ func (handler *workerThread) beforeScriptExecution() string {
 		setupWorkerScript(handler, handler.worker)
 		return handler.worker.fileName
 	case stateShuttingDown:
+		handler.worker.detachThread(handler.thread)
 		// signal to stop
 		return ""
 	}

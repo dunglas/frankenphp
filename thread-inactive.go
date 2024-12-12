@@ -6,15 +6,13 @@ import (
 
 // representation of a thread with no work assigned to it
 // implements the threadHandler interface
+// each inactive thread weighs around ~350KB
+// keeping threads at 'inactive' will consume more memory, but allow a faster transition
 type inactiveThread struct {
 	thread *phpThread
 }
 
 func convertToInactiveThread(thread *phpThread) {
-	if thread.handler == nil {
-		thread.handler = &inactiveThread{thread: thread}
-		return
-	}
 	thread.setHandler(&inactiveThread{thread: thread})
 }
 

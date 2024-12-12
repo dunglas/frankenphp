@@ -42,6 +42,7 @@ func (handler *regularThread) beforeScriptExecution() string {
 	case stateReady:
 		return handler.waitForRequest()
 	case stateShuttingDown:
+		detachRegularThread(handler.thread)
 		// signal to stop
 		return ""
 	}
