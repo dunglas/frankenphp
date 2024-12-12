@@ -64,6 +64,7 @@ var (
 	ScriptExecutionError        = errors.New("error during PHP script execution")
 
 	requestChan chan *http.Request
+	isRunning   bool
 	done        chan struct{}
 	shutdownWG  sync.WaitGroup
 
@@ -277,9 +278,10 @@ func calculateMaxThreads(opt *opt) error {
 
 // Init starts the PHP runtime and the configured workers.
 func Init(options ...Option) error {
-	if requestChan != nil {
+	if isRunning {
 		return AlreadyStartedError
 	}
+	isRunning = true
 
 	// Ignore all SIGPIPE signals to prevent weird issues with systemd: https://github.com/dunglas/frankenphp/issues/1020
 	// Docker/Moby has a similar hack: https://github.com/moby/moby/blob/d828b032a87606ae34267e349bf7f7ccb1f6495a/cmd/dockerd/docker.go#L87-L90
@@ -362,6 +364,10 @@ func Init(options ...Option) error {
 
 // Shutdown stops the workers and the PHP runtime.
 func Shutdown() {
+	if !isRunning {
+		return
+	}
+
 	drainWorkers()
 	drainThreads()
 	metrics.Shutdown()
@@ -372,6 +378,7 @@ func Shutdown() {
 		_ = os.RemoveAll(EmbeddedAppPath)
 	}
 
+	isRunning = false
 	logger.Debug("FrankenPHP shut down")
 }
 

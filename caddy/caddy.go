@@ -6,6 +6,7 @@ package caddy
 import (
 	"encoding/json"
 	"errors"
+	"flag"
 	"fmt"
 	"github.com/dunglas/frankenphp/internal/fastabs"
 	"github.com/prometheus/client_golang/prometheus"
@@ -40,21 +41,7 @@ func init() {
 	httpcaddyfile.RegisterDirectiveOrder("php_server", "before", "file_server")
 }
 
-type mainPHPinterpreterKeyType int
-
-var mainPHPInterpreterKey mainPHPinterpreterKeyType
-
-var phpInterpreter = caddy.NewUsagePool()
-
 var metrics = frankenphp.NewPrometheusMetrics(prometheus.DefaultRegisterer)
-
-type phpInterpreterDestructor struct{}
-
-func (phpInterpreterDestructor) Destruct() error {
-	frankenphp.Shutdown()
-
-	return nil
-}
 
 type workerConfig struct {
 	// FileName sets the path to the worker script.
@@ -91,22 +78,9 @@ func (f *FrankenPHPApp) Start() error {
 		opts = append(opts, frankenphp.WithWorkers(repl.ReplaceKnown(w.FileName, ""), w.Num, w.Env, w.Watch))
 	}
 
-	_, loaded, err := phpInterpreter.LoadOrNew(mainPHPInterpreterKey, func() (caddy.Destructor, error) {
-		if err := frankenphp.Init(opts...); err != nil {
-			return nil, err
-		}
-
-		return phpInterpreterDestructor{}, nil
-	})
-	if err != nil {
+	frankenphp.Shutdown()
+	if err := frankenphp.Init(opts...); err != nil {
 		return err
-	}
-
-	if loaded {
-		frankenphp.Shutdown()
-		if err := frankenphp.Init(opts...); err != nil {
-			return err
-		}
 	}
 
 	return nil
@@ -114,6 +88,12 @@ func (f *FrankenPHPApp) Start() error {
 
 func (f *FrankenPHPApp) Stop() error {
 	caddy.Log().Info("FrankenPHP stopped 🐘")
+
+	// attempt a graceful shutdown if we are not running tests
+	if flag.Lookup("test.v") == nil {
+		frankenphp.Shutdown()
+	}
+
 	// reset configuration so it doesn't bleed into later tests
 	f.Workers = nil
 	f.NumThreads = 0
