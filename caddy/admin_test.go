@@ -154,11 +154,14 @@ func TestShowTheCorrectThreadDebugStatus(t *testing.T) {
 		}
 		`, "caddyfile")
 
+	// should create a 'worker-with-counter.php' thread at index 6
 	assertAdminResponse(tester, "PUT", "threads?worker=counter.php", http.StatusOK, "")
+	// should remove the 'index.php' worker thread at index 5
 	assertAdminResponse(tester, "DELETE", "threads?worker=index.php", http.StatusOK, "")
+	// should remove a regular thread at index 1
 	assertAdminResponse(tester, "DELETE", "threads", http.StatusOK, "")
 
-	// assert that all threads are in the right state via debug message
+	// confirm that the threads are in the expected state
 	assertAdminResponse(
 		tester,
 		"GET",
