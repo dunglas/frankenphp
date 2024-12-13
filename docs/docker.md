@@ -149,7 +149,7 @@ Here is a sample `Dockerfile` doing this:
 ```dockerfile
 FROM dunglas/frankenphp
 
-ARG USER=www-data
+ARG USER=appuser
 
 RUN \
 	# Use "adduser -D ${USER}" for alpine based distros
@@ -173,7 +173,7 @@ the webserver as a non-root user, and without the need for any capability:
 ```dockerfile
 FROM dunglas/frankenphp
 
-ARG USER=www-data
+ARG USER=appuser
 
 RUN \
 	# Use "adduser -D ${USER}" for alpine based distros
