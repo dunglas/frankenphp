@@ -5,8 +5,7 @@ import (
 	"fmt"
 )
 
-// exposed logic for safely scaling threads
-
+// turn the first inactive/reserved thread into a regular thread
 func AddRegularThread() (int, error) {
 	thread := getInactivePHPThread()
 	if thread == nil {
@@ -16,6 +15,7 @@ func AddRegularThread() (int, error) {
 	return countRegularThreads(), nil
 }
 
+// remove the last regular thread
 func RemoveRegularThread() (int, error) {
 	regularThreadMu.RLock()
 	if len(regularThreads) <= 1 {
@@ -28,6 +28,7 @@ func RemoveRegularThread() (int, error) {
 	return countRegularThreads(), nil
 }
 
+// turn the first inactive/reserved thread into a worker thread
 func AddWorkerThread(workerFileName string) (int, error) {
 	worker, ok := workers[workerFileName]
 	if !ok {
@@ -42,6 +43,7 @@ func AddWorkerThread(workerFileName string) (int, error) {
 	return worker.countThreads(), nil
 }
 
+// remove the last worker thread
 func RemoveWorkerThread(workerFileName string) (int, error) {
 	worker, ok := workers[workerFileName]
 	if !ok {
