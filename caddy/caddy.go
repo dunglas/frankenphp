@@ -6,7 +6,6 @@ package caddy
 import (
 	"encoding/json"
 	"errors"
-	"flag"
 	"fmt"
 	"github.com/dunglas/frankenphp/internal/fastabs"
 	"github.com/prometheus/client_golang/prometheus"
@@ -89,8 +88,10 @@ func (f *FrankenPHPApp) Start() error {
 func (f *FrankenPHPApp) Stop() error {
 	caddy.Log().Info("FrankenPHP stopped 🐘")
 
-	// attempt a graceful shutdown if we are not running tests
-	if flag.Lookup("test.v") == nil {
+	// attempt a graceful shutdown if caddy is exiting
+	// note: Exiting() is currently marked as 'experimental'
+	// https://github.com/caddyserver/caddy/blob/e76405d55058b0a3e5ba222b44b5ef00516116aa/caddy.go#L810
+	if caddy.Exiting() {
 		frankenphp.Shutdown()
 	}
 
