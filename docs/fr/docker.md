@@ -142,11 +142,11 @@ Voici un exemple de `Dockerfile` le permettant :
 ```dockerfile
 FROM dunglas/frankenphp
 
-ARG USER=www-data
+ARG USER=appuser
 
 RUN \
 	# Utilisez "adduser -D ${USER}" pour les distributions basées sur Alpine
-	useradd -D ${USER}; \
+	useradd ${USER}; \
 	# Ajouter la capacité supplémentaire de se lier aux ports 80 et 443
 	setcap CAP_NET_BIND_SERVICE=+eip /usr/local/bin/frankenphp; \
 	# Donner l'accès en écriture à /data/caddy et /config/caddy
@@ -165,11 +165,11 @@ Si vous exposez FrankenPHP sur un port non privilégié (à partir de 1024), il 
 ```dockerfile
 FROM dunglas/frankenphp
 
-ARG USER=www-data
+ARG USER=appuser
 
 RUN
 	# Utiliser "adduser -D ${USER}" pour les distros basées sur Alpine
-	useradd -D ${USER};
+	useradd ${USER};
 	# Supprimer la capacité par défaut
 	setcap -r /usr/local/bin/frankenphp; \
 	# Donner un accès en écriture à /data/caddy et /config/caddy
