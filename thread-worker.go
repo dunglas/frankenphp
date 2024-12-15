@@ -151,6 +151,8 @@ func (handler *workerThread) waitForWorkerRequest() bool {
 		metrics.ReadyWorker(handler.worker.fileName)
 	}
 
+	handler.thread.waitingSince = time.Now().UnixMilli()
+
 	var r *http.Request
 	select {
 	case <-handler.thread.drainChan:
@@ -170,6 +172,7 @@ func (handler *workerThread) waitForWorkerRequest() bool {
 	}
 
 	handler.workerRequest = r
+	handler.thread.waitingSince = 0
 
 	if c := logger.Check(zapcore.DebugLevel, "request handling started"); c != nil {
 		c.Write(zap.String("worker", handler.worker.fileName), zap.String("url", r.RequestURI))

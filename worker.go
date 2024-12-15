@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/dunglas/frankenphp/internal/watcher"
+	//"go.uber.org/zap"
 )
 
 // represents a worker script and can have many threads assigned to it
@@ -178,8 +179,13 @@ func (worker *worker) handleRequest(r *http.Request, fc *FrankenPHPContext) {
 	worker.threadMutex.RUnlock()
 
 	// if no thread was available, fan the request out to all threads
-	// TODO: theoretically there could be autoscaling of threads here
+	stalledAt := time.Now()
 	worker.requestChan <- r
+	stallTime := time.Since(stalledAt).Microseconds()
 	<-fc.done
 	metrics.StopWorkerRequest(worker.fileName, time.Since(fc.startedAt))
+
+	// reaching here means we might not have spawned enough threads
+	// forward the % of time we spent being stalled to scale.go
+	requestNewWorkerThread(worker, stallTime, time.Since(stalledAt).Microseconds())
 }

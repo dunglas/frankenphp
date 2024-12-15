@@ -16,7 +16,6 @@ import (
 // identified by the index in the phpThreads slice
 type phpThread struct {
 	runtime.Pinner
-
 	threadIndex       int
 	knownVariableKeys map[string]*C.zend_string
 	requestChan       chan *http.Request
@@ -24,6 +23,8 @@ type phpThread struct {
 	handlerMu         *sync.Mutex
 	handler           threadHandler
 	state             *threadState
+	waitingSince      int64
+	isProtected       bool
 }
 
 // interface that defines how the callbacks from the C thread should be handled
@@ -117,7 +118,7 @@ func (thread *phpThread) debugStatus() string {
 		threadType = " Regular PHP Thread"
 	}
 	thread.handlerMu.Unlock()
-	return fmt.Sprintf("Thread %d (%s)%s", thread.threadIndex, thread.state.name(), threadType)
+	return fmt.Sprintf("Thread %d (%s for %dms)%s", thread.threadIndex, thread.state.name(), thread.waitingSince, threadType)
 }
 
 // Pin a string that is not null-terminated
