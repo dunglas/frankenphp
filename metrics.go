@@ -11,6 +11,7 @@ import (
 
 var metricsNameRegex = regexp.MustCompile(`\W+`)
 var metricsNameFixRegex = regexp.MustCompile(`^_+|_+$`)
+var versionString = "dev"
 
 const (
 	StopReasonCrash = iota
@@ -85,6 +86,7 @@ type PrometheusMetrics struct {
 	workerRestarts     map[string]prometheus.Counter
 	workerRequestTime  map[string]prometheus.Counter
 	workerRequestCount map[string]prometheus.Counter
+	version            *prometheus.GaugeVec
 	mu                 sync.Mutex
 }
 
@@ -292,6 +294,8 @@ func (m *PrometheusMetrics) Shutdown() {
 	m.workerCrashes = map[string]prometheus.Counter{}
 	m.readyWorkers = map[string]prometheus.Gauge{}
 
+	// version does not change while running/restarting/stopping
+
 	m.registry.MustRegister(m.totalThreads)
 	m.registry.MustRegister(m.busyThreads)
 }
@@ -325,7 +329,14 @@ func NewPrometheusMetrics(registry prometheus.Registerer) *PrometheusMetrics {
 		workerRestarts:     map[string]prometheus.Counter{},
 		workerCrashes:      map[string]prometheus.Counter{},
 		readyWorkers:       map[string]prometheus.Gauge{},
+		version: prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: "frankenphp_version",
+			Help: "Current version of FrankenPHP",
+		}, []string{"version", "php_version"}),
 	}
+
+	m.registry.MustRegister(m.version)
+	m.version.WithLabelValues(versionString, Version().Version).Set(1)
 
 	m.registry.MustRegister(m.totalThreads)
 	m.registry.MustRegister(m.busyThreads)
