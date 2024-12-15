@@ -118,14 +118,10 @@ func handleRequestWithRegularPHPThreads(r *http.Request, fc *FrankenPHPContext) 
 	regularThreadMu.RUnlock()
 
 	// if no thread was available, fan out to all threads
-	var stallTime time.Duration
 	stalledSince := time.Now()
-	select {
-	case <-mainThread.done:
-	case regularRequestChan <- r:
-		stallTime = time.Since(stalledSince)
-		<-fc.done
-	}
+	regularRequestChan <- r
+	stallTime := time.Since(stalledSince)
+	<-fc.done
 	metrics.StopRequest()
 	autoscaleRegularThreads(stallTime)
 }
