@@ -146,6 +146,7 @@ func tearDownWorkerScript(handler *workerThread, exitStatus int) {
 func (handler *workerThread) waitForWorkerRequest() bool {
 	// unpin any memory left over from previous requests
 	handler.thread.Unpin()
+	handler.state.markAsWaiting(true)
 
 	if c := logger.Check(zapcore.DebugLevel, "waiting for request"); c != nil {
 		c.Write(zap.String("worker", handler.worker.fileName))
@@ -154,8 +155,6 @@ func (handler *workerThread) waitForWorkerRequest() bool {
 	if handler.state.compareAndSwap(stateTransitionComplete, stateReady) {
 		metrics.ReadyWorker(handler.worker.fileName)
 	}
-
-	handler.thread.waitingSince = time.Now().UnixMilli()
 
 	var r *http.Request
 	select {
@@ -176,7 +175,7 @@ func (handler *workerThread) waitForWorkerRequest() bool {
 	}
 
 	handler.workerRequest = r
-	handler.thread.waitingSince = 0
+	handler.state.markAsWaiting(false)
 
 	if c := logger.Check(zapcore.DebugLevel, "request handling started"); c != nil {
 		c.Write(zap.String("worker", handler.worker.fileName), zap.String("url", r.RequestURI))

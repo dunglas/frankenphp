@@ -163,13 +163,14 @@ func downScaleThreads() {
 			autoScaledThreads = append(autoScaledThreads[:i], autoScaledThreads[i+1:]...)
 			continue
 		}
-		if stoppedThreadCount > maxTerminationCount || thread.waitingSince == 0 {
+
+		waitTime := thread.state.waitTime()
+		if stoppedThreadCount > maxTerminationCount || waitTime == 0 {
 			continue
 		}
 
 		// convert threads to inactive if they have been idle for too long
-		threadIdleTime := time.Now().UnixMilli() - thread.waitingSince
-		if thread.state.is(stateReady) && threadIdleTime > maxThreadIdleTime.Milliseconds() {
+		if thread.state.is(stateReady) && waitTime > maxThreadIdleTime.Milliseconds() {
 			logger.Debug("auto-converting thread to inactive", zap.Int("threadIndex", thread.threadIndex))
 			convertToInactiveThread(thread)
 			stoppedThreadCount++
@@ -178,7 +179,7 @@ func downScaleThreads() {
 		}
 
 		// if threads are already inactive, shut them down
-		if thread.state.is(stateInactive) && threadIdleTime > maxThreadIdleTime.Milliseconds() {
+		if thread.state.is(stateInactive) && waitTime > maxThreadIdleTime.Milliseconds() {
 			logger.Debug("auto-stopping thread", zap.Int("threadIndex", thread.threadIndex))
 			thread.shutdown()
 			stoppedThreadCount++

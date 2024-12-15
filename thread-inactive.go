@@ -2,7 +2,6 @@ package frankenphp
 
 import (
 	"net/http"
-	"time"
 )
 
 // representation of a thread with no work assigned to it
@@ -25,9 +24,11 @@ func (handler *inactiveThread) beforeScriptExecution() string {
 		return thread.transitionToNewHandler()
 	case stateBooting, stateTransitionComplete:
 		thread.state.set(stateInactive)
-		thread.waitingSince = time.Now().UnixMilli()
+
 		// wait for external signal to start or shut down
+		thread.state.markAsWaiting(true)
 		thread.state.waitFor(stateTransitionRequested, stateShuttingDown)
+		thread.state.markAsWaiting(false)
 		return handler.beforeScriptExecution()
 	case stateShuttingDown:
 		// signal to stop

@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"runtime"
 	"sync"
-	"time"
 	"unsafe"
 
 	"go.uber.org/zap"
@@ -24,7 +23,6 @@ type phpThread struct {
 	handlerMu         *sync.Mutex
 	handler           threadHandler
 	state             *threadState
-	waitingSince      int64
 	isProtected       bool
 }
 
@@ -112,11 +110,10 @@ func (thread *phpThread) getActiveRequest() *http.Request {
 // small status message for debugging
 func (thread *phpThread) debugStatus() string {
 	waitingSinceMessage := ""
-	thread.handlerMu.Lock()
-	if thread.waitingSince > 0 {
-		waitingSinceMessage = fmt.Sprintf(" waiting for %dms", time.Now().UnixMilli()-thread.waitingSince)
+	waitTime := thread.state.waitTime()
+	if waitTime > 0 {
+		waitingSinceMessage = fmt.Sprintf(" waiting for %dms", waitTime)
 	}
-	thread.handlerMu.Unlock()
 	return fmt.Sprintf("Thread %d (%s%s) %s", thread.threadIndex, thread.state.name(), waitingSinceMessage, thread.handler.name())
 }
 

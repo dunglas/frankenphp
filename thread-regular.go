@@ -64,6 +64,8 @@ func (handler *regularThread) name() string {
 }
 
 func (handler *regularThread) waitForRequest() string {
+	handler.state.markAsWaiting(true)
+
 	var r *http.Request
 	select {
 	case <-handler.thread.drainChan:
@@ -75,6 +77,7 @@ func (handler *regularThread) waitForRequest() string {
 	}
 
 	handler.activeRequest = r
+	handler.state.markAsWaiting(false)
 	fc := r.Context().Value(contextKey).(*FrankenPHPContext)
 
 	if err := updateServerContext(handler.thread, r, true, false); err != nil {

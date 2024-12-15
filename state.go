@@ -3,6 +3,7 @@ package frankenphp
 import (
 	"slices"
 	"sync"
+	"time"
 )
 
 type stateID uint8
@@ -46,6 +47,7 @@ type threadState struct {
 	currentState stateID
 	mu           sync.RWMutex
 	subscribers  []stateSubscriber
+	waitingSince int64
 }
 
 type stateSubscriber struct {
@@ -98,6 +100,28 @@ func (ts *threadState) set(nextState stateID) {
 	ts.currentState = nextState
 	ts.notifySubscribers(nextState)
 	ts.mu.Unlock()
+}
+
+// the thread reached a stable state and is waiting
+func (ts *threadState) markAsWaiting(isWaiting bool) {
+	ts.mu.Lock()
+	if isWaiting {
+		ts.waitingSince = time.Now().UnixMilli()
+	} else {
+		ts.waitingSince = 0
+	}
+	ts.mu.Unlock()
+}
+
+// the time since the thread is waiting in a stable state (for request/activation)
+func (ts *threadState) waitTime() int64 {
+	ts.mu.RLock()
+	var waitTime int64 = 0
+	if ts.waitingSince != 0 {
+		waitTime = time.Now().UnixMilli() - ts.waitingSince
+	}
+	ts.mu.RUnlock()
+	return waitTime
 }
 
 func (ts *threadState) notifySubscribers(nextState stateID) {
