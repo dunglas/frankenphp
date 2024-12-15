@@ -460,6 +460,10 @@ func TestWorkerMetrics(t *testing.T) {
 	# HELP frankenphp_testdata_index_php_worker_restarts Number of PHP worker restarts for this worker
 	# TYPE frankenphp_testdata_index_php_worker_restarts counter
 	frankenphp_testdata_index_php_worker_restarts 0
+
+	# HELP frankenphp_version Current version of FrankenPHP
+	# TYPE frankenphp_version gauge
+	frankenphp_version{php_version="` + frankenphp.Version().Version + `",version="dev"} 1
 	`
 
 	require.NoError(t,
@@ -474,6 +478,7 @@ func TestWorkerMetrics(t *testing.T) {
 			"frankenphp_testdata_index_php_worker_crashes",
 			"frankenphp_testdata_index_php_worker_restarts",
 			"frankenphp_testdata_index_php_ready_workers",
+			"frankenphp_version",
 		))
 }
 

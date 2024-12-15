@@ -11,5 +11,6 @@ When [Caddy metrics](https://caddyserver.com/docs/metrics) are enabled, FrankenP
 * `frankenphp_[worker]_worker_restarts`: The number of times a worker has been deliberately restarted.
 * `frankenphp_total_threads`: The total number of PHP threads.
 * `frankenphp_busy_threads`: The number of PHP threads currently processing a request (running workers always consume a thread).
+* `frankenphp_version`: The current version of FrankenPHP and PHP as a label.
 
 For worker metrics, the `[worker]` placeholder is replaced by the worker script path in the Caddyfile.
