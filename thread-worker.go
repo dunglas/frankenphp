@@ -70,6 +70,10 @@ func (handler *workerThread) getActiveRequest() *http.Request {
 	return handler.fakeRequest
 }
 
+func (handler *workerThread) name() string {
+	return "Worker PHP Thread - " + handler.worker.fileName
+}
+
 func setupWorkerScript(handler *workerThread, worker *worker) {
 	handler.backoff.wait()
 	metrics.StartWorker(worker.fileName)

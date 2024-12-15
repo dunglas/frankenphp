@@ -58,6 +58,10 @@ func (handler *regularThread) getActiveRequest() *http.Request {
 	return handler.activeRequest
 }
 
+func (handler *regularThread) name() string {
+	return "Regular PHP Thread"
+}
+
 func (handler *regularThread) waitForRequest() string {
 	var r *http.Request
 	select {

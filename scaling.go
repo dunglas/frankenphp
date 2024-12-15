@@ -3,7 +3,6 @@ package frankenphp
 import (
 	"errors"
 	"fmt"
-	"runtime"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -11,22 +10,36 @@ import (
 	"go.uber.org/zap"
 )
 
+const (
+	// only allow scaling threads if they were stalled longer than this time
+	allowedStallTime = 10 * time.Millisecond
+	// time to wait after scaling a thread to prevent scaling too fast
+	scaleBlockTime = 100 * time.Millisecond
+	// time to wait between checking for idle threads
+	downScaleCheckTime = 5 * time.Second
+	// max time a thread can be idle before being stopped or converted to inactive
+	maxThreadIdleTime = 5 * time.Second
+	// amount of threads that can be stopped in one downScaleCheckTime iteration
+	amountOfThreadsStoppedAtOnce = 10
+)
+
 var scalingMu = new(sync.RWMutex)
 var isAutoScaling = atomic.Bool{}
-var cpuCount = runtime.NumCPU()
 
 func initAutoScaling() {
-	return
-	timer := time.NewTimer(5 * time.Second)
-	for {
-		timer.Reset(5 * time.Second)
-		select {
-		case <-mainThread.done:
-			return
-		case <-timer.C:
-			autoScaleThreads()
+	timer := time.NewTimer(downScaleCheckTime)
+	doneChan := mainThread.done
+	go func() {
+		for {
+			timer.Reset(downScaleCheckTime)
+			select {
+			case <-doneChan:
+				return
+			case <-timer.C:
+				stopIdleThreads()
+			}
 		}
-	}
+	}()
 }
 
 // turn the first inactive/reserved thread into a regular thread
@@ -94,59 +107,42 @@ func RemoveWorkerThread(workerFileName string) (int, error) {
 	return worker.countThreads(), nil
 }
 
-var averageStallPercent float64 = 0.0
-var stallMu = new(sync.Mutex)
-var stallTime = 0
-
-const minStallTimeMicroseconds = 10_000
-
-func requestNewWorkerThread(worker *worker, timeSpentStalling int64, timeSpentTotal int64) {
+// worker thread autoscaling
+func requestNewWorkerThread(worker *worker, timeSpentStalling time.Duration) {
 	// ignore requests that have been stalled for an acceptable amount of time
-	if timeSpentStalling < minStallTimeMicroseconds {
-		return
-	}
-	// percent of time the request spent waiting for a thread
-	stalledThisRequest := float64(timeSpentStalling) / float64(timeSpentTotal)
-
-	// weigh the change to the average stall-time by the amount of handling threads
-	numWorkers := float64(worker.countThreads())
-	stallMu.Lock()
-	averageStallPercent = (averageStallPercent*(numWorkers-1.0) + stalledThisRequest) / numWorkers
-	stallMu.Unlock()
-
-	// if we are only being stalled by a small amount, do not scale
-	//logger.Info("stalling", zap.Float64("percent", averageStallPercent))
-	if averageStallPercent < 0.66 {
+	if timeSpentStalling < allowedStallTime || !isAutoScaling.CompareAndSwap(false, true) {
 		return
 	}
 
-	// prevent multiple auto-scaling attempts
-	if !isAutoScaling.CompareAndSwap(false, true) {
-		return
-	}
+	count, err := AddWorkerThread(worker.fileName)
 
-	logger.Debug("scaling up worker thread", zap.String("worker", worker.fileName))
-
-	// it does not matter here if adding a thread is successful or not
-	_, _ = AddWorkerThread(worker.fileName)
+	logger.Debug("worker thread autoscaling", zap.String("worker", worker.fileName), zap.Int("count", count), zap.Error(err))
 
 	// wait a bit to prevent spending too much time on scaling
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(scaleBlockTime)
 	isAutoScaling.Store(false)
 }
 
-func autoScaleThreads() {
+func stopIdleThreads() {
+	stoppedThreadCount := 0
 	for i := len(phpThreads) - 1; i >= 0; i-- {
 		thread := phpThreads[i]
-		if thread.isProtected {
+		if stoppedThreadCount > amountOfThreadsStoppedAtOnce || thread.isProtected || thread.waitingSince == 0 {
 			continue
 		}
-		if thread.state.is(stateReady) && time.Now().UnixMilli()-thread.waitingSince > 5000 {
+		waitingMilliseconds := time.Now().UnixMilli() - thread.waitingSince
+
+		// convert threads to inactive first
+		if thread.state.is(stateReady) && waitingMilliseconds > maxThreadIdleTime.Milliseconds() {
 			convertToInactiveThread(thread)
+			stoppedThreadCount++
 			continue
 		}
-		if thread.state.is(stateInactive) && time.Now().UnixMilli()-thread.waitingSince > 5000 {
+
+		// if threads are already inactive, shut them down
+		if thread.state.is(stateInactive) && waitingMilliseconds > maxThreadIdleTime.Milliseconds() {
 			thread.shutdown()
+			stoppedThreadCount++
 			continue
 		}
 	}

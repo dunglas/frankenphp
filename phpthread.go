@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"runtime"
 	"sync"
+	"time"
 	"unsafe"
 
 	"go.uber.org/zap"
@@ -29,6 +30,7 @@ type phpThread struct {
 
 // interface that defines how the callbacks from the C thread should be handled
 type threadHandler interface {
+	name() string
 	beforeScriptExecution() string
 	afterScriptExecution(exitStatus int)
 	getActiveRequest() *http.Request
@@ -109,16 +111,13 @@ func (thread *phpThread) getActiveRequest() *http.Request {
 
 // small status message for debugging
 func (thread *phpThread) debugStatus() string {
-	threadType := ""
+	waitingSinceMessage := ""
 	thread.handlerMu.Lock()
-	// TODO: this can also be put into the handler interface if required elsewhere
-	if handler, ok := thread.handler.(*workerThread); ok {
-		threadType = " Worker PHP Thread - " + handler.worker.fileName
-	} else if _, ok := thread.handler.(*regularThread); ok {
-		threadType = " Regular PHP Thread"
+	if thread.waitingSince > 0 {
+		waitingSinceMessage = fmt.Sprintf(" waiting for %dms", time.Now().UnixMilli()-thread.waitingSince)
 	}
 	thread.handlerMu.Unlock()
-	return fmt.Sprintf("Thread %d (%s for %dms)%s", thread.threadIndex, thread.state.name(), thread.waitingSince, threadType)
+	return fmt.Sprintf("Thread %d (%s%s)%s", thread.threadIndex, thread.state.name(), waitingSinceMessage, thread.handler.name())
 }
 
 // Pin a string that is not null-terminated

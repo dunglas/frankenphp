@@ -92,6 +92,10 @@ func drainWorkers() {
 }
 
 func RestartWorkers() {
+	// disallow scaling threads while restarting workers
+	scalingMu.Lock()
+	defer scalingMu.Unlock()
+
 	ready := sync.WaitGroup{}
 	threadsToRestart := make([]*phpThread, 0)
 	for _, worker := range workers {
@@ -99,7 +103,8 @@ func RestartWorkers() {
 		ready.Add(len(worker.threads))
 		for _, thread := range worker.threads {
 			if !thread.state.requestSafeStateChange(stateRestarting) {
-				// no state change allowed = shutdown
+				// no state change allowed == thread is shutting down
+				// we'll proceed to restart all other threads anyways
 				continue
 			}
 			close(thread.drainChan)
@@ -181,11 +186,11 @@ func (worker *worker) handleRequest(r *http.Request, fc *FrankenPHPContext) {
 	// if no thread was available, fan the request out to all threads
 	stalledAt := time.Now()
 	worker.requestChan <- r
-	stallTime := time.Since(stalledAt).Microseconds()
+	stallTime := time.Since(stalledAt)
 	<-fc.done
 	metrics.StopWorkerRequest(worker.fileName, time.Since(fc.startedAt))
 
 	// reaching here means we might not have spawned enough threads
-	// forward the % of time we spent being stalled to scale.go
-	requestNewWorkerThread(worker, stallTime, time.Since(stalledAt).Microseconds())
+	// forward the amount of time the request spent being stalled
+	requestNewWorkerThread(worker, stallTime)
 }
