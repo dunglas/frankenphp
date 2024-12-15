@@ -349,7 +349,7 @@ func Init(options ...Option) error {
 	}
 
 	if c := logger.Check(zapcore.InfoLevel, "FrankenPHP started 🐘"); c != nil {
-		c.Write(zap.String("php_version", Version().Version), zap.Int("num_threads", opt.numThreads))
+		c.Write(zap.String("php_version", Version().Version), zap.Int("num_threads", opt.numThreads), zap.String("frankenphp_version", VersionString))
 	}
 	if EmbeddedAppPath != "" {
 		if c := logger.Check(zapcore.InfoLevel, "embedded PHP app 📦"); c != nil {

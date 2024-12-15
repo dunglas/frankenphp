@@ -11,7 +11,7 @@ import (
 
 var metricsNameRegex = regexp.MustCompile(`\W+`)
 var metricsNameFixRegex = regexp.MustCompile(`^_+|_+$`)
-var versionString = "dev"
+var VersionString = "dev"
 
 const (
 	StopReasonCrash = iota
@@ -336,7 +336,7 @@ func NewPrometheusMetrics(registry prometheus.Registerer) *PrometheusMetrics {
 	}
 
 	m.registry.MustRegister(m.version)
-	m.version.WithLabelValues(versionString, Version().Version).Set(1)
+	m.version.WithLabelValues(VersionString, Version().Version).Set(1)
 
 	m.registry.MustRegister(m.totalThreads)
 	m.registry.MustRegister(m.busyThreads)

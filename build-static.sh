@@ -271,7 +271,7 @@ fi
 
 cd caddy/frankenphp/
 go env
-go build -buildmode=pie -tags "cgo,netgo,osusergo,static_build,nobadger,nomysql,nopgx" -ldflags "-linkmode=external -extldflags '-static-pie ${extraExtldflags}' ${extraLdflags} -X 'github.com/dunglas/frankenphp/versionString=${FRANKENPHP_VERSION}' -X 'github.com/caddyserver/caddy/v2.CustomVersion=FrankenPHP ${FRANKENPHP_VERSION} PHP ${LIBPHP_VERSION} Caddy'" -o "../../dist/${bin}"
+go build -buildmode=pie -tags "cgo,netgo,osusergo,static_build,nobadger,nomysql,nopgx" -ldflags "-linkmode=external -extldflags '-static-pie ${extraExtldflags}' ${extraLdflags} -X 'github.com/dunglas/frankenphp.VersionString=${FRANKENPHP_VERSION}' -X 'github.com/caddyserver/caddy/v2.CustomVersion=FrankenPHP ${FRANKENPHP_VERSION} PHP ${LIBPHP_VERSION} Caddy'" -o "../../dist/${bin}"
 cd ../..
 
 if [ -d "${EMBED}" ]; then
