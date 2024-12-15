@@ -117,7 +117,7 @@ func (thread *phpThread) debugStatus() string {
 		waitingSinceMessage = fmt.Sprintf(" waiting for %dms", time.Now().UnixMilli()-thread.waitingSince)
 	}
 	thread.handlerMu.Unlock()
-	return fmt.Sprintf("Thread %d (%s%s)%s", thread.threadIndex, thread.state.name(), waitingSinceMessage, thread.handler.name())
+	return fmt.Sprintf("Thread %d (%s%s) %s", thread.threadIndex, thread.state.name(), waitingSinceMessage, thread.handler.name())
 }
 
 // Pin a string that is not null-terminated

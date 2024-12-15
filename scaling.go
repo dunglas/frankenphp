@@ -11,36 +11,23 @@ import (
 )
 
 const (
-	// only allow scaling threads if they were stalled longer than this time
+	// only allow scaling threads if requests were stalled for longer than this time
 	allowedStallTime = 10 * time.Millisecond
-	// time to wait after scaling a thread to prevent scaling too fast
+	// time to wait after scaling a thread to prevent spending too many resources on scaling
 	scaleBlockTime = 100 * time.Millisecond
-	// time to wait between checking for idle threads
+	// check for and stop idle threads every x seconds
 	downScaleCheckTime = 5 * time.Second
-	// max time a thread can be idle before being stopped or converted to inactive
+	// if an autoscaled thread has been waiting for longer than this time, terminate it
 	maxThreadIdleTime = 5 * time.Second
-	// amount of threads that can be stopped in one downScaleCheckTime iteration
-	amountOfThreadsStoppedAtOnce = 10
+	// amount of threads that can be stopped at once
+	maxTerminationCount = 10
 )
 
-var scalingMu = new(sync.RWMutex)
-var isAutoScaling = atomic.Bool{}
-
-func initAutoScaling() {
-	timer := time.NewTimer(downScaleCheckTime)
-	doneChan := mainThread.done
-	go func() {
-		for {
-			timer.Reset(downScaleCheckTime)
-			select {
-			case <-doneChan:
-				return
-			case <-timer.C:
-				stopIdleThreads()
-			}
-		}
-	}()
-}
+var (
+	autoScaledThreads = []*phpThread{}
+	scalingMu         = new(sync.RWMutex)
+	isAutoScaling     = atomic.Bool{}
+)
 
 // turn the first inactive/reserved thread into a regular thread
 func AddRegularThread() (int, error) {
@@ -107,14 +94,35 @@ func RemoveWorkerThread(workerFileName string) (int, error) {
 	return worker.countThreads(), nil
 }
 
-// worker thread autoscaling
-func requestNewWorkerThread(worker *worker, timeSpentStalling time.Duration) {
-	// ignore requests that have been stalled for an acceptable amount of time
+func initAutoScaling() {
+	autoScaledThreads = []*phpThread{}
+	isAutoScaling.Store(false)
+	timer := time.NewTimer(downScaleCheckTime)
+	doneChan := mainThread.done
+	go func() {
+		for {
+			timer.Reset(downScaleCheckTime)
+			select {
+			case <-doneChan:
+				return
+			case <-timer.C:
+				downScaleThreads()
+			}
+		}
+	}()
+}
+
+// Add worker PHP threads automatically
+// only add threads if requests were stalled long enough and no other scaling is in progress
+func autoscaleWorkerThreads(worker *worker, timeSpentStalling time.Duration) {
 	if timeSpentStalling < allowedStallTime || !isAutoScaling.CompareAndSwap(false, true) {
 		return
 	}
 
 	count, err := AddWorkerThread(worker.fileName)
+	worker.threadMutex.RLock()
+	autoScaledThreads = append(autoScaledThreads, worker.threads[len(worker.threads)-1])
+	worker.threadMutex.RUnlock()
 
 	logger.Debug("worker thread autoscaling", zap.String("worker", worker.fileName), zap.Int("count", count), zap.Error(err))
 
@@ -123,24 +131,55 @@ func requestNewWorkerThread(worker *worker, timeSpentStalling time.Duration) {
 	isAutoScaling.Store(false)
 }
 
-func stopIdleThreads() {
+// Add regular PHP threads automatically
+// only add threads if requests were stalled long enough and no other scaling is in progress
+func autoscaleRegularThreads(timeSpentStalling time.Duration) {
+	if timeSpentStalling < allowedStallTime || !isAutoScaling.CompareAndSwap(false, true) {
+		return
+	}
+
+	count, err := AddRegularThread()
+
+	regularThreadMu.RLock()
+	autoScaledThreads = append(autoScaledThreads, regularThreads[len(regularThreads)-1])
+	regularThreadMu.RUnlock()
+
+	logger.Debug("regular thread autoscaling", zap.Int("count", count), zap.Error(err))
+
+	// wait a bit to prevent spending too much time on scaling
+	time.Sleep(scaleBlockTime)
+	isAutoScaling.Store(false)
+}
+
+func downScaleThreads() {
 	stoppedThreadCount := 0
-	for i := len(phpThreads) - 1; i >= 0; i-- {
-		thread := phpThreads[i]
-		if stoppedThreadCount > amountOfThreadsStoppedAtOnce || thread.isProtected || thread.waitingSince == 0 {
+	scalingMu.Lock()
+	defer scalingMu.Unlock()
+	for i := len(autoScaledThreads) - 1; i >= 0; i-- {
+		thread := autoScaledThreads[i]
+
+		// remove the thread if it's reserved
+		if thread.state.is(stateReserved) {
+			autoScaledThreads = append(autoScaledThreads[:i], autoScaledThreads[i+1:]...)
 			continue
 		}
-		waitingMilliseconds := time.Now().UnixMilli() - thread.waitingSince
+		if stoppedThreadCount > maxTerminationCount || thread.waitingSince == 0 {
+			continue
+		}
 
-		// convert threads to inactive first
-		if thread.state.is(stateReady) && waitingMilliseconds > maxThreadIdleTime.Milliseconds() {
+		// convert threads to inactive if they have been idle for too long
+		threadIdleTime := time.Now().UnixMilli() - thread.waitingSince
+		if thread.state.is(stateReady) && threadIdleTime > maxThreadIdleTime.Milliseconds() {
+			logger.Debug("auto-converting thread to inactive", zap.Int("threadIndex", thread.threadIndex))
 			convertToInactiveThread(thread)
 			stoppedThreadCount++
+
 			continue
 		}
 
 		// if threads are already inactive, shut them down
-		if thread.state.is(stateInactive) && waitingMilliseconds > maxThreadIdleTime.Milliseconds() {
+		if thread.state.is(stateInactive) && threadIdleTime > maxThreadIdleTime.Milliseconds() {
+			logger.Debug("auto-stopping thread", zap.Int("threadIndex", thread.threadIndex))
 			thread.shutdown()
 			stoppedThreadCount++
 			continue

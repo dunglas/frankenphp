@@ -192,5 +192,5 @@ func (worker *worker) handleRequest(r *http.Request, fc *FrankenPHPContext) {
 
 	// reaching here means we might not have spawned enough threads
 	// forward the amount of time the request spent being stalled
-	requestNewWorkerThread(worker, stallTime)
+	autoscaleWorkerThreads(worker, stallTime)
 }

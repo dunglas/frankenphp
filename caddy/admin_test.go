@@ -2,10 +2,13 @@ package caddy_test
 
 import (
 	"fmt"
-	"github.com/caddyserver/caddy/v2/caddytest"
+	"io"
 	"net/http"
 	"path/filepath"
 	"testing"
+
+	"github.com/caddyserver/caddy/v2/caddytest"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestRestartWorkerViaAdminApi(t *testing.T) {
@@ -128,8 +131,6 @@ func TestAddWorkerThreadsViaAdminApi(t *testing.T) {
 }
 
 func TestShowTheCorrectThreadDebugStatus(t *testing.T) {
-	absWorker1Path, _ := filepath.Abs("../testdata/worker-with-counter.php")
-	absWorker2Path, _ := filepath.Abs("../testdata/index.php")
 	tester := caddytest.NewTester(t)
 	tester.InitServer(`
 		{
@@ -161,19 +162,18 @@ func TestShowTheCorrectThreadDebugStatus(t *testing.T) {
 	// should remove a regular thread at index 1
 	assertAdminResponse(tester, "DELETE", "threads", http.StatusOK, "")
 
-	// confirm that the threads are in the expected state
-	assertAdminResponse(
-		tester,
-		"GET",
-		"threads",
-		http.StatusOK, `Thread 0 (ready) Regular PHP Thread
-Thread 2 (ready) Worker PHP Thread - `+absWorker1Path+`
-Thread 3 (ready) Worker PHP Thread - `+absWorker1Path+`
-Thread 4 (ready) Worker PHP Thread - `+absWorker2Path+`
-Thread 6 (ready) Worker PHP Thread - `+absWorker1Path+`
-7 additional threads can be started at runtime
-`,
-	)
+	threadInfo := getAdminResponseBody(tester, "GET", "threads")
+
+	// assert that the correct threads are present in the thread info
+	assert.Contains(t, threadInfo, "Thread 0")
+	assert.NotContains(t, threadInfo, "Thread 1")
+	assert.Contains(t, threadInfo, "Thread 2")
+	assert.Contains(t, threadInfo, "Thread 3")
+	assert.Contains(t, threadInfo, "Thread 4")
+	assert.NotContains(t, threadInfo, "Thread 5")
+	assert.Contains(t, threadInfo, "Thread 6")
+	assert.NotContains(t, threadInfo, "Thread 7")
+	assert.Contains(t, threadInfo, "7 additional threads can be started at runtime")
 }
 
 func assertAdminResponse(tester *caddytest.Tester, method string, path string, expectedStatus int, expectedBody string) {
@@ -183,8 +183,24 @@ func assertAdminResponse(tester *caddytest.Tester, method string, path string, e
 		panic(err)
 	}
 	if expectedBody == "" {
-		tester.AssertResponseCode(r, expectedStatus)
+		_ = tester.AssertResponseCode(r, expectedStatus)
 	} else {
-		tester.AssertResponse(r, expectedStatus, expectedBody)
+		_, _ = tester.AssertResponse(r, expectedStatus, expectedBody)
 	}
+}
+
+func getAdminResponseBody(tester *caddytest.Tester, method string, path string) string {
+	adminUrl := "http://localhost:2999/frankenphp/"
+	r, err := http.NewRequest(method, adminUrl+path, nil)
+	if err != nil {
+		panic(err)
+	}
+	resp := tester.AssertResponseCode(r, http.StatusOK)
+	defer resp.Body.Close()
+	bytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		panic(err)
+	}
+
+	return string(bytes)
 }

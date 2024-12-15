@@ -5,6 +5,7 @@ import "C"
 import (
 	"net/http"
 	"sync"
+	"time"
 )
 
 // representation of a non-worker PHP thread
@@ -113,15 +114,17 @@ func handleRequestWithRegularPHPThreads(r *http.Request, fc *FrankenPHPContext) 
 	}
 	regularThreadMu.RUnlock()
 
-	// TODO: there can be possible auto-scaling here
-
 	// if no thread was available, fan out to all threads
+	var stallTime time.Duration
+	stalledSince := time.Now()
 	select {
 	case <-mainThread.done:
 	case regularRequestChan <- r:
+		stallTime = time.Since(stalledSince)
 		<-fc.done
 	}
 	metrics.StopRequest()
+	autoscaleRegularThreads(stallTime)
 }
 
 func attachRegularThread(thread *phpThread) {
