@@ -51,7 +51,7 @@ Optionally, the number of threads to create and [worker scripts](worker.md) to s
 {
 	frankenphp {
 		num_threads <num_threads> # Sets the number of PHP threads to start. Default: 2x the number of available CPUs.
-		max_threads <num_threads> # Limits the number of additional PHP threads that can be started at runtime. Default: 2x the number of num_threads.
+		max_threads <num_threads> # Limits the number of additional PHP threads that can be started at runtime. Default: num_threads (no scaling).
 		worker {
 			file <path> # Sets the path to the worker script.
 			num <num> # Sets the number of PHP threads to start, defaults to 2x the number of available CPUs.

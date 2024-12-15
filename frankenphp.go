@@ -267,10 +267,6 @@ func calculateMaxThreads(opt *opt) (int, int, int, error) {
 		return opt.numThreads, numWorkers, opt.maxThreads, NotEnoughThreads
 	}
 
-	// default maxThreads to 2x the number of threads
-	if opt.maxThreads == 0 {
-		opt.maxThreads = 2 * opt.numThreads
-	}
 	if opt.maxThreads < opt.numThreads {
 		opt.maxThreads = opt.numThreads
 	}
@@ -353,7 +349,7 @@ func Init(options ...Option) error {
 		return err
 	}
 
-	initAutoScaling()
+	initAutoScaling(totalThreadCount, maxThreadCount)
 
 	if c := logger.Check(zapcore.InfoLevel, "FrankenPHP started 🐘"); c != nil {
 		c.Write(zap.String("php_version", Version().Version), zap.Int("num_threads", totalThreadCount))

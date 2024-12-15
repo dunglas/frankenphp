@@ -10,6 +10,7 @@ import (
 	"go.uber.org/zap"
 )
 
+// TODO: make speed of scaling dependant on CPU count?
 const (
 	// only allow scaling threads if requests were stalled for longer than this time
 	allowedStallTime = 10 * time.Millisecond
@@ -26,7 +27,7 @@ const (
 var (
 	autoScaledThreads = []*phpThread{}
 	scalingMu         = new(sync.RWMutex)
-	isAutoScaling     = atomic.Bool{}
+	blockAutoScaling  = atomic.Bool{}
 )
 
 // turn the first inactive/reserved thread into a regular thread
@@ -64,6 +65,8 @@ func AddWorkerThread(workerFileName string) (int, error) {
 	if !ok {
 		return 0, errors.New("worker not found")
 	}
+
+	// TODO: instead of starting new threads, would it make sense to convert idle ones?
 	thread := getInactivePHPThread()
 	if thread == nil {
 		count := worker.countThreads()
@@ -94,9 +97,13 @@ func RemoveWorkerThread(workerFileName string) (int, error) {
 	return worker.countThreads(), nil
 }
 
-func initAutoScaling() {
-	autoScaledThreads = []*phpThread{}
-	isAutoScaling.Store(false)
+func initAutoScaling(numThreads int, maxThreads int) {
+	if maxThreads <= numThreads {
+		blockAutoScaling.Store(true)
+		return
+	}
+	autoScaledThreads = make([]*phpThread, 0, maxThreads-numThreads)
+	blockAutoScaling.Store(false)
 	timer := time.NewTimer(downScaleCheckTime)
 	doneChan := mainThread.done
 	go func() {
@@ -113,9 +120,9 @@ func initAutoScaling() {
 }
 
 // Add worker PHP threads automatically
-// only add threads if requests were stalled long enough and no other scaling is in progress
+// Only add threads if requests were stalled long enough and no other scaling is in progress
 func autoscaleWorkerThreads(worker *worker, timeSpentStalling time.Duration) {
-	if timeSpentStalling < allowedStallTime || !isAutoScaling.CompareAndSwap(false, true) {
+	if timeSpentStalling < allowedStallTime || !blockAutoScaling.CompareAndSwap(false, true) {
 		return
 	}
 
@@ -128,13 +135,13 @@ func autoscaleWorkerThreads(worker *worker, timeSpentStalling time.Duration) {
 
 	// wait a bit to prevent spending too much time on scaling
 	time.Sleep(scaleBlockTime)
-	isAutoScaling.Store(false)
+	blockAutoScaling.Store(false)
 }
 
 // Add regular PHP threads automatically
-// only add threads if requests were stalled long enough and no other scaling is in progress
+// Only add threads if requests were stalled long enough and no other scaling is in progress
 func autoscaleRegularThreads(timeSpentStalling time.Duration) {
-	if timeSpentStalling < allowedStallTime || !isAutoScaling.CompareAndSwap(false, true) {
+	if timeSpentStalling < allowedStallTime || !blockAutoScaling.CompareAndSwap(false, true) {
 		return
 	}
 
@@ -148,7 +155,7 @@ func autoscaleRegularThreads(timeSpentStalling time.Duration) {
 
 	// wait a bit to prevent spending too much time on scaling
 	time.Sleep(scaleBlockTime)
-	isAutoScaling.Store(false)
+	blockAutoScaling.Store(false)
 }
 
 func downScaleThreads() {
@@ -158,7 +165,7 @@ func downScaleThreads() {
 	for i := len(autoScaledThreads) - 1; i >= 0; i-- {
 		thread := autoScaledThreads[i]
 
-		// remove the thread if it's reserved
+		// the thread might have been stopped otherwise, remove it
 		if thread.state.is(stateReserved) {
 			autoScaledThreads = append(autoScaledThreads[:i], autoScaledThreads[i+1:]...)
 			continue
@@ -183,6 +190,7 @@ func downScaleThreads() {
 			logger.Debug("auto-stopping thread", zap.Int("threadIndex", thread.threadIndex))
 			thread.shutdown()
 			stoppedThreadCount++
+			autoScaledThreads = append(autoScaledThreads[:i], autoScaledThreads[i+1:]...)
 			continue
 		}
 	}
