@@ -40,21 +40,7 @@ func init() {
 	httpcaddyfile.RegisterDirectiveOrder("php_server", "before", "file_server")
 }
 
-type mainPHPinterpreterKeyType int
-
-var mainPHPInterpreterKey mainPHPinterpreterKeyType
-
-var phpInterpreter = caddy.NewUsagePool()
-
 var metrics = frankenphp.NewPrometheusMetrics(prometheus.DefaultRegisterer)
-
-type phpInterpreterDestructor struct{}
-
-func (phpInterpreterDestructor) Destruct() error {
-	frankenphp.Shutdown()
-
-	return nil
-}
 
 type workerConfig struct {
 	// FileName sets the path to the worker script.
@@ -91,22 +77,9 @@ func (f *FrankenPHPApp) Start() error {
 		opts = append(opts, frankenphp.WithWorkers(repl.ReplaceKnown(w.FileName, ""), w.Num, w.Env, w.Watch))
 	}
 
-	_, loaded, err := phpInterpreter.LoadOrNew(mainPHPInterpreterKey, func() (caddy.Destructor, error) {
-		if err := frankenphp.Init(opts...); err != nil {
-			return nil, err
-		}
-
-		return phpInterpreterDestructor{}, nil
-	})
-	if err != nil {
+	frankenphp.Shutdown()
+	if err := frankenphp.Init(opts...); err != nil {
 		return err
-	}
-
-	if loaded {
-		frankenphp.Shutdown()
-		if err := frankenphp.Init(opts...); err != nil {
-			return err
-		}
 	}
 
 	return nil
@@ -114,6 +87,14 @@ func (f *FrankenPHPApp) Start() error {
 
 func (f *FrankenPHPApp) Stop() error {
 	caddy.Log().Info("FrankenPHP stopped 🐘")
+
+	// attempt a graceful shutdown if caddy is exiting
+	// note: Exiting() is currently marked as 'experimental'
+	// https://github.com/caddyserver/caddy/blob/e76405d55058b0a3e5ba222b44b5ef00516116aa/caddy.go#L810
+	if caddy.Exiting() {
+		frankenphp.Shutdown()
+	}
+
 	// reset configuration so it doesn't bleed into later tests
 	f.Workers = nil
 	f.NumThreads = 0
