@@ -89,7 +89,7 @@ static void frankenphp_free_request_context() {
   free(ctx->cookie_data);
   ctx->cookie_data = NULL;
 
-  /* Is freed via thread.Unpin() at the end of each request */
+  /* Is freed via thread.Unpin() */
   SG(request_info).auth_password = NULL;
   SG(request_info).auth_user = NULL;
   SG(request_info).request_method = NULL;
@@ -243,7 +243,7 @@ PHP_FUNCTION(frankenphp_finish_request) { /* {{{ */
   php_header();
 
   if (ctx->has_active_request) {
-    go_frankenphp_finish_request(thread_index, false);
+    go_frankenphp_finish_php_request(thread_index);
   }
 
   ctx->finished = true;
@@ -443,7 +443,7 @@ PHP_FUNCTION(frankenphp_handle_request) {
 
   frankenphp_worker_request_shutdown();
   ctx->has_active_request = false;
-  go_frankenphp_finish_request(thread_index, true);
+  go_frankenphp_finish_worker_request(thread_index);
 
   RETURN_TRUE;
 }
@@ -811,9 +811,9 @@ static void set_thread_name(char *thread_name) {
 }
 
 static void *php_thread(void *arg) {
-  char thread_name[16] = {0};
-  snprintf(thread_name, 16, "php-%" PRIxPTR, (uintptr_t)arg);
   thread_index = (uintptr_t)arg;
+  char thread_name[16] = {0};
+  snprintf(thread_name, 16, "php-%" PRIxPTR, thread_index);
   set_thread_name(thread_name);
 
 #ifdef ZTS
@@ -832,7 +832,11 @@ static void *php_thread(void *arg) {
   cfg_get_string("filter.default", &default_filter);
   should_filter_var = default_filter != NULL;
 
-  while (go_handle_request(thread_index)) {
+  // loop until Go signals to stop
+  char *scriptName = NULL;
+  while ((scriptName = go_frankenphp_before_script_execution(thread_index))) {
+    go_frankenphp_after_script_execution(thread_index,
+                                         frankenphp_execute_script(scriptName));
   }
 
   go_frankenphp_release_known_variable_keys(thread_index);
@@ -840,6 +844,8 @@ static void *php_thread(void *arg) {
 #ifdef ZTS
   ts_free_thread();
 #endif
+
+  go_frankenphp_on_thread_shutdown(thread_index);
 
   return NULL;
 }
@@ -858,13 +864,11 @@ static void *php_main(void *arg) {
     exit(EXIT_FAILURE);
   }
 
-  intptr_t num_threads = (intptr_t)arg;
-
   set_thread_name("php-main");
 
 #ifdef ZTS
 #if (PHP_VERSION_ID >= 80300)
-  php_tsrm_startup_ex(num_threads);
+  php_tsrm_startup_ex((intptr_t)arg);
 #else
   php_tsrm_startup();
 #endif
@@ -892,28 +896,7 @@ static void *php_main(void *arg) {
 
   frankenphp_sapi_module.startup(&frankenphp_sapi_module);
 
-  pthread_t *threads = malloc(num_threads * sizeof(pthread_t));
-  if (threads == NULL) {
-    perror("malloc failed");
-    exit(EXIT_FAILURE);
-  }
-
-  for (uintptr_t i = 0; i < num_threads; i++) {
-    if (pthread_create(&(*(threads + i)), NULL, &php_thread, (void *)i) != 0) {
-      perror("failed to create PHP thread");
-      free(threads);
-      exit(EXIT_FAILURE);
-    }
-  }
-
-  for (int i = 0; i < num_threads; i++) {
-    if (pthread_join((*(threads + i)), NULL) != 0) {
-      perror("failed to join PHP thread");
-      free(threads);
-      exit(EXIT_FAILURE);
-    }
-  }
-  free(threads);
+  go_frankenphp_main_thread_is_ready();
 
   /* channel closed, shutdown gracefully */
   frankenphp_sapi_module.shutdown(&frankenphp_sapi_module);
@@ -929,23 +912,28 @@ static void *php_main(void *arg) {
     frankenphp_sapi_module.ini_entries = NULL;
   }
 #endif
-
-  go_shutdown();
-
+  go_frankenphp_shutdown_main_thread();
   return NULL;
 }
 
-int frankenphp_init(int num_threads) {
+int frankenphp_new_main_thread(int num_threads) {
   pthread_t thread;
 
   if (pthread_create(&thread, NULL, &php_main, (void *)(intptr_t)num_threads) !=
       0) {
-    go_shutdown();
-
     return -1;
   }
 
   return pthread_detach(thread);
+}
+
+bool frankenphp_new_php_thread(uintptr_t thread_index) {
+  pthread_t thread;
+  if (pthread_create(&thread, NULL, &php_thread, (void *)thread_index) != 0) {
+    return false;
+  }
+  pthread_detach(thread);
+  return true;
 }
 
 int frankenphp_request_startup() {
@@ -960,8 +948,6 @@ int frankenphp_request_startup() {
 
 int frankenphp_execute_script(char *file_name) {
   if (frankenphp_request_startup() == FAILURE) {
-    free(file_name);
-    file_name = NULL;
 
     return FAILURE;
   }
@@ -970,8 +956,6 @@ int frankenphp_execute_script(char *file_name) {
 
   zend_file_handle file_handle;
   zend_stream_init_filename(&file_handle, file_name);
-  free(file_name);
-  file_name = NULL;
 
   file_handle.primary_script = 1;
 
