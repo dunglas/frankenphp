@@ -141,11 +141,11 @@ FrankenPHP 可以在 Docker 中以非 root 用户身份运行。
 ```dockerfile
 FROM dunglas/frankenphp
 
-ARG USER=www-data
+ARG USER=appuser
 
 RUN \
 	# 在基于 alpine 的发行版使用 "adduser -D ${USER}"
-	useradd -D ${USER}; \
+	useradd ${USER}; \
 	# 需要开放80和443端口的权限
 	setcap CAP_NET_BIND_SERVICE=+eip /usr/local/bin/frankenphp; \
 	# 需要 /data/caddy 和 /config/caddy 目录的写入权限

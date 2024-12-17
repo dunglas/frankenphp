@@ -65,8 +65,6 @@ var (
 
 	requestChan chan *http.Request
 	isRunning   bool
-	done        chan struct{}
-	shutdownWG  sync.WaitGroup
 
 	loggerMu sync.RWMutex
 	logger   *zap.Logger
@@ -124,7 +122,7 @@ type FrankenPHPContext struct {
 	closed sync.Once
 
 	responseWriter http.ResponseWriter
-	exitStatus     C.int
+	exitStatus     int
 
 	done      chan interface{}
 	startedAt time.Time
@@ -245,7 +243,7 @@ func Config() PHPConfig {
 // MaxThreads is internally used during tests. It is written to, but never read and may go away in the future.
 var MaxThreads int
 
-func calculateMaxThreads(opt *opt) error {
+func calculateMaxThreads(opt *opt) (int, int, error) {
 	maxProcs := runtime.GOMAXPROCS(0) * 2
 
 	var numWorkers int
@@ -267,13 +265,13 @@ func calculateMaxThreads(opt *opt) error {
 			opt.numThreads = maxProcs
 		}
 	} else if opt.numThreads <= numWorkers {
-		return NotEnoughThreads
+		return opt.numThreads, numWorkers, NotEnoughThreads
 	}
 
 	metrics.TotalThreads(opt.numThreads)
 	MaxThreads = opt.numThreads
 
-	return nil
+	return opt.numThreads, numWorkers, nil
 }
 
 // Init starts the PHP runtime and the configured workers.
@@ -313,7 +311,7 @@ func Init(options ...Option) error {
 		metrics = opt.metrics
 	}
 
-	err := calculateMaxThreads(opt)
+	totalThreadCount, workerThreadCount, err := calculateMaxThreads(opt)
 	if err != nil {
 		return err
 	}
@@ -329,29 +327,26 @@ func Init(options ...Option) error {
 			logger.Warn(`Zend Max Execution Timers are not enabled, timeouts (e.g. "max_execution_time") are disabled, recompile PHP with the "--enable-zend-max-execution-timers" configuration option to fix this issue`)
 		}
 	} else {
-		opt.numThreads = 1
+		totalThreadCount = 1
 		logger.Warn(`ZTS is not enabled, only 1 thread will be available, recompile PHP using the "--enable-zts" configuration option or performance will be degraded`)
 	}
 
-	shutdownWG.Add(1)
-	done = make(chan struct{})
 	requestChan = make(chan *http.Request, opt.numThreads)
-	initPHPThreads(opt.numThreads)
+	if err := initPHPThreads(totalThreadCount); err != nil {
+		return err
+	}
 
-	if C.frankenphp_init(C.int(opt.numThreads)) != 0 {
-		return MainThreadCreationError
+	for i := 0; i < totalThreadCount-workerThreadCount; i++ {
+		thread := getInactivePHPThread()
+		convertToRegularThread(thread)
 	}
 
 	if err := initWorkers(opt.workers); err != nil {
 		return err
 	}
 
-	if err := restartWorkersOnFileChanges(opt.workers); err != nil {
-		return err
-	}
-
 	if c := logger.Check(zapcore.InfoLevel, "FrankenPHP started 🐘"); c != nil {
-		c.Write(zap.String("php_version", Version().Version), zap.Int("num_threads", opt.numThreads))
+		c.Write(zap.String("php_version", Version().Version), zap.Int("num_threads", totalThreadCount))
 	}
 	if EmbeddedAppPath != "" {
 		if c := logger.Check(zapcore.InfoLevel, "embedded PHP app 📦"); c != nil {
@@ -369,7 +364,7 @@ func Shutdown() {
 	}
 
 	drainWorkers()
-	drainThreads()
+	drainPHPThreads()
 	metrics.Shutdown()
 	requestChan = nil
 
@@ -380,17 +375,6 @@ func Shutdown() {
 
 	logger.Debug("FrankenPHP shut down")
 	isRunning = false
-}
-
-//export go_shutdown
-func go_shutdown() {
-	shutdownWG.Done()
-}
-
-func drainThreads() {
-	close(done)
-	shutdownWG.Wait()
-	phpThreads = nil
 }
 
 func getLogger() *zap.Logger {
@@ -473,9 +457,6 @@ func ServeHTTP(responseWriter http.ResponseWriter, request *http.Request) error 
 		return nil
 	}
 
-	shutdownWG.Add(1)
-	defer shutdownWG.Done()
-
 	fc, ok := FromContext(request.Context())
 	if !ok {
 		return InvalidRequestError
@@ -484,74 +465,23 @@ func ServeHTTP(responseWriter http.ResponseWriter, request *http.Request) error 
 	fc.responseWriter = responseWriter
 	fc.startedAt = time.Now()
 
-	isWorker := fc.responseWriter == nil
-
 	// Detect if a worker is available to handle this request
-	if !isWorker {
-		if worker, ok := workers[fc.scriptFilename]; ok {
-			metrics.StartWorkerRequest(fc.scriptFilename)
-			worker.handleRequest(request)
-			<-fc.done
-			metrics.StopWorkerRequest(fc.scriptFilename, time.Since(fc.startedAt))
-			return nil
-		} else {
-			metrics.StartRequest()
-		}
+	if worker, ok := workers[fc.scriptFilename]; ok {
+		worker.handleRequest(request, fc)
+		return nil
 	}
 
+	metrics.StartRequest()
+
 	select {
-	case <-done:
+	case <-mainThread.done:
 	case requestChan <- request:
 		<-fc.done
 	}
 
-	if !isWorker {
-		metrics.StopRequest()
-	}
+	metrics.StopRequest()
 
 	return nil
-}
-
-//export go_handle_request
-func go_handle_request(threadIndex C.uintptr_t) bool {
-	select {
-	case <-done:
-		return false
-
-	case r := <-requestChan:
-		thread := phpThreads[threadIndex]
-		thread.mainRequest = r
-
-		fc, ok := FromContext(r.Context())
-		if !ok {
-			panic(InvalidRequestError)
-		}
-		defer func() {
-			maybeCloseContext(fc)
-			thread.mainRequest = nil
-			thread.Unpin()
-		}()
-
-		if err := updateServerContext(thread, r, true, false); err != nil {
-			rejectRequest(fc.responseWriter, err.Error())
-			return true
-		}
-
-		// scriptFilename is freed in frankenphp_execute_script()
-		fc.exitStatus = C.frankenphp_execute_script(C.CString(fc.scriptFilename))
-		if fc.exitStatus < 0 {
-			panic(ScriptExecutionError)
-		}
-
-		// if the script has errored or timed out, make sure any pending worker requests are closed
-		if fc.exitStatus > 0 && thread.workerRequest != nil {
-			fc := thread.workerRequest.Context().Value(contextKey).(*FrankenPHPContext)
-			maybeCloseContext(fc)
-			thread.workerRequest = nil
-		}
-
-		return true
-	}
 }
 
 func maybeCloseContext(fc *FrankenPHPContext) {
@@ -605,7 +535,7 @@ func go_apache_request_headers(threadIndex C.uintptr_t, hasActiveRequest bool) (
 
 	if !hasActiveRequest {
 		// worker mode, not handling a request
-		mfc := thread.mainRequest.Context().Value(contextKey).(*FrankenPHPContext)
+		mfc := thread.getActiveRequest().Context().Value(contextKey).(*FrankenPHPContext)
 
 		if c := mfc.logger.Check(zapcore.DebugLevel, "apache_request_headers() called in non-HTTP context"); c != nil {
 			c.Write(zap.String("worker", mfc.scriptFilename))
@@ -791,21 +721,11 @@ func freeArgs(argv []*C.char) {
 	}
 }
 
-func executePHPFunction(functionName string) {
+func executePHPFunction(functionName string) bool {
 	cFunctionName := C.CString(functionName)
 	defer C.free(unsafe.Pointer(cFunctionName))
 
-	success := C.frankenphp_execute_php_function(cFunctionName)
-
-	if success == 1 {
-		if c := logger.Check(zapcore.DebugLevel, "php function call successful"); c != nil {
-			c.Write(zap.String("function", functionName))
-		}
-	} else {
-		if c := logger.Check(zapcore.ErrorLevel, "php function call failed"); c != nil {
-			c.Write(zap.String("function", functionName))
-		}
-	}
+	return C.frankenphp_execute_php_function(cFunctionName) == 1
 }
 
 // Ensure that the request path does not contain null bytes
