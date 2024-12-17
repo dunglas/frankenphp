@@ -28,6 +28,8 @@ var (
 	autoScaledThreads = []*phpThread{}
 	scalingMu         = new(sync.RWMutex)
 	blockAutoScaling  = atomic.Bool{}
+	allThreadsCpuPercent float64
+	cpuMutex sync.Mutex
 )
 
 // turn the first inactive/reserved thread into a regular thread
