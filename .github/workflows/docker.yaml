@@ -209,7 +209,7 @@ jobs:
         if: fromJson(needs.prepare.outputs.push)
         uses: actions/upload-artifact@v4
         with:
-          name: metadata-runner-${{ github.run_id }}-${{ matrix.variant }}-${{ matrix.platform }}
+          name: metadata-runner-${{ matrix.variant }}-${{ matrix.platform }}
           path: /tmp/metadata/runner/*
           if-no-files-found: error
           retention-days: 1
