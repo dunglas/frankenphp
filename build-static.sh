@@ -96,7 +96,7 @@ else
 		if ! type "composer" >/dev/null; then
 			packages="composer"
 		fi
-		if ! type "go" >/dev/null; then
+		if ! type "go" >/dev/null 2>&1; then
 			packages="${packages} go"
 		fi
 		if [ -n "${RELEASE}" ] && ! type "gh" >/dev/null 2>&1; then
@@ -123,6 +123,10 @@ else
 	${spcCommand} download --with-php="${PHP_VERSION}" --for-extensions="${PHP_EXTENSIONS}" --for-libs="${PHP_EXTENSION_LIBS}" --ignore-cache-sources=php-src --prefer-pre-built
 	# shellcheck disable=SC2086
 	${spcCommand} build --debug --enable-zts --build-embed ${extraOpts} "${PHP_EXTENSIONS}" --with-libs="${PHP_EXTENSION_LIBS}"
+fi
+
+if ! type "xcaddy" >/dev/null 2>&1; then
+	go install github.com/caddyserver/xcaddy/cmd/xcaddy@latest
 fi
 
 curlGitHubHeaders=(--header "X-GitHub-Api-Version: 2022-11-28")
@@ -265,10 +269,27 @@ if [ -n "${EMBED}" ] && [ -d "${EMBED}" ]; then
 	${md5binary} app.tar | awk '{printf $1}' >app_checksum.txt
 fi
 
-cd caddy/frankenphp/
+if [ -z "${XCADDY_ARGS}" ]; then
+	XCADDY_ARGS="--with github.com/dunglas/mercure/caddy --with github.com/dunglas/vulcain/caddy"
+fi
+
+XCADDY_DEBUG=0
+if [ -n "${DEBUG_SYMBOLS}" ]; then
+	XCADDY_DEBUG=1
+fi
+
 go env
-go build -buildmode=pie -tags "cgo,netgo,osusergo,static_build,nobadger,nomysql,nopgx" -ldflags "-linkmode=external -extldflags '-static-pie ${extraExtldflags}' ${extraLdflags} -X 'github.com/caddyserver/caddy/v2.CustomVersion=FrankenPHP ${FRANKENPHP_VERSION} PHP ${LIBPHP_VERSION} Caddy'" -o "../../dist/${bin}"
-cd ../..
+cd caddy/
+# shellcheck disable=SC2086
+CGO_ENABLED=1 \
+	XCADDY_GO_BUILD_FLAGS="-buildmode=pie -tags cgo,netgo,osusergo,static_build,nobadger,nomysql,nopgx -ldflags \"-linkmode=external -extldflags '-static-pie ${extraExtldflags}' ${extraLdflags} -X 'github.com/caddyserver/caddy/v2.CustomVersion=FrankenPHP ${FRANKENPHP_VERSION} PHP ${LIBPHP_VERSION} Caddy'\"" \
+	XCADDY_DEBUG="${XCADDY_DEBUG}" \
+	xcaddy build \
+	--output "../dist/${bin}" \
+	${XCADDY_ARGS} \
+	--with github.com/dunglas/frankenphp=.. \
+	--with github.com/dunglas/frankenphp/caddy=.
+cd ..
 
 if [ -d "${EMBED}" ]; then
 	truncate -s 0 app.tar

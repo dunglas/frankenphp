@@ -14,6 +14,7 @@ ENV PHP_VERSION=${PHP_VERSION}
 
 ARG PHP_EXTENSIONS=''
 ARG PHP_EXTENSION_LIBS=''
+ARG XCADDY_ARGS=''
 ARG CLEAN=''
 ARG EMBED=''
 ARG DEBUG_SYMBOLS=''
@@ -86,7 +87,8 @@ WORKDIR /goroot/src
 ENV GOHOSTARCH="$TARGETARCH"
 RUN ./make.bash
 ENV PATH="/goroot/bin:$PATH"
-RUN go version
+RUN go version && \
+	go install github.com/caddyserver/xcaddy/cmd/xcaddy@latest
 
 # https://getcomposer.org/doc/03-cli.md#composer-allow-superuser
 ENV COMPOSER_ALLOW_SUPERUSER=1

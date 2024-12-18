@@ -43,6 +43,24 @@ docker buildx bake \
   static-builder
 ```
 
+### Ekstra Caddy Modülleri
+
+Ekstra Caddy modülleri eklemek veya [xcaddy](https://github.com/caddyserver/xcaddy) adresine başka argümanlar iletmek için `XCADDY_ARGS` Docker ARG'sini kullanın:
+
+```console
+docker buildx bake \
+  --load \
+  --set static-builder.args.XCADDY_ARGS="--with github.com/darkweak/souin/plugins/caddy --with github.com/dunglas/mercure/caddy --with github.com/dunglas/vulcain/caddy" \
+  static-builder
+```
+
+Bu örnekte, Caddy için [Souin](https://souin.io) HTTP önbellek modülünün yanı sıra [Mercure](https://mercure.rocks) ve [Vulcain](https://vulcain.rocks) modüllerini ekliyoruz.
+
+> [!TIP]
+>
+> Mercure ve Vulcain modülleri, `XCADDY_ARGS` boşsa veya ayarlanmamışsa varsayılan olarak dahil edilir.
+> Eğer `XCADDY_ARGS` değerini özelleştirirseniz, dahil edilmelerini istiyorsanız bunları açıkça dahil etmelisiniz.
+
 Derlemeyi nasıl [özelleştireceğinize](#yapıyı-özelleştirme) de bakın.
 
 ### GitHub Token
@@ -75,6 +93,7 @@ statik derlemeyi özelleştirmek için betik:
 * `PHP_VERSION`: kullanılacak PHP sürümü
 * `PHP_EXTENSIONS`: oluşturulacak PHP eklentileri ([desteklenen eklentiler listesi](https://static-php.dev/en/guide/extensions.html))
 * `PHP_EXTENSION_LIBS`: eklentilere özellikler ekleyen oluşturulacak ekstra kütüphaneler
+* `XCADDY_ARGS`: [xcaddy](https://github.com/caddyserver/xcaddy) adresine iletilecek argümanlar, örneğin ekstra Caddy modülleri eklemek için
 * `EMBED`: binary dosyaya gömülecek PHP uygulamasının yolu
 * `CLEAN`: ayarlandığında, libphp ve tüm bağımlılıkları sıfırdan oluşturulur (önbellek yok)
 * `DEBUG_SYMBOLS`: ayarlandığında, hata ayıklama sembolleri ayıklanmayacak ve binary dosyaya eklenecektir
