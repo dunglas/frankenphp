@@ -273,7 +273,7 @@ go install github.com/caddyserver/xcaddy/cmd/xcaddy@latest
 CGO_ENABLED=1 \
 	XCADDY_GO_BUILD_FLAGS="-buildmode=pie -tags cgo,netgo,osusergo,static_build,nobadger,nomysql,nopgx -ldflags \"-linkmode=external -extldflags '-static-pie ${extraExtldflags}' ${extraLdflags} -X 'github.com/caddyserver/caddy/v2.CustomVersion=FrankenPHP ${FRANKENPHP_VERSION} PHP ${LIBPHP_VERSION} Caddy'\"" \
 	xcaddy build \
-	--output "../../dist/${bin}" \
+	--output "../dist/${bin}" \
 	${XCADDY_ARGS} \
 	--with github.com/dunglas/frankenphp=.. \
 	--with github.com/dunglas/frankenphp/caddy=.
