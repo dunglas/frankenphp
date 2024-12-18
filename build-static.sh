@@ -74,12 +74,15 @@ if [ -n "${CLEAN}" ]; then
 	go clean -cache
 fi
 
+cache_key="${PHP_VERSION}-${PHP_EXTENSIONS}-${PHP_EXTENSION_LIBS}"
+
 # Build libphp if necessary
-if [ -f "dist/static-php-cli/buildroot/lib/libphp.a" ]; then
+if [ -f dist/cache_key ] && [ "$(cat dist/cache_key)" = "${cache_key}" ] && [ -f "dist/static-php-cli/buildroot/lib/libphp.a" ]; then
 	cd dist/static-php-cli
 else
 	mkdir -p dist/
 	cd dist/
+	echo -n "${cache_key}" >cache_key
 
 	if [ -d "static-php-cli/" ]; then
 		cd static-php-cli/

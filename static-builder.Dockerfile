@@ -106,5 +106,4 @@ COPY --link caddy caddy
 COPY --link internal internal
 
 RUN --mount=type=secret,id=github-token GITHUB_TOKEN=$(cat /run/secrets/github-token) ./build-static.sh && \
-	rm -Rf dist/static-php-cli/source/* && \
-    rm dist/static-php-cli/buildroot/lib/libphp.a
+	rm -Rf dist/static-php-cli/source/*
