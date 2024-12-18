@@ -1,35 +1,5 @@
 # Bilinen Sorunlar
 
-## Fibers
-
-[Fibers](https://www.php.net/manual/en/language.fibers.php) içinde [cgo](https://go.dev/blog/cgo) çağrısı yapan PHP fonksiyonlarının ve dil yapılarının çağrılmasının çökmelere neden olduğu bilinmektedir.
-
-Bu sorun [Go projesi tarafından üzerinde çalışılmaktadır](https://github.com/golang/go/issues/62130).
-
-Bu arada, bir çözüm Fibers içinden Go'ya temsilci atayan yapıları (`echo` gibi) ve fonksiyonları (`header()` gibi) kullanmamaktır.
-
-Bu kod, Fiber içinde `echo` kullandığı için büyük olasılıkla çökecektir:
-
-```php
-$fiber = new Fiber(function() {
-    echo 'In the Fiber'.PHP_EOL;
-    echo 'Still inside'.PHP_EOL;
-});
-$fiber->start();
-```
-
-Bunun yerine, değeri Fiber'den döndürün ve dışarıda kullanın:
-
-```php
-$fiber = new Fiber(function() {
-    Fiber::suspend('In the Fiber'.PHP_EOL));
-    Fiber::suspend('Still inside'.PHP_EOL));
-});
-echo $fiber->start();
-echo $fiber->resume();
-$fiber->resume();
-```
-
 ## Desteklenmeyen PHP Eklentileri
 
 Aşağıdaki eklentilerin FrankenPHP ile uyumlu olmadığı bilinmektedir:

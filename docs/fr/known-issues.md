@@ -1,35 +1,5 @@
 # Problèmes Connus
 
-## Fibres
-
-Appeller de fonctions et mots clefs PHP qui eux-mêmes appellent [cgo](https://go.dev/blog/cgo) dans des [Fibres](https://www.php.net/manual/fr/language.fibers.php) est connu pour provoquer des plantages.
-
-Ce problème est [en cours de correction par le projet Go](https://github.com/golang/go/issues/62130).
-
-En attendant, une solution consiste à ne pas utiliser de mots clefs (comme `echo`) et de fonctions (comme `header()`) qui délèguent à Go depuis l'intérieur de fibres.
-
-Ce code risque de planter car il utilise `echo` dans une fibre :
-
-```php
-$fiber = new Fiber(function() {
-    echo 'Dans la fibre'.PHP_EOL;
-    echo 'Toujours dedans'.PHP_EOL;
-});
-$fiber->start();
-```
-
-A la place, retournez la valeur de la Fibre et utilisez-la à l'extérieur :
-
-```php
-$fiber = new Fiber(function() {
-    Fiber::suspend('Dans la fibre'.PHP_EOL));
-    Fiber::suspend('Toujours dedans'.PHP_EOL));
-});
-echo $fiber->start();
-echo $fiber->resume();
-$fiber->resume();
-```
-
 ## Extensions PHP non prises en charge
 
 Les extensions suivantes sont connues pour ne pas être compatibles avec FrankenPHP :
