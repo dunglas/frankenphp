@@ -3,6 +3,7 @@ package frankenphp
 import (
 	"errors"
 	"fmt"
+	"runtime"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -20,16 +21,19 @@ const (
 	downScaleCheckTime = 5 * time.Second
 	// if an autoscaled thread has been waiting for longer than this time, terminate it
 	maxThreadIdleTime = 5 * time.Second
+	// if PHP threads are using more than this percentage of CPU, do not scale
+	maxCpuPotential = 0.85
 	// amount of threads that can be stopped at once
 	maxTerminationCount = 10
 )
 
 var (
-	autoScaledThreads = []*phpThread{}
-	scalingMu         = new(sync.RWMutex)
-	blockAutoScaling  = atomic.Bool{}
+	autoScaledThreads    = []*phpThread{}
+	scalingMu            = new(sync.RWMutex)
+	blockAutoScaling     = atomic.Bool{}
+	cpuCount             = runtime.NumCPU()
 	allThreadsCpuPercent float64
-	cpuMutex sync.Mutex
+	cpuMutex             sync.Mutex
 )
 
 // turn the first inactive/reserved thread into a regular thread
@@ -122,18 +126,29 @@ func initAutoScaling(numThreads int, maxThreads int) {
 }
 
 // Add worker PHP threads automatically
-// Only add threads if requests were stalled long enough and no other scaling is in progress
 func autoscaleWorkerThreads(worker *worker, timeSpentStalling time.Duration) {
+
+	// first check if time spent waiting for a thread was above the allowed threshold
 	if timeSpentStalling < allowedStallTime || !blockAutoScaling.CompareAndSwap(false, true) {
 		return
 	}
 
-	count, err := AddWorkerThread(worker.fileName)
-	worker.threadMutex.RLock()
-	autoScaledThreads = append(autoScaledThreads, worker.threads[len(worker.threads)-1])
-	worker.threadMutex.RUnlock()
+	threadCount := worker.countThreads()
+	if cpuCoresAreBusy(threadCount) {
+		logger.Debug("not autoscaling", zap.String("worker", worker.fileName), zap.Int("count", threadCount))
+		time.Sleep(scaleBlockTime)
+		blockAutoScaling.Store(false)
+		return
+	}
 
-	logger.Debug("worker thread autoscaling", zap.String("worker", worker.fileName), zap.Int("count", count), zap.Error(err))
+	_, err := AddWorkerThread(worker.fileName)
+	if err != nil {
+		logger.Debug("could not add worker thread", zap.String("worker", worker.fileName), zap.Error(err))
+	}
+
+	scalingMu.Lock()
+	autoScaledThreads = append(autoScaledThreads, worker.threads[len(worker.threads)-1])
+	scalingMu.Unlock()
 
 	// wait a bit to prevent spending too much time on scaling
 	time.Sleep(scaleBlockTime)
@@ -148,10 +163,9 @@ func autoscaleRegularThreads(timeSpentStalling time.Duration) {
 	}
 
 	count, err := AddRegularThread()
-
-	regularThreadMu.RLock()
+	scalingMu.Lock()
 	autoScaledThreads = append(autoScaledThreads, regularThreads[len(regularThreads)-1])
-	regularThreadMu.RUnlock()
+	scalingMu.Unlock()
 
 	logger.Debug("regular thread autoscaling", zap.Int("count", count), zap.Error(err))
 
@@ -196,4 +210,24 @@ func downScaleThreads() {
 			continue
 		}
 	}
+}
+
+// threads spend a certain % of time on CPU cores and a certain % waiting for IO
+// this function tracks the CPU usage and weighs it against previous requests
+func trackCpuUsage(cpuPercent float64) {
+	cpuMutex.Lock()
+	allThreadsCpuPercent = (allThreadsCpuPercent*99 + cpuPercent) / 100
+	cpuMutex.Unlock()
+}
+
+// threads track how much time they spend on CPU cores
+// cpuPotential is the average amount of time threads spend on CPU cores * the number of threads
+// example: 10 threads that spend 10% of their time on CPU cores and 90% waiting for IO, would have a potential of 100%
+// only scale if the potential is below a threshold
+// if the potential is too high, then requests are stalled because of CPU usage, not because of IO
+func cpuCoresAreBusy(threadCount int) bool {
+	cpuMutex.Lock()
+	cpuPotential := allThreadsCpuPercent * float64(threadCount) / float64(cpuCount)
+	cpuMutex.Unlock()
+	return cpuPotential > maxCpuPotential
 }

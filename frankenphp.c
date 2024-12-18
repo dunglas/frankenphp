@@ -83,8 +83,6 @@ __thread frankenphp_server_context *local_ctx = NULL;
 __thread uintptr_t thread_index;
 __thread zval *os_environment = NULL;
 __thread float ioPercentage = 0.0;
-__thread struct timespec cpu_start;
-__thread struct timespec req_start;
 
 static void frankenphp_free_request_context() {
   frankenphp_server_context *ctx = SG(server_context);
@@ -419,6 +417,8 @@ PHP_FUNCTION(frankenphp_handle_request) {
     RETURN_FALSE;
   }
 
+  // read the CPU timer
+  struct timespec cpu_start, cpu_end, req_start, req_end;
   clock_gettime(CLOCK_THREAD_CPUTIME_ID, &cpu_start);
   clock_gettime(CLOCK_MONOTONIC, &req_start);
 
@@ -450,18 +450,14 @@ PHP_FUNCTION(frankenphp_handle_request) {
   frankenphp_worker_request_shutdown();
   ctx->has_active_request = false;
 
-  // calculate how much time was spent using the CPU
-  struct timespec cpu_end;
-  struct timespec req_end;
-
+  // calculate how much time was spent using a CPU core
   clock_gettime(CLOCK_THREAD_CPUTIME_ID, &cpu_end);
   clock_gettime(CLOCK_MONOTONIC, &req_end);
-
   float cpu_diff = (cpu_end.tv_nsec / 1000000000.0 + cpu_end.tv_sec) - (cpu_start.tv_nsec / 1000000000.0 + cpu_start.tv_sec);
   float req_diff = (req_end.tv_nsec / 1000000000.0 + req_end.tv_sec) - (req_start.tv_nsec / 1000000000.0 + req_start.tv_sec);
   float cpu_percent = cpu_diff / req_diff;
 
-  go_frankenphp_finish_worker_request(thread_index,cpu_percent);
+  go_frankenphp_finish_worker_request(thread_index, cpu_percent);
 
   RETURN_TRUE;
 }

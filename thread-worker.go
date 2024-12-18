@@ -215,10 +215,7 @@ func go_frankenphp_finish_worker_request(threadIndex C.uintptr_t, cpuPercent C.f
 		c.Write(zap.String("worker", fc.scriptFilename), zap.String("url", r.RequestURI))
 	}
 
-	cpuMutex.Lock()
-	allThreadsCpuPercent = (allThreadsCpuPercent * 99 + float64(cpuPercent)) / 100
-	logger.Warn("cpu time", zap.Float64("cpu percent", allThreadsCpuPercent))
-	cpuMutex.Unlock()
+	trackCpuUsage(float64(cpuPercent))
 }
 
 // when frankenphp_finish_request() is directly called from PHP
