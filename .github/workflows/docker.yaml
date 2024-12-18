@@ -198,18 +198,18 @@ jobs:
       -
         name: Upload builder metadata
         if: fromJson(needs.prepare.outputs.push)
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: metadata-builder-${{ matrix.variant }}
+          name: metadata-builder-${{ github.run_id }}-${{ matrix.variant }}-${{ matrix.platform }}
           path: /tmp/metadata/builder/*
           if-no-files-found: error
           retention-days: 1
       -
         name: Upload runner metadata
         if: fromJson(needs.prepare.outputs.push)
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: metadata-runner-${{ matrix.variant }}
+          name: metadata-runner-${{ github.run_id }}-${{ matrix.variant }}-${{ matrix.platform }}
           path: /tmp/metadata/runner/*
           if-no-files-found: error
           retention-days: 1
@@ -237,10 +237,11 @@ jobs:
     steps:
       -
         name: Download metadata
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
-          name: metadata-${{ matrix.target }}-${{ matrix.variant }}
+          pattern: metadata-${{ matrix.target }}-${{ github.run_id }}-${{ matrix.variant }}-*
           path: /tmp/metadata
+          merge-multiple: true
       -
         name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
