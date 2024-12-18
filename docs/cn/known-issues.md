@@ -1,35 +1,5 @@
 # 已知问题
 
-## Fibers
-
-在 [Fibers](https://www.php.net/manual/en/language.fibers.php) 中调用 PHP 的函数和代码等语言结构，这些结构内部再调用 [cgo](https://go.dev/blog/cgo) 会导致崩溃。
-
-这个问题 [正在由 Go 项目处理](https://github.com/golang/go/issues/62130)。
-
-一种解决方案是不要使用从 Fibers 内部委托给 Go 的构造（如 `echo`）和函数（如 `header()`）。
-
-下面的代码可能会崩溃，因为它在 Fiber 中使用了 `echo`：
-
-```php
-$fiber = new Fiber(function() {
-    echo 'In the Fiber'.PHP_EOL;
-    echo 'Still inside'.PHP_EOL;
-});
-$fiber->start();
-```
-
-相反，请从 Fiber 返回值并在外部使用它：
-
-```php
-$fiber = new Fiber(function() {
-    Fiber::suspend('In the Fiber'.PHP_EOL));
-    Fiber::suspend('Still inside'.PHP_EOL));
-});
-echo $fiber->start();
-echo $fiber->resume();
-$fiber->resume();
-```
-
 ## 不支持的 PHP 扩展
 
 已知以下扩展与 FrankenPHP 不兼容：
