@@ -200,7 +200,7 @@ jobs:
         if: fromJson(needs.prepare.outputs.push)
         uses: actions/upload-artifact@v4
         with:
-          name: metadata-builder-${{ github.run_id }}-${{ matrix.variant }}-${{ matrix.platform }}
+          name: metadata-builder-${{ matrix.variant }}-${{ matrix.platform }}
           path: /tmp/metadata/builder/*
           if-no-files-found: error
           retention-days: 1
