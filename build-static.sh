@@ -82,7 +82,7 @@ if [ -f dist/cache_key ] && [ "$(cat dist/cache_key)" = "${cache_key}" ] && [ -f
 else
 	mkdir -p dist/
 	cd dist/
-	echo -n "${cache_key}" > cache_key
+	echo -n "${cache_key}" >cache_key
 
 	if [ -d "static-php-cli/" ]; then
 		cd static-php-cli/
