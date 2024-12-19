@@ -5,12 +5,12 @@ on:
     branches:
       - main
     paths-ignore:
-      - 'docs/**'
+      - "docs/**"
   push:
     branches:
       - main
     paths-ignore:
-      - 'docs/**'
+      - "docs/**"
 permissions:
   contents: read
 jobs:
@@ -19,23 +19,20 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        php-versions: ['8.2', '8.3', '8.4']
+        php-versions: ["8.2", "8.3", "8.4"]
     env:
       GOEXPERIMENT: cgocheck2
       GOMAXPROCS: 10
       LIBRARY_PATH: ${{ github.workspace }}/watcher/target/lib
     steps:
-      -
-        uses: actions/checkout@v4
-      -
-        uses: actions/setup-go@v5
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
         with:
-          go-version: '1.22'
+          go-version: "1.22"
           cache-dependency-path: |
             go.sum 
             caddy/go.sum
-      -
-        uses: shivammathur/setup-php@v2
+      - uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php-versions }}
           ini-file: development
@@ -44,43 +41,32 @@ jobs:
         env:
           phpts: ts
           debug: true
-      -
-        name: Install e-dant/watcher
+      - name: Install e-dant/watcher
         uses: ./.github/actions/watcher
-      -
-        name: Set Set CGO flags
+      - name: Set Set CGO flags
         run: echo "CGO_CFLAGS=-I${PWD}/watcher/target/include $(php-config --includes)" >> "${GITHUB_ENV}"
-      -
-        name: Build
-        run: go build          
-      -
-        name: Build testcli binary
+      - name: Build
+        run: go build
+      - name: Build testcli binary
         working-directory: internal/testcli/
         run: go build
-      -
-        name: Run library tests
+      - name: Run library tests
         run: go test -race -v ./...
-      -
-        name: Run Caddy module tests
+      - name: Run Caddy module tests
         working-directory: caddy/
         run: go test -tags nobadger,nomysql,nopgx -race -v ./...
-      -
-        name: Run Fuzzing Tests
+      - name: Run Fuzzing Tests
         working-directory: caddy/
         run: go test -fuzz FuzzRequest -fuzztime 20s
-      -
-        name: Build the server
+      - name: Build the server
         working-directory: caddy/frankenphp/
         run: go build
-      -
-        name: Start the server
+      - name: Start the server
         working-directory: testdata/
         run: sudo ../caddy/frankenphp/frankenphp start
-      -
-        name: Run integrations tests
+      - name: Run integrations tests
         run: ./reload_test.sh
-      -
-        name: Lint Go code
+      - name: Lint Go code
         uses: golangci/golangci-lint-action@v6
         if: matrix.php-versions == '8.4'
         with:
