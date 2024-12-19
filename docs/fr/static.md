@@ -42,6 +42,24 @@ docker buildx bake \
   static-builder
 ```
 
+### Modules supplémentaires de Caddy
+
+Pour ajouter des modules Caddy supplémentaires ou passer d'autres arguments à [xcaddy](https://github.com/caddyserver/xcaddy), utilisez l'argument Docker `XCADDY_ARGS` :
+
+```console
+docker buildx bake \
+  --load \
+  --set static-builder.args.XCADDY_ARGS="--with github.com/darkweak/souin/plugins/caddy --with github.com/dunglas/mercure/caddy --with github.com/dunglas/vulcain/caddy" \
+  static-builder
+```
+
+Dans cet exemple, nous ajoutons le module de cache HTTP [Souin](https://souin.io) pour Caddy ainsi que les modules [Mercure](https://mercure.rocks) et [Vulcain](https://vulcain.rocks).
+
+> [!TIP]
+>
+> Les modules Mercure et Vulcain sont inclus par défaut si `XCADDY_ARGS` est vide ou n'est pas défini.
+> Si vous personnalisez la valeur de `XCADDY_ARGS`, vous devez les inclure explicitement si vous voulez qu'ils soient inclus.
+
 Voir aussi comment [personnaliser la construction](#personnalisation-de-la-construction)
 
 ### Jeton GitHub
@@ -73,6 +91,7 @@ Les variables d'environnement suivantes peuvent être transmises à `docker buil
 * `PHP_VERSION` : la version de PHP à utiliser
 * `PHP_EXTENSIONS` : les extensions PHP à construire ([liste des extensions prises en charge](https://static-php.dev/en/guide/extensions.html))
 * `PHP_EXTENSION_LIBS` : bibliothèques supplémentaires à construire qui ajoutent des fonctionnalités aux extensions
+* `XCADDY_ARGS` : arguments à passer à [xcaddy](https://github.com/caddyserver/xcaddy), par exemple pour ajouter des modules Caddy supplémentaires
 * `EMBED` : chemin de l'application PHP à intégrer dans le binaire
 * `CLEAN` : lorsque défini, `libphp` et toutes ses dépendances sont construites à partir de zéro (pas de cache)
 * `DEBUG_SYMBOLS` : lorsque défini, les symboles de débogage ne seront pas supprimés et seront ajoutés dans le binaire

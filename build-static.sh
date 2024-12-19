@@ -10,6 +10,8 @@ fi
 
 arch="$(uname -m)"
 os="$(uname -s | tr '[:upper:]' '[:lower:]')"
+# FIXME: re-enable PHP errors when SPC will be compatible with PHP 8.4
+spcCommand="php -ddisplay_errors=Off ./bin/spc"
 md5binary="md5sum"
 if [ "${os}" = "darwin" ]; then
 	os="mac"
@@ -72,12 +74,15 @@ if [ -n "${CLEAN}" ]; then
 	go clean -cache
 fi
 
+cache_key="${PHP_VERSION}-${PHP_EXTENSIONS}-${PHP_EXTENSION_LIBS}"
+
 # Build libphp if necessary
-if [ -f "dist/static-php-cli/buildroot/lib/libphp.a" ]; then
+if [ -f dist/cache_key ] && [ "$(cat dist/cache_key)" = "${cache_key}" ] && [ -f "dist/static-php-cli/buildroot/lib/libphp.a" ]; then
 	cd dist/static-php-cli
 else
 	mkdir -p dist/
 	cd dist/
+	echo -n "${cache_key}" >cache_key
 
 	if [ -d "static-php-cli/" ]; then
 		cd static-php-cli/
@@ -91,7 +96,7 @@ else
 		if ! type "composer" >/dev/null; then
 			packages="composer"
 		fi
-		if ! type "go" >/dev/null; then
+		if ! type "go" >/dev/null 2>&1; then
 			packages="${packages} go"
 		fi
 		if [ -n "${RELEASE}" ] && ! type "gh" >/dev/null 2>&1; then
@@ -114,10 +119,14 @@ else
 		extraOpts="${extraOpts} --no-strip"
 	fi
 
-	./bin/spc doctor --auto-fix
-	./bin/spc download --with-php="${PHP_VERSION}" --for-extensions="${PHP_EXTENSIONS}" --for-libs="${PHP_EXTENSION_LIBS}" --ignore-cache-sources=php-src --prefer-pre-built
+	${spcCommand} doctor --auto-fix
+	${spcCommand} download --with-php="${PHP_VERSION}" --for-extensions="${PHP_EXTENSIONS}" --for-libs="${PHP_EXTENSION_LIBS}" --ignore-cache-sources=php-src --prefer-pre-built
 	# shellcheck disable=SC2086
-	./bin/spc build --debug --enable-zts --build-embed ${extraOpts} "${PHP_EXTENSIONS}" --with-libs="${PHP_EXTENSION_LIBS}"
+	${spcCommand} build --debug --enable-zts --build-embed ${extraOpts} "${PHP_EXTENSIONS}" --with-libs="${PHP_EXTENSION_LIBS}"
+fi
+
+if ! type "xcaddy" >/dev/null 2>&1; then
+	go install github.com/caddyserver/xcaddy/cmd/xcaddy@latest
 fi
 
 curlGitHubHeaders=(--header "X-GitHub-Api-Version: 2022-11-28")
@@ -144,7 +153,7 @@ cp -R include/wtr/watcher-c.h ../../buildroot/include/wtr/watcher-c.h
 cd ../../
 
 # See https://github.com/docker-library/php/blob/master/8.3/alpine3.20/zts/Dockerfile#L53-L55
-CGO_CFLAGS="-DFRANKENPHP_VERSION=${FRANKENPHP_VERSION} -I${PWD}/buildroot/include/ $(./buildroot/bin/php-config --includes | sed s#-I/#-I"${PWD}"/buildroot/#g)"
+CGO_CFLAGS="-DFRANKENPHP_VERSION=${FRANKENPHP_VERSION} -I${PWD}/buildroot/include/ $(${spcCommand} spc-config "${PHP_EXTENSIONS}" --with-libs="${PHP_EXTENSION_LIBS}" --includes)"
 if [ -n "${DEBUG_SYMBOLS}" ]; then
 	CGO_CFLAGS="-g ${CGO_CFLAGS}"
 else
@@ -159,12 +168,7 @@ elif [ "${os}" = "linux" ] && [ -z "${DEBUG_SYMBOLS}" ]; then
 	CGO_LDFLAGS="-Wl,-O1 -pie"
 fi
 
-# Temporary workaround for https://github.com/crazywhalecc/static-php-cli/issues/560
-if [[ "${PHP_EXTENSIONS}" == *"pgsql"* ]]; then
-	CGO_LDFLAGS="${CGO_LDFLAGS} ${PWD}/buildroot/lib/libpgcommon.a ${PWD}/buildroot/lib/libpgport.a ${PWD}/buildroot/lib/libpq.a"
-fi
-
-CGO_LDFLAGS="${CGO_LDFLAGS} ${PWD}/buildroot/lib/libbrotlicommon.a ${PWD}/buildroot/lib/libbrotlienc.a ${PWD}/buildroot/lib/libbrotlidec.a ${PWD}/buildroot/lib/libwatcher-c.a $(./buildroot/bin/php-config --ldflags || true) $(./buildroot/bin/php-config --libs | sed -e 's/-lgcc_s//g' || true)"
+CGO_LDFLAGS="${CGO_LDFLAGS} ${PWD}/buildroot/lib/libbrotlicommon.a ${PWD}/buildroot/lib/libbrotlienc.a ${PWD}/buildroot/lib/libbrotlidec.a ${PWD}/buildroot/lib/libwatcher-c.a $(${spcCommand} spc-config "${PHP_EXTENSIONS}" --with-libs="${PHP_EXTENSION_LIBS}" --libs)"
 if [ "${os}" = "linux" ]; then
 	if echo "${PHP_EXTENSIONS}" | grep -qE "\b(intl|imagick|grpc|v8js|protobuf|mongodb|tbb)\b"; then
 		CGO_LDFLAGS="${CGO_LDFLAGS} -lstdc++"
@@ -173,11 +177,7 @@ fi
 
 export CGO_LDFLAGS
 
-#LIBPHP_VERSION="$(./buildroot/bin/php-config --version)"
-# Temporary workaround for https://github.com/crazywhalecc/static-php-cli/issues/563
-if [[ $(cat buildroot/include/php/main/php_version.h) =~ (define PHP_VERSION \"([0-9\.]+)) ]]; then
-	export LIBPHP_VERSION=${BASH_REMATCH[2]}
-fi
+LIBPHP_VERSION="$(./buildroot/bin/php-config --version)"
 
 cd ../
 
@@ -269,10 +269,27 @@ if [ -n "${EMBED}" ] && [ -d "${EMBED}" ]; then
 	${md5binary} app.tar | awk '{printf $1}' >app_checksum.txt
 fi
 
-cd caddy/frankenphp/
+if [ -z "${XCADDY_ARGS}" ]; then
+	XCADDY_ARGS="--with github.com/dunglas/mercure/caddy --with github.com/dunglas/vulcain/caddy"
+fi
+
+XCADDY_DEBUG=0
+if [ -n "${DEBUG_SYMBOLS}" ]; then
+	XCADDY_DEBUG=1
+fi
+
 go env
-go build -buildmode=pie -tags "cgo,netgo,osusergo,static_build,nobadger,nomysql,nopgx" -ldflags "-linkmode=external -extldflags '-static-pie ${extraExtldflags}' ${extraLdflags} -X 'github.com/caddyserver/caddy/v2.CustomVersion=FrankenPHP ${FRANKENPHP_VERSION} PHP ${LIBPHP_VERSION} Caddy'" -o "../../dist/${bin}"
-cd ../..
+cd caddy/
+# shellcheck disable=SC2086
+CGO_ENABLED=1 \
+	XCADDY_GO_BUILD_FLAGS="-buildmode=pie -tags cgo,netgo,osusergo,static_build,nobadger,nomysql,nopgx -ldflags \"-linkmode=external -extldflags '-static-pie ${extraExtldflags}' ${extraLdflags} -X 'github.com/caddyserver/caddy/v2.CustomVersion=FrankenPHP ${FRANKENPHP_VERSION} PHP ${LIBPHP_VERSION} Caddy'\"" \
+	XCADDY_DEBUG="${XCADDY_DEBUG}" \
+	xcaddy build \
+	--output "../dist/${bin}" \
+	${XCADDY_ARGS} \
+	--with github.com/dunglas/frankenphp=.. \
+	--with github.com/dunglas/frankenphp/caddy=.
+cd ..
 
 if [ -d "${EMBED}" ]; then
 	truncate -s 0 app.tar

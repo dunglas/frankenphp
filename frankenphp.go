@@ -365,6 +365,10 @@ func Init(options ...Option) error {
 
 // Shutdown stops the workers and the PHP runtime.
 func Shutdown() {
+	if !isRunning {
+		return
+	}
+
 	drainWorkers()
 	drainPHPThreads()
 	drainAutoScaling()
@@ -468,13 +472,27 @@ func ServeHTTP(responseWriter http.ResponseWriter, request *http.Request) error 
 	fc.startedAt = time.Now()
 
 	// Detect if a worker is available to handle this request
-	if worker, ok := workers[fc.scriptFilename]; ok {
-		worker.handleRequest(request, fc)
-		return nil
+	if !isWorker {
+		if worker, ok := workers[fc.scriptFilename]; ok {
+			metrics.StartWorkerRequest(fc.scriptFilename)
+			worker.handleRequest(request)
+			<-fc.done
+			metrics.StopWorkerRequest(fc.scriptFilename, time.Since(fc.startedAt))
+			return nil
+		} else {
+			metrics.StartRequest()
+		}
 	}
 
-	// If no worker was availabe send the request to non-worker threads
-	handleRequestWithRegularPHPThreads(request, fc)
+	select {
+	case <-done:
+	case requestChan <- request:
+		<-fc.done
+	}
+
+	if !isWorker {
+		metrics.StopRequest()
+	}
 
 	return nil
 }

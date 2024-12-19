@@ -134,6 +134,12 @@ jobs:
             platform: linux/arm/v6
     steps:
       -
+        name: Prepare
+        id: prepare
+        run: |
+          platform=${{ matrix.platform }}
+          echo "sanitized_platform=${platform//\//-}" >> "${GITHUB_OUTPUT}"
+      -
         uses: actions/checkout@v4
         with:
           ref: ${{ needs.prepare.outputs.ref }}
@@ -198,18 +204,18 @@ jobs:
       -
         name: Upload builder metadata
         if: fromJson(needs.prepare.outputs.push)
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: metadata-builder-${{ matrix.variant }}
+          name: metadata-builder-${{ matrix.variant }}-${{ steps.prepare.outputs.sanitized_platform }}
           path: /tmp/metadata/builder/*
           if-no-files-found: error
           retention-days: 1
       -
         name: Upload runner metadata
         if: fromJson(needs.prepare.outputs.push)
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: metadata-runner-${{ matrix.variant }}
+          name: metadata-runner-${{ matrix.variant }}-${{ steps.prepare.outputs.sanitized_platform }}
           path: /tmp/metadata/runner/*
           if-no-files-found: error
           retention-days: 1
@@ -237,10 +243,11 @@ jobs:
     steps:
       -
         name: Download metadata
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
-          name: metadata-${{ matrix.target }}-${{ matrix.variant }}
+          pattern: metadata-${{ matrix.target }}-${{ matrix.variant }}-*
           path: /tmp/metadata
+          merge-multiple: true
       -
         name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3

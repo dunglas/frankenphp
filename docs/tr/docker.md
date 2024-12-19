@@ -142,11 +142,11 @@ FrankenPHP, Docker'da root olmayan kullanıcı olarak çalışabilir.
 ```dockerfile
 FROM dunglas/frankenphp
 
-ARG USER=www-data
+ARG USER=appuser
 
 RUN \
 	# Alpine tabanlı dağıtımlar için "adduser -D ${USER}" kullanın
-	useradd -D ${USER}; \
+	useradd ${USER}; \
 	# 80 ve 443 numaralı bağlantı noktalarına bağlanmak için ek özellik ekleyin
 	setcap CAP_NET_BIND_SERVICE=+eip /usr/local/bin/frankenphp; \
 	# /data/caddy ve /config/caddy dosyalarına yazma erişimi verin
