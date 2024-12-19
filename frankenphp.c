@@ -1167,11 +1167,11 @@ int frankenphp_reset_opcache(void) {
   return 0;
 }
 
-  /*
-   * Probe the CPU usage of the entire process fo x milliseconds
-   * Uses clock_gettime to compare cpu time with real time
-   * Returns the % of CPUs used by the process in the timeframe
-   */
+/*
+ * Probe the CPU usage of the entire process fo x milliseconds
+ * Uses clock_gettime to compare cpu time with real time
+ * Returns the % of CPUs used by the process in the timeframe
+ */
 float frankenphp_probe_cpu(int cpu_count, int milliseconds) {
   struct timespec sleep_time, cpu_start, cpu_end, probe_start, probe_end;
   clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &cpu_start);
@@ -1183,7 +1183,9 @@ float frankenphp_probe_cpu(int cpu_count, int milliseconds) {
 
   clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &cpu_end);
   clock_gettime(CLOCK_MONOTONIC, &probe_end);
-  float cpu_diff = (cpu_end.tv_nsec / 1000000000.0 + cpu_end.tv_sec) - (cpu_start.tv_nsec / 1000000000.0 + cpu_start.tv_sec);
-  float req_diff = (probe_end.tv_nsec / 1000000000.0 + probe_end.tv_sec) - (probe_start.tv_nsec / 1000000000.0 + probe_start.tv_sec);
+  float cpu_diff = (cpu_end.tv_nsec / 1000000000.0 + cpu_end.tv_sec) -
+                   (cpu_start.tv_nsec / 1000000000.0 + cpu_start.tv_sec);
+  float req_diff = (probe_end.tv_nsec / 1000000000.0 + probe_end.tv_sec) -
+                   (probe_start.tv_nsec / 1000000000.0 + probe_start.tv_sec);
   return cpu_diff / req_diff / cpu_count;
 }

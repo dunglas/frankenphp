@@ -22,18 +22,18 @@ const (
 	// if PHP threads are using more than this ratio of the CPU, do not scale
 	maxCpuUsageForScaling = 0.8
 	// check if threads should be stopped every x seconds
-    downScaleCheckTime = 5 * time.Second
+	downScaleCheckTime = 5 * time.Second
 	// amount of threads that can be stopped in one iteration of downScaleCheckTime
 	maxTerminationCount = 10
 	// if an autoscaled thread has been waiting for longer than this time, terminate it
-    maxThreadIdleTime = 5 * time.Second
+	maxThreadIdleTime = 5 * time.Second
 )
 
 var (
-	autoScaledThreads    = []*phpThread{}
-	scalingMu            = new(sync.RWMutex)
-	blockAutoScaling     = atomic.Bool{}
-	cpuCount             = runtime.NumCPU()
+	autoScaledThreads = []*phpThread{}
+	scalingMu         = new(sync.RWMutex)
+	blockAutoScaling  = atomic.Bool{}
+	cpuCount          = runtime.NumCPU()
 )
 
 // turn the first inactive/reserved thread into a regular thread
@@ -160,9 +160,9 @@ func autoscaleRegularThreads(timeSpentStalling time.Duration) {
 	defer blockAutoScaling.Store(false)
 
 	if probeIfCpusAreBusy(cpuProbeTime) {
-        logger.Debug("cpu is busy, not autoscaling")
-        return
-    }
+		logger.Debug("cpu is busy, not autoscaling")
+		return
+	}
 
 	count, err := AddRegularThread()
 	scalingMu.Lock()
@@ -210,8 +210,8 @@ func downScaleThreads() {
 	}
 }
 
-func readMemory(){
-	return;
+func readMemory() {
+	return
 	var mem runtime.MemStats
 	runtime.ReadMemStats(&mem)
 
@@ -230,4 +230,3 @@ func probeIfCpusAreBusy(sleepTime time.Duration) bool {
 	logger.Warn("CPU usage", zap.Float64("usage", cpuUsage))
 	return cpuUsage > maxCpuUsageForScaling
 }
-
