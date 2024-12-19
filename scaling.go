@@ -255,8 +255,8 @@ func probeCPUs(probeTime time.Duration) bool {
 	C.clock_gettime(C.CLOCK_MONOTONIC, &endTime)
 	C.clock_gettime(C.CLOCK_PROCESS_CPUTIME_ID, &cpuEndTime)
 
-	elapsedTime := float64((endTime.tv_sec-startTime.tv_sec)*1e9 + (endTime.tv_nsec - startTime.tv_nsec))
-	elapsedCpuTime := float64((cpuEndTime.tv_sec-cpuTime.tv_sec)*1e9 + (cpuEndTime.tv_nsec - cpuTime.tv_nsec))
+	elapsedTime := float64((endTime.tv_sec-startTime.tv_sec)*1e9 + (endTime.tv_nsec - startTime.tv_nsec)*1.0)
+	elapsedCpuTime := float64((cpuEndTime.tv_sec-cpuTime.tv_sec)*1e9 + (cpuEndTime.tv_nsec - cpuTime.tv_nsec)*1.0)
 	cpuUsage := elapsedCpuTime / elapsedTime / float64(cpuCount)
 
 	// TODO: remove unnecessary debug messages

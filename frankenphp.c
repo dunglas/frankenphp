@@ -82,7 +82,6 @@ __thread bool should_filter_var = 0;
 __thread frankenphp_server_context *local_ctx = NULL;
 __thread uintptr_t thread_index;
 __thread zval *os_environment = NULL;
-__thread float ioPercentage = 0.0;
 
 static void frankenphp_free_request_context() {
   frankenphp_server_context *ctx = SG(server_context);
