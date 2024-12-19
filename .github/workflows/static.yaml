@@ -96,6 +96,12 @@ jobs:
     needs: [ prepare ]
     steps:
       -
+        name: Prepare
+        id: prepare
+        run: |
+          platform=${{ matrix.platform }}
+          echo "sanitized_platform=${platform//\//-}" >> "${GITHUB_OUTPUT}"
+      -
         uses: actions/checkout@v4
         with:
           ref: ${{ needs.prepare.outputs.ref }}
@@ -154,9 +160,9 @@ jobs:
       -
         name: Upload metadata
         if: fromJson(needs.prepare.outputs.push) && !matrix.debug && !matrix.mimalloc
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: metadata-static-builder
+          name: metadata-static-builder-${{ steps.prepare.outputs.sanitized_platform }}
           path: /tmp/metadata/*
           if-no-files-found: error
           retention-days: 1
@@ -173,9 +179,9 @@ jobs:
       -
         name: Upload artifact
         if: ${{ !fromJson(needs.prepare.outputs.push) }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: frankenphp-linux-${{ matrix.platform == 'linux/amd64' && 'x86_64' || 'aarch64' }}${{ matrix.debug && '-debug' || '' }}${{ matrix.mimalloc && '-mimalloc' || '' }}
+          name: frankenphp-linux-${{ matrix.platform == 'linux/amd64' && 'x86_64' || 'aarch64' }}${{ matrix.debug && '-debug' || '' }}${{ matrix.mimalloc && '-mimalloc' || '' }}-${{ steps.prepare.outputs.sanitized_platform }}
           path: frankenphp-linux-${{ matrix.platform == 'linux/amd64' && 'x86_64' || 'aarch64' }}${{ matrix.debug && '-debug' || '' }}${{ matrix.mimalloc && '-mimalloc' || '' }}
       -
         name: Upload special assets
@@ -199,10 +205,11 @@ jobs:
     steps:
       -
         name: Download metadata
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
-          name: metadata-static-builder
+          pattern: metadata-static-builder-*
           path: /tmp/metadata
+          merge-multiple: true
       -
         name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -260,6 +267,12 @@ jobs:
       HOMEBREW_NO_AUTO_UPDATE: 1
     steps:
       -
+        name: Prepare
+        id: prepare
+        run: |
+          platform=${{ matrix.platform }}
+          echo "sanitized_platform=${platform//\//-}" >> "${GITHUB_OUTPUT}"
+      -
         uses: actions/checkout@v4
         with:
           ref: ${{ needs.prepare.outputs.ref }}
@@ -297,7 +310,7 @@ jobs:
       -
         name: Upload artifact
         if: github.ref_type == 'branch'
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: frankenphp-mac-${{ matrix.platform }}
+          name: frankenphp-mac-${{ matrix.platform }}-${{ steps.prepare.outputs.sanitized_platform }}
           path: dist/frankenphp-mac-${{ matrix.platform }}
