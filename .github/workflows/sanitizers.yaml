@@ -5,12 +5,12 @@ on:
     branches:
       - main
     paths-ignore:
-      - 'docs/**'
+      - "docs/**"
   push:
     branches:
       - main
     paths-ignore:
-      - 'docs/**'
+      - "docs/**"
 permissions:
   contents: read
 jobs:
@@ -21,7 +21,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        sanitizer: ['asan', 'msan']
+        sanitizer: ["asan", "msan"]
     env:
       CFLAGS: -g -O0 -fsanitize=${{ matrix.sanitizer == 'asan' && 'address' || 'memory' }} -DZEND_TRACK_ARENA_ALLOC
       LDFLAGS: -fsanitize=${{ matrix.sanitizer == 'asan' && 'address' || 'memory' }}
@@ -31,34 +31,28 @@ jobs:
       LIBRARY_PATH: ${{ github.workspace }}/php/target/lib:${{ github.workspace }}/watcher/target/lib
       LD_LIBRARY_PATH: ${{ github.workspace }}/php/target/lib
     steps:
-      -
-        name: Remove local PHP
+      - name: Remove local PHP
         run: sudo apt-get remove --purge --autoremove 'php*' 'libmemcached*'
-      -
-        uses: actions/checkout@v4
-      -
-        uses: actions/setup-go@v5
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
         with:
-          go-version: '1.22'
+          go-version: "1.22"
           cache-dependency-path: |
             go.sum 
             caddy/go.sum
-      -
-        name: Determine PHP version
+      - name: Determine PHP version
         id: determine-php-version
         run: |
           curl -fsSL 'https://www.php.net/releases/index.php?json&max=1&version=8.4' -o version.json
           echo version="$(jq -r 'keys[0]' version.json)" >> "$GITHUB_OUTPUT"
           echo archive="$(jq -r '.[] .source[] | select(.filename |endswith(".xz")) | "https://www.php.net/distributions/" + .filename' version.json)" >> "$GITHUB_OUTPUT"
-      -
-        name: Cache PHP
+      - name: Cache PHP
         id: cache-php
         uses: actions/cache@v4
         with:
           path: php/target
           key: php-sanitizers-${{ matrix.sanitizer }}-${{ runner.arch }}-${{ steps.determine-php-version.outputs.version }}
-      -
-        if: steps.cache-php.outputs.cache-hit != 'true'
+      - if: steps.cache-php.outputs.cache-hit != 'true'
         name: Compile PHP
         run: |
           mkdir php/
@@ -92,22 +86,17 @@ jobs:
             --prefix="$(pwd)/target/"
           make -j"$(getconf _NPROCESSORS_ONLN)"
           make install
-      -
-        name: Add PHP to the PATH
+      - name: Add PHP to the PATH
         run: echo "$(pwd)/php/target/bin" >> "$GITHUB_PATH"
-      -
-        name: Install e-dant/watcher
+      - name: Install e-dant/watcher
         uses: ./.github/actions/watcher
-      -
-        name: Set Set CGO flags
+      - name: Set Set CGO flags
         run: |
           {
             echo "CGO_CFLAGS=$CFLAGS -I${PWD}/watcher/target/include $(php-config --includes)"
             echo "CGO_LDFLAGS=$LDFLAGS $(php-config --ldflags) $(php-config --libs)"
           } >> "$GITHUB_ENV"
-      -
-        name: Compile tests
+      - name: Compile tests
         run: go test  ${{ matrix.sanitizer == 'msan' && '-tags=nowatcher' || '' }} -${{ matrix.sanitizer }} -v -x -c
-      -
-        name: Run tests
+      - name: Run tests
         run: ./frankenphp.test -test.v
