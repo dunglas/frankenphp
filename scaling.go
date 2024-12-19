@@ -1,5 +1,7 @@
 package frankenphp
 
+//#include "frankenphp.h"
+import "C"
 import (
 	"errors"
 	"fmt"
@@ -15,16 +17,16 @@ import (
 const (
 	// only allow scaling threads if requests were stalled for longer than this time
 	allowedStallTime = 10 * time.Millisecond
-	// time to wait after scaling a thread to prevent spending too many resources on scaling
-	scaleBlockTime = 100 * time.Millisecond
-	// check for and stop idle threads every x seconds
-	downScaleCheckTime = 5 * time.Second
-	// if an autoscaled thread has been waiting for longer than this time, terminate it
-	maxThreadIdleTime = 5 * time.Second
-	// if PHP threads are using more than this percentage of CPU, do not scale
-	maxCpuPotential = 0.85
-	// amount of threads that can be stopped at once
+	// the amount of time to check for CPU usage before scaling
+	cpuProbeTime = 100 * time.Millisecond
+	// if PHP threads are using more than this ratio of the CPU, do not scale
+	maxCpuUsageForScaling = 0.8
+	// check if threads should be stopped every x seconds
+    downScaleCheckTime = 5 * time.Second
+	// amount of threads that can be stopped in one iteration of downScaleCheckTime
 	maxTerminationCount = 10
+	// if an autoscaled thread has been waiting for longer than this time, terminate it
+    maxThreadIdleTime = 5 * time.Second
 )
 
 var (
@@ -32,8 +34,6 @@ var (
 	scalingMu            = new(sync.RWMutex)
 	blockAutoScaling     = atomic.Bool{}
 	cpuCount             = runtime.NumCPU()
-	allThreadsCpuPercent float64
-	cpuMutex             sync.Mutex
 )
 
 // turn the first inactive/reserved thread into a regular thread
@@ -72,7 +72,6 @@ func AddWorkerThread(workerFileName string) (int, error) {
 		return 0, errors.New("worker not found")
 	}
 
-	// TODO: instead of starting new threads, would it make sense to convert idle ones?
 	thread := getInactivePHPThread()
 	if thread == nil {
 		count := worker.countThreads()
@@ -132,35 +131,38 @@ func autoscaleWorkerThreads(worker *worker, timeSpentStalling time.Duration) {
 	if timeSpentStalling < allowedStallTime || !blockAutoScaling.CompareAndSwap(false, true) {
 		return
 	}
+	defer blockAutoScaling.Store(false)
 
-	threadCount := worker.countThreads()
-	if cpuCoresAreBusy(threadCount) {
-		logger.Debug("not autoscaling", zap.String("worker", worker.fileName), zap.Int("count", threadCount))
-		time.Sleep(scaleBlockTime)
-		blockAutoScaling.Store(false)
+	// TODO: is there an easy way to check if we are reaching memory limits?
+
+	if probeIfCpusAreBusy(cpuProbeTime) {
+		logger.Debug("cpu is busy, not autoscaling", zap.String("worker", worker.fileName))
 		return
 	}
 
-	_, err := AddWorkerThread(worker.fileName)
+	count, err := AddWorkerThread(worker.fileName)
 	if err != nil {
-		logger.Debug("could not add worker thread", zap.String("worker", worker.fileName), zap.Error(err))
+		logger.Debug("could not add worker thread", zap.String("worker", worker.fileName), zap.Int("count", count), zap.Error(err))
 	}
 
 	scalingMu.Lock()
 	autoScaledThreads = append(autoScaledThreads, worker.threads[len(worker.threads)-1])
 	scalingMu.Unlock()
-
-	// wait a bit to prevent spending too much time on scaling
-	time.Sleep(scaleBlockTime)
-	blockAutoScaling.Store(false)
 }
 
 // Add regular PHP threads automatically
-// Only add threads if requests were stalled long enough and no other scaling is in progress
 func autoscaleRegularThreads(timeSpentStalling time.Duration) {
+
+	// first check if time spent waiting for a thread was above the allowed threshold
 	if timeSpentStalling < allowedStallTime || !blockAutoScaling.CompareAndSwap(false, true) {
 		return
 	}
+	defer blockAutoScaling.Store(false)
+
+	if probeIfCpusAreBusy(cpuProbeTime) {
+        logger.Debug("cpu is busy, not autoscaling")
+        return
+    }
 
 	count, err := AddRegularThread()
 	scalingMu.Lock()
@@ -168,10 +170,6 @@ func autoscaleRegularThreads(timeSpentStalling time.Duration) {
 	scalingMu.Unlock()
 
 	logger.Debug("regular thread autoscaling", zap.Int("count", count), zap.Error(err))
-
-	// wait a bit to prevent spending too much time on scaling
-	time.Sleep(scaleBlockTime)
-	blockAutoScaling.Store(false)
 }
 
 func downScaleThreads() {
@@ -212,22 +210,24 @@ func downScaleThreads() {
 	}
 }
 
-// threads spend a certain % of time on CPU cores and a certain % waiting for IO
-// this function tracks the CPU usage and weighs it against previous requests
-func trackCpuUsage(cpuPercent float64) {
-	cpuMutex.Lock()
-	allThreadsCpuPercent = (allThreadsCpuPercent*99 + cpuPercent) / 100
-	cpuMutex.Unlock()
+func readMemory(){
+	return;
+	var mem runtime.MemStats
+	runtime.ReadMemStats(&mem)
+
+	fmt.Printf("Total allocated memory: %d bytes\n", mem.TotalAlloc)
+	fmt.Printf("Number of memory allocations: %d\n", mem.Mallocs)
 }
 
-// threads track how much time they spend on CPU cores
-// cpuPotential is the average amount of time threads spend on CPU cores * the number of threads
-// example: 10 threads that spend 10% of their time on CPU cores and 90% waiting for IO, would have a potential of 100%
-// only scale if the potential is below a threshold
-// if the potential is too high, then requests are stalled because of CPU usage, not because of IO
-func cpuCoresAreBusy(threadCount int) bool {
-	cpuMutex.Lock()
-	cpuPotential := allThreadsCpuPercent * float64(threadCount) / float64(cpuCount)
-	cpuMutex.Unlock()
-	return cpuPotential > maxCpuPotential
+// probe the CPU usage of the process
+// if CPUs are not busy, most threads are likely waiting for I/O, so we should scale
+// if CPUs are already busy we won't gain much by scaling and want to avoid the overhead of doing so
+// keep in mind that this will only probe CPU usage by PHP Threads
+// time spent by the go runtime or other processes is not considered
+func probeIfCpusAreBusy(sleepTime time.Duration) bool {
+	cpuUsage := float64(C.frankenphp_probe_cpu(C.int(cpuCount), C.int(sleepTime.Milliseconds())))
+
+	logger.Warn("CPU usage", zap.Float64("usage", cpuUsage))
+	return cpuUsage > maxCpuUsageForScaling
 }
+

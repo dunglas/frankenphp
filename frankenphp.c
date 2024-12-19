@@ -417,11 +417,6 @@ PHP_FUNCTION(frankenphp_handle_request) {
     RETURN_FALSE;
   }
 
-  // read the CPU timer
-  struct timespec cpu_start, cpu_end, req_start, req_end;
-  clock_gettime(CLOCK_THREAD_CPUTIME_ID, &cpu_start);
-  clock_gettime(CLOCK_MONOTONIC, &req_start);
-
 #ifdef ZEND_MAX_EXECUTION_TIMERS
   /*
    * Reset default timeout
@@ -450,14 +445,7 @@ PHP_FUNCTION(frankenphp_handle_request) {
   frankenphp_worker_request_shutdown();
   ctx->has_active_request = false;
 
-  // calculate how much time was spent using a CPU core
-  clock_gettime(CLOCK_THREAD_CPUTIME_ID, &cpu_end);
-  clock_gettime(CLOCK_MONOTONIC, &req_end);
-  float cpu_diff = (cpu_end.tv_nsec / 1000000000.0 + cpu_end.tv_sec) - (cpu_start.tv_nsec / 1000000000.0 + cpu_start.tv_sec);
-  float req_diff = (req_end.tv_nsec / 1000000000.0 + req_end.tv_sec) - (req_start.tv_nsec / 1000000000.0 + req_start.tv_sec);
-  float cpu_percent = cpu_diff / req_diff;
-
-  go_frankenphp_finish_worker_request(thread_index, cpu_percent);
+  go_frankenphp_finish_worker_request(thread_index);
 
   RETURN_TRUE;
 }
@@ -1177,4 +1165,25 @@ int frankenphp_reset_opcache(void) {
     return frankenphp_execute_php_function("opcache_reset");
   }
   return 0;
+}
+
+  /*
+   * Probe the CPU usage of the entire process fo x milliseconds
+   * Uses clock_gettime to compare cpu time with real time
+   * Returns the % of CPUs used by the process in the timeframe
+   */
+float frankenphp_probe_cpu(int cpu_count, int milliseconds) {
+  struct timespec sleep_time, cpu_start, cpu_end, probe_start, probe_end;
+  clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &cpu_start);
+  clock_gettime(CLOCK_MONOTONIC, &probe_start);
+
+  sleep_time.tv_sec = 0;
+  sleep_time.tv_nsec = 1000 * 1000 * milliseconds;
+  nanosleep(&sleep_time, &sleep_time);
+
+  clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &cpu_end);
+  clock_gettime(CLOCK_MONOTONIC, &probe_end);
+  float cpu_diff = (cpu_end.tv_nsec / 1000000000.0 + cpu_end.tv_sec) - (cpu_start.tv_nsec / 1000000000.0 + cpu_start.tv_sec);
+  float req_diff = (probe_end.tv_nsec / 1000000000.0 + probe_end.tv_sec) - (probe_start.tv_nsec / 1000000000.0 + probe_start.tv_sec);
+  return cpu_diff / req_diff / cpu_count;
 }

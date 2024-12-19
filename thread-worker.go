@@ -203,7 +203,7 @@ func go_frankenphp_worker_handle_request_start(threadIndex C.uintptr_t) C.bool {
 }
 
 //export go_frankenphp_finish_worker_request
-func go_frankenphp_finish_worker_request(threadIndex C.uintptr_t, cpuPercent C.float) {
+func go_frankenphp_finish_worker_request(threadIndex C.uintptr_t) {
 	thread := phpThreads[threadIndex]
 	r := thread.getActiveRequest()
 	fc := r.Context().Value(contextKey).(*FrankenPHPContext)
@@ -214,8 +214,6 @@ func go_frankenphp_finish_worker_request(threadIndex C.uintptr_t, cpuPercent C.f
 	if c := fc.logger.Check(zapcore.DebugLevel, "request handling finished"); c != nil {
 		c.Write(zap.String("worker", fc.scriptFilename), zap.String("url", r.RequestURI))
 	}
-
-	trackCpuUsage(float64(cpuPercent))
 }
 
 // when frankenphp_finish_request() is directly called from PHP
