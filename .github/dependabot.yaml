@@ -1,15 +1,13 @@
 ---
 version: 2
 updates:
-  -
-    package-ecosystem: gomod
+  - package-ecosystem: gomod
     directory: /
     schedule:
       interval: weekly
     commit-message:
       prefix: chore
-  -
-    package-ecosystem: gomod
+  - package-ecosystem: gomod
     directory: /caddy
     schedule:
       interval: weekly
@@ -18,12 +16,9 @@ updates:
     # These packages must be in sync with versions
     # used by github.com/caddyserver/caddy/v2
     ignore:
-      -
-        dependency-name: github.com/google/cel-go
-      -
-        dependency-name: github.com/quic-go/*
-  -
-    package-ecosystem: github-actions
+      - dependency-name: github.com/google/cel-go
+      - dependency-name: github.com/quic-go/*
+  - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
