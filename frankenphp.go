@@ -367,6 +367,7 @@ func Init(options ...Option) error {
 func Shutdown() {
 	drainWorkers()
 	drainPHPThreads()
+	drainAutoScaling()
 	metrics.Shutdown()
 
 	// Remove the installed app

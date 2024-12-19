@@ -5,6 +5,8 @@ import (
 	"io"
 	"net/http"
 	"path/filepath"
+	"strings"
+	"sync"
 	"testing"
 
 	"github.com/caddyserver/caddy/v2/caddytest"
@@ -174,6 +176,114 @@ func TestShowTheCorrectThreadDebugStatus(t *testing.T) {
 	assert.Contains(t, threadInfo, "Thread 6")
 	assert.NotContains(t, threadInfo, "Thread 7")
 	assert.Contains(t, threadInfo, "7 additional threads can be started at runtime")
+}
+
+func TestAutoScaleWorkerThreads(t *testing.T) {
+	wg := sync.WaitGroup{}
+	maxTries := 100
+	requestsPerTry := 200
+	tester := caddytest.NewTester(t)
+	tester.InitServer(`
+		{
+			skip_install_trust
+			admin localhost:2999
+			http_port `+testPort+`
+
+			frankenphp {
+				max_threads 10
+				num_threads 2
+				worker ../testdata/sleep.php 1
+			}
+		}
+
+		localhost:`+testPort+` {
+			route {
+				root ../testdata
+				rewrite sleep.php
+				php
+			}
+		}
+		`, "caddyfile")
+
+	// spam an endpoint that simulates IO
+	endpoint := "http://localhost:" + testPort + "/?sleep=5&work=1000"
+	autoScaledThread := "Thread 2"
+
+	// first assert that the thread is not already present
+	threadInfo := getAdminResponseBody(tester, "GET", "threads")
+	assert.NotContains(t, threadInfo, autoScaledThread)
+
+	// try to spawn the additional threads by spamming the server
+	for tries := 0; tries < maxTries; tries++ {
+		wg.Add(requestsPerTry)
+		for i := 0; i < requestsPerTry; i++ {
+			go func() {
+				tester.AssertGetResponse(endpoint, http.StatusOK, "slept for 5 ms and worked for 1000 iterations")
+				wg.Done()
+			}()
+		}
+		wg.Wait()
+		threadInfo = getAdminResponseBody(tester, "GET", "threads")
+		if strings.Contains(threadInfo, autoScaledThread) {
+			break
+		}
+	}
+
+	// assert that the autoscaled thread is present in the threadInfo
+	assert.Contains(t, threadInfo, autoScaledThread)
+}
+
+func TestAutoScaleRegularThreads(t *testing.T) {
+	wg := sync.WaitGroup{}
+	maxTries := 100
+	requestsPerTry := 200
+	tester := caddytest.NewTester(t)
+	tester.InitServer(`
+		{
+			skip_install_trust
+			admin localhost:2999
+			http_port `+testPort+`
+
+			frankenphp {
+				max_threads 10
+				num_threads 1
+			}
+		}
+
+		localhost:`+testPort+` {
+			route {
+				root ../testdata
+				php
+			}
+		}
+		`, "caddyfile")
+
+	// spam an endpoint that simulates IO
+	endpoint := "http://localhost:" + testPort + "/sleep.php?sleep=5&work=1000"
+	autoScaledThread := "Thread 1"
+
+	// first assert that the thread is not already present
+	threadInfo := getAdminResponseBody(tester, "GET", "threads")
+	assert.NotContains(t, threadInfo, autoScaledThread)
+
+	// try to spawn the additional threads by spamming the server
+	for tries := 0; tries < maxTries; tries++ {
+		wg.Add(requestsPerTry)
+		for i := 0; i < requestsPerTry; i++ {
+			go func() {
+				tester.AssertGetResponse(endpoint, http.StatusOK, "slept for 5 ms and worked for 1000 iterations")
+				wg.Done()
+			}()
+		}
+		wg.Wait()
+		threadInfo = getAdminResponseBody(tester, "GET", "threads")
+		if strings.Contains(threadInfo, autoScaledThread) {
+			break
+		}
+	}
+
+	// assert that the autoscaled thread is present in the threadInfo
+	assert.Contains(t, threadInfo, autoScaledThread)
 }
 
 func assertAdminResponse(tester *caddytest.Tester, method string, path string, expectedStatus int, expectedBody string) {

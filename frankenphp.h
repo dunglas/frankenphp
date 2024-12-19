@@ -69,6 +69,4 @@ zend_string *frankenphp_init_persistent_string(const char *string, size_t len);
 void frankenphp_release_zend_string(zend_string *z_string);
 int frankenphp_reset_opcache(void);
 
-float frankenphp_probe_cpu(int cpu_count, int milliseconds);
-
 #endif

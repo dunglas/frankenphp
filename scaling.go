@@ -4,7 +4,6 @@ package frankenphp
 import "C"
 import (
 	"errors"
-	"fmt"
 	"runtime"
 	"sync"
 	"sync/atomic"
@@ -18,7 +17,7 @@ const (
 	// only allow scaling threads if requests were stalled for longer than this time
 	allowedStallTime = 10 * time.Millisecond
 	// the amount of time to check for CPU usage before scaling
-	cpuProbeTime = 100 * time.Millisecond
+	cpuProbeTime = 50 * time.Millisecond
 	// if PHP threads are using more than this ratio of the CPU, do not scale
 	maxCpuUsageForScaling = 0.8
 	// check if threads should be stopped every x seconds
@@ -40,66 +39,84 @@ var (
 func AddRegularThread() (int, error) {
 	scalingMu.Lock()
 	defer scalingMu.Unlock()
-	thread := getInactivePHPThread()
-	if thread == nil {
-		return countRegularThreads(), fmt.Errorf("max amount of overall threads reached: %d", len(phpThreads))
-	}
-	convertToRegularThread(thread)
-	return countRegularThreads(), nil
+	_, err := addRegularThread()
+	return countRegularThreads(), err
 }
 
-// remove the last regular thread
+func addRegularThread() (*phpThread, error) {
+	thread := getInactivePHPThread()
+	if thread == nil {
+		return nil, errors.New("max amount of overall threads reached")
+	}
+	convertToRegularThread(thread)
+	return thread, nil
+}
+
 func RemoveRegularThread() (int, error) {
 	scalingMu.Lock()
 	defer scalingMu.Unlock()
+	err := removeRegularThread()
+	return countRegularThreads(), err
+}
+
+// remove the last regular thread
+func removeRegularThread() error {
 	regularThreadMu.RLock()
 	if len(regularThreads) <= 1 {
 		regularThreadMu.RUnlock()
-		return 1, errors.New("cannot remove last thread")
+		return errors.New("cannot remove last thread")
 	}
 	thread := regularThreads[len(regularThreads)-1]
 	regularThreadMu.RUnlock()
 	thread.shutdown()
-	return countRegularThreads(), nil
+	return nil
+}
+
+func AddWorkerThread(workerFileName string) (int, error) {
+	worker, ok := workers[workerFileName]
+	if !ok {
+		return 0, errors.New("worker not found")
+	}
+	scalingMu.Lock()
+	defer scalingMu.Unlock()
+	_, err := addWorkerThread(worker)
+	return worker.countThreads(), err
 }
 
 // turn the first inactive/reserved thread into a worker thread
-func AddWorkerThread(workerFileName string) (int, error) {
-	scalingMu.Lock()
-	defer scalingMu.Unlock()
+func addWorkerThread(worker *worker) (*phpThread, error) {
+	thread := getInactivePHPThread()
+	if thread == nil {
+		return nil, errors.New("max amount of overall threads reached")
+	}
+	convertToWorkerThread(thread, worker)
+	return thread, nil
+}
+
+func RemoveWorkerThread(workerFileName string) (int, error) {
 	worker, ok := workers[workerFileName]
 	if !ok {
 		return 0, errors.New("worker not found")
 	}
+	scalingMu.Lock()
+	defer scalingMu.Unlock()
+	err := removeWorkerThread(worker)
 
-	thread := getInactivePHPThread()
-	if thread == nil {
-		count := worker.countThreads()
-		return count, fmt.Errorf("max amount of threads reached: %d", count)
-	}
-	convertToWorkerThread(thread, worker)
-	return worker.countThreads(), nil
+	return worker.countThreads(), err
 }
 
 // remove the last worker thread
-func RemoveWorkerThread(workerFileName string) (int, error) {
-	scalingMu.Lock()
-	defer scalingMu.Unlock()
-	worker, ok := workers[workerFileName]
-	if !ok {
-		return 0, errors.New("worker not found")
-	}
-
+func removeWorkerThread(worker *worker) error {
 	worker.threadMutex.RLock()
 	if len(worker.threads) <= 1 {
 		worker.threadMutex.RUnlock()
-		return 1, errors.New("cannot remove last thread")
+		return errors.New("cannot remove last thread")
 	}
 	thread := worker.threads[len(worker.threads)-1]
 	worker.threadMutex.RUnlock()
 	thread.shutdown()
 
-	return worker.countThreads(), nil
+	return nil
 }
 
 func initAutoScaling(numThreads int, maxThreads int) {
@@ -107,8 +124,8 @@ func initAutoScaling(numThreads int, maxThreads int) {
 		blockAutoScaling.Store(true)
 		return
 	}
-	autoScaledThreads = make([]*phpThread, 0, maxThreads-numThreads)
 	blockAutoScaling.Store(false)
+	autoScaledThreads = make([]*phpThread, 0, maxThreads-numThreads)
 	timer := time.NewTimer(downScaleCheckTime)
 	doneChan := mainThread.done
 	go func() {
@@ -124,52 +141,60 @@ func initAutoScaling(numThreads int, maxThreads int) {
 	}()
 }
 
+func drainAutoScaling() {
+	scalingMu.Lock()
+	blockAutoScaling.Store(true)
+	scalingMu.Unlock()
+}
+
 // Add worker PHP threads automatically
 func autoscaleWorkerThreads(worker *worker, timeSpentStalling time.Duration) {
-
 	// first check if time spent waiting for a thread was above the allowed threshold
 	if timeSpentStalling < allowedStallTime || !blockAutoScaling.CompareAndSwap(false, true) {
 		return
 	}
+	scalingMu.Lock()
+	defer scalingMu.Unlock()
 	defer blockAutoScaling.Store(false)
 
 	// TODO: is there an easy way to check if we are reaching memory limits?
 
-	if probeIfCpusAreBusy(cpuProbeTime) {
+	if !probeCPUs(cpuProbeTime) {
 		logger.Debug("cpu is busy, not autoscaling", zap.String("worker", worker.fileName))
 		return
 	}
 
-	count, err := AddWorkerThread(worker.fileName)
+	thread, err := addWorkerThread(worker)
 	if err != nil {
-		logger.Debug("could not add worker thread", zap.String("worker", worker.fileName), zap.Int("count", count), zap.Error(err))
+		logger.Debug("could not add worker thread", zap.String("worker", worker.fileName), zap.Error(err))
+		return
 	}
 
-	scalingMu.Lock()
-	autoScaledThreads = append(autoScaledThreads, worker.threads[len(worker.threads)-1])
-	scalingMu.Unlock()
+	autoScaledThreads = append(autoScaledThreads, thread)
 }
 
 // Add regular PHP threads automatically
 func autoscaleRegularThreads(timeSpentStalling time.Duration) {
-
 	// first check if time spent waiting for a thread was above the allowed threshold
 	if timeSpentStalling < allowedStallTime || !blockAutoScaling.CompareAndSwap(false, true) {
 		return
 	}
+	scalingMu.Lock()
+	defer scalingMu.Unlock()
 	defer blockAutoScaling.Store(false)
 
-	if probeIfCpusAreBusy(cpuProbeTime) {
+	if !probeCPUs(cpuProbeTime) {
 		logger.Debug("cpu is busy, not autoscaling")
 		return
 	}
 
-	count, err := AddRegularThread()
-	scalingMu.Lock()
-	autoScaledThreads = append(autoScaledThreads, regularThreads[len(regularThreads)-1])
-	scalingMu.Unlock()
+	thread, err := addRegularThread()
+	if err != nil {
+		logger.Debug("could not add regular thread", zap.Error(err))
+		return
+	}
 
-	logger.Debug("regular thread autoscaling", zap.Int("count", count), zap.Error(err))
+	autoScaledThreads = append(autoScaledThreads, thread)
 }
 
 func downScaleThreads() {
@@ -210,23 +235,32 @@ func downScaleThreads() {
 	}
 }
 
-func readMemory() {
-	return
-	var mem runtime.MemStats
-	runtime.ReadMemStats(&mem)
-
-	fmt.Printf("Total allocated memory: %d bytes\n", mem.TotalAlloc)
-	fmt.Printf("Number of memory allocations: %d\n", mem.Mallocs)
-}
-
-// probe the CPU usage of the process
+// probe the CPU usage of all PHP Threads
 // if CPUs are not busy, most threads are likely waiting for I/O, so we should scale
 // if CPUs are already busy we won't gain much by scaling and want to avoid the overhead of doing so
-// keep in mind that this will only probe CPU usage by PHP Threads
 // time spent by the go runtime or other processes is not considered
-func probeIfCpusAreBusy(sleepTime time.Duration) bool {
-	cpuUsage := float64(C.frankenphp_probe_cpu(C.int(cpuCount), C.int(sleepTime.Milliseconds())))
+func probeCPUs(probeTime time.Duration) bool {
+	var startTime, endTime, cpuTime, cpuEndTime C.struct_timespec
 
-	logger.Warn("CPU usage", zap.Float64("usage", cpuUsage))
-	return cpuUsage > maxCpuUsageForScaling
+	C.clock_gettime(C.CLOCK_MONOTONIC, &startTime)
+	C.clock_gettime(C.CLOCK_PROCESS_CPUTIME_ID, &cpuTime)
+
+	timer := time.NewTimer(probeTime)
+	select {
+	case <-mainThread.done:
+		return false
+	case <-timer.C:
+	}
+
+	C.clock_gettime(C.CLOCK_MONOTONIC, &endTime)
+	C.clock_gettime(C.CLOCK_PROCESS_CPUTIME_ID, &cpuEndTime)
+
+	elapsedTime := float64((endTime.tv_sec-startTime.tv_sec)*1e9 + (endTime.tv_nsec - startTime.tv_nsec))
+	elapsedCpuTime := float64((cpuEndTime.tv_sec-cpuTime.tv_sec)*1e9 + (cpuEndTime.tv_nsec - cpuTime.tv_nsec))
+	cpuUsage := elapsedCpuTime / elapsedTime / float64(cpuCount)
+
+	// TODO: remove unnecessary debug messages
+	logger.Debug("CPU usage", zap.Float64("cpuUsage", cpuUsage))
+
+	return cpuUsage < maxCpuUsageForScaling
 }
