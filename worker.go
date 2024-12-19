@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/dunglas/frankenphp/internal/watcher"
+	//"go.uber.org/zap"
 )
 
 // represents a worker script and can have many threads assigned to it
@@ -56,7 +57,8 @@ func initWorkers(opt []workerOpt) error {
 		return nil
 	}
 
-	if err := watcher.InitWatcher(directoriesToWatch, restartWorkers, getLogger()); err != nil {
+	watcherIsEnabled = true
+	if err := watcher.InitWatcher(directoriesToWatch, RestartWorkers, getLogger()); err != nil {
 		return err
 	}
 
@@ -89,7 +91,11 @@ func drainWorkers() {
 	watcher.DrainWatcher()
 }
 
-func restartWorkers() {
+func RestartWorkers() {
+	// disallow scaling threads while restarting workers
+	scalingMu.Lock()
+	defer scalingMu.Unlock()
+
 	ready := sync.WaitGroup{}
 	threadsToRestart := make([]*phpThread, 0)
 	for _, worker := range workers {
@@ -97,7 +103,8 @@ func restartWorkers() {
 		ready.Add(len(worker.threads))
 		for _, thread := range worker.threads {
 			if !thread.state.requestSafeStateChange(stateRestarting) {
-				// no state change allowed = shutdown
+				// no state change allowed == thread is shutting down
+				// we'll proceed to restart all other threads anyways
 				continue
 			}
 			close(thread.drainChan)
@@ -116,6 +123,14 @@ func restartWorkers() {
 		thread.drainChan = make(chan struct{})
 		thread.state.set(stateReady)
 	}
+}
+
+func WorkerFileNames() []string {
+	workerNames := make([]string, 0, len(workers))
+	for fileName, _ := range workers {
+		workerNames = append(workerNames, fileName)
+	}
+	return workerNames
 }
 
 func getDirectoriesToWatch(workerOpts []workerOpt) []string {
@@ -143,6 +158,13 @@ func (worker *worker) detachThread(thread *phpThread) {
 	worker.threadMutex.Unlock()
 }
 
+func (worker *worker) countThreads() int {
+	worker.threadMutex.RLock()
+	defer worker.threadMutex.RUnlock()
+
+	return len(worker.threads)
+}
+
 func (worker *worker) handleRequest(r *http.Request, fc *FrankenPHPContext) {
 	metrics.StartWorkerRequest(fc.scriptFilename)
 
@@ -156,13 +178,19 @@ func (worker *worker) handleRequest(r *http.Request, fc *FrankenPHPContext) {
 			metrics.StopWorkerRequest(worker.fileName, time.Since(fc.startedAt))
 			return
 		default:
+			// thread is busy, continue
 		}
 	}
 	worker.threadMutex.RUnlock()
 
 	// if no thread was available, fan the request out to all threads
-	// TODO: theoretically there could be autoscaling of threads here
+	stalledAt := time.Now()
 	worker.requestChan <- r
+	stallTime := time.Since(stalledAt)
 	<-fc.done
 	metrics.StopWorkerRequest(worker.fileName, time.Since(fc.startedAt))
+
+	// reaching here means we might not have spawned enough threads
+	// forward the amount of time the request spent being stalled
+	autoscaleWorkerThreads(worker, stallTime)
 }
