@@ -240,10 +240,10 @@ func downScaleThreads() {
 // if CPUs are already busy we won't gain much by scaling and want to avoid the overhead of doing so
 // time spent by the go runtime or other processes is not considered
 func probeCPUs(probeTime time.Duration) bool {
-	var startTime, endTime, cpuTime, cpuEndTime C.struct_timespec
+	var start, end, cpuStart, cpuEnd C.struct_timespec
 
-	C.clock_gettime(C.CLOCK_MONOTONIC, &startTime)
-	C.clock_gettime(C.CLOCK_PROCESS_CPUTIME_ID, &cpuTime)
+	C.clock_gettime(C.CLOCK_MONOTONIC, &start)
+	C.clock_gettime(C.CLOCK_PROCESS_CPUTIME_ID, &cpuStart)
 
 	timer := time.NewTimer(probeTime)
 	select {
@@ -252,11 +252,11 @@ func probeCPUs(probeTime time.Duration) bool {
 	case <-timer.C:
 	}
 
-	C.clock_gettime(C.CLOCK_MONOTONIC, &endTime)
-	C.clock_gettime(C.CLOCK_PROCESS_CPUTIME_ID, &cpuEndTime)
+	C.clock_gettime(C.CLOCK_MONOTONIC, &end)
+	C.clock_gettime(C.CLOCK_PROCESS_CPUTIME_ID, &cpuEnd)
 
-	elapsedTime := float64((endTime.tv_sec-startTime.tv_sec)*1e9 + (endTime.tv_nsec - startTime.tv_nsec)*1.0)
-	elapsedCpuTime := float64((cpuEndTime.tv_sec-cpuTime.tv_sec)*1e9 + (cpuEndTime.tv_nsec - cpuTime.tv_nsec)*1.0)
+	elapsedTime := float64(end.tv_sec-start.tv_sec)*1e9 + float64(end.tv_nsec - start.tv_nsec)
+	elapsedCpuTime := float64(cpuEnd.tv_sec-cpuStart.tv_sec)*1e9 + float64(cpuEnd.tv_nsec - cpuStart.tv_nsec)
 	cpuUsage := elapsedCpuTime / elapsedTime / float64(cpuCount)
 
 	// TODO: remove unnecessary debug messages
