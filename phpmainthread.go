@@ -46,7 +46,6 @@ func initPHPThreads(numThreads int, numMaxThreads int) error {
 	for i := 0; i < numThreads; i++ {
 		thread := phpThreads[i]
 		go func() {
-			thread.isProtected = true
 			thread.boot()
 			ready.Done()
 		}()

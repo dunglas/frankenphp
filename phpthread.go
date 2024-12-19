@@ -23,7 +23,6 @@ type phpThread struct {
 	handlerMu         *sync.Mutex
 	handler           threadHandler
 	state             *threadState
-	isProtected       bool
 }
 
 // interface that defines how the callbacks from the C thread should be handled
