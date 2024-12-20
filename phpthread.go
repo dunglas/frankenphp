@@ -41,7 +41,7 @@ func newPHPThread(threadIndex int) *phpThread {
 }
 
 // change the thread handler safely
-// must be called from outside of the PHP thread
+// must be called from outside the PHP thread
 func (thread *phpThread) setHandler(handler threadHandler) {
 	logger.Debug("setHandler")
 	thread.handlerMu.Lock()
@@ -79,6 +79,7 @@ func (thread *phpThread) pinString(s string) *C.char {
 
 	sData := unsafe.StringData(s)
 	thread.Pin(sData)
+
 	return (*C.char)(unsafe.Pointer(sData))
 }
 
