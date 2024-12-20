@@ -71,7 +71,8 @@ WORKDIR /usr/local/src/watcher
 RUN git clone https://github.com/e-dant/watcher . && \
 	cmake -S . -B build -DCMAKE_BUILD_TYPE=Release && \
 	cmake --build build/ && \
-	cmake --install build
+	cmake --install build && \
+    ldconfig
 
 WORKDIR /go/src/app
 COPY . .

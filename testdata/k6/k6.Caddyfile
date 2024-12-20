@@ -1,0 +1,21 @@
+{
+	frankenphp {
+		max_threads {$MAX_THREADS}
+		num_threads {$NUM_THREADS}
+		worker {
+			file /go/src/app/testdata/{$WORKER_FILE:sleep.php}
+			watch ./**/*.{php,yaml,yml,twig,env}
+			num {$WORKER_THREADS}
+		}
+	}
+}
+
+:80 {
+	route {
+		root /go/src/app/testdata
+		php {
+			root /go/src/app/testdata
+			enable_root_symlink false
+		}
+	}
+}
