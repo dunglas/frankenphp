@@ -31,6 +31,8 @@ func initPHPThreads(numThreads int) error {
 	phpThreads = make([]*phpThread, numThreads)
 
 	// initialize all threads as inactive
+	// this needs to happen before starting the main thread
+	// since some extensions access environment variables on startup
 	for i := 0; i < numThreads; i++ {
 		phpThreads[i] = newPHPThread(i)
 		convertToInactiveThread(phpThreads[i])
