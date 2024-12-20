@@ -151,7 +151,6 @@ jobs:
           if-no-files-found: error
           retention-days: 1
       - name: Copy binary
-        if: ${{ !fromJson(needs.prepare.outputs.push) || matrix.debug || matrix.mimalloc }}
         run: |
           digest=$(jq -r '."static-builder"."containerimage.config.digest"' <<< "${METADATA}")
           docker create --platform=${{ matrix.platform }} --name static-builder "${digest}"
@@ -165,15 +164,15 @@ jobs:
         with:
           name: frankenphp-linux-${{ matrix.platform == 'linux/amd64' && 'x86_64' || 'aarch64' }}${{ matrix.debug && '-debug' || '' }}${{ matrix.mimalloc && '-mimalloc' || '' }}
           path: frankenphp-linux-${{ matrix.platform == 'linux/amd64' && 'x86_64' || 'aarch64' }}${{ matrix.debug && '-debug' || '' }}${{ matrix.mimalloc && '-mimalloc' || '' }}
-      - name: Upload special assets
-        if: fromJson(needs.prepare.outputs.push) && (matrix.debug || matrix.mimalloc) && (needs.prepare.outputs.ref || github.ref_type == 'tag')
-        run: gh release upload "${{ (github.ref_type == 'tag' && github.ref_name) || needs.prepare.outputs.ref }}" frankenphp-linux-x86_64${{ matrix.debug && '-debug' || '' }}${{ matrix.mimalloc && '-mimalloc' || '' }} --repo dunglas/frankenphp --clobber
+      - name: Upload assets
+        if: fromJson(needs.prepare.outputs.push) && (needs.prepare.outputs.ref || github.ref_type == 'tag')
+        run: gh release upload "${{ (github.ref_type == 'tag' && github.ref_name) || needs.prepare.outputs.ref }}" frankenphp-linux-${{ matrix.platform == 'linux/amd64' && 'x86_64' || 'aarch64' }}${{ matrix.debug && '-debug' || '' }}${{ matrix.mimalloc && '-mimalloc' || '' }} --repo dunglas/frankenphp --clobber
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - if: fromJson(needs.prepare.outputs.push) && (matrix.debug || matrix.mimalloc) && (needs.prepare.outputs.ref || github.ref_type == 'tag')
+      - if: fromJson(needs.prepare.outputs.push) && (needs.prepare.outputs.ref || github.ref_type == 'tag')
         uses: actions/attest-build-provenance@v2
         with:
-          subject-path: ${{ github.workspace }}/frankenphp-linux-x86_64${{ matrix.debug && '-debug' || '' }}${{ matrix.mimalloc && '-mimalloc' || '' }}
+          subject-path: ${{ github.workspace }}/frankenphp-linux-*
 
   # Adapted from https://docs.docker.com/build/ci/github-actions/multi-platform/
   push:
@@ -210,22 +209,6 @@ jobs:
           docker buildx imagetools inspect "$(jq -cr '.target."static-builder".tags | first' <<< "${METADATA}")"
         env:
           METADATA: ${{ needs.prepare.outputs.metadata }}
-      - name: Copy binary
-        run: |
-          tag=$(jq -cr '.target."static-builder".tags | first' <<< "${METADATA}")
-          docker cp "$(docker create --platform=linux/amd64 --name static-builder "${tag}"):/go/src/app/dist/frankenphp-linux-x86_64" frankenphp-linux-x86_64 ; docker rm static-builder
-          docker cp "$(docker create --platform=linux/arm64 --name static-builder "${tag}"):/go/src/app/dist/frankenphp-linux-aarch64" frankenphp-linux-aarch64 ; docker rm static-builder
-        env:
-          METADATA: ${{ needs.prepare.outputs.metadata }}
-      - name: Upload asset
-        if: needs.prepare.outputs.ref || github.ref_type == 'tag'
-        run: gh release upload "${{ (github.ref_type == 'tag' && github.ref_name) || needs.prepare.outputs.ref }}" frankenphp-linux-x86_64 frankenphp-linux-aarch64 --repo dunglas/frankenphp --clobber
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - if: needs.prepare.outputs.ref || github.ref_type == 'tag'
-        uses: actions/attest-build-provenance@v2
-        with:
-          subject-path: ${{ github.workspace }}/frankenphp-linux-*
 
   build-mac:
     strategy:
