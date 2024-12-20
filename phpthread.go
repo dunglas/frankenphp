@@ -41,7 +41,7 @@ func newPHPThread(threadIndex int) *phpThread {
 }
 
 // change the thread handler safely
-// must be called from outside of the PHP thread
+// must be called from outside the PHP thread
 func (thread *phpThread) setHandler(handler threadHandler) {
 	logger.Debug("setHandler")
 	thread.handlerMu.Lock()
@@ -73,8 +73,13 @@ func (thread *phpThread) getActiveRequest() *http.Request {
 // Pin a string that is not null-terminated
 // PHP's zend_string may contain null-bytes
 func (thread *phpThread) pinString(s string) *C.char {
+	if s == "" {
+		return nil
+	}
+
 	sData := unsafe.StringData(s)
 	thread.Pin(sData)
+
 	return (*C.char)(unsafe.Pointer(sData))
 }
 

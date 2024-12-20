@@ -649,6 +649,8 @@ func TestEnvWorker(t *testing.T) {
 	testEnv(t, &testOptions{workerScript: "test-env.php"})
 }
 func testEnv(t *testing.T, opts *testOptions) {
+	assert.NoError(t, os.Setenv("EMPTY", ""))
+
 	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
 		req := httptest.NewRequest("GET", fmt.Sprintf("http://example.com/test-env.php?var=%d", i), nil)
 		w := httptest.NewRecorder()
