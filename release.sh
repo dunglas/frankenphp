@@ -19,6 +19,11 @@ if ! type "gh" >/dev/null; then
 	exit 1
 fi
 
+if ! type "brew" >/dev/null; then
+	echo "The \"brew\" command must be installed."
+	exit 1
+fi
+
 if [[ $# -ne 1 ]]; then
 	echo "Usage: ./release.sh version" >&2
 	exit 1
@@ -47,3 +52,4 @@ tags=$(git tag --list --sort=-version:refname 'v*')
 previous_tag=$(awk 'NR==2 {print;exit}' <<<"${tags}")
 
 gh release create --draft --generate-notes --latest --notes-start-tag "${previous_tag}" --verify-tag "v$1"
+brew bump-formula-pr dunglas/frankenphp/frankenphp --version "$1"
