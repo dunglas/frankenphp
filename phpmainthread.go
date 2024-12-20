@@ -30,14 +30,14 @@ func initPHPThreads(numThreads int) error {
 	}
 	phpThreads = make([]*phpThread, numThreads)
 
-	if err := mainThread.start(); err != nil {
-		return err
-	}
-
 	// initialize all threads as inactive
 	for i := 0; i < numThreads; i++ {
 		phpThreads[i] = newPHPThread(i)
 		convertToInactiveThread(phpThreads[i])
+	}
+
+	if err := mainThread.start(); err != nil {
+		return err
 	}
 
 	// start the underlying C threads
