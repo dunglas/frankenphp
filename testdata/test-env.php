@@ -47,4 +47,6 @@ return function() {
     } else {
         echo "Failed to unset NON_EXISTING_VAR.\n";
     }
+
+    getenv();
 };

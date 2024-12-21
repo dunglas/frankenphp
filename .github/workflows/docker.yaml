@@ -8,7 +8,7 @@ on:
     branches:
       - main
     paths-ignore:
-      - 'docs/**'
+      - "docs/**"
   push:
     branches:
       - main
@@ -18,11 +18,11 @@ on:
     inputs:
       #checkov:skip=CKV_GHA_7
       version:
-        description: 'FrankenPHP version'
+        description: "FrankenPHP version"
         required: false
         type: string
   schedule:
-    - cron:  '0 4 * * *'
+    - cron: "0 4 * * *"
 permissions:
   contents: read
 env:
@@ -42,8 +42,7 @@ jobs:
       skip: ${{ steps.check.outputs.skip }}
       ref: ${{ steps.check.outputs.ref || (github.event_name == 'workflow_dispatch' && inputs.version) || '' }}
     steps:
-      -
-        name: Check PHP versions
+      - name: Check PHP versions
         id: check
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -77,17 +76,14 @@ jobs:
             echo ref="$(gh release view --repo dunglas/frankenphp --json tagName --jq '.tagName')"
             echo skip=false
           } >> "${GITHUB_OUTPUT}"
-      -
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         if: ${{ !fromJson(steps.check.outputs.skip) }}
         with:
           ref: ${{ steps.check.outputs.ref }}
-      -
-        name: Set up Docker Buildx
+      - name: Set up Docker Buildx
         if: ${{ !fromJson(steps.check.outputs.skip) }}
         uses: docker/setup-buildx-action@v3
-      -
-        name: Create variants matrix
+      - name: Create variants matrix
         if: ${{ !fromJson(steps.check.outputs.skip) }}
         id: matrix
         shell: bash
@@ -114,55 +110,44 @@ jobs:
         variant: ${{ fromJson(needs.prepare.outputs.variants) }}
         platform: ${{ fromJson(needs.prepare.outputs.platforms) }}
         include:
-          -
-            race: ""
+          - race: ""
             qemu: true
-          -
-            platform: linux/amd64
+          - platform: linux/amd64
             qemu: false
             race: "-race" # The Go race detector is only supported on amd64
-          -
-            platform: linux/386
+          - platform: linux/386
             qemu: false
         exclude:
           # arm/v6 is only available for Alpine: https://github.com/docker-library/golang/issues/502
-          -
-            variant: php-${{ needs.prepare.outputs.php82_version }}-bookworm
+          - variant: php-${{ needs.prepare.outputs.php82_version }}-bookworm
             platform: linux/arm/v6
-          -
-            variant: php-${{ needs.prepare.outputs.php83_version }}-bookworm
+          - variant: php-${{ needs.prepare.outputs.php83_version }}-bookworm
             platform: linux/arm/v6
     steps:
-      -
-        name: Prepare
+      - name: Prepare
         id: prepare
         run: |
           platform=${{ matrix.platform }}
           echo "sanitized_platform=${platform//\//-}" >> "${GITHUB_OUTPUT}"
-      -
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           ref: ${{ needs.prepare.outputs.ref }}
-      -
-        name: Set up QEMU
+      - name: Set up QEMU
         if: matrix.qemu
         uses: docker/setup-qemu-action@v3
         with:
           platforms: ${{ matrix.platform }}
-      -
-        name: Set up Docker Buildx
+      - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
         with:
           platforms: ${{ matrix.platform }}
-      -
-        name: Login to DockerHub
+      - name: Login to DockerHub
         if: fromJson(needs.prepare.outputs.push)
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.REGISTRY_USERNAME }}
           password: ${{ secrets.REGISTRY_PASSWORD }}
-      -
-        name: Build
+      - name: Build
         id: build
         uses: docker/bake-action@v5
         with:
@@ -187,8 +172,7 @@ jobs:
           SHA: ${{ github.sha }}
           VERSION: ${{ (github.ref_type == 'tag' && github.ref_name) || needs.prepare.outputs.ref || 'dev' }}
           PHP_VERSION: ${{ needs.prepare.outputs.php_version }}
-      -
-        # Workaround for https://github.com/actions/runner/pull/2477#issuecomment-1501003600
+      - # Workaround for https://github.com/actions/runner/pull/2477#issuecomment-1501003600
         name: Export metadata
         if: fromJson(needs.prepare.outputs.push)
         run: |
@@ -201,8 +185,7 @@ jobs:
           touch "/tmp/metadata/runner/${runnerDigest#sha256:}"
         env:
           METADATA: ${{ steps.build.outputs.metadata }}
-      -
-        name: Upload builder metadata
+      - name: Upload builder metadata
         if: fromJson(needs.prepare.outputs.push)
         uses: actions/upload-artifact@v4
         with:
@@ -210,8 +193,7 @@ jobs:
           path: /tmp/metadata/builder/*
           if-no-files-found: error
           retention-days: 1
-      -
-        name: Upload runner metadata
+      - name: Upload runner metadata
         if: fromJson(needs.prepare.outputs.push)
         uses: actions/upload-artifact@v4
         with:
@@ -219,8 +201,7 @@ jobs:
           path: /tmp/metadata/runner/*
           if-no-files-found: error
           retention-days: 1
-      -
-        name: Run tests
+      - name: Run tests
         if: ${{ !matrix.qemu && !fromJson(needs.prepare.outputs.push) }}
         run: |
           docker run --platform=${{ matrix.platform }} --rm \
@@ -230,7 +211,7 @@ jobs:
           METADATA: ${{ steps.build.outputs.metadata }}
   # Adapted from https://docs.docker.com/build/ci/github-actions/multi-platform/
   push:
-    runs-on: ubuntu-latest    
+    runs-on: ubuntu-latest
     needs:
       - prepare
       - build
@@ -239,26 +220,22 @@ jobs:
       fail-fast: false
       matrix:
         variant: ${{ fromJson(needs.prepare.outputs.variants) }}
-        target: ['builder', 'runner']
+        target: ["builder", "runner"]
     steps:
-      -
-        name: Download metadata
+      - name: Download metadata
         uses: actions/download-artifact@v4
         with:
           pattern: metadata-${{ matrix.target }}-${{ matrix.variant }}-*
           path: /tmp/metadata
           merge-multiple: true
-      -
-        name: Set up Docker Buildx
+      - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-      -
-        name: Login to DockerHub
+      - name: Login to DockerHub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.REGISTRY_USERNAME }}
           password: ${{ secrets.REGISTRY_PASSWORD }}
-      -
-        name: Create manifest list and push
+      - name: Create manifest list and push
         working-directory: /tmp/metadata
         run: |
           set -x
@@ -267,10 +244,9 @@ jobs:
             $(printf "${IMAGE_NAME}@sha256:%s " *)
         env:
           METADATA: ${{ needs.prepare.outputs.metadata }}
-      -
-        name: Inspect image
+      - name: Inspect image
         run: |
           # shellcheck disable=SC2046,SC2086
-          docker buildx imagetools inspect $(jq -cr '.target."${{ matrix.target }}-${{ matrix.variant }}".tags | first' <<< ${METADATA}) 
+          docker buildx imagetools inspect $(jq -cr '.target."${{ matrix.target }}-${{ matrix.variant }}".tags | first' <<< ${METADATA})
         env:
           METADATA: ${{ needs.prepare.outputs.metadata }}

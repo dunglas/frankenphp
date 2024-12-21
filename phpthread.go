@@ -79,7 +79,7 @@ func (thread *phpThread) shutdown() {
 }
 
 // change the thread handler safely
-// must be called from outside of the PHP thread
+// must be called from outside the PHP thread
 func (thread *phpThread) setHandler(handler threadHandler) {
 	thread.handlerMu.Lock()
 	defer thread.handlerMu.Unlock()
@@ -124,7 +124,11 @@ func (thread *phpThread) debugStatus() string {
 // PHP's zend_string may contain null-bytes
 func (thread *phpThread) pinString(s string) *C.char {
 	sData := unsafe.StringData(s)
+	if sData == nil {
+		return nil
+	}
 	thread.Pin(sData)
+
 	return (*C.char)(unsafe.Pointer(sData))
 }
 
