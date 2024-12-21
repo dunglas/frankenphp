@@ -173,6 +173,16 @@ jobs:
         uses: actions/attest-build-provenance@v2
         with:
           subject-path: ${{ github.workspace }}/frankenphp-linux-*
+      - name: Run sanity checks
+        run: |
+          "${BINARY}" version
+          "${BINARY}" list-modules | grep frankenphp
+          "${BINARY}" list-modules | grep http.encoders.br
+          "${BINARY}" list-modules | grep http.handlers.mercure
+          "${BINARY}" list-modules | grep http.handlers.mercure
+          "${BINARY}" list-modules | grep http.handlers.vulcain
+        env:
+          BINARY: ./frankenphp-linux-${{ matrix.platform == 'linux/amd64' && 'x86_64' || 'aarch64' }}${{ matrix.debug && '-debug' || '' }}${{ matrix.mimalloc && '-mimalloc' || '' }}
 
   # Adapted from https://docs.docker.com/build/ci/github-actions/multi-platform/
   push:
@@ -257,3 +267,13 @@ jobs:
         with:
           name: frankenphp-mac-${{ matrix.platform }}
           path: dist/frankenphp-mac-${{ matrix.platform }}
+      - name: Run sanity checks
+        run: |
+          "${BINARY}" version
+          "${BINARY}" list-modules | grep frankenphp
+          "${BINARY}" list-modules | grep http.encoders.br
+          "${BINARY}" list-modules | grep http.handlers.mercure
+          "${BINARY}" list-modules | grep http.handlers.mercure
+          "${BINARY}" list-modules | grep http.handlers.vulcain
+        env:
+          BINARY: dist/frankenphp-mac-${{ matrix.platform }}

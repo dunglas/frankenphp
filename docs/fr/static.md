@@ -49,15 +49,15 @@ Pour ajouter des modules Caddy supplémentaires ou passer d'autres arguments à 
 ```console
 docker buildx bake \
   --load \
-  --set static-builder.args.XCADDY_ARGS="--with github.com/darkweak/souin/plugins/caddy --with github.com/dunglas/mercure/caddy --with github.com/dunglas/vulcain/caddy" \
+  --set static-builder.args.XCADDY_ARGS="--with github.com/darkweak/souin/plugins/caddy --with github.com/dunglas/caddy-cbrotli --with github.com/dunglas/mercure/caddy --with github.com/dunglas/vulcain/caddy" \
   static-builder
 ```
 
-Dans cet exemple, nous ajoutons le module de cache HTTP [Souin](https://souin.io) pour Caddy ainsi que les modules [Mercure](https://mercure.rocks) et [Vulcain](https://vulcain.rocks).
+Dans cet exemple, nous ajoutons le module de cache HTTP [Souin](https://souin.io) pour Caddy ainsi que les modules [cbrotli](https://github.com/dunglas/caddy-cbrotli), [Mercure](https://mercure.rocks) et [Vulcain](https://vulcain.rocks).
 
 > [!TIP]
 >
-> Les modules Mercure et Vulcain sont inclus par défaut si `XCADDY_ARGS` est vide ou n'est pas défini.
+> Les modules cbrotli, Mercure et Vulcain sont inclus par défaut si `XCADDY_ARGS` est vide ou n'est pas défini.
 > Si vous personnalisez la valeur de `XCADDY_ARGS`, vous devez les inclure explicitement si vous voulez qu'ils soient inclus.
 
 Voir aussi comment [personnaliser la construction](#personnalisation-de-la-construction)

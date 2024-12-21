@@ -270,7 +270,7 @@ if [ -n "${EMBED}" ] && [ -d "${EMBED}" ]; then
 fi
 
 if [ -z "${XCADDY_ARGS}" ]; then
-	XCADDY_ARGS="--with github.com/dunglas/mercure/caddy --with github.com/dunglas/vulcain/caddy"
+	XCADDY_ARGS="--with github.com/dunglas/caddy-cbrotli --with github.com/dunglas/mercure/caddy --with github.com/dunglas/vulcain/caddy"
 fi
 
 XCADDY_DEBUG=0
