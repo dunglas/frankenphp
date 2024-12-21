@@ -23,6 +23,18 @@ if [ "${os}" = "linux" ] && ! type "cmake" >/dev/null 2>&1; then
 	exit 1
 fi
 
+if [ "${os}" = "linux" ] && { [[ "${arch}" =~ "aarch" ]] || [[ "${arch}" =~ "arm" ]]; }; then
+	fpic="-fPIC"
+	fpie="-fPIE"
+
+	if [ -z "${DEBUG_SYMBOLS}" ]; then
+		export SPC_PHP_DEFAULT_OPTIMIZE_CFLAGS="-g -fstack-protector-strong -fPIC -fPIE -Os -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64"
+	fi
+else
+	fpic="-fpic"
+	fpie="-fpie"
+fi
+
 if [ -z "${PHP_EXTENSIONS}" ]; then
 	if [ -n "${EMBED}" ] && [ -f "${EMBED}/composer.json" ]; then
 		cd "${EMBED}"
@@ -145,7 +157,7 @@ curl -f --retry 5 "${curlGitHubHeaders[@]}" https://api.github.com/repos/e-dant/
 	xargs curl -fL --retry 5 "${curlGitHubHeaders[@]}" |
 	tar xz --strip-components 1
 cd watcher-c
-cc -c -o libwatcher-c.o ./src/watcher-c.cpp -I ./include -I ../include -std=c++17 -Wall -Wextra -fPIC
+cc -c -o libwatcher-c.o ./src/watcher-c.cpp -I ./include -I ../include -std=c++17 -Wall -Wextra "${fpic}"
 ar rcs libwatcher-c.a libwatcher-c.o
 cp libwatcher-c.a ../../buildroot/lib/libwatcher-c.a
 mkdir -p ../../buildroot/include/wtr
@@ -157,7 +169,7 @@ CGO_CFLAGS="-DFRANKENPHP_VERSION=${FRANKENPHP_VERSION} -I${PWD}/buildroot/includ
 if [ -n "${DEBUG_SYMBOLS}" ]; then
 	CGO_CFLAGS="-g ${CGO_CFLAGS}"
 else
-	CGO_CFLAGS="-fstack-protector-strong -fpic -fpie -O2 -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 ${CGO_CFLAGS}"
+	CGO_CFLAGS="-fstack-protector-strong ${fpic} ${fpie} -O2 -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 ${CGO_CFLAGS}"
 fi
 export CGO_CFLAGS
 export CGO_CPPFLAGS="${CGO_CFLAGS}"
