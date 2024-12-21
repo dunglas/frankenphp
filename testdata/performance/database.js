@@ -19,10 +19,10 @@ export const options = {
 export default function () {
     // 1-10ms latency
     const latency = Math.floor(Math.random() * 9) + 1;
-    // 1-2 queries per request
+    // 1-2 iterations per request
     const iterations = Math.floor(Math.random() * 2) + 1;
-    // 0-30000 work units
-    const work = Math.floor(Math.random() * 30000);
+    // 0-30000 work units per iteration
+    const work = Math.floor(Math.random() *30000);
     // 0-40 output units
     const output = Math.floor(Math.random() * 40);
 

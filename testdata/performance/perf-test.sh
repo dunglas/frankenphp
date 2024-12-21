@@ -6,10 +6,11 @@ docker build -t frankenphp-dev -f dev.Dockerfile .
 
 export "CADDY_HOSTNAME=http://host.docker.internal"
 
-select filename in ./testdata/k6/*.js; do
+select filename in ./testdata/performance/*.js; do
     read -p "How many worker threads? " workerThreads
-    read -p "How many num threads? (must be > worker threads) " numThreads
     read -p "How many max threads? " maxThreads
+
+    numThreads=$((workerThreads+1))
 
     docker run --cap-add=SYS_PTRACE --security-opt seccomp=unconfined \
     -p 8125:80 \
@@ -20,9 +21,9 @@ select filename in ./testdata/k6/*.js; do
     -e "NUM_THREADS=$numThreads" \
     -itd \
     frankenphp-dev \
-    sh /go/src/app/testdata/k6/start-server.sh
+    sh /go/src/app/testdata/performance/start-server.sh
 
-    docker exec -d load-test-container sh /go/src/app/testdata/k6/flamegraph.sh
+    docker exec -d load-test-container sh /go/src/app/testdata/performance/flamegraph.sh
 
     sleep 10
 
