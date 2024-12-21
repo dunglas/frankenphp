@@ -8,7 +8,7 @@ However, it is possible to substantially improve performance using an appropriat
 By default, FrankenPHP starts 2 times more threads and workers (in worker mode) than the available numbers of CPU.
 
 The appropriate values depend heavily on how your application is written, what it does and your hardware.
-We strongly recommend changing these values.
+We strongly recommend changing these values. For best system stability, it is recommended to have `num_threads` x `memory_limit` < `available_memory`.
 
 To find the right values, it's best to run load tests simulating real traffic.
 [k6](https://k6.io) and [Gatling](https://gatling.io) are good tools for this.
