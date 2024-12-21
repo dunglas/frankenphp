@@ -73,11 +73,10 @@ func (thread *phpThread) getActiveRequest() *http.Request {
 // Pin a string that is not null-terminated
 // PHP's zend_string may contain null-bytes
 func (thread *phpThread) pinString(s string) *C.char {
-	if s == "" {
+	sData := unsafe.StringData(s)
+	if sData == nil {
 		return nil
 	}
-
-	sData := unsafe.StringData(s)
 	thread.Pin(sData)
 
 	return (*C.char)(unsafe.Pointer(sData))
