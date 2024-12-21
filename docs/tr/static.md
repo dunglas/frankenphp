@@ -50,15 +50,15 @@ Ekstra Caddy modülleri eklemek veya [xcaddy](https://github.com/caddyserver/xca
 ```console
 docker buildx bake \
   --load \
-  --set static-builder.args.XCADDY_ARGS="--with github.com/darkweak/souin/plugins/caddy --with github.com/dunglas/mercure/caddy --with github.com/dunglas/vulcain/caddy" \
+  --set static-builder.args.XCADDY_ARGS="--with github.com/darkweak/souin/plugins/caddy --with github.com/dunglas/caddy-cbrotli --with github.com/dunglas/mercure/caddy --with github.com/dunglas/vulcain/caddy" \
   static-builder
 ```
 
-Bu örnekte, Caddy için [Souin](https://souin.io) HTTP önbellek modülünün yanı sıra [Mercure](https://mercure.rocks) ve [Vulcain](https://vulcain.rocks) modüllerini ekliyoruz.
+Bu örnekte, Caddy için [Souin](https://souin.io) HTTP önbellek modülünün yanı sıra [cbrotli](https://github.com/dunglas/caddy-cbrotli], [Mercure](https://mercure.rocks) ve [Vulcain](https://vulcain.rocks) modüllerini ekliyoruz.
 
 > [!TIP]
 >
-> Mercure ve Vulcain modülleri, `XCADDY_ARGS` boşsa veya ayarlanmamışsa varsayılan olarak dahil edilir.
+> cbrotli, Mercure ve Vulcain modülleri, `XCADDY_ARGS` boşsa veya ayarlanmamışsa varsayılan olarak dahil edilir.
 > Eğer `XCADDY_ARGS` değerini özelleştirirseniz, dahil edilmelerini istiyorsanız bunları açıkça dahil etmelisiniz.
 
 Derlemeyi nasıl [özelleştireceğinize](#yapıyı-özelleştirme) de bakın.

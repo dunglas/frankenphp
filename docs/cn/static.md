@@ -50,15 +50,15 @@ docker buildx bake \
 ```console
 docker buildx bake \
   --load \
-  --set static-builder.args.XCADDY_ARGS="--with github.com/darkweak/souin/plugins/caddy --with github.com/dunglas/mercure/caddy --with github.com/dunglas/vulcain/caddy" \
+  --set static-builder.args.XCADDY_ARGS="--with github.com/darkweak/souin/plugins/caddy --with github.com/dunglas/caddy-cbrotli --with github.com/dunglas/mercure/caddy --with github.com/dunglas/vulcain/caddy" \
   static-builder
 ```
 
-在本例中，我们为 Caddy 添加了 [Souin](https://souin.io) HTTP 缓存模块，以及 [Mercure](https://mercure.rocks) 和 [Vulcain](https://vulcain.rocks) 模块。
+在本例中，我们为 Caddy 添加了 [Souin](https://souin.io) HTTP 缓存模块，以及 [cbrotli](https://github.com/dunglas/caddy-cbrotli)、[Mercure](https://mercure.rocks) 和 [Vulcain](https://vulcain.rocks) 模块。
 
 > [!TIP]
 >
-> 如果 `XCADDY_ARGS` 为空或未设置，则默认包含 Mercure 和 Vulcain 模块。
+> 如果 `XCADDY_ARGS` 为空或未设置，则默认包含 cbrotli、Mercure 和 Vulcain 模块。
 > 如果自定义了 `XCADDY_ARGS` 的值，则必须显式地包含它们。
 
 参见：[自定义构建](#自定义构建)
