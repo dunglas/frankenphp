@@ -115,13 +115,38 @@ func handleRequestWithRegularPHPThreads(r *http.Request, fc *FrankenPHPContext) 
 	}
 	regularThreadMu.RUnlock()
 
-	// if no thread was available, fan out to all threads
-	stalledSince := time.Now()
-	regularRequestChan <- r
-	stallTime := time.Since(stalledSince)
-	<-fc.done
-	metrics.StopRequest()
-	autoscaleRegularThreads(stallTime)
+	// if no thread was available, fan the request out to all threads
+	// if a request has waited for too long, trigger autoscaling
+
+	timeout := allowedStallTime
+	timer := time.NewTimer(timeout)
+
+	for {
+		select {
+		case regularRequestChan <- r:
+			// a thread was available to handle the request after all
+			timer.Stop()
+			<-fc.done
+			metrics.StopRequest()
+			return
+		case <-timer.C:
+			// reaching here means we might not have spawned enough threads
+			if blockAutoScaling.CompareAndSwap(false, true) {
+				go func() {
+					autoscaleRegularThreads()
+					blockAutoScaling.Store(false)
+				}()
+			}
+
+			// TODO: reject a request that has been waiting for too long (504)
+			// TODO: limit the amount of stalled requests (maybe) (503)
+
+			// re-trigger autoscaling with an exponential backoff
+			timeout *= 2
+			timer.Reset(timeout)
+		}
+	}
+
 }
 
 func attachRegularThread(thread *phpThread) {

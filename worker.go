@@ -184,13 +184,35 @@ func (worker *worker) handleRequest(r *http.Request, fc *FrankenPHPContext) {
 	worker.threadMutex.RUnlock()
 
 	// if no thread was available, fan the request out to all threads
-	stalledAt := time.Now()
-	worker.requestChan <- r
-	stallTime := time.Since(stalledAt)
-	<-fc.done
-	metrics.StopWorkerRequest(worker.fileName, time.Since(fc.startedAt))
+	// if a request has waited for too long, trigger autoscaling
 
-	// reaching here means we might not have spawned enough threads
-	// forward the amount of time the request spent being stalled
-	autoscaleWorkerThreads(worker, stallTime)
+	timeout := allowedStallTime
+	timer := time.NewTimer(timeout)
+
+	for {
+		select {
+		case worker.requestChan <- r:
+			// a worker was available to handle the request after all
+			timer.Stop()
+			<-fc.done
+			metrics.StopWorkerRequest(worker.fileName, time.Since(fc.startedAt))
+			return
+		case <-timer.C:
+			// reaching here means we might not have spawned enough threads
+			if blockAutoScaling.CompareAndSwap(false, true) {
+				go func() {
+					autoscaleWorkerThreads(worker)
+					blockAutoScaling.Store(false)
+				}()
+			}
+
+			// TODO: reject a request that has been waiting for too long (504)
+			// TODO: limit the amount of stalled requests (maybe) (503)
+
+			// re-trigger autoscaling with an exponential backoff
+			timeout *= 2
+			timer.Reset(timeout)
+		}
+	}
+
 }
