@@ -180,7 +180,7 @@ jobs:
           "${BINARY}" list-modules | grep http.encoders.br
           "${BINARY}" list-modules | grep http.handlers.mercure
           "${BINARY}" list-modules | grep http.handlers.mercure
-          "${BINARY}" list-modules | http.handlers.vulcain
+          "${BINARY}" list-modules | grep http.handlers.vulcain
         env:
           BINARY: ./frankenphp-linux-${{ matrix.platform == 'linux/amd64' && 'x86_64' || 'aarch64' }}${{ matrix.debug && '-debug' || '' }}${{ matrix.mimalloc && '-mimalloc' || '' }}
 
@@ -274,6 +274,6 @@ jobs:
           "${BINARY}" list-modules | grep http.encoders.br
           "${BINARY}" list-modules | grep http.handlers.mercure
           "${BINARY}" list-modules | grep http.handlers.mercure
-          "${BINARY}" list-modules | http.handlers.vulcain
+          "${BINARY}" list-modules | grep http.handlers.vulcain
         env:
           BINARY: dist/frankenphp-mac-${{ matrix.platform }}
