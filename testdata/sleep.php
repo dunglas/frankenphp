@@ -3,27 +3,27 @@
 require_once __DIR__ . '/_executor.php';
 
 return function () {
-    $sleep = $_GET['sleep'] ?? 0;
-    $work = $_GET['work'] ?? 0;
-    $output = $_GET['output'] ?? 1;
+    $sleep = (int)($_GET['sleep'] ?? 0);
+    $work = (int)($_GET['work'] ?? 0);
+    $output = (int)($_GET['output'] ?? 1);
+    $iterations = (int)($_GET['iterations'] ?? 1);
 
-    // simulate work
-    // 50_000 iterations are approximately the weight of a simple Laravel request
-    for ($i = 0; $i < $work; $i++) {
-        $a = +$i;
-    }
+    for ($i = 0; $i < $iterations; $i++) {
+        // simulate work
+        // with 30_000 iterations we're in the range of a simple Laravel request
+        // (without JIT and with debug symbols enabled)
+        for ($j = 0; $j < $work; $j++) {
+            $a = +$j;
+        }
 
-    // simulate IO, some examples:
-    // SSDs: 0.1ms - 1ms
-    // HDDs: 5ms - 10ms
-    // modern databases: usually 1ms - 10ms (for simple queries)
-    // external APIs: can take up to multiple seconds
-    if ($sleep > 0) {
-        usleep($sleep * 1000);
-    }
+        // simulate IO, sleep x milliseconds
+        if ($sleep > 0) {
+            usleep($sleep * 1000);
+        }
 
-    // simulate output
-    for ($i = 0; $i < $output; $i++) {
-        echo "slept for $sleep ms and worked for $work iterations";
+        // simulate output
+        for ($k = 0; $k < $output; $k++) {
+            echo "slept for $sleep ms and worked for $work iterations";
+        }
     }
 };

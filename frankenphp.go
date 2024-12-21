@@ -139,7 +139,8 @@ func clientHasClosed(r *http.Request) bool {
 // NewRequestWithContext creates a new FrankenPHP request context.
 func NewRequestWithContext(r *http.Request, opts ...RequestOption) (*http.Request, error) {
 	fc := &FrankenPHPContext{
-		done: make(chan interface{}),
+		done:      make(chan interface{}),
+		startedAt: time.Now(),
 	}
 	for _, o := range opts {
 		if err := o(fc); err != nil {
@@ -469,7 +470,6 @@ func ServeHTTP(responseWriter http.ResponseWriter, request *http.Request) error 
 	}
 
 	fc.responseWriter = responseWriter
-	fc.startedAt = time.Now()
 
 	// Detect if a worker is available to handle this request
 	if worker, ok := workers[fc.scriptFilename]; ok {

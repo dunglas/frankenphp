@@ -1,7 +1,6 @@
 #!/bin/bash
 
-# run the load test server with the k6.Caddyfile
-
+# build and run FrankenPHP with the k6.Caddyfile
 cd /go/src/app/caddy/frankenphp \
 && go build --buildvcs=false \
 && cd ../../testdata/k6 \

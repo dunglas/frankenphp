@@ -17,7 +17,7 @@ const (
 	// only allow scaling threads if requests were stalled for longer than this time
 	allowedStallTime = 10 * time.Millisecond
 	// the amount of time to check for CPU usage before scaling
-	cpuProbeTime = 50 * time.Millisecond
+	cpuProbeTime = 40 * time.Millisecond
 	// if PHP threads are using more than this ratio of the CPU, do not scale
 	maxCpuUsageForScaling = 0.8
 	// check if threads should be stopped every x seconds
@@ -148,11 +148,7 @@ func drainAutoScaling() {
 }
 
 // Add worker PHP threads automatically
-func autoscaleWorkerThreads(worker *worker, timeSpentStalling time.Duration) {
-	// first check if time spent waiting for a thread was above the allowed threshold
-	if timeSpentStalling < allowedStallTime || !blockAutoScaling.CompareAndSwap(false, true) {
-		return
-	}
+func autoscaleWorkerThreads(worker *worker) {
 	scalingMu.Lock()
 	defer scalingMu.Unlock()
 	defer blockAutoScaling.Store(false)
@@ -166,7 +162,7 @@ func autoscaleWorkerThreads(worker *worker, timeSpentStalling time.Duration) {
 
 	thread, err := addWorkerThread(worker)
 	if err != nil {
-		logger.Debug("could not add worker thread", zap.String("worker", worker.fileName), zap.Error(err))
+		logger.Info("could not increase the amount of threads handling requests", zap.String("worker", worker.fileName), zap.Error(err))
 		return
 	}
 
@@ -174,14 +170,9 @@ func autoscaleWorkerThreads(worker *worker, timeSpentStalling time.Duration) {
 }
 
 // Add regular PHP threads automatically
-func autoscaleRegularThreads(timeSpentStalling time.Duration) {
-	// first check if time spent waiting for a thread was above the allowed threshold
-	if timeSpentStalling < allowedStallTime || !blockAutoScaling.CompareAndSwap(false, true) {
-		return
-	}
+func autoscaleRegularThreads() {
 	scalingMu.Lock()
 	defer scalingMu.Unlock()
-	defer blockAutoScaling.Store(false)
 
 	if !probeCPUs(cpuProbeTime) {
 		logger.Debug("cpu is busy, not autoscaling")
@@ -190,7 +181,7 @@ func autoscaleRegularThreads(timeSpentStalling time.Duration) {
 
 	thread, err := addRegularThread()
 	if err != nil {
-		logger.Debug("could not add regular thread", zap.Error(err))
+		logger.Info("could not increase the amount of threads handling requests", zap.Error(err))
 		return
 	}
 

@@ -1,7 +1,6 @@
 ## Running Load tests
 
-To run load tests with k6 you need to have docker installed
-
+To run load tests with k6 you need to have docker and bash installed.
 Go the root of this repository and run:
 
 ```sh
@@ -9,5 +8,12 @@ bash testdata/k6/load-test.sh
 ```
 
 This will build the `frankenphp-dev` docker image and run it under the name 'load-test-container'
-in the background. Additionally, it will download grafana/k6 and you'll be able to choose
-the load test you want to run.
+in the background. Additionally, it will run the grafana/k6 container and you'll be able to choose
+the load test you want to run. A flamegraph.svg will be created in the `testdata/k6` directory.
+
+If the load test has stopped prematurely, you might have to remove it manually:
+
+```sh
+docker stop load-test-container
+docker rm load-test-container
+```

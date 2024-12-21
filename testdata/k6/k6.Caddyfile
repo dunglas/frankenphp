@@ -4,7 +4,6 @@
 		num_threads {$NUM_THREADS}
 		worker {
 			file /go/src/app/testdata/{$WORKER_FILE:sleep.php}
-			watch ./**/*.{php,yaml,yml,twig,env}
 			num {$WORKER_THREADS}
 		}
 	}

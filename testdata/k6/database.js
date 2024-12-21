@@ -1,24 +1,30 @@
 import http from 'k6/http';
-import { sleep } from 'k6';
 
 /**
  * Modern databases tend to have latencies in the single-digit milliseconds.
+ * We'll simulate 1-10ms latencies and 1-2 queries per request.
  */
 export const options = {
     stages: [
-        { duration: '20s', target: 50, },   // ramp up to concurrency 10 over 20s
-        { duration: '20s', target: 200 },    // ramp up to concurrency 25 over 20s
-        { duration: '20s', target: 0 },     // ramp down to 0 over 20s
+        {duration: '20s', target: 100,},
+        {duration: '20s', target: 200},
+        {duration: '10s', target: 0},
     ],
     thresholds: {
-        http_req_failed: ['rate<0.01'],     // http errors should be less than 1%
-        http_req_duration: ['p(90)<5'],   // 90% of requests should be below 150ms
+        http_req_failed: ['rate<0.01'],
     },
 };
 
 // simulate different latencies
 export default function () {
-    http.get(`${__ENV.CADDY_HOSTNAME}/sleep.php?sleep=1work=5000&output=10`);
-    http.get(`${__ENV.CADDY_HOSTNAME}/sleep.php?sleep=5work=5000&output=10`);
-    http.get(`${__ENV.CADDY_HOSTNAME}/sleep.php?sleep=10work=5000&output=10`);
+    // 1-10ms latency
+    const latency = Math.floor(Math.random() * 9) + 1;
+    // 1-2 queries per request
+    const iterations = Math.floor(Math.random() * 2) + 1;
+    // 0-30000 work units
+    const work = Math.floor(Math.random() * 30000);
+    // 0-40 output units
+    const output = Math.floor(Math.random() * 40);
+
+    http.get(http.url`${__ENV.CADDY_HOSTNAME}/sleep.php?sleep=${latency}&work=${work}&output=${output}&iterations=${iterations}`);
 }
