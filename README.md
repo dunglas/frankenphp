@@ -60,7 +60,8 @@ frankenphp php-cli /path/to/your/script.php
 
 ## Docs
 
-* [The worker mode](https://frankenphp.dev/docs/worker/)
+* [Classic mode](https://frankenphp.dev/docs/classic/)
+* [Worker mode](https://frankenphp.dev/docs/worker/)
 * [Early Hints support (103 HTTP status code)](https://frankenphp.dev/docs/early-hints/)
 * [Real-time](https://frankenphp.dev/docs/mercure/)
 * [Configuration](https://frankenphp.dev/docs/config/)
