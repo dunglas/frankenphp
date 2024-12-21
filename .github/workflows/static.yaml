@@ -182,7 +182,7 @@ jobs:
           "${BINARY}" list-modules | grep http.handlers.mercure
           "${BINARY}" list-modules | http.handlers.vulcain
         env:
-          BINARY: dist/frankenphp-linux-${{ matrix.platform == 'linux/amd64' && 'x86_64' || 'aarch64' }}${{ matrix.debug && '-debug' || '' }}${{ matrix.mimalloc && '-mimalloc' || '' }}"
+          BINARY: frankenphp-linux-${{ matrix.platform == 'linux/amd64' && 'x86_64' || 'aarch64' }}${{ matrix.debug && '-debug' || '' }}${{ matrix.mimalloc && '-mimalloc' || '' }}"
 
   # Adapted from https://docs.docker.com/build/ci/github-actions/multi-platform/
   push:

@@ -54,7 +54,7 @@ docker buildx bake \
   static-builder
 ```
 
-Bu örnekte, Caddy için [Souin](https://souin.io) HTTP önbellek modülünün yanı sıra [cbrotli](https://github.com/dunglas/caddy-cbrotli], [Mercure](https://mercure.rocks) ve [Vulcain](https://vulcain.rocks) modüllerini ekliyoruz.
+Bu örnekte, Caddy için [Souin](https://souin.io) HTTP önbellek modülünün yanı sıra [cbrotli](https://github.com/dunglas/caddy-cbrotli), [Mercure](https://mercure.rocks) ve [Vulcain](https://vulcain.rocks) modüllerini ekliyoruz.
 
 > [!TIP]
 >
