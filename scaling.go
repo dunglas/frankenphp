@@ -49,6 +49,7 @@ func addRegularThread() (*phpThread, error) {
 		return nil, errors.New("max amount of overall threads reached")
 	}
 	convertToRegularThread(thread)
+	thread.state.waitFor(stateReady, stateShuttingDown, stateReserved)
 	return thread, nil
 }
 
@@ -90,6 +91,7 @@ func addWorkerThread(worker *worker) (*phpThread, error) {
 		return nil, errors.New("max amount of overall threads reached")
 	}
 	convertToWorkerThread(thread, worker)
+	thread.state.waitFor(stateReady, stateShuttingDown, stateReserved)
 	return thread, nil
 }
 

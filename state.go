@@ -15,7 +15,7 @@ const (
 	stateShuttingDown
 	stateDone
 
-	// these states are safe to transition from at any time
+	// these states are 'stable' and safe to transition from at any time
 	stateInactive
 	stateReady
 
@@ -47,7 +47,9 @@ type threadState struct {
 	currentState stateID
 	mu           sync.RWMutex
 	subscribers  []stateSubscriber
-	waitingSince int64
+	// how long threads have been waiting in stable states
+	waitingSince time.Time
+	isWaiting    bool
 }
 
 type stateSubscriber struct {
@@ -106,19 +108,20 @@ func (ts *threadState) set(nextState stateID) {
 func (ts *threadState) markAsWaiting(isWaiting bool) {
 	ts.mu.Lock()
 	if isWaiting {
-		ts.waitingSince = time.Now().UnixMilli()
+		ts.isWaiting = true
+		ts.waitingSince = time.Now()
 	} else {
-		ts.waitingSince = 0
+		ts.isWaiting = false
 	}
 	ts.mu.Unlock()
 }
 
-// the time since the thread is waiting in a stable state (for request/activation)
+// the time since the thread is waiting in a stable state in ms
 func (ts *threadState) waitTime() int64 {
 	ts.mu.RLock()
-	var waitTime int64 = 0
-	if ts.waitingSince != 0 {
-		waitTime = time.Now().UnixMilli() - ts.waitingSince
+	waitTime := int64(0)
+	if ts.isWaiting {
+		waitTime = time.Now().UnixMilli() - ts.waitingSince.UnixMilli()
 	}
 	ts.mu.RUnlock()
 	return waitTime
