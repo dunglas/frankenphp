@@ -12,13 +12,21 @@ package frankenphp
 //
 // We also set these flags for hardening: https://github.com/docker-library/php/blob/master/8.2/bookworm/zts/Dockerfile#L57-L59
 
+// TODO: Add windows CFLAGS -Wall -Werror
+
 // #cgo darwin pkg-config: libxml-2.0
-// #cgo CFLAGS: -Wall -Werror
+// #cgo linux CFLAGS: -Wall -Werror
+// #cgo darwin CFLAGS: -Wall -Werror
+// #cgo openbsd CFLAGS: -Wall -Werror
+// #cgo freebsd CFLAGS: -Wall -Werror
 // #cgo CFLAGS: -I/usr/local/include -I/usr/local/include/php -I/usr/local/include/php/main -I/usr/local/include/php/TSRM -I/usr/local/include/php/Zend -I/usr/local/include/php/ext -I/usr/local/include/php/ext/date/lib
 // #cgo linux CFLAGS: -D_GNU_SOURCE
-// #cgo darwin LDFLAGS: -L/opt/homebrew/opt/libiconv/lib -liconv
-// #cgo linux LDFLAGS: -lresolv
-// #cgo LDFLAGS: -L/usr/local/lib -L/usr/lib -lphp -ldl -lm -lutil
+// #cgo windows CFLAGS: -D_WINDOWS -DWINDOWS=1 -DZEND_WIN32=1 -DPHP_WIN32=1 -DWIN32 -D_MBCS -D_USE_MATH_DEFINES -DNDebug -DNDEBUG -DZEND_DEBUG=0 -DZTS=1 -DFD_SETSIZE=256
+// #cgo windows CFLAGS: -IC:/msys64/usr/local/include -IC:/msys64/usr/local/include/php -IC:/msys64/usr/local/include/php/main -IC:/msys64/usr/local/include/php/TSRM -IC:/msys64/usr/local/include/php/Zend -IC:/msys64/usr/local/include/php/ext -IC:/msys64/usr/local/include/php/ext/date/lib -IC:/msys64/usr/local/include/php/main/win32
+// #cgo darwin LDFLAGS: -L/opt/homebrew/opt/libiconv/lib -L/usr/lib -liconv -lphp -ldl -lm -lutil
+// #cgo linux LDFLAGS: -L/usr/lib -lresolv -lphp -ldl -lm -lutil
+// #cgo windows LDFLAGS: -LC:/msys64/usr/local/lib -lphp8ts -lphp8embed -lbrotlicommon -lbrotlidec -lbrotlienc
+// #cgo LDFLAGS: -L/usr/local/lib
 // #include <stdlib.h>
 // #include <stdint.h>
 // #include <php_variables.h>
