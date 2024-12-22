@@ -26,10 +26,10 @@ vous devez créer un script worker et vous assurer que l'application n'a pas de 
 
 Les binaires statiques que nous fournissons, ainsi que la variante Alpine Linux des images Docker officielles, utilisent [la bibliothèque musl](https://musl.libc.org).
 
-PHP est connu pour être significativement plus lent lorsqu'il utilise cette bibliothèque C alternative au lieu de la bibliothèque GNU traditionnelle,
-surtout lorsqu'il est compilé en mode ZTS (thread-safe), ce qui est nécessaire pour FrankenPHP.
+PHP est connu pour être [significativement plus lent](https://gitlab.alpinelinux.org/alpine/aports/-/issues/14381) lorsqu'il utilise cette bibliothèque C alternative au lieu de la bibliothèque GNU traditionnelle,
+surtout lorsqu'il est compilé en mode ZTS (*thread-safe*), ce qui est nécessaire pour FrankenPHP.
 
-En outre, certains bogues ne se produisent que lors de l'utilisation de musl.
+En outre, [certains bogues ne se produisent que lors de l'utilisation de musl](https://github.com/php/php-src/issues?q=sort%3Aupdated-desc+is%3Aissue+is%3Aopen+label%3ABug+musl).
 
 Dans les environnements de production, nous recommandons fortement d'utiliser la glibc.
 
