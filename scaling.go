@@ -14,17 +14,17 @@ import (
 
 // TODO: make speed of scaling dependant on CPU count?
 const (
-	// only allow scaling threads if requests were stalled for longer than this time
+	// scale threads if requests stall this amount of time
 	allowedStallTime = 10 * time.Millisecond
-	// the amount of time to check for CPU usage before scaling
+	// time to check for CPU usage before scaling a single thread
 	cpuProbeTime = 40 * time.Millisecond
-	// if PHP threads are using more than this ratio of the CPU, do not scale
+	// do not scale over this amount of CPU usage
 	maxCpuUsageForScaling = 0.8
-	// check if threads should be stopped every x seconds
+	// downscale idle threads every x seconds
 	downScaleCheckTime = 5 * time.Second
-	// amount of threads that can be stopped in one iteration of downScaleCheckTime
+	// max amount of threads stopped in one iteration of downScaleCheckTime
 	maxTerminationCount = 10
-	// if an autoscaled thread has been waiting for longer than this time, terminate it
+	// autoscaled threads waiting for longer than this time are downscaled
 	maxThreadIdleTime = 5 * time.Second
 )
 
@@ -33,6 +33,10 @@ var (
 	scalingMu         = new(sync.RWMutex)
 	blockAutoScaling  = atomic.Bool{}
 	cpuCount          = runtime.NumCPU()
+
+	MaxThreadsReachedError      = errors.New("max amount of overall threads reached")
+	CannotRemoveLastThreadError = errors.New("cannot remove last thread")
+	WorkerNotFoundError         = errors.New("worker not found for given filename")
 )
 
 // turn the first inactive/reserved thread into a regular thread
@@ -46,7 +50,7 @@ func AddRegularThread() (int, error) {
 func addRegularThread() (*phpThread, error) {
 	thread := getInactivePHPThread()
 	if thread == nil {
-		return nil, errors.New("max amount of overall threads reached")
+		return nil, MaxThreadsReachedError
 	}
 	convertToRegularThread(thread)
 	thread.state.waitFor(stateReady, stateShuttingDown, stateReserved)
@@ -65,7 +69,7 @@ func removeRegularThread() error {
 	regularThreadMu.RLock()
 	if len(regularThreads) <= 1 {
 		regularThreadMu.RUnlock()
-		return errors.New("cannot remove last thread")
+		return CannotRemoveLastThreadError
 	}
 	thread := regularThreads[len(regularThreads)-1]
 	regularThreadMu.RUnlock()
@@ -76,7 +80,7 @@ func removeRegularThread() error {
 func AddWorkerThread(workerFileName string) (int, error) {
 	worker, ok := workers[workerFileName]
 	if !ok {
-		return 0, errors.New("worker not found")
+		return 0, WorkerNotFoundError
 	}
 	scalingMu.Lock()
 	defer scalingMu.Unlock()
@@ -88,7 +92,7 @@ func AddWorkerThread(workerFileName string) (int, error) {
 func addWorkerThread(worker *worker) (*phpThread, error) {
 	thread := getInactivePHPThread()
 	if thread == nil {
-		return nil, errors.New("max amount of overall threads reached")
+		return nil, MaxThreadsReachedError
 	}
 	convertToWorkerThread(thread, worker)
 	thread.state.waitFor(stateReady, stateShuttingDown, stateReserved)
@@ -98,7 +102,7 @@ func addWorkerThread(worker *worker) (*phpThread, error) {
 func RemoveWorkerThread(workerFileName string) (int, error) {
 	worker, ok := workers[workerFileName]
 	if !ok {
-		return 0, errors.New("worker not found")
+		return 0, WorkerNotFoundError
 	}
 	scalingMu.Lock()
 	defer scalingMu.Unlock()
@@ -112,7 +116,7 @@ func removeWorkerThread(worker *worker) error {
 	worker.threadMutex.RLock()
 	if len(worker.threads) <= 1 {
 		worker.threadMutex.RUnlock()
-		return errors.New("cannot remove last thread")
+		return CannotRemoveLastThreadError
 	}
 	thread := worker.threads[len(worker.threads)-1]
 	worker.threadMutex.RUnlock()
@@ -235,7 +239,7 @@ func downScaleThreads() {
 func probeCPUs(probeTime time.Duration) bool {
 	var start, end, cpuStart, cpuEnd C.struct_timespec
 
-	// TODO: make this cross-platform compatible
+	// TODO: validate cross-platform compatibility
 	C.clock_gettime(C.CLOCK_MONOTONIC, &start)
 	C.clock_gettime(C.CLOCK_PROCESS_CPUTIME_ID, &cpuStart)
 
@@ -252,9 +256,6 @@ func probeCPUs(probeTime time.Duration) bool {
 	elapsedTime := float64(end.tv_sec-start.tv_sec)*1e9 + float64(end.tv_nsec-start.tv_nsec)
 	elapsedCpuTime := float64(cpuEnd.tv_sec-cpuStart.tv_sec)*1e9 + float64(cpuEnd.tv_nsec-cpuStart.tv_nsec)
 	cpuUsage := elapsedCpuTime / elapsedTime / float64(cpuCount)
-
-	// TODO: remove unnecessary debug messages
-	logger.Debug("CPU usage", zap.Float64("cpuUsage", cpuUsage))
 
 	return cpuUsage < maxCpuUsageForScaling
 }
