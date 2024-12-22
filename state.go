@@ -104,29 +104,6 @@ func (ts *threadState) set(nextState stateID) {
 	ts.mu.Unlock()
 }
 
-// the thread reached a stable state and is waiting
-func (ts *threadState) markAsWaiting(isWaiting bool) {
-	ts.mu.Lock()
-	if isWaiting {
-		ts.isWaiting = true
-		ts.waitingSince = time.Now()
-	} else {
-		ts.isWaiting = false
-	}
-	ts.mu.Unlock()
-}
-
-// the time since the thread is waiting in a stable state in ms
-func (ts *threadState) waitTime() int64 {
-	ts.mu.RLock()
-	waitTime := int64(0)
-	if ts.isWaiting {
-		waitTime = time.Now().UnixMilli() - ts.waitingSince.UnixMilli()
-	}
-	ts.mu.RUnlock()
-	return waitTime
-}
-
 func (ts *threadState) notifySubscribers(nextState stateID) {
 	if len(ts.subscribers) == 0 {
 		return
@@ -179,4 +156,27 @@ func (ts *threadState) requestSafeStateChange(nextState stateID) bool {
 	// wait for the state to change to a safe state
 	ts.waitFor(stateReady, stateInactive, stateShuttingDown)
 	return ts.requestSafeStateChange(nextState)
+}
+
+// the thread reached a stable state and is waiting for requests or shutdown
+func (ts *threadState) markAsWaiting(isWaiting bool) {
+	ts.mu.Lock()
+	if isWaiting {
+		ts.isWaiting = true
+		ts.waitingSince = time.Now()
+	} else {
+		ts.isWaiting = false
+	}
+	ts.mu.Unlock()
+}
+
+// the time since the thread is waiting in a stable state in ms
+func (ts *threadState) waitTime() int64 {
+	ts.mu.RLock()
+	waitTime := int64(0)
+	if ts.isWaiting {
+		waitTime = time.Now().UnixMilli() - ts.waitingSince.UnixMilli()
+	}
+	ts.mu.RUnlock()
+	return waitTime
 }
