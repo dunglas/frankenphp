@@ -160,9 +160,10 @@ func (worker *worker) detachThread(thread *phpThread) {
 
 func (worker *worker) countThreads() int {
 	worker.threadMutex.RLock()
-	defer worker.threadMutex.RUnlock()
+	l := len(worker.threads)
+	worker.threadMutex.RUnlock()
 
-	return len(worker.threads)
+	return l
 }
 
 func (worker *worker) handleRequest(r *http.Request, fc *FrankenPHPContext) {

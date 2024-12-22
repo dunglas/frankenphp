@@ -151,26 +151,25 @@ func handleRequestWithRegularPHPThreads(r *http.Request, fc *FrankenPHPContext) 
 
 func attachRegularThread(thread *phpThread) {
 	regularThreadMu.Lock()
-	defer regularThreadMu.Unlock()
-
 	regularThreads = append(regularThreads, thread)
+	regularThreadMu.Unlock()
 }
 
 func detachRegularThread(thread *phpThread) {
 	regularThreadMu.Lock()
-	defer regularThreadMu.Unlock()
-
 	for i, t := range regularThreads {
 		if t == thread {
 			regularThreads = append(regularThreads[:i], regularThreads[i+1:]...)
 			break
 		}
 	}
+	regularThreadMu.Unlock()
 }
 
 func countRegularThreads() int {
 	regularThreadMu.RLock()
-	defer regularThreadMu.RUnlock()
+	l := len(regularThreads)
+	regularThreadMu.RUnlock()
 
-	return len(regularThreads)
+	return l
 }

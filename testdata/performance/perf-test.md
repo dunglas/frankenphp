@@ -1,4 +1,4 @@
-## Running Load tests
+# Running Load tests
 
 To run load tests with k6 you need to have docker and bash installed.
 Go the root of this repository and run:

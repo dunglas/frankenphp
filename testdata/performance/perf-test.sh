@@ -7,34 +7,34 @@ docker build -t frankenphp-dev -f dev.Dockerfile .
 export "CADDY_HOSTNAME=http://host.docker.internal"
 
 select filename in ./testdata/performance/*.js; do
-    read -p "How many worker threads? " workerThreads
-    read -p "How many max threads? " maxThreads
+	read -pr "How many worker threads? " workerThreads
+	read -pr "How many max threads? " maxThreads
 
-    numThreads=$((workerThreads+1))
+	numThreads=$((workerThreads+1))
 
-    docker run --cap-add=SYS_PTRACE --security-opt seccomp=unconfined \
-    -p 8125:80 \
-    -v $PWD:/go/src/app \
-    --name load-test-container \
-    -e "MAX_THREADS=$maxThreads" \
-    -e "WORKER_THREADS=$workerThreads" \
-    -e "NUM_THREADS=$numThreads" \
-    -itd \
-    frankenphp-dev \
-    sh /go/src/app/testdata/performance/start-server.sh
+	docker run --cap-add=SYS_PTRACE --security-opt seccomp=unconfined \
+	-p 8125:80 \
+	-v "$PWD:/go/src/app" \
+	--name load-test-container \
+	-e "MAX_THREADS=$maxThreads" \
+	-e "WORKER_THREADS=$workerThreads" \
+	-e "NUM_THREADS=$numThreads" \
+	-itd \
+	frankenphp-dev \
+	sh /go/src/app/testdata/performance/start-server.sh
 
-    docker exec -d load-test-container sh /go/src/app/testdata/performance/flamegraph.sh
+	docker exec -d load-test-container sh /go/src/app/testdata/performance/flamegraph.sh
 
-    sleep 10
+	sleep 10
 
-    docker run --entrypoint "" -it  -v .:/app -w /app \
-    --add-host "host.docker.internal:host-gateway" \
-    grafana/k6:latest \
-    k6 run -e "CADDY_HOSTNAME=$CADDY_HOSTNAME:8125" "./$filename"
+	docker run --entrypoint "" -it -v .:/app -w /app \
+	--add-host "host.docker.internal:host-gateway" \
+	grafana/k6:latest \
+	k6 run -e "CADDY_HOSTNAME=$CADDY_HOSTNAME:8125" "./$filename"
 
-    docker exec load-test-container curl "http://localhost:2019/frankenphp/threads"
+	docker exec load-test-container curl "http://localhost:2019/frankenphp/threads"
 
-    docker stop load-test-container
-    docker rm load-test-container
+	docker stop load-test-container
+	docker rm load-test-container
 done
 
