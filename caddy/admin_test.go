@@ -44,7 +44,7 @@ func TestRestartWorkerViaAdminApi(t *testing.T) {
 }
 
 func TestRemoveWorkerThreadsViaAdminApi(t *testing.T) {
-	absWorkerPath, _ := filepath.Abs("../testdata/worker-with-counter.php")
+	absWorkerPath, _ := filepath.Abs("../testdata/sleep.php")
 	tester := caddytest.NewTester(t)
 	tester.InitServer(`
 		{
@@ -55,21 +55,21 @@ func TestRemoveWorkerThreadsViaAdminApi(t *testing.T) {
 			frankenphp {
 				num_threads 6
 				max_threads 6
-				worker ../testdata/worker-with-counter.php 4
+				worker ../testdata/sleep.php 4
 			}
 		}
 
 		localhost:`+testPort+` {
 			route {
 				root ../testdata
-				rewrite worker-with-counter.php
+				rewrite sleep.php
 				php
 			}
 		}
 		`, "caddyfile")
 
 	// make a request to the worker to make sure it's running
-	tester.AssertGetResponse("http://localhost:"+testPort+"/", http.StatusOK, "requests:1")
+	tester.AssertGetResponse("http://localhost:"+testPort, http.StatusOK, "slept for 0 ms and worked for 0 iterations")
 
 	// remove a thread
 	expectedMessage := fmt.Sprintf("New thread count: 3 %s\n", absWorkerPath)
@@ -83,7 +83,7 @@ func TestRemoveWorkerThreadsViaAdminApi(t *testing.T) {
 	assertAdminResponse(tester, "DELETE", "threads?worker", http.StatusBadRequest, "")
 
 	// make a request to the worker to make sure it's still running
-	tester.AssertGetResponse("http://localhost:"+testPort+"/", http.StatusOK, "requests:2")
+	tester.AssertGetResponse("http://localhost:"+testPort, http.StatusOK, "slept for 0 ms and worked for 0 iterations")
 }
 
 func TestAddWorkerThreadsViaAdminApi(t *testing.T) {
