@@ -13,7 +13,7 @@ export const options = {
   thresholds: {
     http_req_failed: ['rate<0.01']
   }
-};
+}
 
 /* global __ENV */
 export default function () {

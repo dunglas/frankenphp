@@ -10,7 +10,7 @@ select filename in ./testdata/performance/*.js; do
 	read -r -p "How many worker threads? " workerThreads
 	read -r -p "How many max threads? " maxThreads
 
-	numThreads=$((workerThreads+1))
+	numThreads=$((workerThreads + 1))
 
 	docker run --cap-add=SYS_PTRACE --security-opt seccomp=unconfined \
 		-p 8125:80 \
