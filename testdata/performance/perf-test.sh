@@ -37,4 +37,3 @@ select filename in ./testdata/performance/*.js; do
 	docker stop load-test-container
 	docker rm load-test-container
 done
-
