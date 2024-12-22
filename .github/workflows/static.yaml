@@ -152,8 +152,9 @@ jobs:
           retention-days: 1
       - name: Copy binary
         run: |
+          # shellcheck disable=SC2034
           digest=$(jq -r '."static-builder"."${{ (fromJson(needs.prepare.outputs.push) && !matrix.debug && !matrix.mimalloc) && 'containerimage.digest' || 'containerimage.config.digest' }}"' <<< "${METADATA}")
-          docker create --platform=${{ matrix.platform }} --name static-builder "${IMAGE_NAME}@${digest}"
+          docker create --platform=${{ matrix.platform }} --name static-builder "${{ (fromJson(needs.prepare.outputs.push) && !matrix.debug && !matrix.mimalloc) && '${IMAGE_NAME}@${digest}' || '${digest}' }}"
           docker cp "static-builder:/go/src/app/dist/${BINARY}" "${BINARY}${{ matrix.debug && '-debug' || '' }}${{ matrix.mimalloc && '-mimalloc' || '' }}"
         env:
           METADATA: ${{ steps.build.outputs.metadata }}
