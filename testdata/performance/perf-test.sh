@@ -7,8 +7,8 @@ docker build -t frankenphp-dev -f dev.Dockerfile .
 export "CADDY_HOSTNAME=http://host.docker.internal"
 
 select filename in ./testdata/performance/*.js; do
-	read -pr "How many worker threads? " workerThreads
-	read -pr "How many max threads? " maxThreads
+	read -r -p "How many worker threads? " workerThreads
+	read -r -p "How many max threads? " maxThreads
 
 	numThreads=$((workerThreads+1))
 

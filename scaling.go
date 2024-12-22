@@ -235,6 +235,7 @@ func downScaleThreads() {
 func probeCPUs(probeTime time.Duration) bool {
 	var start, end, cpuStart, cpuEnd C.struct_timespec
 
+	// TODO: make this cross-platform compatible
 	C.clock_gettime(C.CLOCK_MONOTONIC, &start)
 	C.clock_gettime(C.CLOCK_PROCESS_CPUTIME_ID, &cpuStart)
 

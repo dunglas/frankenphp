@@ -8,7 +8,7 @@ import http from 'k6/http';
 export const options = {
     stages: [
         {duration: '20s', target: 150,},
-        {duration: '20s', target: 400},
+        {duration: '20s', target: 1000},
         {duration: '10s', target: 0}
     ],
     thresholds: {
