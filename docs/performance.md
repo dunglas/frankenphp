@@ -27,12 +27,12 @@ you need to create a worker script and to be sure that the app is not leaking me
 The static binaries we provide and the Alpine Linux variant of the official Docker images
 are using [the musl libc](https://musl.libc.org).
 
-PHP is known to be significantly slower when using this alternative C library instead of the traditional GNU library,
+PHP is known to be [significantly slower](https://gitlab.alpinelinux.org/alpine/aports/-/issues/14381) when using this alternative C library instead of the traditional GNU library,
 especially when compiled in ZTS mode (thread-safe), which is required for FrankenPHP.
 
-Also, some bugs also only happen when using musl.
+Also, [some bugs only happen when using musl](https://github.com/php/php-src/issues?q=sort%3Aupdated-desc+is%3Aissue+is%3Aopen+label%3ABug+musl).
 
-In production environements, we strongly recommend to use the glibc.
+In production environments, we strongly recommend to use the glibc.
 
 This can be achieved by using the Debian Docker images (the default) and [by compiling FrankenPHP from sources](compile.md).
 
