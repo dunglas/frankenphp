@@ -69,8 +69,6 @@ func (handler *regularThread) waitForRequest() string {
 	case <-handler.thread.drainChan:
 		// go back to beforeScriptExecution
 		return handler.beforeScriptExecution()
-
-	case r = <-handler.thread.requestChan:
 	case r = <-regularRequestChan:
 	}
 
@@ -99,52 +97,28 @@ func (handler *regularThread) afterRequest(exitStatus int) {
 
 func handleRequestWithRegularPHPThreads(r *http.Request, fc *FrankenPHPContext) {
 	metrics.StartRequest()
-	regularThreadMu.RLock()
-
-	// dispatch to all threads in order
-	for _, thread := range regularThreads {
-		select {
-		case thread.requestChan <- r:
-			regularThreadMu.RUnlock()
-			<-fc.done
-			metrics.StopRequest()
-			return
-		default:
-			// thread is busy, continue
-		}
-	}
-	regularThreadMu.RUnlock()
 
 	// if no thread was available, fan the request out to all threads
-	// if a request has waited for too long, trigger autoscaling
 
-	timeout := allowedStallTime
-	timer := time.NewTimer(timeout)
+	select {
+	case regularRequestChan <- r:
+		// a thread was available to handle the request after all
+		<-fc.done
+		metrics.StopRequest()
+		return
+	default:
+		// there is no thread available to handle the request
+		metrics.QueuedRequest()
+		go autoscaleRegularThreads()
 
-	for {
-		select {
-		case regularRequestChan <- r:
-			// a thread was available to handle the request after all
-			timer.Stop()
-			<-fc.done
-			metrics.StopRequest()
-			return
-		case <-timer.C:
-			// reaching here means we might not have spawned enough threads
-			if blockAutoScaling.CompareAndSwap(false, true) {
-				go func() {
-					autoscaleRegularThreads()
-					blockAutoScaling.Store(false)
-				}()
-			}
+		// block until the request is handled
+		regularRequestChan <- r
+		<-fc.done
+		metrics.StopRequest()
 
-			// TODO: reject a request that has been waiting for too long (504)
-			// TODO: limit the amount of stalled requests (maybe) (503)
-
-			// re-trigger autoscaling with an exponential backoff
-			timeout *= 2
-			timer.Reset(timeout)
-		}
+		// success!
+		metrics.DequeuedRequest()
+		return
 	}
 
 }
