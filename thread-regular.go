@@ -3,7 +3,6 @@ package frankenphp
 import (
 	"net/http"
 	"sync"
-	"time"
 )
 
 // representation of a non-worker PHP thread

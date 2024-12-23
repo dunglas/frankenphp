@@ -157,12 +157,17 @@ func drainAutoScaling() {
 func autoscaleWorkerThreads(worker *worker) {
 	scalingMu.Lock()
 	defer scalingMu.Unlock()
-	defer blockAutoScaling.Store(false)
 
 	// TODO: is there an easy way to check if we are reaching memory limits?
 
 	if !probeCPUs(cpuProbeTime) {
 		logger.Debug("cpu is busy, not autoscaling", zap.String("worker", worker.fileName))
+		return
+	}
+
+	depth := metrics.GetWorkerQueueDepth(worker.fileName)
+
+	if depth <= 0 {
 		return
 	}
 
@@ -182,6 +187,11 @@ func autoscaleRegularThreads() {
 
 	if !probeCPUs(cpuProbeTime) {
 		logger.Debug("cpu is busy, not autoscaling")
+		return
+	}
+
+	depth := metrics.GetQueueDepth()
+	if depth <= 0 {
 		return
 	}
 
