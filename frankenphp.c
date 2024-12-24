@@ -28,8 +28,6 @@
 #include <sys/prctl.h>
 #elif defined(__FreeBSD__) || defined(__OpenBSD__)
 #include <pthread_np.h>
-#elif defined(__MINGW64__)
-#include <pthread.h>
 #endif
 
 #include "_cgo_export.h"

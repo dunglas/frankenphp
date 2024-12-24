@@ -15,10 +15,7 @@ package frankenphp
 // TODO: Add windows CFLAGS -Wall -Werror
 
 // #cgo darwin pkg-config: libxml-2.0
-// #cgo linux CFLAGS: -Wall -Werror
-// #cgo darwin CFLAGS: -Wall -Werror
-// #cgo openbsd CFLAGS: -Wall -Werror
-// #cgo freebsd CFLAGS: -Wall -Werror
+// #cgo unix CFLAGS: -Wall -Werror
 // #cgo CFLAGS: -I/usr/local/include -I/usr/local/include/php -I/usr/local/include/php/main -I/usr/local/include/php/TSRM -I/usr/local/include/php/Zend -I/usr/local/include/php/ext -I/usr/local/include/php/ext/date/lib
 // #cgo linux CFLAGS: -D_GNU_SOURCE
 // #cgo windows CFLAGS: -D_WINDOWS -DWINDOWS=1 -DZEND_WIN32=1 -DPHP_WIN32=1 -DWIN32 -D_MBCS -D_USE_MATH_DEFINES -DNDebug -DNDEBUG -DZEND_DEBUG=0 -DZTS=1 -DFD_SETSIZE=256
