@@ -131,12 +131,12 @@ func (f *FrankenPHPApp) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 					return d.ArgErr()
 				}
 
-				v, err := strconv.Atoi(d.Val())
+				v, err := strconv.ParseUint(d.Val(), 10, 32)
 				if err != nil {
 					return err
 				}
 
-				f.MaxThreads = v
+				f.MaxThreads = int(v)
 			case "worker":
 				wc := workerConfig{}
 				if d.NextArg() {

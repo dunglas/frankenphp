@@ -38,7 +38,7 @@ func TestRestartWorkerViaAdminApi(t *testing.T) {
 	tester.AssertGetResponse("http://localhost:"+testPort+"/", http.StatusOK, "requests:1")
 	tester.AssertGetResponse("http://localhost:"+testPort+"/", http.StatusOK, "requests:2")
 
-	assertAdminResponse(tester, "POST", "workers/restart", http.StatusOK, "workers restarted successfully\n")
+	assertAdminResponse(t, tester, "POST", "workers/restart", http.StatusOK, "workers restarted successfully\n")
 
 	tester.AssertGetResponse("http://localhost:"+testPort+"/", http.StatusOK, "requests:1")
 }
@@ -73,14 +73,14 @@ func TestRemoveWorkerThreadsViaAdminApi(t *testing.T) {
 
 	// remove a thread
 	expectedMessage := fmt.Sprintf("New thread count: 3 %s\n", absWorkerPath)
-	assertAdminResponse(tester, "DELETE", "threads?worker", http.StatusOK, expectedMessage)
+	assertAdminResponse(t, tester, "DELETE", "threads?worker", http.StatusOK, expectedMessage)
 
 	// remove 2 threads
 	expectedMessage = fmt.Sprintf("New thread count: 1 %s\n", absWorkerPath)
-	assertAdminResponse(tester, "DELETE", "threads?worker&count=2", http.StatusOK, expectedMessage)
+	assertAdminResponse(t, tester, "DELETE", "threads?worker&count=2", http.StatusOK, expectedMessage)
 
 	// get 400 status if removing the last thread
-	assertAdminResponse(tester, "DELETE", "threads?worker", http.StatusBadRequest, "")
+	assertAdminResponse(t, tester, "DELETE", "threads?worker", http.StatusBadRequest, "")
 
 	// make a request to the worker to make sure it's still running
 	tester.AssertGetResponse("http://localhost:"+testPort, http.StatusOK, "slept for 0 ms and worked for 0 iterations")
@@ -115,18 +115,18 @@ func TestAddWorkerThreadsViaAdminApi(t *testing.T) {
 	tester.AssertGetResponse("http://localhost:"+testPort+"/", http.StatusOK, "requests:1")
 
 	// get 400 status if the filename is wrong
-	assertAdminResponse(tester, "PUT", "threads?worker=wrong.php", http.StatusBadRequest, "")
+	assertAdminResponse(t, tester, "PUT", "threads?worker=wrong.php", http.StatusBadRequest, "")
 
 	// add a thread
 	expectedMessage := fmt.Sprintf("New thread count: 2 %s\n", absWorkerPath)
-	assertAdminResponse(tester, "PUT", "threads?worker=counter.php", http.StatusOK, expectedMessage)
+	assertAdminResponse(t, tester, "PUT", "threads?worker=counter.php", http.StatusOK, expectedMessage)
 
 	// add 2 threads
 	expectedMessage = fmt.Sprintf("New thread count: 4 %s\n", absWorkerPath)
-	assertAdminResponse(tester, "PUT", "threads?worker&=counter.php&count=2", http.StatusOK, expectedMessage)
+	assertAdminResponse(t, tester, "PUT", "threads?worker&=counter.php&count=2", http.StatusOK, expectedMessage)
 
 	// get 400 status if adding too many threads
-	assertAdminResponse(tester, "PUT", "threads?worker&=counter.php&count=100", http.StatusBadRequest, "")
+	assertAdminResponse(t, tester, "PUT", "threads?worker&=counter.php&count=100", http.StatusBadRequest, "")
 
 	// make a request to the worker to make sure it's still running
 	tester.AssertGetResponse("http://localhost:"+testPort+"/", http.StatusOK, "requests:2")
@@ -158,13 +158,13 @@ func TestShowTheCorrectThreadDebugStatus(t *testing.T) {
 		`, "caddyfile")
 
 	// should create a 'worker-with-counter.php' thread at index 6
-	assertAdminResponse(tester, "PUT", "threads?worker=counter.php", http.StatusOK, "")
+	assertAdminResponse(t, tester, "PUT", "threads?worker=counter.php", http.StatusOK, "")
 	// should remove the 'index.php' worker thread at index 5
-	assertAdminResponse(tester, "DELETE", "threads?worker=index.php", http.StatusOK, "")
+	assertAdminResponse(t, tester, "DELETE", "threads?worker=index.php", http.StatusOK, "")
 	// should remove a regular thread at index 1
-	assertAdminResponse(tester, "DELETE", "threads", http.StatusOK, "")
+	assertAdminResponse(t, tester, "DELETE", "threads", http.StatusOK, "")
 
-	threadInfo := getAdminResponseBody(tester, "GET", "threads")
+	threadInfo := getAdminResponseBody(t, tester, "GET", "threads")
 
 	// assert that the correct threads are present in the thread info
 	assert.Contains(t, threadInfo, "Thread 0")
@@ -210,7 +210,7 @@ func TestAutoScaleWorkerThreads(t *testing.T) {
 	autoScaledThread := "Thread 2"
 
 	// first assert that the thread is not already present
-	threadInfo := getAdminResponseBody(tester, "GET", "threads")
+	threadInfo := getAdminResponseBody(t, tester, "GET", "threads")
 	assert.NotContains(t, threadInfo, autoScaledThread)
 
 	// try to spawn the additional threads by spamming the server
@@ -223,7 +223,7 @@ func TestAutoScaleWorkerThreads(t *testing.T) {
 			}()
 		}
 		wg.Wait()
-		threadInfo = getAdminResponseBody(tester, "GET", "threads")
+		threadInfo = getAdminResponseBody(t, tester, "GET", "threads")
 		if strings.Contains(threadInfo, autoScaledThread) {
 			break
 		}
@@ -263,7 +263,7 @@ func TestAutoScaleRegularThreads(t *testing.T) {
 	autoScaledThread := "Thread 1"
 
 	// first assert that the thread is not already present
-	threadInfo := getAdminResponseBody(tester, "GET", "threads")
+	threadInfo := getAdminResponseBody(t, tester, "GET", "threads")
 	assert.NotContains(t, threadInfo, autoScaledThread)
 
 	// try to spawn the additional threads by spamming the server
@@ -276,7 +276,7 @@ func TestAutoScaleRegularThreads(t *testing.T) {
 			}()
 		}
 		wg.Wait()
-		threadInfo = getAdminResponseBody(tester, "GET", "threads")
+		threadInfo = getAdminResponseBody(t, tester, "GET", "threads")
 		if strings.Contains(threadInfo, autoScaledThread) {
 			break
 		}
@@ -286,31 +286,25 @@ func TestAutoScaleRegularThreads(t *testing.T) {
 	assert.Contains(t, threadInfo, autoScaledThread)
 }
 
-func assertAdminResponse(tester *caddytest.Tester, method string, path string, expectedStatus int, expectedBody string) {
+func assertAdminResponse(t *testing.T, tester *caddytest.Tester, method string, path string, expectedStatus int, expectedBody string) {
 	adminUrl := "http://localhost:2999/frankenphp/"
 	r, err := http.NewRequest(method, adminUrl+path, nil)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(t, err)
 	if expectedBody == "" {
 		_ = tester.AssertResponseCode(r, expectedStatus)
-	} else {
-		_, _ = tester.AssertResponse(r, expectedStatus, expectedBody)
+		return
 	}
+	_, _ = tester.AssertResponse(r, expectedStatus, expectedBody)
 }
 
-func getAdminResponseBody(tester *caddytest.Tester, method string, path string) string {
+func getAdminResponseBody(t *testing.T, tester *caddytest.Tester, method string, path string) string {
 	adminUrl := "http://localhost:2999/frankenphp/"
 	r, err := http.NewRequest(method, adminUrl+path, nil)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(t, err)
 	resp := tester.AssertResponseCode(r, http.StatusOK)
 	defer resp.Body.Close()
 	bytes, err := io.ReadAll(resp.Body)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(t, err)
 
 	return string(bytes)
 }

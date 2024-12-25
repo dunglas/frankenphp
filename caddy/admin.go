@@ -45,17 +45,16 @@ func (admin *FrankenPHPAdmin) restartWorkers(w http.ResponseWriter, r *http.Requ
 }
 
 func (admin *FrankenPHPAdmin) threads(w http.ResponseWriter, r *http.Request) error {
-	if r.Method == http.MethodPut {
+	switch r.Method {
+	case http.MethodPut:
 		return admin.changeThreads(w, r, admin.getCountFromRequest(r))
-	}
-	if r.Method == http.MethodDelete {
+	case http.MethodDelete:
 		return admin.changeThreads(w, r, -admin.getCountFromRequest(r))
-	}
-	if r.Method == http.MethodGet {
+	case http.MethodGet:
 		return admin.success(w, frankenphp.ThreadDebugStatus())
+	default:
+		return admin.error(http.StatusMethodNotAllowed, fmt.Errorf("method not allowed, try: GET,PUT,DELETE"))
 	}
-
-	return admin.error(http.StatusMethodNotAllowed, fmt.Errorf("method not allowed, try: GET,PUT,DELETE"))
 }
 
 func (admin *FrankenPHPAdmin) changeThreads(w http.ResponseWriter, r *http.Request, count int) error {
