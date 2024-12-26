@@ -14,7 +14,7 @@ import (
 
 // TODO: make speed of scaling dependant on CPU count?
 const (
-	// scale threads if requests stall this amount of time
+	// scale threads if requestAs stall this amount of time
 	allowedStallTime = 10 * time.Millisecond
 	// time to check for CPU usage before scaling a single thread
 	cpuProbeTime = 40 * time.Millisecond
@@ -57,6 +57,7 @@ func addRegularThread() (*phpThread, error) {
 	return thread, nil
 }
 
+// remove the last regular thread
 func RemoveRegularThread() (int, error) {
 	scalingMu.Lock()
 	defer scalingMu.Unlock()
@@ -64,7 +65,6 @@ func RemoveRegularThread() (int, error) {
 	return countRegularThreads(), err
 }
 
-// remove the last regular thread
 func removeRegularThread() error {
 	regularThreadMu.RLock()
 	if len(regularThreads) <= 1 {
@@ -77,6 +77,7 @@ func removeRegularThread() error {
 	return nil
 }
 
+// turn the first inactive/reserved thread into a worker thread
 func AddWorkerThread(workerFileName string) (int, error) {
 	worker, ok := workers[workerFileName]
 	if !ok {
@@ -88,7 +89,6 @@ func AddWorkerThread(workerFileName string) (int, error) {
 	return worker.countThreads(), err
 }
 
-// turn the first inactive/reserved thread into a worker thread
 func addWorkerThread(worker *worker) (*phpThread, error) {
 	thread := getInactivePHPThread()
 	if thread == nil {
@@ -99,6 +99,7 @@ func addWorkerThread(worker *worker) (*phpThread, error) {
 	return thread, nil
 }
 
+// remove the last worker thread
 func RemoveWorkerThread(workerFileName string) (int, error) {
 	worker, ok := workers[workerFileName]
 	if !ok {
@@ -111,7 +112,6 @@ func RemoveWorkerThread(workerFileName string) (int, error) {
 	return worker.countThreads(), err
 }
 
-// remove the last worker thread
 func removeWorkerThread(worker *worker) error {
 	worker.threadMutex.RLock()
 	if len(worker.threads) <= 1 {
@@ -157,7 +157,6 @@ func drainAutoScaling() {
 func autoscaleWorkerThreads(worker *worker) {
 	scalingMu.Lock()
 	defer scalingMu.Unlock()
-	defer blockAutoScaling.Store(false)
 
 	// TODO: is there an easy way to check if we are reaching memory limits?
 
