@@ -4,6 +4,7 @@ package frankenphp
 import "C"
 import (
 	"errors"
+	"net/http"
 	"runtime"
 	"sync"
 	"sync/atomic"
@@ -14,8 +15,6 @@ import (
 
 // TODO: make speed of scaling dependant on CPU count?
 const (
-	// scale threads if requests stall this amount of time
-	allowedStallTime = 5 * time.Millisecond
 	// time to check for CPU usage before scaling a single thread
 	cpuProbeTime = 40 * time.Millisecond
 	// do not scale over this amount of CPU usage
@@ -28,16 +27,86 @@ const (
 	maxThreadIdleTime = 5 * time.Second
 )
 
+type scalingStrategy interface {
+	apply(requestChan chan *http.Request, r *http.Request, scaleFunc func())
+}
+
+type scalingStrategyNormal struct {
+	minStallTime time.Duration
+	blockScaling atomic.Bool
+}
+type scalingStrategyNone struct{}
+
 var (
-	autoScaledThreads = []*phpThread{}
-	scalingMu         = new(sync.RWMutex)
-	blockAutoScaling  = atomic.Bool{}
-	cpuCount          = runtime.NumCPU()
+	activeScalingStrategy scalingStrategy
+	autoScaledThreads     = []*phpThread{}
+	scalingMu             = new(sync.RWMutex)
+	cpuCount              = runtime.NumCPU()
 
 	MaxThreadsReachedError      = errors.New("max amount of overall threads reached")
 	CannotRemoveLastThreadError = errors.New("cannot remove last thread")
 	WorkerNotFoundError         = errors.New("worker not found for given filename")
 )
+
+// when scaling is disabled, just send the request to the channel
+func (s scalingStrategyNone) apply(requestChan chan *http.Request, r *http.Request, scaleFunc func()) {
+	requestChan <- r
+}
+
+// start a timer that triggers autoscaling
+// after triggering autoscaling, double the timer's length
+func (s scalingStrategyNormal) apply(requestChan chan *http.Request, r *http.Request, scaleFunc func()) {
+	timeout := s.minStallTime
+	timer := time.NewTimer(timeout)
+
+	for {
+		select {
+		case requestChan <- r:
+			timer.Stop()
+			return
+		case <-timer.C:
+			if s.blockScaling.CompareAndSwap(false, true) {
+				go func() {
+					scaleFunc()
+					s.blockScaling.Store(false)
+				}()
+			}
+			timeout *= 2
+			timer.Reset(timeout)
+		}
+	}
+}
+
+func initAutoScaling(numThreads int, maxThreads int, s ScalingStrategy) {
+	if maxThreads <= numThreads || s == ScalingStrategyNone {
+		activeScalingStrategy = scalingStrategyNone{}
+		return
+	}
+	activeScalingStrategy = scalingStrategyNormal{
+		minStallTime: 5 * time.Millisecond,
+		blockScaling: atomic.Bool{},
+	}
+	autoScaledThreads = make([]*phpThread, 0, maxThreads-numThreads)
+	timer := time.NewTimer(downScaleCheckTime)
+	doneChan := mainThread.done
+	go func() {
+		for {
+			timer.Reset(downScaleCheckTime)
+			select {
+			case <-doneChan:
+				return
+			case <-timer.C:
+				downScaleThreads()
+			}
+		}
+	}()
+}
+
+func drainAutoScaling() {
+	scalingMu.Lock()
+	activeScalingStrategy = scalingStrategyNone{}
+	scalingMu.Unlock()
+}
 
 // turn the first inactive/reserved thread into a regular thread
 func AddRegularThread() (int, error) {
@@ -125,92 +194,45 @@ func removeWorkerThread(worker *worker) error {
 	return nil
 }
 
-func initAutoScaling(numThreads int, maxThreads int) {
-	if maxThreads <= numThreads {
-		blockAutoScaling.Store(true)
-		return
-	}
-	blockAutoScaling.Store(false)
-	autoScaledThreads = make([]*phpThread, 0, maxThreads-numThreads)
-	timer := time.NewTimer(downScaleCheckTime)
-	doneChan := mainThread.done
-	go func() {
-		for {
-			timer.Reset(downScaleCheckTime)
-			select {
-			case <-doneChan:
-				return
-			case <-timer.C:
-				downScaleThreads()
-			}
-		}
-	}()
-}
-
-func drainAutoScaling() {
-	scalingMu.Lock()
-	blockAutoScaling.Store(true)
-	scalingMu.Unlock()
-}
-
-func requestNewWorkerThread(worker *worker) {
-	if blockAutoScaling.CompareAndSwap(false, true) {
-		go func() {
-			autoscaleWorkerThreads(worker)
-			blockAutoScaling.Store(false)
-		}()
-	}
-}
-
-// Add worker PHP threads automatically
-func autoscaleWorkerThreads(worker *worker) {
+// Add a worker PHP threads automatically
+func scaleWorkerThreads(worker *worker) {
 	scalingMu.Lock()
 	defer scalingMu.Unlock()
 
 	// TODO: is there an easy way to check if we are reaching memory limits?
 
-	if !probeCPUs(cpuProbeTime) {
-		logger.Debug("cpu is busy, not autoscaling", zap.String("worker", worker.fileName))
+	if !mainThread.state.is(stateReady) || !probeCPUs(cpuProbeTime) {
 		return
 	}
 
 	thread, err := addWorkerThread(worker)
 	if err != nil {
-		logger.Info("could not increase the amount of threads handling requests", zap.String("worker", worker.fileName), zap.Error(err))
+		logMaxThreadsReachedWarning(zap.String("worker", worker.fileName), zap.Error(err))
 		return
 	}
 
 	autoScaledThreads = append(autoScaledThreads, thread)
 }
 
-func requestNewRegularThread() {
-	if blockAutoScaling.CompareAndSwap(false, true) {
-		go func() {
-			autoscaleRegularThreads()
-			blockAutoScaling.Store(false)
-		}()
-	}
-}
-
-// Add regular PHP threads automatically
-func autoscaleRegularThreads() {
+// Add a regular PHP thread automatically
+func scaleRegularThreads() {
 	scalingMu.Lock()
 	defer scalingMu.Unlock()
 
-	if !probeCPUs(cpuProbeTime) {
-		logger.Debug("cpu is busy, not autoscaling")
+	if !mainThread.state.is(stateReady) || !probeCPUs(cpuProbeTime) {
 		return
 	}
 
 	thread, err := addRegularThread()
 	if err != nil {
-		logger.Info("could not increase the amount of threads handling requests", zap.Error(err))
+		logMaxThreadsReachedWarning(zap.Error(err))
 		return
 	}
 
 	autoScaledThreads = append(autoScaledThreads, thread)
 }
 
+// Check all threads and remove those that have been inactive for too long
 func downScaleThreads() {
 	stoppedThreadCount := 0
 	scalingMu.Lock()
@@ -276,4 +298,14 @@ func probeCPUs(probeTime time.Duration) bool {
 	cpuUsage := elapsedCpuTime / elapsedTime / float64(cpuCount)
 
 	return cpuUsage < maxCpuUsageForScaling
+}
+
+// only log the maximum amount of threads reached warning once per minute
+var lastMaxThreadsWarning = time.Time{}
+
+func logMaxThreadsReachedWarning(zapFields ...zap.Field) {
+	if lastMaxThreadsWarning.Add(time.Minute).Before(time.Now()) {
+		logger.Warn("could not increase max_threads, consider raising this limit", zapFields...)
+		lastMaxThreadsWarning = time.Now()
+	}
 }

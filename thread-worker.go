@@ -170,6 +170,7 @@ func (handler *workerThread) waitForWorkerRequest() bool {
 		}
 
 		return false
+	case r = <-handler.thread.requestChan:
 	case r = <-handler.worker.requestChan:
 	}
 

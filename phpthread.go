@@ -37,6 +37,7 @@ type threadHandler interface {
 func newPHPThread(threadIndex int) *phpThread {
 	return &phpThread{
 		threadIndex: threadIndex,
+		requestChan: make(chan *http.Request),
 		handlerMu:   &sync.Mutex{},
 		state:       newThreadState(),
 	}

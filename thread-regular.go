@@ -3,7 +3,6 @@ package frankenphp
 import (
 	"net/http"
 	"sync"
-	"time"
 )
 
 // representation of a non-worker PHP thread
@@ -107,34 +106,12 @@ func handleRequestWithRegularPHPThreads(r *http.Request, fc *FrankenPHPContext) 
 		// no thread was available
 	}
 
-	// if no thread was available, fan the request out to all threads
-	// if a request has waited for too long, trigger autoscaling
-
-	timeout := allowedStallTime
-	timer := time.NewTimer(timeout)
+	// if no thread was available, mark the request as queued and apply the scaling strategy
 	metrics.QueuedRequest()
-
-	for {
-		select {
-		case regularRequestChan <- r:
-			// a thread was available to handle the request after all
-			timer.Stop()
-			metrics.DequeuedRequest()
-			<-fc.done
-			metrics.StopRequest()
-			return
-		case <-timer.C:
-			// reaching here means we might not have spawned enough threads
-			requestNewRegularThread()
-
-			// TODO: reject a request that has been waiting for too long (504)
-			// TODO: limit the amount of stalled requests (maybe) (503)
-
-			// re-trigger autoscaling with an exponential backoff
-			timeout *= 2
-			timer.Reset(timeout)
-		}
-	}
+	activeScalingStrategy.apply(regularRequestChan, r, scaleRegularThreads)
+	metrics.DequeuedRequest()
+	<-fc.done
+	metrics.StopRequest()
 }
 
 func attachRegularThread(thread *phpThread) {

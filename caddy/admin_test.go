@@ -180,7 +180,7 @@ func TestShowTheCorrectThreadDebugStatus(t *testing.T) {
 
 func TestAutoScaleWorkerThreads(t *testing.T) {
 	wg := sync.WaitGroup{}
-	maxTries := 100
+	maxTries := 10
 	requestsPerTry := 200
 	tester := caddytest.NewTester(t)
 	tester.InitServer(`
@@ -235,7 +235,7 @@ func TestAutoScaleWorkerThreads(t *testing.T) {
 
 func TestAutoScaleRegularThreads(t *testing.T) {
 	wg := sync.WaitGroup{}
-	maxTries := 100
+	maxTries := 10
 	requestsPerTry := 200
 	tester := caddytest.NewTester(t)
 	tester.InitServer(`

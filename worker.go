@@ -183,29 +183,11 @@ func (worker *worker) handleRequest(r *http.Request, fc *FrankenPHPContext) {
 	}
 	worker.threadMutex.RUnlock()
 
+	// if no thread was available, mark the request as queued and apply the scaling strategy
 	metrics.QueuedWorkerRequest(fc.scriptFilename)
-	timeout := allowedStallTime
-	timer := time.NewTimer(timeout)
+	activeScalingStrategy.apply(worker.requestChan, r, func() { scaleWorkerThreads(worker) })
+	metrics.DequeuedWorkerRequest(fc.scriptFilename)
 
-	for {
-		select {
-		case worker.requestChan <- r:
-			// a worker was available to handle the request after all
-			timer.Stop()
-			metrics.DequeuedWorkerRequest(fc.scriptFilename)
-			<-fc.done
-			metrics.StopWorkerRequest(worker.fileName, time.Since(fc.startedAt))
-			return
-		case <-timer.C:
-			// reaching here means we might not have spawned enough threads
-			requestNewWorkerThread(worker)
-
-			// TODO: reject a request that has been waiting for too long (504)
-			// TODO: limit the amount of stalled requests (maybe) (503)
-
-			// re-trigger autoscaling with an exponential backoff
-			timeout *= 2
-			timer.Reset(timeout)
-		}
-	}
+	<-fc.done
+	metrics.StopWorkerRequest(worker.fileName, time.Since(fc.startedAt))
 }
