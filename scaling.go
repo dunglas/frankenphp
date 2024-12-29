@@ -165,6 +165,12 @@ func autoscaleWorkerThreads(worker *worker) {
 		return
 	}
 
+	depth := metrics.GetWorkerQueueDepth(worker.fileName)
+
+	if depth <= 0 {
+		return
+	}
+
 	thread, err := addWorkerThread(worker)
 	if err != nil {
 		logger.Info("could not increase the amount of threads handling requests", zap.String("worker", worker.fileName), zap.Error(err))
@@ -181,6 +187,11 @@ func autoscaleRegularThreads() {
 
 	if !probeCPUs(cpuProbeTime) {
 		logger.Debug("cpu is busy, not autoscaling")
+		return
+	}
+
+	depth := metrics.GetQueueDepth()
+	if depth <= 0 {
 		return
 	}
 
