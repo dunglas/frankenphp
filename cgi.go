@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"path/filepath"
 	"strings"
+	"unsafe"
 )
 
 var knownServerKeys = map[string]struct{}{
@@ -167,7 +168,7 @@ func addKnownVariablesToServer(thread *phpThread, request *http.Request, fc *Fra
 }
 
 func registerTrustedVar(key *C.zend_string, value string, trackVarsArray *C.zval, thread *phpThread) {
-	C.frankenphp_register_trusted_var(key, thread.pinString(value), C.int(len(value)), trackVarsArray)
+	C.frankenphp_register_trusted_var(key, toUnsafeChar(value), C.int(len(value)), trackVarsArray)
 }
 
 func addHeadersToServer(thread *phpThread, request *http.Request, fc *FrankenPHPContext, trackVarsArray *C.zval) {
@@ -183,13 +184,13 @@ func addHeadersToServer(thread *phpThread, request *http.Request, fc *FrankenPHP
 		}
 
 		v := strings.Join(val, ", ")
-		C.frankenphp_register_variable_safe(thread.pinString(k), thread.pinString(v), C.size_t(len(v)), trackVarsArray)
+		C.frankenphp_register_variable_safe(toUnsafeChar(k), toUnsafeChar(v), C.size_t(len(v)), trackVarsArray)
 	}
 }
 
 func addPreparedEnvToServer(thread *phpThread, fc *FrankenPHPContext, trackVarsArray *C.zval) {
 	for k, v := range fc.env {
-		C.frankenphp_register_variable_safe(thread.pinString(k), thread.pinString(v), C.size_t(len(v)), trackVarsArray)
+		C.frankenphp_register_variable_safe(toUnsafeChar(k), toUnsafeChar(v), C.size_t(len(v)), trackVarsArray)
 	}
 	fc.env = nil
 }
@@ -201,7 +202,7 @@ func getKnownVariableKeys(thread *phpThread) map[string]*C.zend_string {
 	threadServerKeys := make(map[string]*C.zend_string)
 	for k := range knownServerKeys {
 		keyWithoutNull := strings.Replace(k, "\x00", "", -1)
-		threadServerKeys[k] = C.frankenphp_init_persistent_string(thread.pinString(keyWithoutNull), C.size_t(len(keyWithoutNull)))
+		threadServerKeys[k] = C.frankenphp_init_persistent_string(toUnsafeChar(keyWithoutNull), C.size_t(len(keyWithoutNull)))
 	}
 	thread.knownVariableKeys = threadServerKeys
 	return threadServerKeys
@@ -289,3 +290,8 @@ func sanitizedPathJoin(root, reqPath string) string {
 }
 
 const separator = string(filepath.Separator)
+
+func toUnsafeChar(s string) *C.char {
+	sData := unsafe.StringData(s)
+	return (*C.char)(unsafe.Pointer(sData))
+}
