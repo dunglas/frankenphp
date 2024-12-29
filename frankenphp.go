@@ -353,7 +353,7 @@ func Init(options ...Option) error {
 	initAutoScaling(totalThreadCount, maxThreadCount)
 
 	if c := logger.Check(zapcore.InfoLevel, "FrankenPHP started 🐘"); c != nil {
-		c.Write(zap.String("php_version", Version().Version), zap.Int("num_threads", totalThreadCount))
+		c.Write(zap.String("php_version", Version().Version), zap.Int("num_threads", totalThreadCount), zap.Int("max_threads", maxThreadCount))
 	}
 	if EmbeddedAppPath != "" {
 		if c := logger.Check(zapcore.InfoLevel, "embedded PHP app 📦"); c != nil {
