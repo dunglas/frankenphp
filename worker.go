@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/dunglas/frankenphp/internal/watcher"
-	//"go.uber.org/zap"
 )
 
 // represents a worker script and can have many threads assigned to it
@@ -166,32 +165,47 @@ func (worker *worker) countThreads() int {
 	return l
 }
 
-func (worker *worker) makeScalingDecision() {
-	autoscaleWorkerThreads(worker)
-}
-
 func (worker *worker) handleRequest(r *http.Request, fc *FrankenPHPContext) {
 	metrics.StartWorkerRequest(fc.scriptFilename)
 
-	// if no thread was available, fan the request out to all threads
-	select {
-	case worker.requestChan <- r:
-		// a worker was available to handle the request after all
-		<-fc.done
-		metrics.StopWorkerRequest(worker.fileName, time.Since(fc.startedAt))
-		return
-	default:
-		// there is no worker to handle the request
-		metrics.QueuedWorkerRequest(fc.scriptFilename)
-		go worker.makeScalingDecision()
+	// dispatch requests to all worker threads in order
+	worker.threadMutex.RLock()
+	for _, thread := range worker.threads {
+		select {
+		case thread.requestChan <- r:
+			worker.threadMutex.RUnlock()
+			<-fc.done
+			metrics.StopWorkerRequest(worker.fileName, time.Since(fc.startedAt))
+			return
+		default:
+			// thread is busy, continue
+		}
+	}
+	worker.threadMutex.RUnlock()
 
-		// block until we have a worker to handle the request
-		worker.requestChan <- r
-		<-fc.done
-		metrics.StopWorkerRequest(worker.fileName, time.Since(fc.startedAt))
+	metrics.QueuedWorkerRequest(fc.scriptFilename)
+	timeout := allowedStallTime
+	timer := time.NewTimer(timeout)
 
-		// success!
-		metrics.DequeuedWorkerRequest(fc.scriptFilename)
-		return
+	for {
+		select {
+		case worker.requestChan <- r:
+			// a worker was available to handle the request after all
+			timer.Stop()
+			metrics.DequeuedWorkerRequest(fc.scriptFilename)
+			<-fc.done
+			metrics.StopWorkerRequest(worker.fileName, time.Since(fc.startedAt))
+			return
+		case <-timer.C:
+			// reaching here means we might not have spawned enough threads
+			requestNewWorkerThread(worker)
+
+			// TODO: reject a request that has been waiting for too long (504)
+			// TODO: limit the amount of stalled requests (maybe) (503)
+
+			// re-trigger autoscaling with an exponential backoff
+			timeout *= 2
+			timer.Reset(timeout)
+		}
 	}
 }

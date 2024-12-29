@@ -14,8 +14,8 @@ import (
 
 // TODO: make speed of scaling dependant on CPU count?
 const (
-	// scale threads if requestAs stall this amount of time
-	allowedStallTime = 10 * time.Millisecond
+	// scale threads if requests stall this amount of time
+	allowedStallTime = 5 * time.Millisecond
 	// time to check for CPU usage before scaling a single thread
 	cpuProbeTime = 40 * time.Millisecond
 	// do not scale over this amount of CPU usage
@@ -153,6 +153,15 @@ func drainAutoScaling() {
 	scalingMu.Unlock()
 }
 
+func requestNewWorkerThread(worker *worker) {
+	if blockAutoScaling.CompareAndSwap(false, true) {
+		go func() {
+			autoscaleWorkerThreads(worker)
+			blockAutoScaling.Store(false)
+		}()
+	}
+}
+
 // Add worker PHP threads automatically
 func autoscaleWorkerThreads(worker *worker) {
 	scalingMu.Lock()
@@ -165,12 +174,6 @@ func autoscaleWorkerThreads(worker *worker) {
 		return
 	}
 
-	depth := metrics.GetWorkerQueueDepth(worker.fileName)
-
-	if depth <= 0 {
-		return
-	}
-
 	thread, err := addWorkerThread(worker)
 	if err != nil {
 		logger.Info("could not increase the amount of threads handling requests", zap.String("worker", worker.fileName), zap.Error(err))
@@ -180,6 +183,15 @@ func autoscaleWorkerThreads(worker *worker) {
 	autoScaledThreads = append(autoScaledThreads, thread)
 }
 
+func requestNewRegularThread() {
+	if blockAutoScaling.CompareAndSwap(false, true) {
+		go func() {
+			autoscaleRegularThreads()
+			blockAutoScaling.Store(false)
+		}()
+	}
+}
+
 // Add regular PHP threads automatically
 func autoscaleRegularThreads() {
 	scalingMu.Lock()
@@ -187,11 +199,6 @@ func autoscaleRegularThreads() {
 
 	if !probeCPUs(cpuProbeTime) {
 		logger.Debug("cpu is busy, not autoscaling")
-		return
-	}
-
-	depth := metrics.GetQueueDepth()
-	if depth <= 0 {
 		return
 	}
 

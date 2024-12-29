@@ -19,6 +19,7 @@ type phpThread struct {
 	runtime.Pinner
 	threadIndex       int
 	knownVariableKeys map[string]*C.zend_string
+	requestChan       chan *http.Request
 	drainChan         chan struct{}
 	handlerMu         *sync.Mutex
 	handler           threadHandler
