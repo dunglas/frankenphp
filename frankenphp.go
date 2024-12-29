@@ -371,8 +371,9 @@ func Shutdown() {
 	}
 
 	drainWorkers()
-	drainPHPThreads()
 	drainAutoScaling()
+	drainPHPThreads()
+
 	metrics.Shutdown()
 
 	// Remove the installed app

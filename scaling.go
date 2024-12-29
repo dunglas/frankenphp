@@ -55,7 +55,7 @@ func (s scalingStrategyNone) apply(requestChan chan *http.Request, r *http.Reque
 
 // start a timer that triggers autoscaling
 // after triggering autoscaling, double the timer's length
-func (s scalingStrategyNormal) apply(requestChan chan *http.Request, r *http.Request, scaleFunc func()) {
+func (s *scalingStrategyNormal) apply(requestChan chan *http.Request, r *http.Request, scaleFunc func()) {
 	timeout := s.minStallTime
 	timer := time.NewTimer(timeout)
 
@@ -82,7 +82,7 @@ func initAutoScaling(numThreads int, maxThreads int, s ScalingStrategy) {
 		activeScalingStrategy = scalingStrategyNone{}
 		return
 	}
-	activeScalingStrategy = scalingStrategyNormal{
+	activeScalingStrategy = &scalingStrategyNormal{
 		minStallTime: 5 * time.Millisecond,
 		blockScaling: atomic.Bool{},
 	}

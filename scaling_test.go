@@ -21,7 +21,7 @@ func TestScalingStrategyShouldBeNormal(t *testing.T) {
 	doneChan := make(chan struct{})
 	initAutoScaling(1, 2, ScalingStrategyNormal)
 
-	assert.IsType(t, scalingStrategyNormal{}, activeScalingStrategy)
+	assert.IsType(t, &scalingStrategyNormal{}, activeScalingStrategy)
 
 	close(doneChan)
 }
