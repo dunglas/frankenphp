@@ -141,3 +141,13 @@ It's also possible to use the `SSL_CERT_FILE` and `SSL_CERT_DIR` to hint OpenSSL
 export SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
 export SSL_CERT_DIR=/etc/ssl/certs
 ```
+
+### Alternative Solution
+
+You can also resolve this issue by creating a shortcut from the `/etc/ssl` folder to the root directory using the following command:
+
+```bash
+sudo ln -s /etc/ssl /
+```
+
+This approach simplifies the configuration by allowing OpenSSL to locate the necessary certificates without additional setup.
