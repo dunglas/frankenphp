@@ -206,7 +206,7 @@ func TestAutoScaleWorkerThreads(t *testing.T) {
 		`, "caddyfile")
 
 	// spam an endpoint that simulates IO
-	endpoint := "http://localhost:" + testPort + "/?sleep=5&work=1000"
+	endpoint := "http://localhost:" + testPort + "/?sleep=2&work=1000"
 	autoScaledThread := "Thread 2"
 
 	// first assert that the thread is not already present
@@ -218,7 +218,7 @@ func TestAutoScaleWorkerThreads(t *testing.T) {
 		wg.Add(requestsPerTry)
 		for i := 0; i < requestsPerTry; i++ {
 			go func() {
-				tester.AssertGetResponse(endpoint, http.StatusOK, "slept for 5 ms and worked for 1000 iterations")
+				tester.AssertGetResponse(endpoint, http.StatusOK, "slept for 2 ms and worked for 1000 iterations")
 				wg.Done()
 			}()
 		}
@@ -259,7 +259,7 @@ func TestAutoScaleRegularThreads(t *testing.T) {
 		`, "caddyfile")
 
 	// spam an endpoint that simulates IO
-	endpoint := "http://localhost:" + testPort + "/sleep.php?sleep=5&work=1000"
+	endpoint := "http://localhost:" + testPort + "/sleep.php?sleep=2&work=1000"
 	autoScaledThread := "Thread 1"
 
 	// first assert that the thread is not already present
@@ -271,7 +271,7 @@ func TestAutoScaleRegularThreads(t *testing.T) {
 		wg.Add(requestsPerTry)
 		for i := 0; i < requestsPerTry; i++ {
 			go func() {
-				tester.AssertGetResponse(endpoint, http.StatusOK, "slept for 5 ms and worked for 1000 iterations")
+				tester.AssertGetResponse(endpoint, http.StatusOK, "slept for 2 ms and worked for 1000 iterations")
 				wg.Done()
 			}()
 		}

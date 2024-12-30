@@ -74,8 +74,15 @@ func ThreadDebugStatus() string {
 func drainPHPThreads() {
 	doneWG := sync.WaitGroup{}
 	doneWG.Add(len(phpThreads))
+	mainThread.state.set(stateShuttingDown)
 	close(mainThread.done)
 	for _, thread := range phpThreads {
+		// shut down all reserved threads
+		if thread.state.compareAndSwap(stateReserved, stateDone) {
+			doneWG.Done()
+			continue
+		}
+		// shut down all active threads
 		go func(thread *phpThread) {
 			thread.shutdown()
 			doneWG.Done()
@@ -83,8 +90,8 @@ func drainPHPThreads() {
 	}
 
 	doneWG.Wait()
-	mainThread.state.set(stateShuttingDown)
-	mainThread.state.waitFor(stateDone)
+	mainThread.state.set(stateDone)
+	mainThread.state.waitFor(stateReserved)
 	phpThreads = nil
 }
 
@@ -121,10 +128,10 @@ func getPHPThreadAtState(state stateID) *phpThread {
 //export go_frankenphp_main_thread_is_ready
 func go_frankenphp_main_thread_is_ready() {
 	mainThread.state.set(stateReady)
-	mainThread.state.waitFor(stateShuttingDown)
+	mainThread.state.waitFor(stateDone)
 }
 
 //export go_frankenphp_shutdown_main_thread
 func go_frankenphp_shutdown_main_thread() {
-	mainThread.state.set(stateDone)
+	mainThread.state.set(stateReserved)
 }

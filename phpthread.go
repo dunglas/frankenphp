@@ -75,7 +75,9 @@ func (thread *phpThread) shutdown() {
 	thread.drainChan = make(chan struct{})
 
 	// threads go back to the reserved state from which they can be booted again
-	thread.state.set(stateReserved)
+	if mainThread.state.is(stateReady) {
+		thread.state.set(stateReserved)
+	}
 }
 
 // change the thread handler safely
