@@ -30,6 +30,7 @@ const defaultDocumentRoot = "public"
 func init() {
 	caddy.RegisterModule(FrankenPHPApp{})
 	caddy.RegisterModule(FrankenPHPModule{})
+	caddy.RegisterModule(FrankenPHPAdmin{})
 
 	httpcaddyfile.RegisterGlobalOption("frankenphp", parseGlobalOption)
 
@@ -56,6 +57,10 @@ type workerConfig struct {
 type FrankenPHPApp struct {
 	// NumThreads sets the number of PHP threads to start. Default: 2x the number of available CPUs.
 	NumThreads int `json:"num_threads,omitempty"`
+	// MaxThreads limits how many threads can be started at runtime. Default 2x NumThreads
+	MaxThreads int `json:"max_threads,omitempty"`
+	// Scaling sets the scaling mode. Default: "on".
+	Scaling frankenphp.ScalingStrategy `json:"scaling,omitempty"`
 	// Workers configures the worker scripts to start.
 	Workers []workerConfig `json:"workers,omitempty"`
 }
@@ -72,7 +77,12 @@ func (f *FrankenPHPApp) Start() error {
 	repl := caddy.NewReplacer()
 	logger := caddy.Log()
 
-	opts := []frankenphp.Option{frankenphp.WithNumThreads(f.NumThreads), frankenphp.WithLogger(logger), frankenphp.WithMetrics(metrics)}
+	opts := []frankenphp.Option{
+		frankenphp.WithNumThreads(f.NumThreads),
+		frankenphp.WithMaxThreads(f.MaxThreads, f.Scaling),
+		frankenphp.WithLogger(logger),
+		frankenphp.WithMetrics(metrics),
+	}
 	for _, w := range f.Workers {
 		opts = append(opts, frankenphp.WithWorkers(repl.ReplaceKnown(w.FileName, ""), w.Num, w.Env, w.Watch))
 	}
@@ -118,6 +128,29 @@ func (f *FrankenPHPApp) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 				}
 
 				f.NumThreads = v
+			case "max_threads":
+				if !d.NextArg() {
+					return d.ArgErr()
+				}
+
+				v, err := strconv.ParseUint(d.Val(), 10, 32)
+				if err != nil {
+					return err
+				}
+
+				f.MaxThreads = int(v)
+			case "scaling":
+				if !d.NextArg() {
+					return d.ArgErr()
+				}
+				switch d.Val() {
+				case "on":
+					f.Scaling = frankenphp.ScalingStrategyNormal
+				case "off":
+					f.Scaling = frankenphp.ScalingStrategyNone
+				default:
+					return d.Errf("unknown scaling mode: %s", d.Val())
+				}
 			case "worker":
 				wc := workerConfig{}
 				if d.NextArg() {
@@ -188,7 +221,7 @@ func (f *FrankenPHPApp) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 }
 
 func parseGlobalOption(d *caddyfile.Dispenser, _ interface{}) (interface{}, error) {
-	app := &FrankenPHPApp{}
+	app := &FrankenPHPApp{Scaling: frankenphp.ScalingStrategyNormal}
 	if err := app.UnmarshalCaddyfile(d); err != nil {
 		return nil, err
 	}

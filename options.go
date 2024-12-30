@@ -11,10 +11,12 @@ type Option func(h *opt) error
 //
 // If you change this, also update the Caddy module and the documentation.
 type opt struct {
-	numThreads int
-	workers    []workerOpt
-	logger     *zap.Logger
-	metrics    Metrics
+	numThreads      int
+	maxThreads      int
+	scalingStrategy ScalingStrategy
+	workers         []workerOpt
+	logger          *zap.Logger
+	metrics         Metrics
 }
 
 type workerOpt struct {
@@ -24,10 +26,26 @@ type workerOpt struct {
 	watch    []string
 }
 
+type ScalingStrategy uint8
+
+const (
+	ScalingStrategyNormal ScalingStrategy = iota
+	ScalingStrategyNone
+)
+
 // WithNumThreads configures the number of PHP threads to start.
 func WithNumThreads(numThreads int) Option {
 	return func(o *opt) error {
 		o.numThreads = numThreads
+
+		return nil
+	}
+}
+
+func WithMaxThreads(maxThreads int, s ScalingStrategy) Option {
+	return func(o *opt) error {
+		o.maxThreads = maxThreads
+		o.scalingStrategy = s
 
 		return nil
 	}

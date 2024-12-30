@@ -63,8 +63,7 @@ var (
 	RequestContextCreationError = errors.New("error during request context creation")
 	ScriptExecutionError        = errors.New("error during PHP script execution")
 
-	requestChan chan *http.Request
-	isRunning   bool
+	isRunning bool
 
 	loggerMu sync.RWMutex
 	logger   *zap.Logger
@@ -140,7 +139,8 @@ func clientHasClosed(r *http.Request) bool {
 // NewRequestWithContext creates a new FrankenPHP request context.
 func NewRequestWithContext(r *http.Request, opts ...RequestOption) (*http.Request, error) {
 	fc := &FrankenPHPContext{
-		done: make(chan interface{}),
+		done:      make(chan interface{}),
+		startedAt: time.Now(),
 	}
 	for _, o := range opts {
 		if err := o(fc); err != nil {
@@ -243,7 +243,7 @@ func Config() PHPConfig {
 // MaxThreads is internally used during tests. It is written to, but never read and may go away in the future.
 var MaxThreads int
 
-func calculateMaxThreads(opt *opt) (int, int, error) {
+func calculateMaxThreads(opt *opt) (int, int, int, error) {
 	maxProcs := runtime.GOMAXPROCS(0) * 2
 
 	var numWorkers int
@@ -265,13 +265,17 @@ func calculateMaxThreads(opt *opt) (int, int, error) {
 			opt.numThreads = maxProcs
 		}
 	} else if opt.numThreads <= numWorkers {
-		return opt.numThreads, numWorkers, NotEnoughThreads
+		return opt.numThreads, numWorkers, opt.maxThreads, NotEnoughThreads
+	}
+
+	if opt.maxThreads < opt.numThreads {
+		opt.maxThreads = opt.numThreads
 	}
 
 	metrics.TotalThreads(opt.numThreads)
 	MaxThreads = opt.numThreads
 
-	return opt.numThreads, numWorkers, nil
+	return opt.numThreads, numWorkers, opt.maxThreads, nil
 }
 
 // Init starts the PHP runtime and the configured workers.
@@ -311,7 +315,7 @@ func Init(options ...Option) error {
 		metrics = opt.metrics
 	}
 
-	totalThreadCount, workerThreadCount, err := calculateMaxThreads(opt)
+	totalThreadCount, workerThreadCount, maxThreadCount, err := calculateMaxThreads(opt)
 	if err != nil {
 		return err
 	}
@@ -331,11 +335,12 @@ func Init(options ...Option) error {
 		logger.Warn(`ZTS is not enabled, only 1 thread will be available, recompile PHP using the "--enable-zts" configuration option or performance will be degraded`)
 	}
 
-	requestChan = make(chan *http.Request, opt.numThreads)
-	if err := initPHPThreads(totalThreadCount); err != nil {
+	if err := initPHPThreads(totalThreadCount, maxThreadCount); err != nil {
 		return err
 	}
 
+	regularRequestChan = make(chan *http.Request, totalThreadCount-workerThreadCount)
+	regularThreads = make([]*phpThread, 0, totalThreadCount-workerThreadCount)
 	for i := 0; i < totalThreadCount-workerThreadCount; i++ {
 		thread := getInactivePHPThread()
 		convertToRegularThread(thread)
@@ -345,8 +350,10 @@ func Init(options ...Option) error {
 		return err
 	}
 
+	initAutoScaling(totalThreadCount, maxThreadCount, opt.scalingStrategy)
+
 	if c := logger.Check(zapcore.InfoLevel, "FrankenPHP started 🐘"); c != nil {
-		c.Write(zap.String("php_version", Version().Version), zap.Int("num_threads", totalThreadCount))
+		c.Write(zap.String("php_version", Version().Version), zap.Int("num_threads", totalThreadCount), zap.Int("max_threads", maxThreadCount))
 	}
 	if EmbeddedAppPath != "" {
 		if c := logger.Check(zapcore.InfoLevel, "embedded PHP app 📦"); c != nil {
@@ -364,17 +371,18 @@ func Shutdown() {
 	}
 
 	drainWorkers()
+	drainAutoScaling()
 	drainPHPThreads()
+
 	metrics.Shutdown()
-	requestChan = nil
 
 	// Remove the installed app
 	if EmbeddedAppPath != "" {
 		_ = os.RemoveAll(EmbeddedAppPath)
 	}
 
-	logger.Debug("FrankenPHP shut down")
 	isRunning = false
+	logger.Debug("FrankenPHP shut down")
 }
 
 func getLogger() *zap.Logger {
@@ -463,7 +471,6 @@ func ServeHTTP(responseWriter http.ResponseWriter, request *http.Request) error 
 	}
 
 	fc.responseWriter = responseWriter
-	fc.startedAt = time.Now()
 
 	// Detect if a worker is available to handle this request
 	if worker, ok := workers[fc.scriptFilename]; ok {
@@ -471,15 +478,8 @@ func ServeHTTP(responseWriter http.ResponseWriter, request *http.Request) error 
 		return nil
 	}
 
-	metrics.StartRequest()
-
-	select {
-	case <-mainThread.done:
-	case requestChan <- request:
-		<-fc.done
-	}
-
-	metrics.StopRequest()
+	// If no worker was availabe send the request to non-worker threads
+	handleRequestWithRegularPHPThreads(request, fc)
 
 	return nil
 }

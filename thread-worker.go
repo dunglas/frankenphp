@@ -51,6 +51,7 @@ func (handler *workerThread) beforeScriptExecution() string {
 		setupWorkerScript(handler, handler.worker)
 		return handler.worker.fileName
 	case stateShuttingDown:
+		handler.worker.detachThread(handler.thread)
 		// signal to stop
 		return ""
 	}
@@ -67,6 +68,10 @@ func (handler *workerThread) getActiveRequest() *http.Request {
 	}
 
 	return handler.fakeRequest
+}
+
+func (handler *workerThread) name() string {
+	return "Worker PHP Thread - " + handler.worker.fileName
 }
 
 func setupWorkerScript(handler *workerThread, worker *worker) {
@@ -141,6 +146,7 @@ func tearDownWorkerScript(handler *workerThread, exitStatus int) {
 func (handler *workerThread) waitForWorkerRequest() bool {
 	// unpin any memory left over from previous requests
 	handler.thread.Unpin()
+	handler.state.markAsWaiting(true)
 
 	if c := logger.Check(zapcore.DebugLevel, "waiting for request"); c != nil {
 		c.Write(zap.String("worker", handler.worker.fileName))
@@ -157,8 +163,9 @@ func (handler *workerThread) waitForWorkerRequest() bool {
 			c.Write(zap.String("worker", handler.worker.fileName))
 		}
 
-		// execute opcache_reset if the restart was triggered by the watcher
-		if watcherIsEnabled && handler.state.is(stateRestarting) {
+		// flush the opcache when restarting due to watcher or admin api
+		// note: this is done right before frankenphp_handle_request() returns 'false'
+		if handler.state.is(stateRestarting) {
 			C.frankenphp_reset_opcache()
 		}
 
@@ -168,6 +175,7 @@ func (handler *workerThread) waitForWorkerRequest() bool {
 	}
 
 	handler.workerRequest = r
+	handler.state.markAsWaiting(false)
 
 	if c := logger.Check(zapcore.DebugLevel, "request handling started"); c != nil {
 		c.Write(zap.String("worker", handler.worker.fileName), zap.String("url", r.RequestURI))
