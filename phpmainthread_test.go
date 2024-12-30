@@ -157,23 +157,15 @@ func assertRequestBody(t *testing.T, url string, expected string) {
 	assert.Equal(t, expected, string(body))
 }
 
-// create all permutations of possible transition between 2 handlers
+// create a mix of possible transitions of workers and regular threads
 func allPossibleTransitions(worker1Path string, worker2Path string) []func(*phpThread) {
-	transitions := []func(*phpThread){
+	return []func(*phpThread){
 		convertToRegularThread,
+		func(thread *phpThread) { thread.shutdown() },
+		func(thread *phpThread) { thread.boot() },
 		func(thread *phpThread) { convertToWorkerThread(thread, workers[worker1Path]) },
+		convertToInactiveThread,
 		func(thread *phpThread) { convertToWorkerThread(thread, workers[worker2Path]) },
 		convertToInactiveThread,
 	}
-	permutations := []func(*phpThread){}
-
-	for i := 0; i < len(transitions); i++ {
-		for j := 0; j < len(transitions); j++ {
-			if i != j {
-				permutations = append(permutations, transitions[i], transitions[j])
-			}
-		}
-	}
-
-	return permutations
 }
