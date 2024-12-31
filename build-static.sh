@@ -158,6 +158,7 @@ if ! type "xcaddy" >/dev/null 2>&1; then
 	fi
 
 	echo "Your user-downloads package in Go = ${PATH_USER_DOWNLOAD_GO}"
+	exit 1
 fi
 
 curlGitHubHeaders=(--header "X-GitHub-Api-Version: 2022-11-28")
