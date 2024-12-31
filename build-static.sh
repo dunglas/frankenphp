@@ -137,8 +137,27 @@ else
 	${spcCommand} build --debug --enable-zts --build-embed ${extraOpts} "${PHP_EXTENSIONS}" --with-libs="${PHP_EXTENSION_LIBS}"
 fi
 
+if ! type "go" >/dev/null 2>&1; then
+	echo "The \"go\" command must be installed. We strongly recommended installed Homebrew for automatically install Golang"
+     	exit 1
+fi
+
 if ! type "xcaddy" >/dev/null 2>&1; then
 	go install github.com/caddyserver/xcaddy/cmd/xcaddy@latest
+fi
+
+if ! type "xcaddy" >/dev/null 2>&1; then
+	echo "Something went wrong after running \"go install github.com/caddyserver/xcaddy/cmd/xcaddy@latest\"."
+
+	PATH_USER_DOWNLOAD_GO="$(go env GOPATH)/bin"
+
+	# Default shell support
+	if [ -z "$PATH_USER_DOWNLOAD_GO" ]; then
+		echo "We cannot detection location user-downloads package in Go"
+		exit 1
+	fi
+
+	echo "Your user-downloads package in Go = ${PATH_USER_DOWNLOAD_GO}"
 fi
 
 curlGitHubHeaders=(--header "X-GitHub-Api-Version: 2022-11-28")
