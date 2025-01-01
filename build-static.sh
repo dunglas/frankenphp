@@ -142,23 +142,10 @@ if ! type "go" >/dev/null 2>&1; then
      	exit 1
 fi
 
-if ! type "xcaddy" >/dev/null 2>&1; then
+XCADDY_COMMAND="$(go env GOPATH)/bin/xcaddy"
+
+if ! type "$XCADDY_COMMAND" >/dev/null 2>&1; then
 	go install github.com/caddyserver/xcaddy/cmd/xcaddy@latest
-fi
-
-if ! type "xcaddy" >/dev/null 2>&1; then
-	echo "Something went wrong after running \"go install github.com/caddyserver/xcaddy/cmd/xcaddy@latest\"."
-
-	PATH_USER_DOWNLOAD_GO="$(go env GOPATH)/bin"
-
-	# Default shell support
-	if [ -z "$PATH_USER_DOWNLOAD_GO" ]; then
-		echo "We cannot detection location user-downloads package in Go"
-		exit 1
-	fi
-
-	echo "Your user-downloads package in Go = ${PATH_USER_DOWNLOAD_GO}"
-	exit 1
 fi
 
 curlGitHubHeaders=(--header "X-GitHub-Api-Version: 2022-11-28")
@@ -316,7 +303,7 @@ cd caddy/
 CGO_ENABLED=1 \
 	XCADDY_GO_BUILD_FLAGS="-buildmode=pie -tags cgo,netgo,osusergo,static_build,nobadger,nomysql,nopgx -ldflags \"-linkmode=external -extldflags '-static-pie ${extraExtldflags}' ${extraLdflags} -X 'github.com/caddyserver/caddy/v2.CustomVersion=FrankenPHP ${FRANKENPHP_VERSION} PHP ${LIBPHP_VERSION} Caddy'\"" \
 	XCADDY_DEBUG="${XCADDY_DEBUG}" \
-	xcaddy build \
+	${XCADDY_COMMAND} build \
 	--output "../dist/${bin}" \
 	${XCADDY_ARGS} \
 	--with github.com/dunglas/frankenphp=.. \
