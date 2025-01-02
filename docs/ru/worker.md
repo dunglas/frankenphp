@@ -1,13 +1,13 @@
-# Using FrankenPHP Workers
+# Worker-режим в FrankenPHP
 
-Boot your application once and keep it in memory.
-FrankenPHP will handle incoming requests in a few milliseconds.
+Загрузите приложение один раз и держите его в памяти.  
+FrankenPHP обрабатывает входящие запросы за несколько миллисекунд.
 
-## Starting Worker Scripts
+## Запуск Worker
 
 ### Docker
 
-Set the value of the `FRANKENPHP_CONFIG` environment variable to `worker /path/to/your/worker/script.php`:
+Установите значение переменной окружения `FRANKENPHP_CONFIG` на `worker /path/to/your/worker/script.php`:
 
 ```console
 docker run \
@@ -17,19 +17,18 @@ docker run \
     dunglas/frankenphp
 ```
 
-### Standalone Binary
+### Standalone бинарник
 
-Use the `--worker` option of the `php-server` command to serve the content of the current directory using a worker:
+Используйте опцию `--worker` команды `php-server`, чтобы обслуживать содержимое текущей директории через Worker:
 
 ```console
 frankenphp php-server --worker /path/to/your/worker/script.php
 ```
 
-If your PHP app is [embedded in the binary](embed.md), you can add a custom `Caddyfile` in the root directory of the app.
-It will be used automatically.
+Если ваше PHP-приложение [встроено в бинарник](embed.md), вы можете добавить пользовательский `Caddyfile` в корневую директорию приложения.  
+Он будет использоваться автоматически.
 
-It's also possible to [restart the worker on file changes](config.md#watching-for-file-changes) with the `--watch` option.
-The following command will trigger a restart if any file ending in `.php` in the `/path/to/your/app/` directory or subdirectories is modified:
+Также можно настроить [автоматический перезапуск Worker при изменении файлов](config.md#watching-for-file-changes) с помощью опции `--watch`.  Следующая команда выполнит перезапуск, если будет изменён любой файл с расширением `.php` в директории `/path/to/your/app/` или её поддиректориях:
 
 ```console
 frankenphp php-server --worker /path/to/your/worker/script.php --watch "/path/to/your/app/**/*.php"
@@ -37,14 +36,14 @@ frankenphp php-server --worker /path/to/your/worker/script.php --watch "/path/to
 
 ## Symfony Runtime
 
-The worker mode of FrankenPHP is supported by the [Symfony Runtime Component](https://symfony.com/doc/current/components/runtime.html).
-To start any Symfony application in a worker, install the FrankenPHP package of [PHP Runtime](https://github.com/php-runtime/runtime):
+Worker-режим FrankenPHP поддерживается компонентом [Symfony Runtime](https://symfony.com/doc/current/components/runtime.html).  
+Чтобы запустить любое Symfony-приложение в Worker-режиме, установите пакет FrankenPHP для [PHP Runtime](https://github.com/php-runtime/runtime):
 
 ```console
 composer require runtime/frankenphp-symfony
 ```
 
-Start your app server by defining the `APP_RUNTIME` environment variable to use the FrankenPHP Symfony Runtime:
+Запустите сервер приложения, задав переменную окружения `APP_RUNTIME` для использования FrankenPHP Symfony Runtime:
 
 ```console
 docker run \
@@ -57,29 +56,29 @@ docker run \
 
 ## Laravel Octane
 
-See [the dedicated documentation](laravel.md#laravel-octane).
+Подробнее см. в [документации](laravel.md#laravel-octane).
 
-## Custom Apps
+## Пользовательские приложения
 
-The following example shows how to create your own worker script without relying on a third-party library:
+Следующий пример показывает, как создать собственный Worker без использования сторонних библиотек:
 
 ```php
 <?php
 // public/index.php
 
-// Prevent worker script termination when a client connection is interrupted
+// Предотвращает завершение Worker при разрыве соединения клиента
 ignore_user_abort(true);
 
-// Boot your app
+// Инициализация приложения
 require __DIR__.'/vendor/autoload.php';
 
 $myApp = new \App\Kernel();
 $myApp->boot();
 
-// Handler outside the loop for better performance (doing less work)
+// Обработчик запросов за пределами цикла для повышения производительности
 $handler = static function () use ($myApp) {
-    // Called when a request is received,
-    // superglobals, php://input and the like are reset
+    // Выполняется при обработке запроса.
+    // Суперглобальные переменные, php://input и другие данные обновляются для каждого запроса.
     echo $myApp->handle($_GET, $_POST, $_COOKIE, $_FILES, $_SERVER);
 };
 
@@ -87,20 +86,20 @@ $maxRequests = (int)($_SERVER['MAX_REQUESTS'] ?? 0);
 for ($nbRequests = 0; !$maxRequests || $nbRequests < $maxRequests; ++$nbRequests) {
     $keepRunning = \frankenphp_handle_request($handler);
 
-    // Do something after sending the HTTP response
+    // Действия после отправки HTTP-ответа
     $myApp->terminate();
 
-    // Call the garbage collector to reduce the chances of it being triggered in the middle of a page generation
+    // Вызов сборщика мусора, чтобы снизить вероятность его запуска в процессе генерации страницы
     gc_collect_cycles();
 
     if (!$keepRunning) break;
 }
 
-// Cleanup
+// Завершение
 $myApp->shutdown();
 ```
 
-Then, start your app and use the `FRANKENPHP_CONFIG` environment variable to configure your worker:
+Запустите приложение, настроив Worker с помощью переменной окружения `FRANKENPHP_CONFIG`:
 
 ```console
 docker run \
@@ -110,8 +109,10 @@ docker run \
     dunglas/frankenphp
 ```
 
-By default, 2 workers per CPU are started.
-You can also configure the number of workers to start:
+## Настройка количества Worker
+
+По умолчанию запускается по 2 Worker на каждый CPU.  
+Вы можете задать своё значение:
 
 ```console
 docker run \
@@ -121,39 +122,36 @@ docker run \
     dunglas/frankenphp
 ```
 
-### Restart the Worker After a Certain Number of Requests
+### Перезапуск Worker после определённого количества запросов
 
-As PHP was not originally designed for long-running processes, there are still many libraries and legacy codes that leak memory.
-A workaround to using this type of code in worker mode is to restart the worker script after processing a certain number of requests:
+PHP изначально не был разработан для долгоживущих процессов, поэтому некоторые библиотеки и устаревший код могут приводить к утечкам памяти.  
+Для решения этой проблемы можно настроить автоматический перезапуск Worker после обработки определённого количества запросов.  
 
-The previous worker snippet allows configuring a maximum number of request to handle by setting an environment variable named `MAX_REQUESTS`.
+В предыдущем примере максимальное количество запросов задаётся с помощью переменной окружения `MAX_REQUESTS`.
 
-### Worker Failures
+### Сбои Worker
 
-If a worker script crashes with a non-zero exit code, FrankenPHP will restart it with an exponential backoff strategy.
-If the worker script stays up longer than the last backoff * 2,
-it will not penalize the worker script and restart it again.
-However, if the worker script continues to fail with a non-zero exit code in a short period of time
-(for example, having a typo in a script), FrankenPHP will crash with the error: `too many consecutive failures`.
+Если Worker завершится с ненулевым кодом выхода, FrankenPHP перезапустит его с использованием экспоненциальной задержки.  
+Если Worker проработает дольше, чем время последней задержки * 2, он будет считаться стабильным, и задержка сбросится.  
+Однако, если Worker продолжает завершаться с ненулевым кодом выхода в течение короткого промежутка времени (например, из-за опечатки в коде), FrankenPHP завершит работу с ошибкой: `too many consecutive failures`.
 
-## Superglobals Behavior
+## Поведение суперглобальных переменных
 
-[PHP superglobals](https://www.php.net/manual/en/language.variables.superglobals.php) (`$_SERVER`, `$_ENV`, `$_GET`...)
-behave as follows:
+[PHP суперглобальные переменные](https://www.php.net/manual/en/language.variables.superglobals.php) (`$_SERVER`, `$_ENV`, `$_GET` и т.д.) ведут себя следующим образом:
 
-* before the first call to `frankenphp_handle_request()`, superglobals contain values bound to the worker script itself
-* during and after the call to `frankenphp_handle_request()`, superglobals contain values generated from the processed HTTP request, each call to `frankenphp_handle_request()` changes the superglobals values
+* до первого вызова `frankenphp_handle_request()` суперглобальные переменные содержат значения, связанные с самим Worker
+* во время и после вызова `frankenphp_handle_request()` суперглобальные переменные содержат значения, сгенерированные на основе обработанного HTTP-запроса, каждый вызов изменяет значения суперглобальных переменных
 
-To access the superglobals of the worker script inside the callback, you must copy them and import the copy in the scope of the callback:
+Чтобы получить доступ к суперглобальным переменным Worker внутри колбэка, необходимо скопировать их и импортировать копию в область видимости колбэка:
 
 ```php
 <?php
-// Copy worker's $_SERVER superglobal before the first call to frankenphp_handle_request()
+// Копирование $_SERVER Worker перед первым вызовом frankenphp_handle_request()
 $workerServer = $_SERVER;
 
 $handler = static function () use ($workerServer) {
-    var_dump($_SERVER); // Request-bound $_SERVER
-    var_dump($workerServer); // $_SERVER of the worker script
+    var_dump($_SERVER); // $_SERVER для запроса
+    var_dump($workerServer); // $_SERVER Worker
 };
 
 // ...
