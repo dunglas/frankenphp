@@ -1,61 +1,61 @@
-# Configuration
+# Конфигурация
 
-FrankenPHP, Caddy as well as the Mercure and Vulcain modules can be configured using [the formats supported by Caddy](https://caddyserver.com/docs/getting-started#your-first-config).
+FrankenPHP, Caddy, а также модули Mercure и Vulcain могут быть настроены с использованием [конфигурационных форматов, поддерживаемых Caddy](https://caddyserver.com/docs/getting-started#your-first-config).
 
-In [the Docker images](docker.md), the `Caddyfile` is located at `/etc/caddy/Caddyfile`.
-The static binary will look for the `Caddyfile` in the directory in which it is started.
+В [Docker-образах](docker.md) файл `Caddyfile` находится по пути `/etc/caddy/Caddyfile`.  
+Standalone бинарник будет искать `Caddyfile` в директории, из которой он запущен.
 
-PHP itself can be configured [using a `php.ini` file](https://www.php.net/manual/en/configuration.file.php).
+PHP можно настроить [с помощью файла `php.ini`](https://www.php.net/manual/en/configuration.file.php).
 
-By default, PHP supplied with Docker images and the one included in the static binary will look for a `php.ini` file in the directory where FrankenPHP is started and in `/usr/local/etc/php/`. They will also load all files ending in `.ini` from `/usr/local/etc/php/conf.d/`.
+По умолчанию PHP, поставляемый с Docker-образами, и тот, что включён в Standalone бинарник, будет искать файл `php.ini` в директории, где был запущен FrankenPHP, а также в `/usr/local/etc/php/`. Кроме того, будут загружены все файлы с расширением `.ini` из директории `/usr/local/etc/php/conf.d/`.
 
-No `php.ini` file is present by default, you should copy an official template provided by the PHP project.
+Файл `php.ini` по умолчанию отсутствует. Вы можете скопировать официальный шаблон, предоставляемый проектом PHP.
 
-On Docker, the templates are provided in the images:
+В Docker-шаблоны включены в образы:
 
 ```dockerfile
 FROM dunglas/frankenphp
 
-# Production:
+# Для продакшена:
 RUN cp $PHP_INI_DIR/php.ini-production $PHP_INI_DIR/php.ini
 
-# Or developement:
+# Или для разработки:
 RUN cp $PHP_INI_DIR/php.ini-development $PHP_INI_DIR/php.ini
 ```
 
-If you don't use Docker, copy one of `php.ini-production` or `php.ini-development` provided [in the PHP sources](https://github.com/php/php-src/).
+Если вы не используете Docker, скопируйте один из шаблонов `php.ini-production` или `php.ini-development`, предоставленных [в исходниках PHP](https://github.com/php/php-src/).
 
-## Caddyfile Config
+## Конфигурация Caddyfile
 
-To register the FrankenPHP executor, the `frankenphp` [global option](https://caddyserver.com/docs/caddyfile/concepts#global-options) must be set, then the `php_server` or the `php` [HTTP directives](https://caddyserver.com/docs/caddyfile/concepts#directives) may be used within the site blocks to serve your PHP app.
+Для настройки FrankenPHP установите [глобальную опцию](https://caddyserver.com/docs/caddyfile/concepts#global-options) frankenphp. После этого можно использовать [HTTP-директивы](https://caddyserver.com/docs/caddyfile/concepts#directives) `php_server` или `php` для обработки вашего PHP-приложения.
 
-Minimal example:
+Минимальный пример:
 
 ```caddyfile
 {
-	# Enable FrankenPHP
+	# Включить FrankenPHP
 	frankenphp
 }
 
 localhost {
-	# Enable compression (optional)
+	# Включить сжатие (опционально)
 	encode zstd br gzip
-	# Execute PHP files in the current directory and serve assets
+	# Выполнять PHP-файлы в текущей директории и обслуживать статические файлы
 	php_server
 }
 ```
 
-Optionally, the number of threads to create and [worker scripts](worker.md) to start with the server can be specified under the global option.
+Опционально можно указать количество потоков и [worker](worker.md), которые запускаются вместе с сервером:
 
 ```caddyfile
 {
 	frankenphp {
-		num_threads <num_threads> # Sets the number of PHP threads to start. Default: 2x the number of available CPUs.
+		num_threads <num_threads> # Указывает количество потоков PHP. По умолчанию: 2x от числа доступных CPU.
 		worker {
-			file <path> # Sets the path to the worker script.
-			num <num> # Sets the number of PHP threads to start, defaults to 2x the number of available CPUs.
-			env <key> <value> # Sets an extra environment variable to the given value. Can be specified more than once for multiple environment variables.
-			watch <path> # Sets the path to watch for file changes. Can be specified more than once for multiple paths.
+			file <path> # Указывает путь к worker.
+			num <num> # Указывает количество потоков PHP. По умолчанию: 2x от числа доступных CPU.
+			env <key> <value> # Устанавливает дополнительную переменную окружения. Можно указать несколько раз для разных переменных.
+			watch <path> # Указывает путь для отслеживания изменений файлов. Можно указать несколько раз для разных путей.
 		}
 	}
 }
@@ -63,7 +63,7 @@ Optionally, the number of threads to create and [worker scripts](worker.md) to s
 # ...
 ```
 
-Alternatively, you may use the one-line short form of the `worker` option:
+В качестве альтернативы можно использовать однострочную краткую форму для опции `worker`:
 
 ```caddyfile
 {
@@ -75,7 +75,7 @@ Alternatively, you may use the one-line short form of the `worker` option:
 # ...
 ```
 
-You can also define multiple workers if you serve multiple apps on the same server:
+Вы также можете определить несколько worker, если обслуживаете несколько приложений на одном сервере:
 
 ```caddyfile
 {
@@ -98,20 +98,20 @@ other.example.com {
 # ...
 ```
 
-Using the `php_server` directive is generally what you need,
-but if you need full control, you can use the lower level `php` directive:
+Использование директивы `php_server` — это то, что нужно в большинстве случаев.  
+Однако если требуется полный контроль, вы можете использовать более низкоуровневую директиву `php`:
 
-Using the `php_server` directive is equivalent to this configuration:
+Использование директивы `php_server` эквивалентно следующей конфигурации:
 
 ```caddyfile
 route {
-	# Add trailing slash for directory requests
+	# Добавить слэш в конец запросов к директориям
 	@canonicalPath {
 		file {path}/index.php
 		not path */
 	}
 	redir @canonicalPath {path}/ 308
-	# If the requested file does not exist, try index files
+	# Если запрошенный файл не существует, попытаться использовать файлы index
 	@indexFiles file {
 		try_files {path} {path}/index.php index.php
 		split_path .php
@@ -124,25 +124,23 @@ route {
 }
 ```
 
-The `php_server` and the `php` directives have the following options:
+Директивы `php_server` и `php` имеют следующие опции:
 
 ```caddyfile
 php_server [<matcher>] {
-	root <directory> # Sets the root folder to the site. Default: `root` directive.
-	split_path <delim...> # Sets the substrings for splitting the URI into two parts. The first matching substring will be used to split the "path info" from the path. The first piece is suffixed with the matching substring and will be assumed as the actual resource (CGI script) name. The second piece will be set to PATH_INFO for the script to use. Default: `.php`
-	resolve_root_symlink false # Disables resolving the `root` directory to its actual value by evaluating a symbolic link, if one exists (enabled by default).
-	env <key> <value> # Sets an extra environment variable to the given value. Can be specified more than once for multiple environment variables.
-	file_server off # Disables the built-in file_server directive.
+	root <directory> # Указывает корневую директорию сайта. По умолчанию: директива `root`.
+	split_path <delim...> # Устанавливает подстроки для разделения URI на две части. Первая часть будет использована как имя ресурса (CGI-скрипта), вторая часть — как PATH_INFO. По умолчанию: `.php`.
+	resolve_root_symlink false # Отключает разрешение символьных ссылок для `root` (включено по умолчанию).
+	env <key> <value> # Устанавливает дополнительные переменные окружения. Можно указать несколько раз для разных переменных.
+	file_server off # Отключает встроенную директиву file_server.
 }
 ```
 
-### Watching for File Changes
+### Отслеживание изменений файлов
 
-Since workers only boot your application once and keep it in memory, any changes
-to your PHP files will not be reflected immediately.
+Поскольку worker запускает ваше приложение только один раз и держит его в памяти, изменения в PHP-файлах не будут применяться сразу.
 
-Workers can instead be restarted on file changes via the `watch` directive.
-This is useful for development environments.
+Для разработки можно настроить перезапуск worker при изменении файлов с помощью директивы `watch`:
 
 ```caddyfile
 {
@@ -155,38 +153,35 @@ This is useful for development environments.
 }
 ```
 
-If the `watch` directory is not specified, it will fall back to `./**/*.{php,yaml,yml,twig,env}`,
-which watches all `.php`, `.yaml`, `.yml`, `.twig` and `.env` files in the directory and subdirectories
-where the FrankenPHP process was started. You can instead also specify one or more directories via a
-[shell filename pattern](https://pkg.go.dev/path/filepath#Match):
+Если директория для `watch` не указана, по умолчанию будет использоваться путь `./**/*.{php,yaml,yml,twig,env}`,  
+который отслеживает все файлы с расширениями `.php`, `.yaml`, `.yml`, `.twig` и `.env` в директории, где был запущен процесс FrankenPHP, и во всех её поддиректориях. Вы также можете указать одну или несколько директорий с использованием [шаблона имён файлов](https://pkg.go.dev/path/filepath#Match):
 
 ```caddyfile
 {
 	frankenphp {
 		worker {
 			file  /path/to/app/public/worker.php
-			watch /path/to/app # watches all files in all subdirectories of /path/to/app
-			watch /path/to/app/*.php # watches files ending in .php in /path/to/app
-			watch /path/to/app/**/*.php # watches PHP files in /path/to/app and subdirectories
-			watch /path/to/app/**/*.{php,twig} # watches PHP and Twig files in /path/to/app and subdirectories
+			watch /path/to/app # отслеживает все файлы во всех поддиректориях /path/to/app
+			watch /path/to/app/*.php # отслеживает файлы с расширением .php в /path/to/app
+			watch /path/to/app/**/*.php # отслеживает PHP-файлы в /path/to/app и поддиректориях
+			watch /path/to/app/**/*.{php,twig} # отслеживает PHP и Twig-файлы в /path/to/app и поддиректориях
 		}
 	}
 }
 ```
 
-* The `**` pattern signifies recursive watching
-* Directories can also be relative (to where the FrankenPHP process is started from)
-* If you have multiple workers defined, all of them will be restarted when a file changes
-* Be wary about watching files that are created at runtime (like logs) since they might cause unwanted worker restarts.
+* Шаблон `**` указывает на рекурсивное отслеживание.  
+* Директории могут быть указаны относительно директории запуска FrankenPHP.  
+* Если у вас определено несколько worker, все они будут перезапущены при изменении файлов.  
+* Избегайте отслеживания файлов, создаваемых во время выполнения (например, логов), так как это может вызвать нежелательные перезапуски.
 
-The file watcher is based on [e-dant/watcher](https://github.com/e-dant/watcher).
+Механизм отслеживания файлов основан на [e-dant/watcher](https://github.com/e-dant/watcher).  
 
-### Full Duplex (HTTP/1)
+### Полный дуплекс (HTTP/1)
 
-When using HTTP/1.x, it may be desirable to enable full-duplex mode to allow writing a response before the entire body
-has been read. (for example: WebSocket, Server-Sent Events, etc.)
+При использовании HTTP/1.x может быть полезно включить режим полного дуплекса, чтобы разрешить запись ответа до завершения чтения тела запроса (например, для WebSocket, Server-Sent Events и т.д.).
 
-This is an opt-in configuration that needs to be added to the global options in the `Caddyfile`:
+Эта опция включается вручную и должна быть добавлена в глобальные настройки в `Caddyfile`:
 
 ```caddyfile
 {
@@ -198,8 +193,8 @@ This is an opt-in configuration that needs to be added to the global options in 
 
 > [!CAUTION]
 >
-> Enabling this option may cause old HTTP/1.x clients that don't support full-duplex to deadlock.
-> This can also be configured using the `CADDY_GLOBAL_OPTIONS` environment config:
+> Включение этой опции может привести к зависанию устаревших HTTP/1.x клиентов, которые не поддерживают полный дуплекс.  
+> Настройка также доступна через переменную окружения `CADDY_GLOBAL_OPTIONS`:
 
 ```sh
 CADDY_GLOBAL_OPTIONS="servers {
@@ -207,29 +202,28 @@ CADDY_GLOBAL_OPTIONS="servers {
 }"
 ```
 
-You can find more information about this setting in the [Caddy documentation](https://caddyserver.com/docs/caddyfile/options#enable-full-duplex).
+Дополнительную информацию об этой настройке можно найти в [документации Caddy](https://caddyserver.com/docs/caddyfile/options#enable-full-duplex).
 
-## Environment Variables
+## Переменные окружения
 
-The following environment variables can be used to inject Caddy directives in the `Caddyfile` without modifying it:
+Следующие переменные окружения могут быть использованы для добавления директив в `Caddyfile` без его изменения:
 
-* `SERVER_NAME`: change [the addresses on which to listen](https://caddyserver.com/docs/caddyfile/concepts#addresses), the provided hostnames will also be used for the generated TLS certificate
-* `CADDY_GLOBAL_OPTIONS`: inject [global options](https://caddyserver.com/docs/caddyfile/options)
-* `FRANKENPHP_CONFIG`: inject config under the `frankenphp` directive
+* `SERVER_NAME`: изменение [адресов для прослушивания](https://caddyserver.com/docs/caddyfile/concepts#addresses); предоставленные хостнеймы также будут использованы для генерации TLS-сертификата.  
+* `CADDY_GLOBAL_OPTIONS`: добавление [глобальных опций](https://caddyserver.com/docs/caddyfile/options).  
+* `FRANKENPHP_CONFIG`: добавление конфигурации в директиву `frankenphp`.
 
-As for FPM and CLI SAPIs, environment variables are exposed by default in the `$_SERVER` superglobal.
+Как и для FPM и CLI SAPIs, переменные окружения по умолчанию доступны в суперглобальной переменной `$_SERVER`.
 
-The `S` value of [the `variables_order` PHP directive](https://www.php.net/manual/en/ini.core.php#ini.variables-order) is always equivalent to `ES` regardless of the placement of `E` elsewhere in this directive.
+Значение `S` в [директиве PHP `variables_order`](https://www.php.net/manual/en/ini.core.php#ini.variables-order) всегда эквивалентно `ES`, независимо от того, где расположена `E` в этой директиве.
 
-## PHP config
+## Конфигурация PHP
 
-To load [additional PHP configuration files](https://www.php.net/manual/en/configuration.file.php#configuration.file.scan),
-the `PHP_INI_SCAN_DIR` environment variable can be used.
-When set, PHP will load all the file with the `.ini` extension present in the given directories.
+Для загрузки [дополнительных конфигурационных файлов PHP](https://www.php.net/manual/en/configuration.file.php#configuration.file.scan) можно использовать переменную окружения `PHP_INI_SCAN_DIR`.  
+Если она установлена, PHP загрузит все файлы с расширением `.ini`, находящиеся в указанных директориях.
 
-## Enable the Debug Mode
+## Включение режима отладки
 
-When using the Docker image, set the `CADDY_GLOBAL_OPTIONS` environment variable to `debug` to enable the debug mode:
+При использовании Docker-образа установите переменную окружения `CADDY_GLOBAL_OPTIONS` в `debug`, чтобы включить режим отладки:
 
 ```console
 docker run -v $PWD:/app/public \
