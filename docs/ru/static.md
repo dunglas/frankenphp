@@ -1,39 +1,38 @@
-# Create a Static Build
+# Создание статической сборки
 
-Instead of using a local installation of the PHP library,
-it's possible to create a static build of FrankenPHP thanks to the great [static-php-cli project](https://github.com/crazywhalecc/static-php-cli) (despite its name, this project support all SAPIs, not only CLI).
+Вместо использования локальной установки библиотеки PHP, можно создать статическую сборку FrankenPHP благодаря проекту [static-php-cli](https://github.com/crazywhalecc/static-php-cli) (несмотря на название, проект поддерживает все SAPI, а не только CLI).
 
-With this method, a single, portable, binary will contain the PHP interpreter, the Caddy web server and FrankenPHP!
+С помощью этого метода создаётся единый переносимый бинарник, который включает PHP-интерпретатор, веб-сервер Caddy и FrankenPHP!
 
-FrankenPHP also supports [embedding the PHP app in the static binary](embed.md).
+FrankenPHP также поддерживает [встраивание PHP-приложений в статический бинарник](embed.md).
 
 ## Linux
 
-We provide a Docker image to build a Linux static binary:
+Мы предоставляем Docker-образ для сборки статического бинарника для Linux:
 
 ```console
 docker buildx bake --load static-builder
 docker cp $(docker create --name static-builder dunglas/frankenphp:static-builder):/go/src/app/dist/frankenphp-linux-$(uname -m) frankenphp ; docker rm static-builder
 ```
 
-The resulting static binary is named `frankenphp` and is available in the current directory.
+Созданный статический бинарник называется `frankenphp` и будет доступен в текущей директории.
 
-If you want to build the static binary without Docker, take a look at the macOS instructions, which also works for Linux.
+Если вы хотите собрать статический бинарник без Docker, следуйте инструкциям для macOS — они также работают для Linux.
 
-### Custom Extensions
+### Кастомные расширения
 
-By default, most popular PHP extensions are compiled.
+По умолчанию компилируются самые популярные PHP-расширения.
 
-To reduce the size of the binary and to reduce the attack surface, you can choose the list of extensions to build using the `PHP_EXTENSIONS` Docker ARG.
+Чтобы сократить размер бинарника и уменьшить возможные векторы атак, можно указать список расширений, которые следует включить в сборку, используя Docker-аргумент `PHP_EXTENSIONS`.
 
-For instance, run the following command to only build the `opcache` extension:
+Например, выполните следующую команду, чтобы собрать только расширение `opcache`:
 
 ```console
 docker buildx bake --load --set static-builder.args.PHP_EXTENSIONS=opcache,pdo_sqlite static-builder
 # ...
 ```
 
-To add libraries enabling additional functionality to the extensions you've enabled, you can pass use the `PHP_EXTENSION_LIBS` Docker ARG:
+Чтобы добавить библиотеки, расширяющие функциональность включённых расширений, используйте Docker-аргумент `PHP_EXTENSION_LIBS`:
 
 ```console
 docker buildx bake \
@@ -43,9 +42,9 @@ docker buildx bake \
   static-builder
 ```
 
-### Extra Caddy Modules
+### Дополнительные модули Caddy
 
-To add extra Caddy modules or pass other arguments to [xcaddy](https://github.com/caddyserver/xcaddy), use the `XCADDY_ARGS` Docker ARG:
+Чтобы добавить дополнительные модули Caddy или передать аргументы в [xcaddy](https://github.com/caddyserver/xcaddy), используйте Docker-аргумент `XCADDY_ARGS`:
 
 ```console
 docker buildx bake \
@@ -54,18 +53,18 @@ docker buildx bake \
   static-builder
 ```
 
-In this example, we add the [Souin](https://souin.io) HTTP cache module for Caddy as well as the [cbrotli](https://github.com/dunglas/caddy-cbrotli), [Mercure](https://mercure.rocks) and [Vulcain](https://vulcain.rocks) modules.
+В этом примере добавляются модуль HTTP-кэширования [Souin](https://souin.io) для Caddy, а также модули [cbrotli](https://github.com/dunglas/caddy-cbrotli), [Mercure](https://mercure.rocks) и [Vulcain](https://vulcain.rocks).
 
 > [!TIP]
 >
-> The cbrotli, Mercure and Vulcain modules are included by default if `XCADDY_ARGS` is empty or not set.
-> If you customize the value of `XCADDY_ARGS`, you must include them explicitly if you want them to be included.
+> Модули cbrotli, Mercure и Vulcain включены по умолчанию, если `XCADDY_ARGS` пуст или не установлен.  
+> Если вы изменяете значение `XCADDY_ARGS`, добавьте их явно, если хотите включить их в сборку.
 
-See also how to [customize the build](#customizing-the-build)
+См. также, как [кастомизировать сборку](#кастомизация-сборки).
 
-### GitHub Token
+### Токен GitHub
 
-If you hit the GitHub API rate limit, set a GitHub Personal Access Token in an environment variable named `GITHUB_TOKEN`:
+Если вы достигли лимита запросов к API GitHub, задайте личный токен доступа GitHub в переменной окружения `GITHUB_TOKEN`:
 
 ```console
 GITHUB_TOKEN="xxx" docker --load buildx bake static-builder
@@ -74,7 +73,7 @@ GITHUB_TOKEN="xxx" docker --load buildx bake static-builder
 
 ## macOS
 
-Run the following script to create a static binary for macOS (you must have [Homebrew](https://brew.sh/) installed):
+Запустите следующий скрипт, чтобы создать статический бинарник для macOS (должен быть установлен [Homebrew](https://brew.sh/)):
 
 ```console
 git clone https://github.com/dunglas/frankenphp
@@ -82,21 +81,20 @@ cd frankenphp
 ./build-static.sh
 ```
 
-Note: this script also works on Linux (and probably on other Unixes), and is used internally by the Docker based static builder we provide.
+Примечание: этот скрипт также работает на Linux (и, вероятно, на других Unix-системах) и используется внутри предоставленного Docker-образа для статической сборки.
 
-## Customizing The Build
+## Кастомизация сборки
 
-The following environment variables can be passed to `docker build` and to the `build-static.sh`
-script to customize the static build:
+Следующие переменные окружения можно передать в `docker build` и скрипт `build-static.sh`, чтобы настроить статическую сборку:
 
-* `FRANKENPHP_VERSION`: the version of FrankenPHP to use
-* `PHP_VERSION`: the version of PHP to use
-* `PHP_EXTENSIONS`: the PHP extensions to build ([list of supported extensions](https://static-php.dev/en/guide/extensions.html))
-* `PHP_EXTENSION_LIBS`: extra libraries to build that add features to the extensions
-* `XCADDY_ARGS`: arguments to pass to [xcaddy](https://github.com/caddyserver/xcaddy), for instance to add extra Caddy modules
-* `EMBED`: path of the PHP application to embed in the binary
-* `CLEAN`: when set, libphp and all its dependencies are built from scratch (no cache)
-* `NO_COMPRESS`: don't compress the resulting binary using UPX
-* `DEBUG_SYMBOLS`: when set, debug-symbols will not be stripped and will be added within the binary
-* `MIMALLOC`: (experimental, Linux-only) replace musl's mallocng by [mimalloc](https://github.com/microsoft/mimalloc) for improved performance
-* `RELEASE`: (maintainers only) when set, the resulting binary will be uploaded on GitHub
+* `FRANKENPHP_VERSION`: версия FrankenPHP
+* `PHP_VERSION`: версия PHP
+* `PHP_EXTENSIONS`: PHP-расширения для сборки ([список поддерживаемых расширений](https://static-php.dev/en/guide/extensions.html))
+* `PHP_EXTENSION_LIBS`: дополнительные библиотеки, добавляющие функциональность расширениям
+* `XCADDY_ARGS`: аргументы для [xcaddy](https://github.com/caddyserver/xcaddy), например, для добавления модулей Caddy
+* `EMBED`: путь к PHP-приложению для встраивания в бинарник
+* `CLEAN`: если задано, libphp и все его зависимости будут пересобраны с нуля (без кэша)
+* `NO_COMPRESS`: отключает сжатие результирующего бинарника с помощью UPX
+* `DEBUG_SYMBOLS`: если задано, отладочные символы не будут удалены и будут добавлены в бинарник
+* `MIMALLOC`: (экспериментально, только для Linux) заменяет musl's mallocng на [mimalloc](https://github.com/microsoft/mimalloc) для повышения производительности
+* `RELEASE`: (только для мейнтейнеров) если задано, бинарник будет загружен на GitHub
