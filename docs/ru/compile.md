@@ -1,23 +1,23 @@
-# Compile From Sources
+# Компиляция из исходников
 
-This document explains how to create a FrankenPHP binary that will load PHP as a dynamic library.
-This is the recommended method.
+Этот документ объясняет, как создать бинарник FrankenPHP, который будет загружать PHP как динамическую библиотеку.  
+Это рекомендуемый способ.  
 
-Alternatively, [static builds](static.md) can also be created.
+Альтернативно можно создать [статическую сборку](static.md).
 
-## Install PHP
+## Установка PHP
 
-FrankenPHP is compatible with PHP 8.2 and superior.
+FrankenPHP совместим с PHP версии 8.2 и выше.
 
-First, [get the PHP sources](https://www.php.net/downloads.php) and extract them:
+Сначала [загрузите исходники PHP](https://www.php.net/downloads.php) и распакуйте их:
 
 ```console
 tar xf php-*
 cd php-*/
 ```
 
-Then, run the `configure` script with the options needed for your platform.
-The following `./configure` flags are mandatory, but you can add others, for example, to compile extensions or additional features.
+Затем выполните скрипт `configure` с параметрами, необходимыми для вашей платформы.  
+Следующие флаги `./configure` обязательны, но вы можете добавить и другие, например, для компиляции расширений или дополнительных функций.
 
 ### Linux
 
@@ -31,15 +31,15 @@ The following `./configure` flags are mandatory, but you can add others, for exa
 
 ### Mac
 
-Use the [Homebrew](https://brew.sh/) package manager to install
-`libiconv`, `bison`, `re2c` and `pkg-config`:
+Используйте пакетный менеджер [Homebrew](https://brew.sh/) для установки
+`libiconv`, `bison`, `re2c` и `pkg-config`:
 
 ```console
 brew install libiconv bison brotli re2c pkg-config
 echo 'export PATH="/opt/homebrew/opt/bison/bin:$PATH"' >> ~/.zshrc
 ```
 
-Then run the configure script:
+Затем выполните скрипт `configure`:
 
 ```console
 ./configure \
@@ -52,28 +52,28 @@ Then run the configure script:
     --with-iconv=/opt/homebrew/opt/libiconv/
 ```
 
-## Compile PHP
+## Компиляция PHP
 
-Finally, compile and install PHP:
+Наконец, скомпилируйте и установите PHP:
 
 ```console
 make -j"$(getconf _NPROCESSORS_ONLN)"
 sudo make install
 ```
 
-## Install Optional Dependencies
+## Установка опциональных зависимостей
 
-Some FrankenPHP features depend on optional system dependencies that must be installed.
-Alternatively, these features can be disabled by passing build tags to the Go compiler.
+Некоторые функции FrankenPHP зависят от опциональных системных зависимостей.  
+Альтернативно, эти функции можно отключить, передав соответствующие build-теги компилятору Go.
 
-| Feature                        | Dependency                                                            | Build tag to disable it |
-|--------------------------------|-----------------------------------------------------------------------|-------------------------|
-| Brotli compression             | [Brotli](https://github.com/google/brotli)                            | nobrotli                |
-| Restart workers on file change | [Watcher C](https://github.com/e-dant/watcher/tree/release/watcher-c) | nowatcher               |
+| Функция                        | Зависимость                                                           | Build-тег для отключения |
+|--------------------------------|-----------------------------------------------------------------------|--------------------------|
+| Сжатие Brotli                  | [Brotli](https://github.com/google/brotli)                           | nobrotli                 |
+| Перезапуск worker-скриптов при изменении файлов | [Watcher C](https://github.com/e-dant/watcher/tree/release/watcher-c) | nowatcher                |
 
-## Compile the Go App
+## Компиляция Go-приложения
 
-You can now build the final binary:
+Теперь можно собрать финальный бинарник:
 
 ```console
 curl -L https://github.com/dunglas/frankenphp/archive/refs/heads/main.tar.gz | tar xz
@@ -81,9 +81,9 @@ cd frankenphp-main/caddy/frankenphp
 CGO_CFLAGS=$(php-config --includes) CGO_LDFLAGS="$(php-config --ldflags) $(php-config --libs)" go build -tags=nobadger,nomysql,nopgx
 ```
 
-### Using xcaddy
+### Использование xcaddy
 
-Alternatively, use [xcaddy](https://github.com/caddyserver/xcaddy) to compile FrankenPHP with [custom Caddy modules](https://caddyserver.com/docs/modules/):
+Альтернативно, используйте [xcaddy](https://github.com/caddyserver/xcaddy) для компиляции FrankenPHP с [пользовательскими модулями Caddy](https://caddyserver.com/docs/modules/):
 
 ```console
 CGO_ENABLED=1 \
@@ -95,15 +95,16 @@ xcaddy build \
     --with github.com/dunglas/frankenphp/caddy \
     --with github.com/dunglas/mercure/caddy \
     --with github.com/dunglas/vulcain/caddy
-    # Add extra Caddy modules here
+    # Добавьте дополнительные модули Caddy здесь
 ```
 
 > [!TIP]
 >
-> If you're using musl libc (the default on Alpine Linux) and Symfony,
-> you may need to increase the default stack size.
-> Otherwise, you may get errors like `PHP Fatal error: Maximum call stack size of 83360 bytes reached during compilation. Try splitting expression`
+> Если вы используете musl libc (по умолчанию в Alpine Linux) и Symfony,  
+> возможно, потребуется увеличить размер стека.  
+> В противном случае вы можете столкнуться с ошибками вроде  
+> `PHP Fatal error: Maximum call stack size of 83360 bytes reached during compilation. Try splitting expression`.
 >
-> To do so, change the `XCADDY_GO_BUILD_FLAGS` environment variable to something like
-> `XCADDY_GO_BUILD_FLAGS=$'-ldflags "-w -s -extldflags \'-Wl,-z,stack-size=0x80000\'"'`
-> (change the stack size value according to your app needs).
+> Для этого измените значение переменной окружения `XCADDY_GO_BUILD_FLAGS`, например:
+> `XCADDY_GO_BUILD_FLAGS=$'-ldflags "-w -s -extldflags \'-Wl,-z,stack-size=0x80000\'"'`  
+> (измените значение размера стека в зависимости от требований вашего приложения).
