@@ -1,64 +1,58 @@
-# Performance
+# Производительность
 
-By default, FrankenPHP tries to offer a good compromise between performance and ease of use.
-However, it is possible to substantially improve performance using an appropriate configuration.
+По умолчанию FrankenPHP предлагает хороший баланс между производительностью и удобством использования.  
+Однако, используя подходящую конфигурацию, можно существенно улучшить производительность.
 
-## Number of Threads and Workers
+## Количество потоков и worker-скриптов
 
-By default, FrankenPHP starts 2 times more threads and workers (in worker mode) than the available numbers of CPU.
+По умолчанию FrankenPHP запускает количество потоков и worker-скриптов в 2 раза больше, чем доступное число CPU.
 
-The appropriate values depend heavily on how your application is written, what it does and your hardware.
-We strongly recommend changing these values.
+Оптимальные значения зависят от структуры вашего приложения, его функциональности и аппаратного обеспечения.  
+Мы настоятельно рекомендуем изменить эти значения.
 
-To find the right values, it's best to run load tests simulating real traffic.
-[k6](https://k6.io) and [Gatling](https://gatling.io) are good tools for this.
+Чтобы найти подходящие параметры, лучше всего провести нагрузочные тесты, имитирующие реальный трафик.  
+Хорошими инструментами для этого являются [k6](https://k6.io) и [Gatling](https://gatling.io).
 
-To configure the number of threads, use the `num_threads` option of the `php_server` and `php` directives.
-To change the number of workers, use the `num` option of the `worker` section of the `frankenphp` directive.
+Чтобы настроить количество потоков, используйте опцию `num_threads` в директивах `php_server` и `php`.  
+Для изменения количества worker-скриптов используйте опцию `num` в секции `worker` директивы `frankenphp`.
 
-## Worker Mode
+## Worker режим
 
-Enabling [the worker mode](worker.md) dramatically improves performance,
-but your app must be adapted to be compatible with this mode:
-you need to create a worker script and to be sure that the app is not leaking memory.
+Включение [Worker режима](worker.md) значительно улучшает производительность,  
+но ваше приложение должно быть адаптировано для совместимости с этим режимом:  
+необходимо создать worker-скрипт и убедиться, что приложение не имеет утечек памяти.
 
-## Don't Use musl
+## Избегайте использования musl
 
-The static binaries we provide and the Alpine Linux variant of the official Docker images
-are using [the musl libc](https://musl.libc.org).
+Статические бинарники, которые мы предоставляем, а также Alpine Linux-вариант официальных Docker-образов используют [библиотеку musl libc](https://musl.libc.org).
 
-PHP is known to be [significantly slower](https://gitlab.alpinelinux.org/alpine/aports/-/issues/14381) when using this alternative C library instead of the traditional GNU library,
-especially when compiled in ZTS mode (thread-safe), which is required for FrankenPHP.
+Известно, что PHP [значительно медленнее работает](https://gitlab.alpinelinux.org/alpine/aports/-/issues/14381) с этой библиотекой по сравнению с традиционной GNU libc, особенно при компиляции в ZTS режиме (потокобезопасный режим), который требуется для FrankenPHP.
 
-Also, [some bugs only happen when using musl](https://github.com/php/php-src/issues?q=sort%3Aupdated-desc+is%3Aissue+is%3Aopen+label%3ABug+musl).
+Кроме того, [некоторые ошибки проявляются исключительно при использовании musl](https://github.com/php/php-src/issues?q=sort%3Aupdated-desc+is%3Aissue+is%3Aopen+label%3ABug+musl).
 
-In production environments, we strongly recommend to use the glibc.
+В производственной среде настоятельно рекомендуется использовать glibc.
 
-This can be achieved by using the Debian Docker images (the default) and [by compiling FrankenPHP from sources](compile.md).
+Это можно сделать, используя Debian Docker-образы (по умолчанию) и [компилируя FrankenPHP из исходников](compile.md).
 
-Alternatively, we provide static binaries compiled with [the mimalloc allocator](https://github.com/microsoft/mimalloc), which makes FrankenPHP+musl faster (but still slower than FrankenPHP+glibc).
+В качестве альтернативы мы предоставляем статические бинарники, скомпилированные с [аллокатором mimalloc](https://github.com/microsoft/mimalloc), что делает FrankenPHP+musl быстрее (но всё же медленнее, чем FrankenPHP+glibc).
 
-## Go Runtime Configuration
+## Настройка среды выполнения Go
 
-FrankenPHP is written in Go.
+FrankenPHP написан на языке Go.
 
-In general, the Go runtime doesn't require any special configuration, but in certain circumstances,
-specific configuration improves performance.
+В большинстве случаев среда выполнения Go не требует особой настройки, но в некоторых ситуациях специфическая конфигурация может улучшить производительность.
 
-You likely want to set the `GODEBUG` environment variable to `cgocheck=0` (the default in the FrankenPHP Docker images).
+Рекомендуется установить переменную окружения `GODEBUG` в значение `cgocheck=0` (по умолчанию в Docker-образах FrankenPHP).
 
-If you run FrankenPHP in containers (Docker, Kubernetes, LXC...) and limit the memory available for the containers,
-set the `GOMEMLIMIT` environment variable to the available amount of memory.
+Если вы запускаете FrankenPHP в контейнерах (Docker, Kubernetes, LXC и т.д.) и ограничиваете доступную память, установите переменную окружения `GOMEMLIMIT` в значение доступного объёма памяти.
 
-For more details, [the Go documentation page dedicated to this subject](https://pkg.go.dev/runtime#hdr-Environment_Variables) is a must-read to get the most out of the runtime.
+Для более детальной информации ознакомьтесь с [документацией Go по этой теме](https://pkg.go.dev/runtime#hdr-Environment_Variables).
 
 ## `file_server`
 
-By default, the `php_server` directive automatically sets up a file server to
-serve static files (assets) stored in the root directory.
+По умолчанию директива `php_server` автоматически настраивает файловый сервер для обслуживания статических файлов (ресурсов), хранящихся в корневой директории.
 
-This feature is convenient, but comes with a cost.
-To disable it, use the following config:
+Эта функция удобна, но имеет издержки. Чтобы отключить её, используйте следующую конфигурацию:
 
 ```caddyfile
 php_server {
@@ -66,17 +60,17 @@ php_server {
 }
 ```
 
-## Placeholders
+## Плейсхолдеры
 
-You can use [placeholders](https://caddyserver.com/docs/conventions#placeholders) in the `root` and `env` directives.
-However, this prevents caching these values, and comes with a significant performance cost.
+Вы можете использовать [плейсхолдеры](https://caddyserver.com/docs/conventions#placeholders) в директивах `root` и `env`.  
+Однако это предотвращает кеширование значений и существенно снижает производительность.
 
-If possible, avoid placeholders in these directives.
+По возможности избегайте использования плейсхолдеров в этих директивах.
 
 ## `resolve_root_symlink`
 
-By default, if the document root is a symbolic link, it is automatically resolved by FrankenPHP (this is necessary for PHP to work properly).
-If the document root is not a symlink, you can disable this feature.
+По умолчанию, если корневая директория документа является символьной ссылкой, она автоматически разрешается FrankenPHP (это необходимо для корректной работы PHP).  
+Если корневая директория документа не является символьной ссылкой, вы можете отключить эту функцию.
 
 ```caddyfile
 php_server {
@@ -84,27 +78,24 @@ php_server {
 }
 ```
 
-This will improve performance if the `root` directive contains [placeholders](https://caddyserver.com/docs/conventions#placeholders).
-The gain will be negligible in other cases.
+Это улучшит производительность, если директива `root` содержит [плейсхолдеры](https://caddyserver.com/docs/conventions#placeholders).  
+В остальных случаях прирост производительности будет минимальным.
 
-## Logs
+## Логи
 
-Logging is obviously very useful, but, by definition,
-it requires I/O operations and memory allocations, which considerably reduces performance.
-Make sure you [set the logging level](https://caddyserver.com/docs/caddyfile/options#log) correctly,
-and only log what's necessary.
+Логирование, безусловно, полезно, но требует операций ввода-вывода и выделения памяти, что значительно снижает производительность.  
+Убедитесь, что вы [правильно настроили уровень логирования](https://caddyserver.com/docs/caddyfile/options#log) и логируете только необходимое.
 
-## PHP Performance
+## Производительность PHP
 
-FrankenPHP uses the official PHP interpreter.
-All usual PHP-related performance optimizations apply with FrankenPHP.
+FrankenPHP использует официальный интерпретатор PHP.  
+Все стандартные оптимизации производительности PHP применимы к FrankenPHP.
 
-In particular:
+В частности:
 
-* check that [OPcache](https://www.php.net/manual/en/book.opcache.php) is installed, enabled and properly configured
-* enable [Composer autoloader optimizations](https://getcomposer.org/doc/articles/autoloader-optimization.md)
-* ensure that the `realpath` cache is big enough for the needs of your application
-* use [preloading](https://www.php.net/manual/en/opcache.preloading.php)
+- убедитесь, что [OPcache](https://www.php.net/manual/en/book.opcache.php) установлен, включён и настроен должным образом;
+- включите [оптимизацию автозагрузчика Composer](https://getcomposer.org/doc/articles/autoloader-optimization.md);
+- убедитесь, что кеш `realpath` достаточно велик для нужд вашего приложения;
+- используйте [предзагрузку](https://www.php.net/manual/en/opcache.preloading.php).
 
-For more details, read [the dedicated Symfony documentation entry](https://symfony.com/doc/current/performance.html)
-(most tips are useful even if you don't use Symfony).
+Для более детальной информации ознакомьтесь с [документацией Symfony о производительности](https://symfony.com/doc/current/performance.html) (большинство советов полезны даже если вы не используете Symfony).
