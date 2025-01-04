@@ -1,92 +1,90 @@
-# PHP Apps As Standalone Binaries
+# PHP-приложения как Standalone бинарники
 
-FrankenPHP has the ability to embed the source code and assets of PHP applications in a static, self-contained binary.
+FrankenPHP позволяет встраивать исходный код и ресурсы PHP-приложений в статический автономный бинарник.
 
-Thanks to this feature, PHP applications can be distributed as standalone binaries that include the application itself, the PHP interpreter, and Caddy, a production-level web server.
+Благодаря этой функции PHP-приложения могут распространяться как standalone бинарники, которые содержат само приложение, интерпретатор PHP и Caddy — веб-сервер уровня продакшн.
 
-Learn more about this feature [in the presentation made by Kévin at SymfonyCon 2023](https://dunglas.dev/2023/12/php-and-symfony-apps-as-standalone-binaries/).
+Подробнее об этой функции [в презентации Кевина на SymfonyCon 2023](https://dunglas.dev/2023/12/php-and-symfony-apps-as-standalone-binaries/).
 
-For embedding Laravel applications, [read this specific documentation entry](laravel.md#laravel-apps-as-standalone-binaries).
+Для встраивания Laravel-приложений ознакомьтесь с [документацией](laravel.md#laravel-apps-as-standalone-binaries).
 
-## Preparing Your App
+## Подготовка приложения
 
-Before creating the self-contained binary be sure that your app is ready for embedding.
+Перед созданием автономного бинарника убедитесь, что ваше приложение готово для встраивания.
 
-For instance, you likely want to:
+Например, вам может понадобиться:
 
-* Install the production dependencies of the app
-* Dump the autoloader
-* Enable the production mode of your application (if any)
-* Strip unneeded files such as `.git` or tests to reduce the size of your final binary
+- Установить продакшн-зависимости приложения.
+- Сгенерировать автозагрузчик.
+- Включить продакшн-режим приложения (если он есть).
+- Удалить ненужные файлы, такие как `.git` или тесты, чтобы уменьшить размер итогового бинарника.
 
-For instance, for a Symfony app, you can use the following commands:
+Для приложения на Symfony это может выглядеть так:
 
 ```console
-# Export the project to get rid of .git/, etc
+# Экспорт проекта, чтобы избавиться от .git/ и других ненужных файлов
 mkdir $TMPDIR/my-prepared-app
 git archive HEAD | tar -x -C $TMPDIR/my-prepared-app
 cd $TMPDIR/my-prepared-app
 
-# Set proper environment variables
+# Установить соответствующие переменные окружения
 echo APP_ENV=prod > .env.local
 echo APP_DEBUG=0 >> .env.local
 
-# Remove the tests and other unneeded files to save space
-# Alternatively, add these files with the export-ignore attribute in your .gitattributes file
+# Удалить тесты и другие ненужные файлы
 rm -Rf tests/
 
-# Install the dependencies
+# Установить зависимости
 composer install --ignore-platform-reqs --no-dev -a
 
-# Optimize .env
+# Оптимизировать .env
 composer dump-env prod
 ```
 
-### Customizing the Configuration
+### Настройка конфигурации
 
-To customize [the configuration](config.md), you can put a `Caddyfile` as well as a `php.ini` file
-in the main directory of the app to be embedded (`$TMPDIR/my-prepared-app` in the previous example).
+Чтобы настроить [конфигурацию](config.md), вы можете разместить файлы `Caddyfile` и `php.ini` в основной директории приложения (`$TMPDIR/my-prepared-app` в примере выше).
 
-## Creating a Linux Binary
+## Создание бинарника для Linux
 
-The easiest way to create a Linux binary is to use the Docker-based builder we provide.
+Самый простой способ создать бинарник для Linux — использовать предоставленный Docker-based builder.
 
-1. Create a file named `static-build.Dockerfile` in the repository of your app:
+1. Создайте файл `static-build.Dockerfile` в репозитории вашего приложения:
 
     ```dockerfile
     FROM --platform=linux/amd64 dunglas/frankenphp:static-builder
 
-    # Copy your app
+    # Скопировать приложение
     WORKDIR /go/src/app/dist/app
     COPY . .
 
-    # Build the static binary
+    # Сборка статического бинарника
     WORKDIR /go/src/app/
     RUN EMBED=dist/app/ ./build-static.sh
     ```
 
     > [!CAUTION]
     >
-    > Some `.dockerignore` files (e.g. default [Symfony Docker `.dockerignore`](https://github.com/dunglas/symfony-docker/blob/main/.dockerignore))
-    > will ignore the `vendor/` directory and `.env` files. Be sure to adjust or remove the `.dockerignore` file before the build.
+    > Некоторые `.dockerignore` файлы (например, [Symfony Docker `.dockerignore`](https://github.com/dunglas/symfony-docker/blob/main/.dockerignore))  
+    > игнорируют директорию `vendor/` и файлы `.env`. Перед сборкой убедитесь, что `.dockerignore` файл настроен корректно или удалён.
 
-2. Build:
+2. Соберите образ:
 
     ```console
     docker build -t static-app -f static-build.Dockerfile .
     ```
 
-3. Extract the binary:
+3. Извлеките бинарник:
 
     ```console
     docker cp $(docker create --name static-app-tmp static-app):/go/src/app/dist/frankenphp-linux-x86_64 my-app ; docker rm static-app-tmp
     ```
 
-The resulting binary is the file named `my-app` in the current directory.
+Итоговый бинарник будет находиться в текущей директории под именем `my-app`.
 
-## Creating a Binary for Other OSes
+## Создание бинарника для других ОС
 
-If you don't want to use Docker, or want to build a macOS binary, use the shell script we provide:
+Если вы не хотите использовать Docker или хотите собрать бинарник для macOS, используйте предоставленный скрипт:
 
 ```console
 git clone https://github.com/dunglas/frankenphp
@@ -94,50 +92,49 @@ cd frankenphp
 EMBED=/path/to/your/app ./build-static.sh
 ```
 
-The resulting binary is the file named `frankenphp-<os>-<arch>` in the `dist/` directory.
+Итоговый бинарник будет находиться в директории `dist/` под именем `frankenphp-<os>-<arch>`.
 
-## Using The Binary
+## Использование бинарника
 
-This is it! The `my-app` file (or `dist/frankenphp-<os>-<arch>` on other OSes) contains your self-contained app!
+Готово! Файл `my-app` (или `dist/frankenphp-<os>-<arch>` для других ОС) содержит ваше автономное приложение.
 
-To start the web app run:
+Для запуска веб-приложения выполните:
 
 ```console
 ./my-app php-server
 ```
 
-If your app contains a [worker script](worker.md), start the worker with something like:
+Если ваше приложение содержит [worker-скрипт](worker.md), запустите его следующим образом:
 
 ```console
 ./my-app php-server --worker public/index.php
 ```
 
-To enable HTTPS (a Let's Encrypt certificate is automatically created), HTTP/2, and HTTP/3, specify the domain name to use:
+Чтобы включить HTTPS (Let's Encrypt автоматически создаст сертификат), HTTP/2 и HTTP/3, укажите доменное имя:
 
 ```console
 ./my-app php-server --domain localhost
 ```
 
-You can also run the PHP CLI scripts embedded in your binary:
+Вы также можете запускать PHP-скрипты CLI, встроенные в бинарник:
 
 ```console
 ./my-app php-cli bin/console
 ```
 
-## PHP Extensions
+## PHP-расширения
 
-By default, the script will build extensions required by the `composer.json` file of your project, if any.
-If the `composer.json` file doesn't exist, the default extensions are built, as documented in [the static builds entry](static.md).
+По умолчанию скрипт собирает расширения, указанные в `composer.json` вашего проекта.  
+Если файла `composer.json` нет, собираются стандартные расширения, как указано в [документации по статической сборке](static.md).
 
-To customize the extensions, use the `PHP_EXTENSIONS` environment variable.
+Чтобы настроить список расширений, используйте переменную окружения `PHP_EXTENSIONS`.
 
-## Customizing The Build
+## Настройка сборки
 
-[Read the static build documentation](static.md) to see how to customize the binary (extensions, PHP version...).
+[Ознакомьтесь с документацией по статической сборке](static.md), чтобы узнать, как настроить бинарник (расширения, версию PHP и т.д.).
 
-## Distributing The Binary
+## Распространение бинарника
 
-On Linux, the created binary is compressed using [UPX](https://upx.github.io).
+На Linux созданный бинарник сжимается с помощью [UPX](https://upx.github.io).
 
-On Mac, to reduce the size of the file before sending it, you can compress it.
-We recommend `xz`.
+На Mac для уменьшения размера файла перед отправкой его можно сжать. Мы рекомендуем использовать `xz`.
