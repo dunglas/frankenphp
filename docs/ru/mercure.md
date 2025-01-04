@@ -1,12 +1,12 @@
-# Real-time
+# В режиме реального времени
 
-FrankenPHP comes with a built-in [Mercure](https://mercure.rocks) hub!
-Mercure allows to push events in real-time to all the connected devices: they will receive a JavaScript event instantly.
+FrankenPHP поставляется с встроенным хабом [Mercure](https://mercure.rocks)!  
+Mercure позволяет отправлять события в режиме реального времени на все подключённые устройства: они мгновенно получат JavaScript-событие.
 
-No JS library or SDK required!
+Не требуется никаких JS-библиотек или SDK!
 
-![Mercure](mercure-hub.png)
+![Mercure](../mercure-hub.png)
 
-To enable the Mercure hub, update the `Caddyfile` as described [on Mercure's site](https://mercure.rocks/docs/hub/config).
+Чтобы включить хаб Mercure, обновите `Caddyfile` в соответствии с инструкциями [на сайте Mercure](https://mercure.rocks/docs/hub/config).
 
-To push Mercure updates from your code, we recommend the [Symfony Mercure Component](https://symfony.com/components/Mercure) (you don't need the Symfony full stack framework to use it).
+Для отправки обновлений Mercure из вашего кода мы рекомендуем использовать [Symfony Mercure Component](https://symfony.com/components/Mercure) (для его использования не требуется полный стек Symfony).
