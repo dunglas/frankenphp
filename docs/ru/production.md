@@ -1,39 +1,37 @@
-# Deploying in Production
+# Деплой в продакшн
 
-In this tutorial, we will learn how to deploy a PHP application on a single server using Docker Compose.
+В этом руководстве мы рассмотрим, как развернуть PHP-приложение на одном сервере с использованием Docker Compose.
 
-If you're using Symfony, prefer reading the "[Deploy in production](https://github.com/dunglas/symfony-docker/blob/main/docs/production.md)" documentation entry of the Symfony Docker project (which uses FrankenPHP).
+Если вы используете Symfony, рекомендуется прочитать раздел "[Deploy in production](https://github.com/dunglas/symfony-docker/blob/main/docs/production.md)" документации проекта Symfony Docker (в котором используется FrankenPHP).
 
-If you're using API Platform (which also uses FrankenPHP), refer to [the deployment documentation of the framework](https://api-platform.com/docs/deployment/).
+Если вы используете API Platform (который также работает с FrankenPHP), ознакомьтесь с [документацией по деплою этого фреймворка](https://api-platform.com/docs/deployment/).
 
-## Preparing Your App
+## Подготовка приложения
 
-First, create a `Dockerfile` in the root directory of your PHP project:
+Сначала создайте файл `Dockerfile` в корневой директории вашего PHP-проекта:
 
 ```dockerfile
 FROM dunglas/frankenphp
 
-# Be sure to replace "your-domain-name.example.com" by your domain name
+# Замените "your-domain-name.example.com" на ваш домен
 ENV SERVER_NAME=your-domain-name.example.com
-# If you want to disable HTTPS, use this value instead:
+# Если вы хотите отключить HTTPS, используйте вместо этого:
 #ENV SERVER_NAME=:80
 
-# Enable PHP production settings
+# Включите настройки PHP для продакшн
 RUN mv "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini"
 
-# Copy the PHP files of your project in the public directory
+# Скопируйте файлы PHP вашего проекта в публичную директорию
 COPY . /app/public
-# If you use Symfony or Laravel, you need to copy the whole project instead:
+# Если вы используете Symfony или Laravel, необходимо скопировать весь проект:
 #COPY . /app
 ```
 
-Refer to "[Building Custom Docker Image](docker.md)" for more details and options,
-and to learn how to customize the configuration, install PHP extensions and Caddy modules.
+Ознакомьтесь с разделом "[Создание кастомных Docker-образов](docker.md)" для получения дополнительных подробностей и настроек, а также для установки PHP-расширений и модулей Caddy.
 
-If your project uses Composer,
-be sure to include it in the Docker image and to install your depedencies.
+Если ваш проект использует Composer, убедитесь, что он включён в Docker-образ, и установите все зависимости.
 
-Then, add a `compose.yaml` file:
+Затем добавьте файл `compose.yaml`:
 
 ```yaml
 services:
@@ -48,7 +46,7 @@ services:
       - caddy_data:/data
       - caddy_config:/config
 
-# Volumes needed for Caddy certificates and configuration
+# Томы, необходимые для сертификатов и конфигурации Caddy
 volumes:
   caddy_data:
   caddy_config:
@@ -56,86 +54,72 @@ volumes:
 
 > [!NOTE]
 >
-> The previous examples are intended for production usage.
-> In development, you may want to use a volume, a different PHP configuration and a different value for the `SERVER_NAME` environment variable.
+> Примеры выше предназначены для использования в продакшне.  
+> В процессе разработки вы можете использовать том для монтирования, другую конфигурацию PHP и другое значение для переменной окружения `SERVER_NAME`.  
 >
-> Take a look to the [Symfony Docker](https://github.com/dunglas/symfony-docker) project
-> (which uses FrankenPHP) for a more advanced example using multi-stage images,
-> Composer, extra PHP extensions, etc.
+> Посмотрите проект [Symfony Docker](https://github.com/dunglas/symfony-docker) (который использует FrankenPHP) для более сложного примера с использованием мультистейдж-образов, Composer, дополнительных PHP-расширений и т.д.
 
-Finally, if you use Git, commit these files and push.
+Наконец, если вы используете Git, закоммитьте эти файлы и отправьте их в репозиторий.
 
-## Preparing a Server
+## Подготовка сервера
 
-To deploy your application in production, you need a server.
-In this tutorial, we will use a virtual machine provided by DigitalOcean, but any Linux server can work.
-If you already have a Linux server with Docker installed, you can skip straight to [the next section](#configuring-a-domain-name).
+Для деплоя приложения в продакшн требуется сервер. В этом руководстве мы будем использовать виртуальную машину, предоставляемую DigitalOcean, но подойдёт любой Linux-сервер.  
+Если у вас уже есть сервер с установленным Docker, вы можете сразу перейти к [следующему разделу](#configuring-a-domain-name).
 
-Otherwise, use [this affiliate link](https://m.do.co/c/5d8aabe3ab80) to get $200 of free credit, create an account, then click on "Create a Droplet".
-Then, click on the "Marketplace" tab under the "Choose an image" section and search for the app named "Docker".
-This will provision an Ubuntu server with the latest versions of Docker and Docker Compose already installed!
+В противном случае, используйте [эту ссылку](https://m.do.co/c/5d8aabe3ab80), чтобы получить $200 на баланс, создайте аккаунт, затем нажмите "Create a Droplet".  
+Перейдите во вкладку "Marketplace" в разделе "Choose an image" и найдите приложение "Docker". Это создаст сервер на Ubuntu с установленными Docker и Docker Compose.
 
-For test purposes, the cheapest plans will be enough.
-For real production usage, you'll probably want to pick a plan in the "general purpose" section to fit your needs.
+Для тестов подойдут самые дешёвые тарифы. Для реального продакшна выберите тариф из раздела "general purpose" в зависимости от ваших потребностей.
 
-![Deploying FrankenPHP on DigitalOcean with Docker](digitalocean-droplet.png)
+![Деплой FrankenPHP на DigitalOcean с Docker](../digitalocean-droplet.png)
 
-You can keep the defaults for other settings, or tweak them according to your needs.
-Don't forget to add your SSH key or create a password then press the "Finalize and create" button.
-
-Then, wait a few seconds while your Droplet is provisioning.
-When your Droplet is ready, use SSH to connect:
+После этого подключитесь к серверу через SSH:
 
 ```console
 ssh root@<droplet-ip>
 ```
 
-## Configuring a Domain Name
+## Настройка доменного имени
 
-In most cases, you'll want to associate a domain name with your site.
-If you don't own a domain name yet, you'll have to buy one through a registrar.
-
-Then create a DNS record of type `A` for your domain name pointing to the IP address of your server:
+В большинстве случаев вам потребуется связать доменное имя с вашим сайтом.  
+Создайте запись DNS типа `A`, указывающую на IP вашего сервера:
 
 ```dns
 your-domain-name.example.com.  IN  A     207.154.233.113
 ```
 
-Example with the DigitalOcean Domains service ("Networking" > "Domains"):
+Пример настройки через DigitalOcean ("Networking" > "Domains"):
 
-![Configuring DNS on DigitalOcean](digitalocean-dns.png)
+![Настройка DNS в DigitalOcean](../digitalocean-dns.png)
 
 > [!NOTE]
 >
-> Let's Encrypt, the service used by default by FrankenPHP to automatically generate a TLS certificate doesn't support using bare IP addresses. Using a domain name is mandatory to use Let's Encrypt.
+> Let's Encrypt, сервис, используемый FrankenPHP для автоматической генерации TLS-сертификатов, не поддерживает использование IP-адресов. Для работы необходим домен.
 
-## Deploying
+## Деплой
 
-Copy your project on the server using `git clone`, `scp`, or any other tool that may fit your need.
-If you use GitHub, you may want to use [a deploy key](https://docs.github.com/en/free-pro-team@latest/developers/overview/managing-deploy-keys#deploy-keys).
-Deploy keys are also [supported by GitLab](https://docs.gitlab.com/ee/user/project/deploy_keys/).
+Скопируйте ваш проект на сервер с помощью `git clone`, `scp` или любого другого инструмента.  
+Если вы используете GitHub, настройте [ключи для деплоя](https://docs.github.com/en/free-pro-team@latest/developers/overview/managing-deploy-keys#deploy-keys).
 
-Example with Git:
+Пример с использованием Git:
 
 ```console
 git clone git@github.com:<username>/<project-name>.git
 ```
 
-Go into the directory containing your project (`<project-name>`), and start the app in production mode:
+Перейдите в директорию проекта и запустите приложение в режиме продакшн:
 
 ```console
 docker compose up -d --wait
 ```
 
-Your server is up and running, and an HTTPS certificate has been automatically generated for you.
-Go to `https://your-domain-name.example.com` and enjoy!
+Сервер готов, а HTTPS-сертификат был автоматически сгенерирован. Перейдите на `https://your-domain-name.example.com` и наслаждайтесь!
 
 > [!CAUTION]
 >
-> Docker can have a cache layer, make sure you have the right build for each deployment or rebuild your project with `--no-cache` option to avoid cache issue.
+> Docker может кэшировать слои. Убедитесь, что у вас актуальная сборка, или используйте опцию `--no-cache` для предотвращения проблем с кэшем.
 
-## Deploying on Multiple Nodes
+## Деплой на несколько узлов
 
-If you want to deploy your app on a cluster of machines, you can use [Docker Swarm](https://docs.docker.com/engine/swarm/stack-deploy/),
-which is compatible with the provided Compose files.
-To deploy on Kubernetes, take a look at [the Helm chart provided with API Platform](https://api-platform.com/docs/deployment/kubernetes/), which uses FrankenPHP.
+Если вам нужно развернуть приложение на кластер машин, используйте [Docker Swarm](https://docs.docker.com/engine/swarm/stack-deploy/), который совместим с предоставленными файлами Compose.  
+Для деплоя на Kubernetes ознакомьтесь с [Helm-чартом API Platform](https://api-platform.com/docs/deployment/kubernetes/), который использует FrankenPHP.
