@@ -18,4 +18,4 @@ echo <<<'HTML'
 HTML;
 ```
 
-Early Hints поддерживаются как в обычном, так и в [Worker-режиме](worker.md).  
+Early Hints поддерживается как в обычном, так и в [Worker режиме](worker.md).  

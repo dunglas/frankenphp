@@ -84,7 +84,7 @@ COPY --from=builder /usr/local/bin/frankenphp /usr/local/bin/frankenphp
 
 ## Активировать Worker режим по умолчанию
 
-Установите переменную окружения `FRANKENPHP_CONFIG`, чтобы запускать FrankenPHP с Worker:
+Установите переменную окружения `FRANKENPHP_CONFIG`, чтобы запускать FrankenPHP с Worker-скриптом:
 
 ```dockerfile
 FROM dunglas/frankenphp
