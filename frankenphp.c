@@ -644,9 +644,12 @@ static char *frankenphp_read_cookies(void) {
 
 /* all variables with well defined keys can safely be registered like this */
 void frankenphp_register_trusted_var(zend_string *z_key, char *value,
-                                     int val_len, zval *track_vars_array) {
+                                     size_t val_len, zval *track_vars_array) {
   if (value == NULL) {
-    value = "";
+    zval empty;
+    ZVAL_EMPTY_STRING(&empty);
+    zend_hash_update_ind(Z_ARRVAL_P(track_vars_array), z_key, &empty);
+    return;
   }
   size_t new_val_len = val_len;
 
@@ -657,6 +660,54 @@ void frankenphp_register_trusted_var(zend_string *z_key, char *value,
     ZVAL_STRINGL_FAST(&z_value, value, new_val_len);
     zend_hash_update_ind(Z_ARRVAL_P(track_vars_array), z_key, &z_value);
   }
+}
+
+/* doing this in one big function minimizes the number of cgo calls */
+void fphp_register_bulk_vars(zend_string *remote_addrk, char *remote_addr, size_t remote_addrl,
+                             zend_string *remote_hostk, char *remote_host, size_t remote_hostl,
+                             zend_string *remote_portk, char *remote_port, size_t remote_portl,
+                             zend_string *document_rootk, char *document_root, size_t document_rootl,
+                             zend_string *path_infok, char *path_info, size_t path_infol,
+                             zend_string *php_selfk, char *php_self, size_t php_selfl,
+                             zend_string *document_urik, char *document_uri, size_t document_url,
+                             zend_string *script_filenamek, char *script_filename, size_t script_filenamel,
+                             zend_string *script_namek, char *script_name, size_t script_namel,
+                             zend_string *httpsk, char *https, size_t httpsl,
+                             zend_string *ssl_protocolk, char *ssl_protocol, size_t ssl_protocoll,
+                             zend_string *request_schemek, char *request_scheme, size_t request_schemel,
+                             zend_string *server_namek, char *server_name, size_t server_namel,
+                             zend_string *server_portk, char *server_port, size_t server_portl,
+                             zend_string *content_lengthk, char *content_length, size_t content_lengthl,
+                             zend_string *gateway_interfacek, char *gateway_interface, size_t gateway_interfacel,
+                             zend_string *server_protocolk, char *server_protocol, size_t server_protocoll,
+                             zend_string *server_softwarek, char *server_software, size_t server_softwarel,
+                             zend_string *http_hostk, char *http_host, size_t http_hostl,
+                             zend_string *auth_typek, char *auth_type, size_t auth_typel,
+                             zend_string *remote_identk, char *remote_ident, size_t remote_identl,
+                             zend_string *request_urik, char *request_uri, size_t request_uril,
+                             zval *track_vars_array) {
+  frankenphp_register_trusted_var(remote_addrk, remote_addr, remote_addrl, track_vars_array);
+  frankenphp_register_trusted_var(remote_hostk, remote_host, remote_hostl, track_vars_array);
+  frankenphp_register_trusted_var(remote_portk, remote_port, remote_portl, track_vars_array);
+  frankenphp_register_trusted_var(document_rootk, document_root, document_rootl, track_vars_array);
+  frankenphp_register_trusted_var(path_infok, path_info, path_infol, track_vars_array);
+  frankenphp_register_trusted_var(php_selfk, php_self, php_selfl, track_vars_array);
+  frankenphp_register_trusted_var(document_urik, document_uri, document_url, track_vars_array);
+  frankenphp_register_trusted_var(script_filenamek, script_filename, script_filenamel, track_vars_array);
+  frankenphp_register_trusted_var(script_namek, script_name, script_namel, track_vars_array);
+  frankenphp_register_trusted_var(httpsk, https, httpsl, track_vars_array);
+  frankenphp_register_trusted_var(ssl_protocolk, ssl_protocol, ssl_protocoll, track_vars_array);
+  frankenphp_register_trusted_var(request_schemek, request_scheme, request_schemel, track_vars_array);
+  frankenphp_register_trusted_var(server_namek, server_name, server_namel, track_vars_array);
+  frankenphp_register_trusted_var(server_portk, server_port, server_portl, track_vars_array);
+  frankenphp_register_trusted_var(content_lengthk, content_length, content_lengthl, track_vars_array);
+  frankenphp_register_trusted_var(gateway_interfacek, gateway_interface, gateway_interfacel, track_vars_array);
+  frankenphp_register_trusted_var(server_protocolk, server_protocol, server_protocoll, track_vars_array);
+  frankenphp_register_trusted_var(server_softwarek, server_software, server_softwarel, track_vars_array);
+  frankenphp_register_trusted_var(http_hostk, http_host, http_hostl, track_vars_array);
+  frankenphp_register_trusted_var(auth_typek, auth_type, auth_typel, track_vars_array);
+  frankenphp_register_trusted_var(remote_identk, remote_ident, remote_identl, track_vars_array);
+  frankenphp_register_trusted_var(request_urik, request_uri, request_uril, track_vars_array);
 }
 
 /** Persistent strings are ignored by the PHP GC, we have to release these
@@ -684,8 +735,7 @@ frankenphp_register_variable_from_request_info(zend_string *zKey, char *value,
 void frankenphp_register_variables_from_request_info(
     zval *track_vars_array, zend_string *content_type,
     zend_string *path_translated, zend_string *query_string,
-    zend_string *auth_user, zend_string *request_method,
-    zend_string *request_uri) {
+    zend_string *auth_user, zend_string *request_method) {
   frankenphp_register_variable_from_request_info(
       content_type, (char *)SG(request_info).content_type, false,
       track_vars_array);
@@ -699,8 +749,6 @@ void frankenphp_register_variables_from_request_info(
   frankenphp_register_variable_from_request_info(
       request_method, (char *)SG(request_info).request_method, false,
       track_vars_array);
-  frankenphp_register_variable_from_request_info(
-      request_uri, SG(request_info).request_uri, true, track_vars_array);
 }
 
 /* variables with user-defined keys must be registered safely

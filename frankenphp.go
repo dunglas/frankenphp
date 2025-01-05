@@ -108,10 +108,11 @@ func (l syslogLevel) String() string {
 
 // FrankenPHPContext provides contextual information about the Request to handle.
 type FrankenPHPContext struct {
-	documentRoot string
-	splitPath    []string
-	env          PreparedEnv
-	logger       *zap.Logger
+	documentRoot    string
+	splitPath       []string
+	env             PreparedEnv
+	logger          *zap.Logger
+	originalRequest *http.Request
 
 	docURI         string
 	pathInfo       string

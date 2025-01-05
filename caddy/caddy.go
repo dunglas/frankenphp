@@ -301,13 +301,11 @@ func (f FrankenPHPModule) ServeHTTP(w http.ResponseWriter, r *http.Request, _ ca
 		documentRootOption = frankenphp.WithRequestResolvedDocumentRoot(f.resolvedDocumentRoot)
 	}
 
-	env := make(map[string]string, len(f.preparedEnv)+1)
-	env["REQUEST_URI\x00"] = origReq.URL.RequestURI()
-	for k, v := range f.preparedEnv {
-		if f.preparedEnvNeedsReplacement {
+	env := f.preparedEnv
+	if f.preparedEnvNeedsReplacement {
+		env = make(frankenphp.PreparedEnv, len(f.Env))
+		for k, v := range f.preparedEnv {
 			env[k] = repl.ReplaceKnown(v, "")
-		} else {
-			env[k] = v
 		}
 	}
 
@@ -316,6 +314,7 @@ func (f FrankenPHPModule) ServeHTTP(w http.ResponseWriter, r *http.Request, _ ca
 		documentRootOption,
 		frankenphp.WithRequestSplitPath(f.SplitPath),
 		frankenphp.WithRequestPreparedEnv(env),
+		frankenphp.WithOriginalRequest(&origReq),
 	)
 
 	if err != nil {
