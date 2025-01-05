@@ -6,7 +6,7 @@ FrankenPHP позволяет встраивать исходный код и р
 
 Подробнее об этой функции [в презентации Кевина на SymfonyCon 2023](https://dunglas.dev/2023/12/php-and-symfony-apps-as-standalone-binaries/).
 
-Для встраивания Laravel-приложений ознакомьтесь с [документацией](laravel.md#laravel-apps-as-standalone-binaries).
+Для встраивания Laravel-приложений ознакомьтесь с [документацией](laravel.md#laravel-приложения-как-standalone-бинарники).
 
 ## Подготовка приложения
 

@@ -80,7 +80,7 @@ COPY --from=builder /usr/local/bin/frankenphp /usr/local/bin/frankenphp
 
 > [!TIP]
 >
-> Если вы используете Alpine Linux и Symfony, возможно, потребуется [увеличить размер стека](compile.md#using-xcaddy).
+> Если вы используете Alpine Linux и Symfony, возможно, потребуется [увеличить размер стека](compile.md#использование-xcaddy).
 
 ## Активировать Worker режим по умолчанию
 
