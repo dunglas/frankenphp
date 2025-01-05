@@ -66,6 +66,7 @@ zend_string *frankenphp_init_persistent_string(const char *string, size_t len);
 void frankenphp_release_zend_string(zend_string *z_string);
 int frankenphp_reset_opcache(void);
 
+// clang-format off
 void fphp_register_bulk_vars(zend_string *remote_addrk, char *remote_addr, size_t remote_addrl,
                              zend_string *remote_hostk, char *remote_host, size_t remote_hostl,
                              zend_string *remote_portk, char *remote_port, size_t remote_portl,
@@ -89,5 +90,6 @@ void fphp_register_bulk_vars(zend_string *remote_addrk, char *remote_addr, size_
                              zend_string *remote_identk, char *remote_ident, size_t remote_identl,
                              zend_string *request_urik, char *request_uri, size_t request_uril,
                              zval *track_vars_array);
+// clang-format on
 
 #endif

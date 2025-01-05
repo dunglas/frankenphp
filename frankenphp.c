@@ -662,6 +662,7 @@ void frankenphp_register_trusted_var(zend_string *z_key, char *value,
   }
 }
 
+// clang-format off
 /* doing this in one big function minimizes the number of cgo calls */
 void fphp_register_bulk_vars(zend_string *remote_addrk, char *remote_addr, size_t remote_addrl,
                              zend_string *remote_hostk, char *remote_host, size_t remote_hostl,
@@ -709,6 +710,7 @@ void fphp_register_bulk_vars(zend_string *remote_addrk, char *remote_addr, size_
   frankenphp_register_trusted_var(remote_identk, remote_ident, remote_identl, track_vars_array);
   frankenphp_register_trusted_var(request_urik, request_uri, request_uril, track_vars_array);
 }
+// clang-format on
 
 /** Persistent strings are ignored by the PHP GC, we have to release these
  * ourselves **/
