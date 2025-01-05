@@ -1,15 +1,15 @@
-# Metrics
+# Метрики
 
-When [Caddy metrics](https://caddyserver.com/docs/metrics) are enabled, FrankenPHP exposes the following metrics:
+При включении [метрик Caddy](https://caddyserver.com/docs/metrics) FrankenPHP предоставляет следующие метрики:
 
-* `frankenphp_[worker]_total_workers`: The total number of workers.
-* `frankenphp_[worker]_busy_workers`: The number of workers currently processing a request.
-* `frankenphp_[worker]_worker_request_time`: The time spent processing requests by all workers.
-* `frankenphp_[worker]_worker_request_count`: The number of requests processed by all workers.
-* `frankenphp_[worker]_ready_workers`: The number of workers that have called `frankenphp_handle_request` at least once.
-* `frankenphp_[worker]_worker_crashes`: The number of times a worker has unexpectedly terminated.
-* `frankenphp_[worker]_worker_restarts`: The number of times a worker has been deliberately restarted.
-* `frankenphp_total_threads`: The total number of PHP threads.
-* `frankenphp_busy_threads`: The number of PHP threads currently processing a request (running workers always consume a thread).
+- `frankenphp_[worker]_total_workers`: Общее количество Worker.
+- `frankenphp_[worker]_busy_workers`: Количество Worker, которые в данный момент обрабатывают запрос.
+- `frankenphp_[worker]_worker_request_time`: Время, затраченное всеми Worker на обработку запросов.
+- `frankenphp_[worker]_worker_request_count`: Количество запросов, обработанных всеми Worker.
+- `frankenphp_[worker]_ready_workers`: Количество Worker, которые вызвали `frankenphp_handle_request` хотя бы один раз.
+- `frankenphp_[worker]_worker_crashes`: Количество случаев неожиданного завершения Worker.
+- `frankenphp_[worker]_worker_restarts`: Количество случаев, когда Worker был перезапущен вручную.
+- `frankenphp_total_threads`: Общее количество потоков PHP.
+- `frankenphp_busy_threads`: Количество потоков PHP, которые в данный момент обрабатывают запрос (работающие Worker всегда используют поток).
 
-For worker metrics, the `[worker]` placeholder is replaced by the worker script path in the Caddyfile.
+Для метрик Worker плейсхолдер `[worker]` заменяется на путь к Worker-скрипту, указанному в Caddyfile.
