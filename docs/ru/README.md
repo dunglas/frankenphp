@@ -59,7 +59,7 @@ frankenphp php-cli /path/to/your/script.php
 ## Документация
 
 * [Worker режим](https://frankenphp.dev/docs/worker/)
-* [Поддержка Early Hints (103 HTTP-код)](https://frankenphp.dev/docs/early-hints/)
+* [Поддержка Early Hints (103 HTTP статус код)](https://frankenphp.dev/docs/early-hints/)
 * [Real-time режим](https://frankenphp.dev/docs/mercure/)
 * [Конфигурация](https://frankenphp.dev/docs/config/)
 * [Docker-образы](https://frankenphp.dev/docs/docker/)
