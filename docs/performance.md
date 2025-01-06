@@ -52,17 +52,33 @@ set the `GOMEMLIMIT` environment variable to the available amount of memory.
 
 For more details, [the Go documentation page dedicated to this subject](https://pkg.go.dev/runtime#hdr-Environment_Variables) is a must-read to get the most out of the runtime.
 
-## `file_server`
+## Most performant `file_server` setup
 
-By default, the `php_server` directive automatically sets up a file server to
-serve static files (assets) stored in the root directory.
-
-This feature is convenient, but comes with a cost.
-To disable it, use the following config:
+Many modern applications will delegate all requests to a single entry PHP file. In this case, the most
+performant solution is to use the `php` directive and split files from PHP by path. An example
+[configuration](config.md#caddyfile-config) that serves all static files behind an `/assets` folder could look like
+this:
 
 ```caddyfile
-php_server {
-    file_server off
+route {
+    root /root/to/your/app # the public path to your app
+    encode zstd br gzip # compress responses
+
+    @assets {
+        path /assets/*
+    }
+
+    # everything behind /assets is handled by the file server
+    handle @assets {
+        # feel free to add cache headers here
+        file_server
+    }
+
+    # everything that is not in /assets is handled by your index or worker PHP file
+    rewrite your-entry-file.php
+    php {
+        root /root/to/your/app # explicitly adding the root here allows better caching
+    }
 }
 ```
 
