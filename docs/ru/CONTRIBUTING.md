@@ -1,19 +1,19 @@
-# Contributing
+# Участие в проекте
 
-## Compiling PHP
+## Компиляция PHP
 
-### With Docker (Linux)
+### С помощью Docker (Linux)
 
-Build the dev Docker image:
+Создайте образ Docker для разработки:
 
 ```console
 docker build -t frankenphp-dev -f dev.Dockerfile .
 docker run --cap-add=SYS_PTRACE --security-opt seccomp=unconfined -p 8080:8080 -p 443:443 -p 443:443/udp -v $PWD:/go/src/app -it frankenphp-dev
 ```
 
-The image contains the usual development tools (Go, GDB, Valgrind, Neovim...).  
+Образ содержит стандартные инструменты для разработки (Go, GDB, Valgrind, Neovim и др.).
 
-If docker version is lower than 23.0, build is failed by dockerignore [pattern issue](https://github.com/moby/moby/pull/42676). Add directories to `.dockerignore`.
+Если версия Docker ниже 23.0, сборка может завершиться ошибкой из-за [проблемы с шаблонами dockerignore](https://github.com/moby/moby/pull/42676). Добавьте в `.dockerignore` следующие директории:
 
 ```patch
  !testdata/*.php
@@ -22,19 +22,19 @@ If docker version is lower than 23.0, build is failed by dockerignore [pattern i
 +!internal
 ```
 
-### Without Docker (Linux and macOS)
+### Без Docker (Linux и macOS)
 
-[Follow the instructions to compile from sources](https://frankenphp.dev/docs/compile/) and pass the `--debug` configuration flag.
+[Следуйте инструкциям по компиляции из исходников](https://frankenphp.dev/docs/compile/) и укажите флаг конфигурации `--debug`.
 
-## Running the test suite
+## Запуск тестов
 
 ```console
 go test -tags watcher -race -v ./...
 ```
 
-## Caddy module
+## Модуль Caddy
 
-Build Caddy with the FrankenPHP Caddy module:
+Соберите Caddy с модулем FrankenPHP:
 
 ```console
 cd caddy/frankenphp/
@@ -42,22 +42,22 @@ go build -tags watcher,brotli,nobadger,nomysql,nopgx
 cd ../../
 ```
 
-Run the Caddy with the FrankenPHP Caddy module:
+Запустите Caddy с модулем FrankenPHP:
 
 ```console
 cd testdata/
 ../caddy/frankenphp/frankenphp run
 ```
 
-The server is listening on `127.0.0.1:8080`:
+Сервер будет слушать `127.0.0.1:8080`:
 
 ```console
 curl -vk https://localhost/phpinfo.php
 ```
 
-## Minimal test server
+## Минимальный тестовый сервер
 
-Build the minimal test server:
+Соберите минимальный тестовый сервер:
 
 ```console
 cd internal/testserver/
@@ -65,48 +65,50 @@ go build
 cd ../../
 ```
 
-Run the test server:
+Запустите тестовый сервер:
 
 ```console
 cd testdata/
 ../internal/testserver/testserver
 ```
 
-The server is listening on `127.0.0.1:8080`:
+Сервер будет слушать `127.0.0.1:8080`:
 
 ```console
 curl -v http://127.0.0.1:8080/phpinfo.php
 ```
 
-## Building Docker Images Locally
+## Локальная сборка Docker-образов
 
-Print bake plan:
+Выведите план bake:
 
 ```console
 docker buildx bake -f docker-bake.hcl --print
 ```
 
-Build FrankenPHP images for amd64 locally:
+Соберите образы FrankenPHP для amd64 локально:
 
 ```console
 docker buildx bake -f docker-bake.hcl --pull --load --set "*.platform=linux/amd64"
 ```
 
-Build FrankenPHP images for arm64 locally:
+Соберите образы FrankenPHP для arm64 локально:
 
 ```console
 docker buildx bake -f docker-bake.hcl --pull --load --set "*.platform=linux/arm64"
 ```
 
-Build FrankenPHP images from scratch for arm64 & amd64 and push to Docker Hub:
+Соберите образы FrankenPHP с нуля для arm64 и amd64 и отправьте их в Docker Hub:
 
 ```console
 docker buildx bake -f docker-bake.hcl --pull --no-cache --push
 ```
 
-## Debugging Segmentation Faults With Static Builds
+# Отладка ошибок сегментации с использованием статических сборок
 
-1. Download the debug version of the FrankenPHP binary from GitHub or create your custom static build including debug symbols:
+## Отладка с использованием статической сборки
+
+1. Скачайте отладочную версию бинарного файла FrankenPHP с GitHub или создайте собственную статическую сборку с включенными отладочными символами:
 
     ```console
     docker buildx bake \
@@ -117,23 +119,23 @@ docker buildx bake -f docker-bake.hcl --pull --no-cache --push
     docker cp $(docker create --name static-builder dunglas/frankenphp:static-builder):/go/src/app/dist/frankenphp-linux-$(uname -m) frankenphp
     ```
 
-2. Replace your current version of `frankenphp` by the debug FrankenPHP executable
-3. Start FrankenPHP as usual (alternatively, you can directly start FrankenPHP with GDB: `gdb --args frankenphp run`)
-4. Attach to the process with GDB:
+2. Замените текущую версию `frankenphp` на отладочную.
+3. Запустите FrankenPHP как обычно (или сразу запустите FrankenPHP с GDB: `gdb --args frankenphp run`).
+4. Подключитесь к процессу через GDB:
 
     ```console
     gdb -p `pidof frankenphp`
     ```
 
-5. If necessary, type `continue` in the GDB shell
-6. Make FrankenPHP crash
-7. Type `bt` in the GDB shell
-8. Copy the output
+5. При необходимости введите `continue` в консоли GDB.
+6. Вызовите сбой FrankenPHP.
+7. Введите `bt` в консоли GDB.
+8. Скопируйте вывод.
 
-## Debugging Segmentation Faults in GitHub Actions
+## Отладка ошибок сегментации в GitHub Actions
 
-1. Open `.github/workflows/tests.yml`
-2. Enable PHP debug symbols
+1. Откройте файл `.github/workflows/tests.yml`.
+2. Включите отладочные символы PHP:
 
     ```patch
         - uses: shivammathur/setup-php@v2
@@ -143,7 +145,7 @@ docker buildx bake -f docker-bake.hcl --pull --no-cache --push
     +       debug: true
     ```
 
-3. Enable `tmate` to connect to the container
+3. Включите `tmate` для подключения к контейнеру:
 
     ```patch
         -
@@ -158,58 +160,57 @@ docker buildx bake -f docker-bake.hcl --pull --no-cache --push
     +     uses: mxschmitt/action-tmate@v3
     ```
 
-4. Connect to the container
-5. Open `frankenphp.go`
-6. Enable `cgosymbolizer`
+4. Подключитесь к контейнеру.
+5. Откройте файл `frankenphp.go`.
+6. Включите `cgosymbolizer`:
 
     ```patch
     -	//_ "github.com/ianlancetaylor/cgosymbolizer"
     +	_ "github.com/ianlancetaylor/cgosymbolizer"
     ```
 
-7. Download the module: `go get`
-8. In the container, you can use GDB and the like:
+7. Загрузите модуль: `go get`.
+8. В контейнере используйте GDB и другие инструменты:
 
     ```console
     go test -tags watcher -c -ldflags=-w
     gdb --args frankenphp.test -test.run ^MyTest$
     ```
 
-9. When the bug is fixed, revert all these changes
+9. После исправления ошибки откатите все внесенные изменения.
 
-## Misc Dev Resources
+## Дополнительные ресурсы для разработки
 
-* [PHP embedding in uWSGI](https://github.com/unbit/uwsgi/blob/master/plugins/php/php_plugin.c)
-* [PHP embedding in NGINX Unit](https://github.com/nginx/unit/blob/master/src/nxt_php_sapi.c)
-* [PHP embedding in Go (go-php)](https://github.com/deuill/go-php)
-* [PHP embedding in Go (GoEmPHP)](https://github.com/mikespook/goemphp)
-* [PHP embedding in C++](https://gist.github.com/paresy/3cbd4c6a469511ac7479aa0e7c42fea7)
-* [Extending and Embedding PHP by Sara Golemon](https://books.google.fr/books?id=zMbGvK17_tYC&pg=PA254&lpg=PA254#v=onepage&q&f=false)
-* [What the heck is TSRMLS_CC, anyway?](http://blog.golemon.com/2006/06/what-heck-is-tsrmlscc-anyway.html)
+* [Встраивание PHP в uWSGI](https://github.com/unbit/uwsgi/blob/master/plugins/php/php_plugin.c)
+* [Встраивание PHP в NGINX Unit](https://github.com/nginx/unit/blob/master/src/nxt_php_sapi.c)
+* [Встраивание PHP в Go (go-php)](https://github.com/deuill/go-php)
+* [Встраивание PHP в Go (GoEmPHP)](https://github.com/mikespook/goemphp)
+* [Встраивание PHP в C++](https://gist.github.com/paresy/3cbd4c6a469511ac7479aa0e7c42fea7)
+* [Книга "Extending and Embedding PHP" Сары Големан](https://books.google.fr/books?id=zMbGvK17_tYC&pg=PA254&lpg=PA254#v=onepage&q&f=false)
+* [Статья: Что такое TSRMLS_CC?](http://blog.golemon.com/2006/06/what-heck-is-tsrmlscc-anyway.html)
 * [SDL bindings](https://pkg.go.dev/github.com/veandco/go-sdl2@v0.4.21/sdl#Main)
 
-## Docker-Related Resources
+## Docker-ресурсы
 
-* [Bake file definition](https://docs.docker.com/build/customize/bake/file-definition/)
-* [docker buildx build](https://docs.docker.com/engine/reference/commandline/buildx_build/)
+* [Определение файлов bake](https://docs.docker.com/build/customize/bake/file-definition/)
+* [Документация по команде `docker buildx build`](https://docs.docker.com/engine/reference/commandline/buildx_build/)
 
-## Useful Command
+## Полезные команды
 
 ```console
 apk add strace util-linux gdb
 strace -e 'trace=!futex,epoll_ctl,epoll_pwait,tgkill,rt_sigreturn' -p 1
 ```
 
-## Translating the Documentation
+## Перевод документации
 
-To translate the documentation and the site in a new language,
-follow these steps:
+Чтобы перевести документацию и сайт на новый язык, выполните следующие шаги:
 
-1. Create a new directory named with the language's 2-character ISO code in this repository's `docs/` directory
-2. Copy all the `.md` files in the root of the `docs/` directory into the new directory (always use the English version as source for translation, as it's always up to date)
-3. Copy the `README.md` and `CONTRIBUTING.md` files from the root directory to the new directory
-4. Translate the content of the files, but don't change the filenames, also don't translate strings starting with `> [!` (it's special markup for GitHub)
-5. Create a Pull Request with the translations
-6. In the [site repository](https://github.com/dunglas/frankenphp-website/tree/main), copy and translate the translation files in the `content/`, `data/` and `i18n/` directories
-7. Translate the values in the created YAML file
-8. Open a Pull Request on the site repository
+1. Создайте новую директорию с кодом языка (ISO 3166-1 alpha-2) в папке `docs/`.
+2. Скопируйте все `.md` файлы из корня папки `docs/` в новую директорию (используйте английскую версию как основу для перевода).
+3. Скопируйте файлы `README.md` и `CONTRIBUTING.md` из корневой директории в новую папку.
+4. Переведите содержимое файлов, но не изменяйте имена файлов. Не переводите строки, начинающиеся с `> [!`, это специальная разметка GitHub.
+5. Создайте Pull Request с переводом.
+6. В [репозитории сайта](https://github.com/dunglas/frankenphp-website/tree/main) скопируйте и переведите файлы в папках `content/`, `data/` и `i18n/`.
+7. Переведите значения в созданных YAML-файлах.
+8. Откройте Pull Request в репозитории сайта.
