@@ -101,13 +101,7 @@ func addKnownVariablesToServer(thread *phpThread, request *http.Request, fc *Fra
 		}
 	}
 
-	var serverPort string
-	if reqPort != "" {
-		serverPort = reqPort
-	} else {
-		serverPort = ""
-	}
-
+	serverPort := reqPort
 	contentLength := request.Header.Get("Content-Length")
 
 	var requestURI string
