@@ -52,32 +52,43 @@ set the `GOMEMLIMIT` environment variable to the available amount of memory.
 
 For more details, [the Go documentation page dedicated to this subject](https://pkg.go.dev/runtime#hdr-Environment_Variables) is a must-read to get the most out of the runtime.
 
-## Most performant `file_server` setup
+## `php_server` and `file_server` performance
 
-Many modern applications will delegate all requests to a single entry PHP file. In this case, the most
-performant solution is to use the `php` directive and split files from PHP by path. An example
-[configuration](config.md#caddyfile-config) that serves all static files behind an `/assets` folder could look like
-this:
+The `php_server` directive includes a `file_server` by default. Besides static files, `php_server` will also try to serve your
+application's index and directory index files (/path/ -> /path/index.php). If you don't need directory indexes,
+you can disable them by explicitly defining `try_files` like this:
+
+```caddyfile
+php_server {
+    try_files {path} index.php {
+        policy first_exist_fallback # always fall back to index.php
+    }
+}
+```
+
+This can significantly reduce the number of unnecessary file system operations.
+
+An alternate approach with 0 unnecessary file system operations would be to instead use the `php` directive and split
+files from PHP by path. This approach works well if your entire application is served by one entry file.
+An example [configuration](config.md#caddyfile-config) that serves static files
+behind an `/assets` folder could look like this:
 
 ```caddyfile
 route {
-    root /root/to/your/app # the public path to your app
-    encode zstd br gzip # compress responses
-
     @assets {
         path /assets/*
     }
 
     # everything behind /assets is handled by the file server
     handle @assets {
-        # feel free to add cache headers here
+        root /root/to/your/app
         file_server
     }
 
     # everything that is not in /assets is handled by your index or worker PHP file
-    rewrite your-entry-file.php
+    rewrite index.php
     php {
-        root /root/to/your/app # explicitly adding the root here allows better caching
+        root /root/to/your/app # explicitly adding the root here allows for better caching
     }
 }
 ```
