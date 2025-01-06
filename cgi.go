@@ -12,34 +12,34 @@ import (
 	"unsafe"
 )
 
-var knownServerKeys = map[string]struct{}{
-	"CONTENT_LENGTH":    {},
-	"DOCUMENT_ROOT":     {},
-	"DOCUMENT_URI":      {},
-	"GATEWAY_INTERFACE": {},
-	"HTTP_HOST":         {},
-	"HTTPS":             {},
-	"PATH_INFO":         {},
-	"PHP_SELF":          {},
-	"REMOTE_ADDR":       {},
-	"REMOTE_HOST":       {},
-	"REMOTE_PORT":       {},
-	"REQUEST_SCHEME":    {},
-	"SCRIPT_FILENAME":   {},
-	"SCRIPT_NAME":       {},
-	"SERVER_NAME":       {},
-	"SERVER_PORT":       {},
-	"SERVER_PROTOCOL":   {},
-	"SERVER_SOFTWARE":   {},
-	"SSL_PROTOCOL":      {},
-	"AUTH_TYPE":         {},
-	"REMOTE_IDENT":      {},
-	"CONTENT_TYPE":      {},
-	"PATH_TRANSLATED":   {},
-	"QUERY_STRING":      {},
-	"REMOTE_USER":       {},
-	"REQUEST_METHOD":    {},
-	"REQUEST_URI":       {},
+var knownServerKeys = []string{
+	"CONTENT_LENGTH",
+	"DOCUMENT_ROOT",
+	"DOCUMENT_URI",
+	"GATEWAY_INTERFACE",
+	"HTTP_HOST",
+	"HTTPS",
+	"PATH_INFO",
+	"PHP_SELF",
+	"REMOTE_ADDR",
+	"REMOTE_HOST",
+	"REMOTE_PORT",
+	"REQUEST_SCHEME",
+	"SCRIPT_FILENAME",
+	"SCRIPT_NAME",
+	"SERVER_NAME",
+	"SERVER_PORT",
+	"SERVER_PROTOCOL",
+	"SERVER_SOFTWARE",
+	"SSL_PROTOCOL",
+	"AUTH_TYPE",
+	"REMOTE_IDENT",
+	"CONTENT_TYPE",
+	"PATH_TRANSLATED",
+	"QUERY_STRING",
+	"REMOTE_USER",
+	"REQUEST_METHOD",
+	"REQUEST_URI",
 }
 
 // computeKnownVariables returns a set of CGI environment variables for the request.
@@ -61,26 +61,6 @@ func addKnownVariablesToServer(thread *phpThread, request *http.Request, fc *Fra
 	ip = strings.Replace(ip, "[", "", 1)
 	ip = strings.Replace(ip, "]", "", 1)
 
-	var remoteAddress string
-	var remoteHost string
-
-	ra, raOK := fc.env["REMOTE_ADDR\x00"]
-	if raOK {
-		remoteAddress = ra
-	} else {
-		remoteAddress = ip
-	}
-
-	if rh, ok := fc.env["REMOTE_HOST\x00"]; ok {
-		remoteHost = rh
-	} else {
-		if raOK {
-			remoteHost = ra
-		} else {
-			remoteHost = ip
-		}
-	}
-
 	var https string
 	var sslProtocol string
 	var rs string
@@ -90,22 +70,14 @@ func addKnownVariablesToServer(thread *phpThread, request *http.Request, fc *Fra
 		sslProtocol = ""
 	} else {
 		rs = "https"
-		if h, ok := fc.env["HTTPS\x00"]; ok {
-			https = h
-		} else {
-			https = "on"
-		}
+		https = "on"
 
 		// and pass the protocol details in a manner compatible with apache's mod_ssl
 		// (which is why these have an SSL_ prefix and not TLS_).
-		if pr, ok := fc.env["SSL_PROTOCOL\x00"]; ok {
-			sslProtocol = pr
+		if v, ok := tlsProtocolStrings[request.TLS.Version]; ok {
+			sslProtocol = v
 		} else {
-			if v, ok := tlsProtocolStrings[request.TLS.Version]; ok {
-				sslProtocol = v
-			} else {
-				sslProtocol = ""
-			}
+			sslProtocol = ""
 		}
 	}
 
@@ -146,8 +118,8 @@ func addKnownVariablesToServer(thread *phpThread, request *http.Request, fc *Fra
 	}
 
 	C.fphp_register_bulk_vars(
-		keys["REMOTE_ADDR"], toUnsafeChar(remoteAddress), C.size_t(len(remoteAddress)),
-		keys["REMOTE_HOST"], toUnsafeChar(remoteHost), C.size_t(len(remoteHost)),
+		keys["REMOTE_ADDR"], toUnsafeChar(ip), C.size_t(len(ip)),
+		keys["REMOTE_HOST"], toUnsafeChar(ip), C.size_t(len(ip)),
 		keys["REMOTE_PORT"], toUnsafeChar(port), C.size_t(len(port)),
 		keys["DOCUMENT_ROOT"], toUnsafeChar(fc.documentRoot), C.size_t(len(fc.documentRoot)),
 		keys["PATH_INFO"], toUnsafeChar(fc.pathInfo), C.size_t(len(fc.pathInfo)),
@@ -217,7 +189,7 @@ func getKnownVariableKeys(thread *phpThread) map[string]*C.zend_string {
 		return thread.knownVariableKeys
 	}
 	threadServerKeys := make(map[string]*C.zend_string)
-	for k := range knownServerKeys {
+	for _, k := range knownServerKeys {
 		threadServerKeys[k] = C.frankenphp_init_persistent_string(toUnsafeChar(k), C.size_t(len(k)))
 	}
 	thread.knownVariableKeys = threadServerKeys
