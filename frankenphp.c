@@ -644,11 +644,11 @@ static char *frankenphp_read_cookies(void) {
 
 /* all variables with well defined keys can safely be registered like this */
 void frankenphp_register_trusted_var(zend_string *z_key, char *value,
-                                     size_t val_len, zval *track_vars_array) {
+                                     size_t val_len, HashTable *ht) {
   if (value == NULL) {
     zval empty;
     ZVAL_EMPTY_STRING(&empty);
-    zend_hash_update_ind(Z_ARRVAL_P(track_vars_array), z_key, &empty);
+    zend_hash_update_ind(ht, z_key, &empty);
     return;
   }
   size_t new_val_len = val_len;
@@ -658,7 +658,7 @@ void frankenphp_register_trusted_var(zend_string *z_key, char *value,
                                new_val_len, &new_val_len)) {
     zval z_value;
     ZVAL_STRINGL_FAST(&z_value, value, new_val_len);
-    zend_hash_update_ind(Z_ARRVAL_P(track_vars_array), z_key, &z_value);
+    zend_hash_update_ind(ht, z_key, &z_value);
   }
 }
 
@@ -687,28 +687,29 @@ void frankenphp_register_bulk(zend_string *remote_addrk, char *remote_addr, size
                               zend_string *remote_identk, char *remote_ident, size_t remote_identl,
                               zend_string *request_urik, char *request_uri, size_t request_uril,
                               zval *track_vars_array) {
-  frankenphp_register_trusted_var(remote_addrk, remote_addr, remote_addrl, track_vars_array);
-  frankenphp_register_trusted_var(remote_hostk, remote_host, remote_hostl, track_vars_array);
-  frankenphp_register_trusted_var(remote_portk, remote_port, remote_portl, track_vars_array);
-  frankenphp_register_trusted_var(document_rootk, document_root, document_rootl, track_vars_array);
-  frankenphp_register_trusted_var(path_infok, path_info, path_infol, track_vars_array);
-  frankenphp_register_trusted_var(php_selfk, php_self, php_selfl, track_vars_array);
-  frankenphp_register_trusted_var(document_urik, document_uri, document_url, track_vars_array);
-  frankenphp_register_trusted_var(script_filenamek, script_filename, script_filenamel, track_vars_array);
-  frankenphp_register_trusted_var(script_namek, script_name, script_namel, track_vars_array);
-  frankenphp_register_trusted_var(httpsk, https, httpsl, track_vars_array);
-  frankenphp_register_trusted_var(ssl_protocolk, ssl_protocol, ssl_protocoll, track_vars_array);
-  frankenphp_register_trusted_var(request_schemek, request_scheme, request_schemel, track_vars_array);
-  frankenphp_register_trusted_var(server_namek, server_name, server_namel, track_vars_array);
-  frankenphp_register_trusted_var(server_portk, server_port, server_portl, track_vars_array);
-  frankenphp_register_trusted_var(content_lengthk, content_length, content_lengthl, track_vars_array);
-  frankenphp_register_trusted_var(gateway_interfacek, gateway_interface, gateway_interfacel, track_vars_array);
-  frankenphp_register_trusted_var(server_protocolk, server_protocol, server_protocoll, track_vars_array);
-  frankenphp_register_trusted_var(server_softwarek, server_software, server_softwarel, track_vars_array);
-  frankenphp_register_trusted_var(http_hostk, http_host, http_hostl, track_vars_array);
-  frankenphp_register_trusted_var(auth_typek, auth_type, auth_typel, track_vars_array);
-  frankenphp_register_trusted_var(remote_identk, remote_ident, remote_identl, track_vars_array);
-  frankenphp_register_trusted_var(request_urik, request_uri, request_uril, track_vars_array);
+  HashTable *ht = Z_ARRVAL_P(track_vars_array);
+  frankenphp_register_trusted_var(remote_addrk, remote_addr, remote_addrl, ht);
+  frankenphp_register_trusted_var(remote_hostk, remote_host, remote_hostl, ht);
+  frankenphp_register_trusted_var(remote_portk, remote_port, remote_portl, ht);
+  frankenphp_register_trusted_var(document_rootk, document_root, document_rootl, ht);
+  frankenphp_register_trusted_var(path_infok, path_info, path_infol, ht);
+  frankenphp_register_trusted_var(php_selfk, php_self, php_selfl, ht);
+  frankenphp_register_trusted_var(document_urik, document_uri, document_url, ht);
+  frankenphp_register_trusted_var(script_filenamek, script_filename, script_filenamel, ht);
+  frankenphp_register_trusted_var(script_namek, script_name, script_namel, ht);
+  frankenphp_register_trusted_var(httpsk, https, httpsl, ht);
+  frankenphp_register_trusted_var(ssl_protocolk, ssl_protocol, ssl_protocoll, ht);
+  frankenphp_register_trusted_var(request_schemek, request_scheme, request_schemel, ht);
+  frankenphp_register_trusted_var(server_namek, server_name, server_namel, ht);
+  frankenphp_register_trusted_var(server_portk, server_port, server_portl, ht);
+  frankenphp_register_trusted_var(content_lengthk, content_length, content_lengthl, ht);
+  frankenphp_register_trusted_var(gateway_interfacek, gateway_interface, gateway_interfacel, ht);
+  frankenphp_register_trusted_var(server_protocolk, server_protocol, server_protocoll, ht);
+  frankenphp_register_trusted_var(server_softwarek, server_software, server_softwarel, ht);
+  frankenphp_register_trusted_var(http_hostk, http_host, http_hostl, ht);
+  frankenphp_register_trusted_var(auth_typek, auth_type, auth_typel, ht);
+  frankenphp_register_trusted_var(remote_identk, remote_ident, remote_identl, ht);
+  frankenphp_register_trusted_var(request_urik, request_uri, request_uril, ht);
 }
 // clang-format on
 
@@ -728,9 +729,9 @@ frankenphp_register_variable_from_request_info(zend_string *zKey, char *value,
                                                zval *track_vars_array) {
   if (value != NULL) {
     frankenphp_register_trusted_var(zKey, value, strlen(value),
-                                    track_vars_array);
+                                    Z_ARRVAL_P(track_vars_array));
   } else if (must_be_present) {
-    frankenphp_register_trusted_var(zKey, "", 0, track_vars_array);
+    frankenphp_register_trusted_var(zKey, "", 0, Z_ARRVAL_P(track_vars_array));
   }
 }
 
