@@ -117,7 +117,7 @@ func addKnownVariablesToServer(thread *phpThread, request *http.Request, fc *Fra
 		requestURI = request.URL.RequestURI()
 	}
 
-	C.fphp_register_bulk_vars(
+	C.frankenphp_register_bulk(
 		keys["REMOTE_ADDR"], toUnsafeChar(ip), C.size_t(len(ip)),
 		keys["REMOTE_HOST"], toUnsafeChar(ip), C.size_t(len(ip)),
 		keys["REMOTE_PORT"], toUnsafeChar(port), C.size_t(len(port)),
