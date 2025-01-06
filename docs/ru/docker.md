@@ -77,6 +77,8 @@ FROM dunglas/frankenphp AS runner
 # Заменяем официальный бинарник на пользовательский с добавленными модулями
 COPY --from=builder /usr/local/bin/frankenphp /usr/local/bin/frankenphp
 ```
+Образ `builder`, предоставляемый FrankenPHP, содержит скомпилированную версию `libphp`.  
+[Образы builder](https://hub.docker.com/r/dunglas/frankenphp/tags?name=builder) доступны для всех версий FrankenPHP и PHP, как для Debian, так и для Alpine.
 
 > [!TIP]
 >
@@ -114,6 +116,10 @@ docker run -v $PWD:/app/public -p 80:80 -p 443:443 -p 443:443/udp --tty my-php-a
 services:
   php:
     image: dunglas/frankenphp
+    # раскомментируйте следующую строку, если хотите использовать кастомный Dockerfile
+    #build: .
+    # раскомментируйте следующую строку, если вы запускаете это в продакшн среде
+    # restart: always
     ports:
       - "80:80" # HTTP
       - "443:443" # HTTPS
@@ -122,8 +128,10 @@ services:
       - ./:/app/public
       - caddy_data:/data
       - caddy_config:/config
+    # закомментируйте следующую строку в продакшн среде, она позволяет получать удобочитаемые логи в режиме разработки
     tty: true
 
+# Томы, необходимые для сертификатов и конфигурации Caddy
 volumes:
   caddy_data:
   caddy_config:
@@ -141,9 +149,11 @@ FROM dunglas/frankenphp
 ARG USER=appuser
 
 RUN \
-	# Для Alpine используйте "adduser -D ${USER}"
+	# Для дистрибутивов на основе Alpine используйте "adduser -D ${USER}"
 	useradd ${USER}; \
+	# Добавьте возможность привязываться к портам 80 и 443
 	setcap CAP_NET_BIND_SERVICE=+eip /usr/local/bin/frankenphp; \
+	# Дайте права на запись для /data/caddy и /config/caddy
 	chown -R ${USER}:${USER} /data/caddy && chown -R ${USER}:${USER} /config/caddy
 
 USER ${USER}
@@ -151,7 +161,9 @@ USER ${USER}
 
 ### Запуск без дополнительных прав
 
-Если вы используете непривилегированные порты (от 1024 и выше), сервер можно запускать без root-прав:
+Даже при запуске без root-прав, FrankenPHP требуется возможность `CAP_NET_BIND_SERVICE` для привязки веб-сервера к привилегированным портам (80 и 443).
+
+Если вы открываете доступ к FrankenPHP на непривилегированном порту (1024 и выше), можно запустить веб-сервер от имени обычного пользователя без необходимости предоставления дополнительных возможностей:
 
 ```dockerfile
 FROM dunglas/frankenphp
@@ -159,12 +171,18 @@ FROM dunglas/frankenphp
 ARG USER=appuser
 
 RUN \
+	# Для дистрибутивов на основе Alpine используйте "adduser -D ${USER}"
 	useradd ${USER}; \
+	# Удалите стандартные возможности
 	setcap -r /usr/local/bin/frankenphp; \
+	# Дайте права на запись для /data/caddy и /config/caddy
 	chown -R ${USER}:${USER} /data/caddy && chown -R ${USER}:${USER} /config/caddy
 
 USER ${USER}
 ```
+
+Затем установите переменную окружения `SERVER_NAME`, чтобы использовать непривилегированный порт.  
+Пример: `:8000`.
 
 ## Обновления
 
@@ -175,5 +193,8 @@ Docker-образы обновляются:
 
 ## Версии для разработки
 
-Версии для разработки доступны в [`dunglas/frankenphp-dev`](https://hub.docker.com/repository/docker/dunglas/frankenphp-dev).  
-Новая сборка запускается при каждом коммите в ветку `main`.
+Версии для разработки доступны в Docker-репозитории [`dunglas/frankenphp-dev`](https://hub.docker.com/repository/docker/dunglas/frankenphp-dev).  
+Новая сборка запускается каждый раз, когда в основную ветку GitHub-репозитория отправляется новый коммит.
+
+Теги с префиксом `latest*` указывают на актуальное состояние ветки `main`.  
+Также доступны теги в формате `sha-<git-commit-hash>`.

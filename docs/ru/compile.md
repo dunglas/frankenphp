@@ -39,7 +39,7 @@ brew install libiconv bison brotli re2c pkg-config
 echo 'export PATH="/opt/homebrew/opt/bison/bin:$PATH"' >> ~/.zshrc
 ```
 
-Затем выполните скрипт `configure`:
+Затем выполните скрипт configure:
 
 ```console
 ./configure \
