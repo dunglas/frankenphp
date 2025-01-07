@@ -55,7 +55,7 @@ For more details, [the Go documentation page dedicated to this subject](https://
 ## `php_server` and `file_server` performance
 
 The `php_server` directive includes a `file_server` by default. Besides static files, `php_server` will also try to serve your
-application's index and directory index files (/path/ -> /path/index.php). If you don't need directory indexes,
+application's index and directory index files (/path/ -> /path/index.php). If you don't need directory indices,
 you can disable them by explicitly defining `try_files` like this:
 
 ```caddyfile
@@ -66,12 +66,11 @@ php_server {
 }
 ```
 
-This can significantly reduce the number of unnecessary file system operations.
+This can significantly reduce the number of unnecessary file operations.
 
 An alternate approach with 0 unnecessary file system operations would be to instead use the `php` directive and split
 files from PHP by path. This approach works well if your entire application is served by one entry file.
-An example [configuration](config.md#caddyfile-config) that serves static files
-behind an `/assets` folder could look like this:
+An example [configuration](config.md#caddyfile-config) that serves static files behind an `/assets` folder could look like this:
 
 ```caddyfile
 route {
