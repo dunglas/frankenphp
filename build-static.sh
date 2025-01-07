@@ -216,7 +216,7 @@ if [ "${os}" = "linux" ]; then
 
 			git checkout "$(git describe --tags "$(git rev-list --tags --max-count=1 || true)" || true)"
 
-			curl -fL --retry 5 https://raw.githubusercontent.com/tweag/rust-alpine-mimalloc/b26002b49d466a295ea8b50828cb7520a71a872a/mimalloc.diff -o mimalloc.diff
+			curl -fL --retry 5 https://raw.githubusercontent.com/tweag/rust-alpine-mimalloc/1a756444a5c1484d26af9cd39187752728416ba8/mimalloc.diff -o mimalloc.diff
 			patch -p1 <mimalloc.diff
 
 			mkdir -p out/
