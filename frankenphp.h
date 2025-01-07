@@ -72,28 +72,18 @@ zend_string *frankenphp_init_persistent_string(const char *string, size_t len);
 void frankenphp_release_zend_string(zend_string *z_string);
 int frankenphp_reset_opcache(void);
 
-void frankenphp_register_bulk(zval *track_vars_array,
-                              ht_key_value_pair remote_addr,
-                              ht_key_value_pair remote_host,
-                              ht_key_value_pair remote_port,
-                              ht_key_value_pair document_root,
-                              ht_key_value_pair path_info,
-                              ht_key_value_pair php_self,
-                              ht_key_value_pair document_uri,
-                              ht_key_value_pair script_filename,
-                              ht_key_value_pair script_name,
-                              ht_key_value_pair https,
-                              ht_key_value_pair ssl_protocol,
-                              ht_key_value_pair request_scheme,
-                              ht_key_value_pair server_name,
-                              ht_key_value_pair server_port,
-                              ht_key_value_pair content_length,
-                              ht_key_value_pair gateway_interface,
-                              ht_key_value_pair server_protocol,
-                              ht_key_value_pair server_software,
-                              ht_key_value_pair http_host,
-                              ht_key_value_pair auth_type,
-                              ht_key_value_pair remote_ident,
-                              ht_key_value_pair request_uri);
+void frankenphp_register_bulk(
+    zval *track_vars_array, ht_key_value_pair remote_addr,
+    ht_key_value_pair remote_host, ht_key_value_pair remote_port,
+    ht_key_value_pair document_root, ht_key_value_pair path_info,
+    ht_key_value_pair php_self, ht_key_value_pair document_uri,
+    ht_key_value_pair script_filename, ht_key_value_pair script_name,
+    ht_key_value_pair https, ht_key_value_pair ssl_protocol,
+    ht_key_value_pair request_scheme, ht_key_value_pair server_name,
+    ht_key_value_pair server_port, ht_key_value_pair content_length,
+    ht_key_value_pair gateway_interface, ht_key_value_pair server_protocol,
+    ht_key_value_pair server_software, ht_key_value_pair http_host,
+    ht_key_value_pair auth_type, ht_key_value_pair remote_ident,
+    ht_key_value_pair request_uri);
 
 #endif
