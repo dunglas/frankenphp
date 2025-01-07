@@ -60,9 +60,8 @@ you can disable them by explicitly defining `try_files` like this:
 
 ```caddyfile
 php_server {
-    try_files {path} index.php {
-        policy first_exist_fallback # always fall back to index.php
-    }
+    try_files {path} index.php
+    root /root/to/your/app # explicitly adding the root here allows for better caching
 }
 ```
 
@@ -79,9 +78,8 @@ route {
     }
 
     # everything behind /assets is handled by the file server
-    handle @assets {
+    file_server @assets {
         root /root/to/your/app
-        file_server
     }
 
     # everything that is not in /assets is handled by your index or worker PHP file
