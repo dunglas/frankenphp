@@ -358,10 +358,6 @@ func Init(options ...Option) error {
 	return nil
 }
 
-func IsRunning() bool {
-	return isRunning
-}
-
 // Shutdown stops the workers and the PHP runtime.
 func Shutdown() {
 	if !isRunning {
@@ -458,6 +454,10 @@ func updateServerContext(thread *phpThread, request *http.Request, create bool, 
 
 // ServeHTTP executes a PHP script according to the given context.
 func ServeHTTP(responseWriter http.ResponseWriter, request *http.Request) error {
+	if !isRunning {
+		return NotRunningError
+	}
+
 	if !requestIsValid(request, responseWriter) {
 		return nil
 	}
