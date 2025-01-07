@@ -62,6 +62,7 @@ var (
 	MainThreadCreationError     = errors.New("error creating the main thread")
 	RequestContextCreationError = errors.New("error during request context creation")
 	ScriptExecutionError        = errors.New("error during PHP script execution")
+	NotRunningError             = errors.New("FrankenPHP is not running. For proper configuration visit: https://frankenphp.dev/docs/config/#caddyfile-config")
 
 	requestChan chan *http.Request
 	isRunning   bool
@@ -355,6 +356,10 @@ func Init(options ...Option) error {
 	}
 
 	return nil
+}
+
+func IsRunning() bool {
+	return isRunning
 }
 
 // Shutdown stops the workers and the PHP runtime.

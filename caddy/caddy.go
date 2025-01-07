@@ -291,6 +291,10 @@ func needReplacement(s string) bool {
 // ServeHTTP implements caddyhttp.MiddlewareHandler.
 // TODO: Expose TLS versions as env vars, as Apache's mod_ssl: https://github.com/caddyserver/caddy/blob/master/modules/caddyhttp/reverseproxy/fastcgi/fastcgi.go#L298
 func (f FrankenPHPModule) ServeHTTP(w http.ResponseWriter, r *http.Request, _ caddyhttp.Handler) error {
+	if !frankenphp.IsRunning() {
+		return caddyhttp.Error(http.StatusBadGateway, frankenphp.NotRunningError)
+	}
+
 	origReq := r.Context().Value(caddyhttp.OriginalRequestCtxKey).(http.Request)
 	repl := r.Context().Value(caddy.ReplacerCtxKey).(*caddy.Replacer)
 
