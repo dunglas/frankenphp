@@ -112,35 +112,35 @@ func addKnownVariablesToServer(thread *phpThread, request *http.Request, fc *Fra
 	}
 
 	C.frankenphp_register_bulk(
-		keys["REMOTE_ADDR"], toUnsafeChar(ip), C.size_t(len(ip)),
-		keys["REMOTE_HOST"], toUnsafeChar(ip), C.size_t(len(ip)),
-		keys["REMOTE_PORT"], toUnsafeChar(port), C.size_t(len(port)),
-		keys["DOCUMENT_ROOT"], toUnsafeChar(fc.documentRoot), C.size_t(len(fc.documentRoot)),
-		keys["PATH_INFO"], toUnsafeChar(fc.pathInfo), C.size_t(len(fc.pathInfo)),
-		keys["PHP_SELF"], toUnsafeChar(request.URL.Path), C.size_t(len(request.URL.Path)),
-		keys["DOCUMENT_URI"], toUnsafeChar(fc.docURI), C.size_t(len(fc.docURI)),
-		keys["SCRIPT_FILENAME"], toUnsafeChar(fc.scriptFilename), C.size_t(len(fc.scriptFilename)),
-		keys["SCRIPT_NAME"], toUnsafeChar(fc.scriptName), C.size_t(len(fc.scriptName)),
-		keys["HTTPS"], toUnsafeChar(https), C.size_t(len(https)),
-		keys["SSL_PROTOCOL"], toUnsafeChar(sslProtocol), C.size_t(len(sslProtocol)),
-		keys["REQUEST_SCHEME"], toUnsafeChar(rs), C.size_t(len(rs)),
-		keys["SERVER_NAME"], toUnsafeChar(reqHost), C.size_t(len(reqHost)),
-		keys["SERVER_PORT"], toUnsafeChar(serverPort), C.size_t(len(serverPort)),
+		trackVarsArray,
+		packCgiVariable(keys["REMOTE_ADDR"], ip),
+		packCgiVariable(keys["REMOTE_HOST"], ip),
+		packCgiVariable(keys["REMOTE_PORT"], port),
+		packCgiVariable(keys["DOCUMENT_ROOT"], fc.documentRoot),
+		packCgiVariable(keys["PATH_INFO"], fc.pathInfo),
+		packCgiVariable(keys["PHP_SELF"], request.URL.Path),
+		packCgiVariable(keys["DOCUMENT_URI"], fc.docURI),
+		packCgiVariable(keys["SCRIPT_FILENAME"], fc.scriptFilename),
+		packCgiVariable(keys["SCRIPT_NAME"], fc.scriptName),
+		packCgiVariable(keys["HTTPS"], https),
+		packCgiVariable(keys["SSL_PROTOCOL"], sslProtocol),
+		packCgiVariable(keys["REQUEST_SCHEME"], rs),
+		packCgiVariable(keys["SERVER_NAME"], reqHost),
+		packCgiVariable(keys["SERVER_PORT"], serverPort),
 		// Variables defined in CGI 1.1 spec
 		// Some variables are unused but cleared explicitly to prevent
 		// the parent environment from interfering.
 		// These values can not be overridden
-		keys["CONTENT_LENGTH"], toUnsafeChar(contentLength), C.size_t(len(contentLength)),
-		keys["GATEWAY_INTERFACE"], toUnsafeChar("CGI/1.1"), C.size_t(len("CGI/1.1")),
-		keys["SERVER_PROTOCOL"], toUnsafeChar(request.Proto), C.size_t(len(request.Proto)),
-		keys["SERVER_SOFTWARE"], toUnsafeChar("FrankenPHP"), C.size_t(len("FrankenPHP")),
-		keys["HTTP_HOST"], toUnsafeChar(request.Host), C.size_t(len(request.Host)),
+		packCgiVariable(keys["CONTENT_LENGTH"], contentLength),
+		packCgiVariable(keys["GATEWAY_INTERFACE"], "CGI/1.1"),
+		packCgiVariable(keys["SERVER_PROTOCOL"], request.Proto),
+		packCgiVariable(keys["SERVER_SOFTWARE"], "FrankenPHP"),
+		packCgiVariable(keys["HTTP_HOST"], request.Host),
 		// These values are always empty but must be defined:
-		keys["AUTH_TYPE"], nil, C.size_t(0),
-		keys["REMOTE_IDENT"], nil, C.size_t(0),
+		packCgiVariable(keys["AUTH_TYPE"], ""),
+		packCgiVariable(keys["REMOTE_IDENT"], ""),
 		// Request uri of the original request
-		keys["REQUEST_URI"], toUnsafeChar(requestURI), C.size_t(len(requestURI)),
-		trackVarsArray,
+		packCgiVariable(keys["REQUEST_URI"], requestURI),
 	)
 
 	// These values are already present in the SG(request_info), so we'll register them from there
@@ -152,6 +152,10 @@ func addKnownVariablesToServer(thread *phpThread, request *http.Request, fc *Fra
 		keys["REMOTE_USER"],
 		keys["REQUEST_METHOD"],
 	)
+}
+
+func packCgiVariable(key *C.zend_string, value string) C.ht_key_value_pair {
+	return C.ht_key_value_pair{key, toUnsafeChar(value), C.size_t(len(value))}
 }
 
 func addHeadersToServer(request *http.Request, fc *FrankenPHPContext, trackVarsArray *C.zval) {

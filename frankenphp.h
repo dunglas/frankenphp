@@ -16,6 +16,12 @@ typedef struct go_string {
   char *data;
 } go_string;
 
+typedef struct ht_key_value_pair {
+  zend_string *key;
+  char *val;
+  size_t val_len;
+} ht_key_value_pair;
+
 typedef struct php_variable {
   const char *var;
   size_t data_len;
@@ -66,30 +72,28 @@ zend_string *frankenphp_init_persistent_string(const char *string, size_t len);
 void frankenphp_release_zend_string(zend_string *z_string);
 int frankenphp_reset_opcache(void);
 
-// clang-format off
-void frankenphp_register_bulk(zend_string *remote_addrk, char *remote_addr, size_t remote_addrl,
-                              zend_string *remote_hostk, char *remote_host, size_t remote_hostl,
-                              zend_string *remote_portk, char *remote_port, size_t remote_portl,
-                              zend_string *document_rootk, char *document_root, size_t document_rootl,
-                              zend_string *path_infok, char *path_info, size_t path_infol,
-                              zend_string *php_selfk, char *php_self, size_t php_selfl,
-                              zend_string *document_urik, char *document_uri, size_t document_url,
-                              zend_string *script_filenamek, char *script_filename, size_t script_filenamel,
-                              zend_string *script_namek, char *script_name, size_t script_namel,
-                              zend_string *httpsk, char *https, size_t httpsl,
-                              zend_string *ssl_protocolk, char *ssl_protocol, size_t ssl_protocoll,
-                              zend_string *request_schemek, char *request_scheme, size_t request_schemel,
-                              zend_string *server_namek, char *server_name, size_t server_namel,
-                              zend_string *server_portk, char *server_port, size_t server_portl,
-                              zend_string *content_lengthk, char *content_length, size_t content_lengthl,
-                              zend_string *gateway_interfacek, char *gateway_interface, size_t gateway_interfacel,
-                              zend_string *server_protocolk, char *server_protocol, size_t server_protocoll,
-                              zend_string *server_softwarek, char *server_software, size_t server_softwarel,
-                              zend_string *http_hostk, char *http_host, size_t http_hostl,
-                              zend_string *auth_typek, char *auth_type, size_t auth_typel,
-                              zend_string *remote_identk, char *remote_ident, size_t remote_identl,
-                              zend_string *request_urik, char *request_uri, size_t request_uril,
-                              zval *track_vars_array);
-// clang-format on
+void frankenphp_register_bulk(zval *track_vars_array,
+                              ht_key_value_pair remote_addr,
+                              ht_key_value_pair remote_host,
+                              ht_key_value_pair remote_port,
+                              ht_key_value_pair document_root,
+                              ht_key_value_pair path_info,
+                              ht_key_value_pair php_self,
+                              ht_key_value_pair document_uri,
+                              ht_key_value_pair script_filename,
+                              ht_key_value_pair script_name,
+                              ht_key_value_pair https,
+                              ht_key_value_pair ssl_protocol,
+                              ht_key_value_pair request_scheme,
+                              ht_key_value_pair server_name,
+                              ht_key_value_pair server_port,
+                              ht_key_value_pair content_length,
+                              ht_key_value_pair gateway_interface,
+                              ht_key_value_pair server_protocol,
+                              ht_key_value_pair server_software,
+                              ht_key_value_pair http_host,
+                              ht_key_value_pair auth_type,
+                              ht_key_value_pair remote_ident,
+                              ht_key_value_pair request_uri);
 
 #endif

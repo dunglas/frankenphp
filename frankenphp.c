@@ -662,56 +662,54 @@ void frankenphp_register_trusted_var(zend_string *z_key, char *value,
   }
 }
 
-// clang-format off
 /* Register known $_SERVER variables in bulk to avoid cgo overhead */
-void frankenphp_register_bulk(zend_string *remote_addrk, char *remote_addr, size_t remote_addrl,
-                              zend_string *remote_hostk, char *remote_host, size_t remote_hostl,
-                              zend_string *remote_portk, char *remote_port, size_t remote_portl,
-                              zend_string *document_rootk, char *document_root, size_t document_rootl,
-                              zend_string *path_infok, char *path_info, size_t path_infol,
-                              zend_string *php_selfk, char *php_self, size_t php_selfl,
-                              zend_string *document_urik, char *document_uri, size_t document_url,
-                              zend_string *script_filenamek, char *script_filename, size_t script_filenamel,
-                              zend_string *script_namek, char *script_name, size_t script_namel,
-                              zend_string *httpsk, char *https, size_t httpsl,
-                              zend_string *ssl_protocolk, char *ssl_protocol, size_t ssl_protocoll,
-                              zend_string *request_schemek, char *request_scheme, size_t request_schemel,
-                              zend_string *server_namek, char *server_name, size_t server_namel,
-                              zend_string *server_portk, char *server_port, size_t server_portl,
-                              zend_string *content_lengthk, char *content_length, size_t content_lengthl,
-                              zend_string *gateway_interfacek, char *gateway_interface, size_t gateway_interfacel,
-                              zend_string *server_protocolk, char *server_protocol, size_t server_protocoll,
-                              zend_string *server_softwarek, char *server_software, size_t server_softwarel,
-                              zend_string *http_hostk, char *http_host, size_t http_hostl,
-                              zend_string *auth_typek, char *auth_type, size_t auth_typel,
-                              zend_string *remote_identk, char *remote_ident, size_t remote_identl,
-                              zend_string *request_urik, char *request_uri, size_t request_uril,
-                              zval *track_vars_array) {
+void frankenphp_register_bulk(zval *track_vars_array,
+                              ht_key_value_pair remote_addr,
+                              ht_key_value_pair remote_host,
+                              ht_key_value_pair remote_port,
+                              ht_key_value_pair document_root,
+                              ht_key_value_pair path_info,
+                              ht_key_value_pair php_self,
+                              ht_key_value_pair document_uri,
+                              ht_key_value_pair script_filename,
+                              ht_key_value_pair script_name,
+                              ht_key_value_pair https,
+                              ht_key_value_pair ssl_protocol,
+                              ht_key_value_pair request_scheme,
+                              ht_key_value_pair server_name,
+                              ht_key_value_pair server_port,
+                              ht_key_value_pair content_length,
+                              ht_key_value_pair gateway_interface,
+                              ht_key_value_pair server_protocol,
+                              ht_key_value_pair server_software,
+                              ht_key_value_pair http_host,
+                              ht_key_value_pair auth_type,
+                              ht_key_value_pair remote_ident,
+                              ht_key_value_pair request_uri) {
   HashTable *ht = Z_ARRVAL_P(track_vars_array);
-  frankenphp_register_trusted_var(remote_addrk, remote_addr, remote_addrl, ht);
-  frankenphp_register_trusted_var(remote_hostk, remote_host, remote_hostl, ht);
-  frankenphp_register_trusted_var(remote_portk, remote_port, remote_portl, ht);
-  frankenphp_register_trusted_var(document_rootk, document_root, document_rootl, ht);
-  frankenphp_register_trusted_var(path_infok, path_info, path_infol, ht);
-  frankenphp_register_trusted_var(php_selfk, php_self, php_selfl, ht);
-  frankenphp_register_trusted_var(document_urik, document_uri, document_url, ht);
-  frankenphp_register_trusted_var(script_filenamek, script_filename, script_filenamel, ht);
-  frankenphp_register_trusted_var(script_namek, script_name, script_namel, ht);
-  frankenphp_register_trusted_var(httpsk, https, httpsl, ht);
-  frankenphp_register_trusted_var(ssl_protocolk, ssl_protocol, ssl_protocoll, ht);
-  frankenphp_register_trusted_var(request_schemek, request_scheme, request_schemel, ht);
-  frankenphp_register_trusted_var(server_namek, server_name, server_namel, ht);
-  frankenphp_register_trusted_var(server_portk, server_port, server_portl, ht);
-  frankenphp_register_trusted_var(content_lengthk, content_length, content_lengthl, ht);
-  frankenphp_register_trusted_var(gateway_interfacek, gateway_interface, gateway_interfacel, ht);
-  frankenphp_register_trusted_var(server_protocolk, server_protocol, server_protocoll, ht);
-  frankenphp_register_trusted_var(server_softwarek, server_software, server_softwarel, ht);
-  frankenphp_register_trusted_var(http_hostk, http_host, http_hostl, ht);
-  frankenphp_register_trusted_var(auth_typek, auth_type, auth_typel, ht);
-  frankenphp_register_trusted_var(remote_identk, remote_ident, remote_identl, ht);
-  frankenphp_register_trusted_var(request_urik, request_uri, request_uril, ht);
+  frankenphp_register_trusted_var(remote_addr.key, remote_addr.val, remote_addr.val_len, ht);
+  frankenphp_register_trusted_var(remote_host.key, remote_host.val, remote_host.val_len, ht);
+  frankenphp_register_trusted_var(remote_port.key, remote_port.val, remote_port.val_len, ht);
+  frankenphp_register_trusted_var(document_root.key, document_root.val, document_root.val_len, ht);
+  frankenphp_register_trusted_var(path_info.key, path_info.val, path_info.val_len, ht);
+  frankenphp_register_trusted_var(php_self.key, php_self.val, php_self.val_len, ht);
+  frankenphp_register_trusted_var(document_uri.key, document_uri.val, document_uri.val_len, ht);
+  frankenphp_register_trusted_var(script_filename.key, script_filename.val, script_filename.val_len, ht);
+  frankenphp_register_trusted_var(script_name.key, script_name.val, script_name.val_len, ht);
+  frankenphp_register_trusted_var(https.key, https.val, https.val_len, ht);
+  frankenphp_register_trusted_var(ssl_protocol.key, ssl_protocol.val, ssl_protocol.val_len, ht);
+  frankenphp_register_trusted_var(request_scheme.key, request_scheme.val, request_scheme.val_len, ht);
+  frankenphp_register_trusted_var(server_name.key, server_name.val, server_name.val_len, ht);
+  frankenphp_register_trusted_var(server_port.key, server_port.val, server_port.val_len, ht);
+  frankenphp_register_trusted_var(content_length.key, content_length.val, content_length.val_len, ht);
+  frankenphp_register_trusted_var(gateway_interface.key, gateway_interface.val, gateway_interface.val_len, ht);
+  frankenphp_register_trusted_var(server_protocol.key, server_protocol.val, server_protocol.val_len, ht);
+  frankenphp_register_trusted_var(server_software.key, server_software.val, server_software.val_len, ht);
+  frankenphp_register_trusted_var(http_host.key, http_host.val, http_host.val_len, ht);
+  frankenphp_register_trusted_var(auth_type.key, auth_type.val, auth_type.val_len, ht);
+  frankenphp_register_trusted_var(remote_ident.key, remote_ident.val, remote_ident.val_len, ht);
+  frankenphp_register_trusted_var(request_uri.key, request_uri.val, request_uri.val_len, ht);
 }
-// clang-format on
 
 /** Persistent strings are ignored by the PHP GC, we have to release these
  * ourselves **/
