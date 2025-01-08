@@ -137,8 +137,15 @@ else
 	${spcCommand} build --debug --enable-zts --build-embed ${extraOpts} "${PHP_EXTENSIONS}" --with-libs="${PHP_EXTENSION_LIBS}"
 fi
 
-if ! type "xcaddy" >/dev/null 2>&1; then
+if ! type "go" >/dev/null 2>&1; then
+	echo "The \"go\" command must be installed."
+	exit 1
+fi
+
+XCADDY_COMMAND="xcaddy"
+if ! type "$XCADDY_COMMAND" >/dev/null 2>&1; then
 	go install github.com/caddyserver/xcaddy/cmd/xcaddy@latest
+	XCADDY_COMMAND="$(go env GOPATH)/bin/xcaddy"
 fi
 
 curlGitHubHeaders=(--header "X-GitHub-Api-Version: 2022-11-28")
@@ -296,7 +303,7 @@ cd caddy/
 CGO_ENABLED=1 \
 	XCADDY_GO_BUILD_FLAGS="-buildmode=pie -tags cgo,netgo,osusergo,static_build,nobadger,nomysql,nopgx -ldflags \"-linkmode=external -extldflags '-static-pie ${extraExtldflags}' ${extraLdflags} -X 'github.com/caddyserver/caddy/v2.CustomVersion=FrankenPHP ${FRANKENPHP_VERSION} PHP ${LIBPHP_VERSION} Caddy'\"" \
 	XCADDY_DEBUG="${XCADDY_DEBUG}" \
-	xcaddy build \
+	${XCADDY_COMMAND} build \
 	--output "../dist/${bin}" \
 	${XCADDY_ARGS} \
 	--with github.com/dunglas/frankenphp=.. \
