@@ -139,13 +139,13 @@ fi
 
 if ! type "go" >/dev/null 2>&1; then
 	echo "The \"go\" command must be installed."
-     	exit 1
+	exit 1
 fi
 
-XCADDY_COMMAND="$(go env GOPATH)/bin/xcaddy"
-
+XCADDY_COMMAND="xcaddy"
 if ! type "$XCADDY_COMMAND" >/dev/null 2>&1; then
 	go install github.com/caddyserver/xcaddy/cmd/xcaddy@latest
+	XCADDY_COMMAND="$(go env GOPATH)/bin/xcaddy"
 fi
 
 curlGitHubHeaders=(--header "X-GitHub-Api-Version: 2022-11-28")
