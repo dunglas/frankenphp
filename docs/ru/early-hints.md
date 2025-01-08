@@ -1,6 +1,6 @@
 # Early Hints
 
-FrankenPHP изначально поддерживает [Early Hints (103 HTTP-код)](https://developer.chrome.com/blog/early-hints/).  
+FrankenPHP изначально поддерживает [Early Hints (103 HTTP статус код)](https://developer.chrome.com/blog/early-hints/).  
 Использование Early Hints может улучшить время загрузки ваших веб-страниц на 30%.
 
 ```php
@@ -18,4 +18,4 @@ echo <<<'HTML'
 HTML;
 ```
 
-Early Hints поддерживается как в обычном, так и в [Worker режиме](worker.md).  
+Early Hints поддерживается как в обычном, так и в [worker режиме](worker.md).  

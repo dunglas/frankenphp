@@ -6,8 +6,8 @@
 
 | Название                                                                                                    | Причина           | Альтернативы                                                                                                           |
 |-------------------------------------------------------------------------------------------------------------|-------------------|-----------------------------------------------------------------------------------------------------------------------|
-| [imap](https://www.php.net/manual/en/imap.installation.php)                                                 | Не является потокобезопасным | [javanile/php-imap2](https://github.com/javanile/php-imap2), [webklex/php-imap](https://github.com/Webklex/php-imap) |
-| [newrelic](https://docs.newrelic.com/docs/apm/agents/php-agent/getting-started/introduction-new-relic-php/) | Не является потокобезопасным | -                                                                                                                     |
+| [imap](https://www.php.net/manual/en/imap.installation.php)                                                 | Не поддерживает потокобезопасность | [javanile/php-imap2](https://github.com/javanile/php-imap2), [webklex/php-imap](https://github.com/Webklex/php-imap) |
+| [newrelic](https://docs.newrelic.com/docs/apm/agents/php-agent/getting-started/introduction-new-relic-php/) | Не поддерживает потокобезопасность | -                                                                                                                     |
 
 ## Проблемные расширения PHP
 
@@ -21,9 +21,9 @@
 
 Функция [get_browser()](https://www.php.net/manual/en/function.get-browser.php) начинает работать медленно через некоторое время. Решение — кэшировать результаты для каждого User-Agent, например, с помощью [APCu](https://www.php.net/manual/en/book.apcu.php), так как они статичны.
 
-## Standalone бинарники и образы на базе Alpine
+## Автономные бинарные файлы и образы на базе Alpine
 
-Standalone бинарники и образы на базе Alpine (`dunglas/frankenphp:*-alpine`) используют [musl libc](https://musl.libc.org/) вместо [glibc](https://www.etalabs.net/compare_libcs.html) для уменьшения размера бинарников. Это может привести к проблемам совместимости. В частности, флаг `GLOB_BRACE` в функции glob [не поддерживается](https://www.php.net/manual/en/function.glob.php).
+Автономные бинарные файлы и образы на базе Alpine (`dunglas/frankenphp:*-alpine`) используют [musl libc](https://musl.libc.org/) вместо [glibc](https://www.etalabs.net/compare_libcs.html) для уменьшения размера бинарных файлов. Это может вызвать проблемы совместимости. В частности, флаг `GLOB_BRACE` в функции glob [не поддерживается](https://www.php.net/manual/en/function.glob.php).
 
 ## Использование `https://127.0.0.1` с Docker
 
@@ -31,7 +31,7 @@ Standalone бинарники и образы на базе Alpine (`dunglas/fra
 
 Если вы всё же хотите использовать `127.0.0.1`, настройте генерацию сертификата, указав в переменной окружения `SERVER_NAME` значение `127.0.0.1`.
 
-Однако это может быть недостаточно при использовании Docker из-за [особенностей его сетевой системы](https://docs.docker.com/network/). Возможна ошибка TLS вида:  
+Однако этого может не хватить при использовании Docker из-за [особенностей его сетевой системы](https://docs.docker.com/network/). Возможна ошибка TLS вида:  
 `curl: (35) LibreSSL/3.3.6: error:1404B438:SSL routines:ST_CONNECT:tlsv1 alert internal error`.
 
 Если вы используете Linux, можно воспользоваться [host-драйвером](https://docs.docker.com/network/network-tutorial-host/):
@@ -77,10 +77,10 @@ docker run \
 ## Скрипты Composer с использованием `@php`
 
 [Скрипты Composer](https://getcomposer.org/doc/articles/scripts.md) могут вызывать PHP для выполнения задач, например, в [проекте Laravel](laravel.md) для команды `@php artisan package:discover --ansi`.  
-Это [пока не поддерживается](https://github.com/dunglas/frankenphp/issues/483#issuecomment-1899890915) по двум причинам:
+Это [на данный момент не поддерживается](https://github.com/dunglas/frankenphp/issues/483#issuecomment-1899890915) по двум причинам:
 
-* Composer не знает, как вызывать бинарник FrankenPHP;
-* Composer может добавлять настройки PHP через флаг `-d`, который пока не поддерживается FrankenPHP.
+* Composer не знает, как вызывать бинарный файл FrankenPHP;
+* Composer может добавлять настройки PHP через флаг `-d`, который FrankenPHP пока не поддерживает.
 
 Решение — создать shell-скрипт в `/usr/local/bin/php`, который удаляет неподдерживаемые параметры и вызывает FrankenPHP:
 
@@ -107,9 +107,9 @@ export PHP_BINARY=/usr/local/bin/php
 composer install
 ```
 
-## Решение проблем TLS/SSL с использованием статических бинарников
+## TLS/SSL: проблемы со статическими бинарными файлами
 
-При использовании статических бинарников могут возникать следующие ошибки TLS, например, при отправке писем через STARTTLS:
+При использовании статических бинарных файлов могут возникать следующие ошибки TLS, например, при отправке писем через STARTTLS:
 
 ```text
 Unable to connect with STARTTLS: stream_socket_enable_crypto(): SSL operation failed with code 5. OpenSSL Error messages:
@@ -119,13 +119,13 @@ error:80000002:system library::No such file or directory
 error:0A000086:SSL routines::certificate verify failed
 ```
 
-Статический бинарник не включает TLS-сертификаты, поэтому необходимо указать OpenSSL местоположение локальных сертификатов CA.
+Статический бинарный файл не включает TLS-сертификаты, поэтому необходимо указать OpenSSL местоположение локальных сертификатов CA.
 
 Выполните [`openssl_get_cert_locations()`](https://www.php.net/manual/en/function.openssl-get-cert-locations.php), чтобы определить, где должны находиться сертификаты CA, и поместите их туда.
 
 > [!WARNING]
 > Веб и CLI контексты могут иметь разные настройки.  
-> Убедитесь, что вы выполняете `openssl_get_cert_locations()` в нужном контексте.
+> Запустите `openssl_get_cert_locations()` в нужном контексте.
 
 [Сертификаты CA, извлечённые из Mozilla, можно скачать с сайта curl](https://curl.se/docs/caextract.html).
 

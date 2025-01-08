@@ -16,7 +16,7 @@ docker run -p 80:80 -p 443:443 -p 443:443/udp -v $PWD:/app dunglas/frankenphp
 
 Вы также можете запустить ваши Laravel-проекты с FrankenPHP на локальной машине:
 
-1. [Скачайте бинарник для вашей системы](README.md#standalone-бинарник)
+1. [Скачайте бинарный файл для вашей системы](README.md#standalone-бинарный-файл)
 2. Добавьте следующую конфигурацию в файл с именем `Caddyfile` в корневой директории вашего Laravel-проекта:
 
     ```caddyfile
@@ -62,7 +62,7 @@ php artisan octane:frankenphp
 * `--host`: IP-адрес, к которому должен привязаться сервер (по умолчанию: `127.0.0.1`)
 * `--port`: Порт, на котором сервер будет доступен (по умолчанию: `8000`)
 * `--admin-port`: Порт, на котором будет доступен административный сервер (по умолчанию: `2019`)
-* `--workers`: Количество Worker для обработки запросов (по умолчанию: `auto`)
+* `--workers`: Количество worker-скриптов для обработки запросов (по умолчанию: `auto`)
 * `--max-requests`: Количество запросов, обрабатываемых перед перезагрузкой сервера (по умолчанию: `500`)
 * `--caddyfile`: Путь к файлу `Caddyfile` FrankenPHP (по умолчанию: [stubbed `Caddyfile` в Laravel Octane](https://github.com/laravel/octane/blob/2.x/src/Commands/stubs/Caddyfile))
 * `--https`: Включить HTTPS, HTTP/2 и HTTP/3, а также автоматически генерировать и обновлять сертификаты
@@ -76,11 +76,11 @@ php artisan octane:frankenphp
 
 Подробнее о [Laravel Octane читайте в официальной документации](https://laravel.com/docs/octane).
 
-## Laravel-приложения как Standalone бинарники
+## Laravel-приложения как автономные бинарные файлы
 
-Используя [возможность встраивания приложений в FrankenPHP](embed.md), можно распространять Laravel-приложения как Standalone бинарники.
+Используя [возможность встраивания приложений в FrankenPHP](embed.md), можно распространять Laravel-приложения как автономные бинарные файлы.
 
-Следуйте этим шагам, чтобы упаковать ваше Laravel-приложение в Standalone бинарник для Linux:
+Следуйте этим шагам, чтобы упаковать ваше Laravel-приложение в автономный бинарный файл для Linux:
 
 1. Создайте файл с именем `static-build.Dockerfile` в репозитории вашего приложения:
 
@@ -105,7 +105,7 @@ php artisan octane:frankenphp
     # Установите зависимости
     RUN composer install --ignore-platform-reqs --no-dev -a
 
-    # Соберите статический бинарник
+    # Соберите статический бинарный файл
     WORKDIR /go/src/app/
     RUN EMBED=dist/app/ ./build-static.sh
     ```
@@ -120,7 +120,7 @@ php artisan octane:frankenphp
     docker build -t static-laravel-app -f static-build.Dockerfile .
     ```
 
-3. Извлеките бинарник:
+3. Извлеките бинарный файл:
 
     ```console
     docker cp $(docker create --name static-laravel-app-tmp static-laravel-app):/go/src/app/dist/frankenphp-linux-x86_64 frankenphp ; docker rm static-laravel-app-tmp
@@ -152,25 +152,25 @@ php artisan octane:frankenphp
 
 Ваше приложение готово!
 
-Узнайте больше о доступных опциях и о том, как собирать бинарники для других ОС в [документации по встраиванию приложений](embed.md).
+Узнайте больше о доступных опциях и о том, как собирать бинарные файлы для других ОС в [документации по встраиванию приложений](embed.md).
 
 ### Изменение пути хранения
 
-По умолчанию Laravel хранит загруженные файлы, кеши, логи и другие данные в директории `storage/` приложения. Это неудобно для встроенных приложений, так как каждая новая версия будет извлекаться в другую временную директорию.
+По умолчанию Laravel сохраняет загруженные файлы, кеши, логи и другие данные в директории `storage/` приложения. Это неудобно для встроенных приложений, так как каждая новая версия будет извлекаться в другую временную директорию.
 
 Установите переменную окружения `LARAVEL_STORAGE_PATH` (например, в вашем `.env` файле) или вызовите метод `Illuminate\Foundation\Application::useStoragePath()`, чтобы использовать директорию за пределами временной директории.
 
-### Запуск Octane с Standalone бинарниками
+### Запуск Octane как автономный бинарный файл
 
-Можно даже упаковать приложения Laravel Octane как Standalone бинарники!
+Можно даже упаковать приложения Laravel Octane как автономный бинарный файл!
 
 Для этого [установите Octane правильно](#laravel-octane) и следуйте шагам, описанным в [предыдущем разделе](#laravel-приложения-как-standalone-бинарники).
 
-Затем, чтобы запустить FrankenPHP в Worker-режиме через Octane, выполните:
+Затем, чтобы запустить FrankenPHP в worker-режиме через Octane, выполните:
 
 ```console
 PATH="$PWD:$PATH" frankenphp php-cli artisan octane:frankenphp
 ```
 
 > [!CAUTION]
-> Для работы команды Standalone бинарник **должен** быть назван `frankenphp`, так как Octane требует наличия программы с именем `frankenphp` в PATH.
+> Для работы команды автономный бинарник **обязательно** должен быть назван `frankenphp`, так как Octane требует наличия программы с именем `frankenphp` в PATH.

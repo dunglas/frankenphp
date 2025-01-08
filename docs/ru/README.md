@@ -6,9 +6,9 @@
 
 FrankenPHP добавляет новые возможности вашим PHP-приложениям благодаря следующим функциям: [*Early Hints*](https://frankenphp.dev/docs/early-hints/), [Worker режим](https://frankenphp.dev/docs/worker/), [Real-time режим](https://frankenphp.dev/docs/mercure/), автоматическая поддержка HTTPS, HTTP/2 и HTTP/3.
 
-FrankenPHP совместим с любыми PHP-приложениями и значительно ускоряет ваши проекты на Laravel и Symfony благодаря их официальной поддержке в Worker режиме.
+FrankenPHP совместим с любыми PHP-приложениями и значительно ускоряет ваши проекты на Laravel и Symfony благодаря их официальной поддержке в worker режиме.
 
-FrankenPHP также может использоваться как Standalone Go-библиотека для встраивания PHP в любое приложение с использованием `net/http`.
+FrankenPHP также может использоваться как автономная Go-библиотека для встраивания PHP в любое приложение с использованием `net/http`.
 
 [**Узнайте больше** на сайте *frankenphp.dev*](https://frankenphp.dev) или из этой презентации:
 
@@ -31,9 +31,9 @@ docker run -v .:/app/public \
 > Не используйте `https://127.0.0.1`. Используйте `https://localhost` и настройте самоподписанный сертификат.  
 > Чтобы изменить используемый домен, настройте переменную окружения [`SERVER_NAME`](config.md#environment-variables).
 
-### Standalone бинарник
+### Автономный бинарный файл
 
-Если вы предпочитаете не использовать Docker, мы предоставляем Standalone бинарник FrankenPHP для Linux и macOS, включающий [PHP 8.4](https://www.php.net/releases/8.4/en.php) и большинство популярных PHP-расширений.
+Если вы предпочитаете не использовать Docker, мы предоставляем автономный бинарный файл FrankenPHP для Linux и macOS, включающий [PHP 8.4](https://www.php.net/releases/8.4/en.php) и большинство популярных PHP-расширений.
 
 Для Windows используйте [WSL](https://learn.microsoft.com/windows/wsl/) для запуска FrankenPHP.
 
@@ -65,8 +65,8 @@ frankenphp php-cli /path/to/your/script.php
 * [Docker-образы](https://frankenphp.dev/docs/docker/)
 * [Деплой в продакшен](https://frankenphp.dev/docs/production/)
 * [Оптимизация производительности](https://frankenphp.dev/docs/performance/)
-* [Создание Standalone PHP-приложений](https://frankenphp.dev/docs/embed/)
-* [Создание статических бинарников](https://frankenphp.dev/docs/static/)
+* [Создание автономного PHP-приложений](https://frankenphp.dev/docs/embed/)
+* [Создание статических бинарных файлов](https://frankenphp.dev/docs/static/)
 * [Компиляция из исходников](https://frankenphp.dev/docs/compile/)
 * [Интеграция с Laravel](https://frankenphp.dev/docs/laravel/)
 * [Известные проблемы](https://frankenphp.dev/docs/known-issues/)

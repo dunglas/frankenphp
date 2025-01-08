@@ -49,7 +49,7 @@ cd testdata/
 ../caddy/frankenphp/frankenphp run
 ```
 
-Сервер будет слушать `127.0.0.1:8080`:
+Сервер будет доступен по адресу `127.0.0.1:8080`:
 
 ```console
 curl -vk https://localhost/phpinfo.php
@@ -72,7 +72,7 @@ cd testdata/
 ../internal/testserver/testserver
 ```
 
-Сервер будет слушать `127.0.0.1:8080`:
+Сервер будет доступен по адресу `127.0.0.1:8080`:
 
 ```console
 curl -v http://127.0.0.1:8080/phpinfo.php
@@ -106,7 +106,7 @@ docker buildx bake -f docker-bake.hcl --pull --no-cache --push
 
 ## Отладка ошибок сегментации с использованием статических сборок
 
-1. Скачайте отладочную версию бинарного файла FrankenPHP с GitHub или создайте собственную статическую сборку с включенными отладочными символами:
+1. Скачайте отладочную версию бинарного файла FrankenPHP с GitHub или создайте собственную статическую сборку с включённым отладочным режимом:
 
     ```console
     docker buildx bake \
@@ -117,7 +117,7 @@ docker buildx bake -f docker-bake.hcl --pull --no-cache --push
     docker cp $(docker create --name static-builder dunglas/frankenphp:static-builder):/go/src/app/dist/frankenphp-linux-$(uname -m) frankenphp
     ```
 
-2. Замените текущую версию `frankenphp` на отладочную.
+2. Замените текущую версию `frankenphp` на бинарный файл с включенным отладочным режимом.
 3. Запустите FrankenPHP как обычно (или сразу запустите FrankenPHP с GDB: `gdb --args frankenphp run`).
 4. Подключитесь к процессу через GDB:
 
@@ -133,7 +133,7 @@ docker buildx bake -f docker-bake.hcl --pull --no-cache --push
 ## Отладка ошибок сегментации в GitHub Actions
 
 1. Откройте файл `.github/workflows/tests.yml`.
-2. Включите отладочные символы PHP:
+2. Включите режим отладки PHP:
 
     ```patch
         - uses: shivammathur/setup-php@v2
@@ -143,7 +143,7 @@ docker buildx bake -f docker-bake.hcl --pull --no-cache --push
     +       debug: true
     ```
 
-3. Включите `tmate` для подключения к контейнеру:
+3. Настройте `tmate` для удалённого подключения к контейнеру:
 
     ```patch
         -
@@ -204,7 +204,7 @@ strace -e 'trace=!futex,epoll_ctl,epoll_pwait,tgkill,rt_sigreturn' -p 1
 
 Чтобы перевести документацию и сайт на новый язык, выполните следующие шаги:
 
-1. Создайте новую директорию с кодом языка (ISO 3166-1 alpha-2) в папке `docs/`.
+1. Создайте новую директорию с 2-буквенным ISO-кодом языка в папке `docs/`.
 2. Скопируйте все `.md` файлы из корня папки `docs/` в новую директорию (используйте английскую версию как основу для перевода).
 3. Скопируйте файлы `README.md` и `CONTRIBUTING.md` из корневой директории в новую папку.
 4. Переведите содержимое файлов, но не изменяйте имена файлов. Не переводите строки, начинающиеся с `> [!`, это специальная разметка GitHub.

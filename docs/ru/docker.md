@@ -1,6 +1,6 @@
 # Создание кастомных Docker-образов
 
-[Docker-образы FrankenPHP](https://hub.docker.com/r/dunglas/frankenphp) основаны на [официальных PHP-образах](https://hub.docker.com/_/php/). Доступны варианты для Debian и Alpine Linux для популярных архитектур. Рекомендуется использовать версии Debian.
+[Docker-образы FrankenPHP](https://hub.docker.com/r/dunglas/frankenphp) основаны на [официальных PHP-образах](https://hub.docker.com/_/php/). Доступны варианты для Debian и Alpine Linux для популярных архитектур. Рекомендуется использовать Debian-варианты.
 
 Доступны версии для PHP 8.2, 8.3 и 8.4.
 
@@ -74,7 +74,7 @@ RUN CGO_ENABLED=1 \
 
 FROM dunglas/frankenphp AS runner
 
-# Заменяем официальный бинарник на пользовательский с добавленными модулями
+# Заменяем официальный бинарный файл на пользовательский с добавленными модулями
 COPY --from=builder /usr/local/bin/frankenphp /usr/local/bin/frankenphp
 ```
 Образ `builder`, предоставляемый FrankenPHP, содержит скомпилированную версию `libphp`.  
@@ -84,7 +84,7 @@ COPY --from=builder /usr/local/bin/frankenphp /usr/local/bin/frankenphp
 >
 > Если вы используете Alpine Linux и Symfony, возможно, потребуется [увеличить размер стека](compile.md#использование-xcaddy).
 
-## Активировать Worker режим по умолчанию
+## Активировать worker режим по умолчанию
 
 Установите переменную окружения `FRANKENPHP_CONFIG`, чтобы запускать FrankenPHP с Worker-скриптом:
 
@@ -116,7 +116,7 @@ docker run -v $PWD:/app/public -p 80:80 -p 443:443 -p 443:443/udp --tty my-php-a
 services:
   php:
     image: dunglas/frankenphp
-    # раскомментируйте следующую строку, если хотите использовать кастомный Dockerfile
+    # раскомментируйте следующую строку, если хотите использовать собственный Dockerfile
     #build: .
     # раскомментируйте следующую строку, если вы запускаете это в продакшн среде
     # restart: always
@@ -161,7 +161,7 @@ USER ${USER}
 
 ### Запуск без дополнительных прав
 
-Даже при запуске без root-прав, FrankenPHP требуется возможность `CAP_NET_BIND_SERVICE` для привязки веб-сервера к привилегированным портам (80 и 443).
+Даже при запуске без root-прав, FrankenPHP требуется возможность `CAP_NET_BIND_SERVICE` для привязки веб-сервера к зарезервированным портам (80 и 443).
 
 Если вы открываете доступ к FrankenPHP на непривилегированном порту (1024 и выше), можно запустить веб-сервер от имени обычного пользователя без необходимости предоставления дополнительных возможностей:
 
@@ -171,7 +171,7 @@ FROM dunglas/frankenphp
 ARG USER=appuser
 
 RUN \
-	# Для дистрибутивов на основе Alpine используйте "adduser -D ${USER}"
+	# Для Alpine-дистрибутивов используйте команду "adduser -D ${USER}"
 	useradd ${USER}; \
 	# Удалите стандартные возможности
 	setcap -r /usr/local/bin/frankenphp; \
@@ -194,7 +194,7 @@ Docker-образы обновляются:
 ## Версии для разработки
 
 Версии для разработки доступны в Docker-репозитории [`dunglas/frankenphp-dev`](https://hub.docker.com/repository/docker/dunglas/frankenphp-dev).  
-Новая сборка запускается каждый раз, когда в основную ветку GitHub-репозитория отправляется новый коммит.
+Сборка запускается автоматически при каждом коммите в основную ветку GitHub-репозитория
 
 Теги с префиксом `latest*` указывают на актуальное состояние ветки `main`.  
 Также доступны теги в формате `sha-<git-commit-hash>`.
