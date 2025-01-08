@@ -16,6 +16,12 @@ typedef struct go_string {
   char *data;
 } go_string;
 
+typedef struct ht_key_value_pair {
+  zend_string *key;
+  char *val;
+  size_t val_len;
+} ht_key_value_pair;
+
 typedef struct php_variable {
   const char *var;
   size_t data_len;
@@ -59,14 +65,25 @@ int frankenphp_execute_php_function(const char *php_function);
 void frankenphp_register_variables_from_request_info(
     zval *track_vars_array, zend_string *content_type,
     zend_string *path_translated, zend_string *query_string,
-    zend_string *auth_user, zend_string *request_method,
-    zend_string *request_uri);
+    zend_string *auth_user, zend_string *request_method);
 void frankenphp_register_variable_safe(char *key, char *var, size_t val_len,
                                        zval *track_vars_array);
-void frankenphp_register_trusted_var(zend_string *z_key, char *value,
-                                     int val_len, zval *track_vars_array);
 zend_string *frankenphp_init_persistent_string(const char *string, size_t len);
 void frankenphp_release_zend_string(zend_string *z_string);
 int frankenphp_reset_opcache(void);
+
+void frankenphp_register_bulk(
+    zval *track_vars_array, ht_key_value_pair remote_addr,
+    ht_key_value_pair remote_host, ht_key_value_pair remote_port,
+    ht_key_value_pair document_root, ht_key_value_pair path_info,
+    ht_key_value_pair php_self, ht_key_value_pair document_uri,
+    ht_key_value_pair script_filename, ht_key_value_pair script_name,
+    ht_key_value_pair https, ht_key_value_pair ssl_protocol,
+    ht_key_value_pair request_scheme, ht_key_value_pair server_name,
+    ht_key_value_pair server_port, ht_key_value_pair content_length,
+    ht_key_value_pair gateway_interface, ht_key_value_pair server_protocol,
+    ht_key_value_pair server_software, ht_key_value_pair http_host,
+    ht_key_value_pair auth_type, ht_key_value_pair remote_ident,
+    ht_key_value_pair request_uri);
 
 #endif
