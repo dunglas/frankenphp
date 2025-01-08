@@ -318,10 +318,14 @@ func (f FrankenPHPModule) ServeHTTP(w http.ResponseWriter, r *http.Request, _ ca
 	)
 
 	if err != nil {
-		return err
+		return caddyhttp.Error(http.StatusInternalServerError, err)
 	}
 
-	return frankenphp.ServeHTTP(w, fr)
+	if err = frankenphp.ServeHTTP(w, fr); err != nil {
+		return caddyhttp.Error(http.StatusInternalServerError, err)
+	}
+
+	return nil
 }
 
 // UnmarshalCaddyfile implements caddyfile.Unmarshaler.

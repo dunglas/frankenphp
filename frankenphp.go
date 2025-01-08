@@ -62,6 +62,7 @@ var (
 	MainThreadCreationError     = errors.New("error creating the main thread")
 	RequestContextCreationError = errors.New("error during request context creation")
 	ScriptExecutionError        = errors.New("error during PHP script execution")
+	NotRunningError             = errors.New("FrankenPHP is not running. For proper configuration visit: https://frankenphp.dev/docs/config/#caddyfile-config")
 
 	requestChan chan *http.Request
 	isRunning   bool
@@ -454,6 +455,10 @@ func updateServerContext(thread *phpThread, request *http.Request, create bool, 
 
 // ServeHTTP executes a PHP script according to the given context.
 func ServeHTTP(responseWriter http.ResponseWriter, request *http.Request) error {
+	if !isRunning {
+		return NotRunningError
+	}
+
 	if !requestIsValid(request, responseWriter) {
 		return nil
 	}
