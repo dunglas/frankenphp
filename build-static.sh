@@ -38,10 +38,9 @@ fi
 if [ -z "${PHP_EXTENSIONS}" ]; then
 	if [ -n "${EMBED}" ] && [ -f "${EMBED}/composer.json" ]; then
 		cd "${EMBED}"
-		# read the composer.json file and extract the required php extensions
-		# note that the ext-json extension will be removed as it is a built-in extension since php 8.x and thus always
-		# available
-		PHP_EXTENSIONS="$(composer check-platform-reqs --no-dev 2>/dev/null | grep ^ext | sed -e 's/^ext-json//' | sed -e 's/^ext-//' -e 's/ .*//' | xargs | tr ' ' ',')"
+		# read the composer.json file and extract the required PHP extensions
+		# remove internal extensions from the list: https://github.com/crazywhalecc/static-php-cli/blob/4b16631d45a57370b4747df15c8f105130e96d03/src/globals/defines.php#L26-L34
+		PHP_EXTENSIONS="$(composer check-platform-reqs --no-dev 2>/dev/null | grep ^ext | sed -e 's/^ext-core//' -e 's/^ext-hash//'  -e 's/^ext-json//'  -e 's/^ext-pcre//'  -e 's/^ext-reflection//'  -e 's/^ext-spl//'  -e 's/^ext-standard//' -e 's/^ext-//' -e 's/ .*//' | xargs | tr ' ' ',')"
 		export PHP_EXTENSIONS
 		cd -
 	else
