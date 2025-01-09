@@ -2,6 +2,7 @@ package frankenphp
 
 import (
 	"github.com/dunglas/frankenphp/internal/fastabs"
+	"net/http"
 	"path/filepath"
 	"sync"
 	"sync/atomic"
@@ -101,6 +102,14 @@ func WithRequestEnv(env map[string]string) RequestOption {
 func WithRequestPreparedEnv(env PreparedEnv) RequestOption {
 	return func(o *FrankenPHPContext) error {
 		o.env = env
+
+		return nil
+	}
+}
+
+func WithOriginalRequest(r *http.Request) RequestOption {
+	return func(o *FrankenPHPContext) error {
+		o.originalRequest = r
 
 		return nil
 	}

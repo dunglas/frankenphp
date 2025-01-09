@@ -320,13 +320,11 @@ func (f FrankenPHPModule) ServeHTTP(w http.ResponseWriter, r *http.Request, _ ca
 		documentRootOption = frankenphp.WithRequestResolvedDocumentRoot(f.resolvedDocumentRoot)
 	}
 
-	env := make(map[string]string, len(f.preparedEnv)+1)
-	env["REQUEST_URI\x00"] = origReq.URL.RequestURI()
-	for k, v := range f.preparedEnv {
-		if f.preparedEnvNeedsReplacement {
+	env := f.preparedEnv
+	if f.preparedEnvNeedsReplacement {
+		env = make(frankenphp.PreparedEnv, len(f.Env))
+		for k, v := range f.preparedEnv {
 			env[k] = repl.ReplaceKnown(v, "")
-		} else {
-			env[k] = v
 		}
 	}
 
@@ -335,13 +333,18 @@ func (f FrankenPHPModule) ServeHTTP(w http.ResponseWriter, r *http.Request, _ ca
 		documentRootOption,
 		frankenphp.WithRequestSplitPath(f.SplitPath),
 		frankenphp.WithRequestPreparedEnv(env),
+		frankenphp.WithOriginalRequest(&origReq),
 	)
 
 	if err != nil {
-		return err
+		return caddyhttp.Error(http.StatusInternalServerError, err)
 	}
 
-	return frankenphp.ServeHTTP(w, fr)
+	if err = frankenphp.ServeHTTP(w, fr); err != nil {
+		return caddyhttp.Error(http.StatusInternalServerError, err)
+	}
+
+	return nil
 }
 
 // UnmarshalCaddyfile implements caddyfile.Unmarshaler.
@@ -548,6 +551,7 @@ func parsePhpServer(h httpcaddyfile.Helper) ([]httpcaddyfile.ConfigValue, error)
 	if indexFile != "off" {
 		dirRedir := false
 		dirIndex := "{http.request.uri.path}/" + indexFile
+		tryPolicy := "first_exist_fallback"
 
 		// if tryFiles wasn't overridden, use a reasonable default
 		if len(tryFiles) == 0 {
@@ -559,6 +563,11 @@ func parsePhpServer(h httpcaddyfile.Helper) ([]httpcaddyfile.ConfigValue, error)
 
 			dirRedir = true
 		} else {
+			if !strings.HasSuffix(tryFiles[len(tryFiles)-1], ".php") {
+				// use first_exist strategy if the last file is not a PHP file
+				tryPolicy = ""
+			}
+
 			for _, tf := range tryFiles {
 				if tf == dirIndex {
 					dirRedir = true
@@ -598,6 +607,7 @@ func parsePhpServer(h httpcaddyfile.Helper) ([]httpcaddyfile.ConfigValue, error)
 		rewriteMatcherSet := caddy.ModuleMap{
 			"file": h.JSON(fileserver.MatchFile{
 				TryFiles:  tryFiles,
+				TryPolicy: tryPolicy,
 				SplitPath: extensions,
 			}),
 		}

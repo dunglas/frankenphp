@@ -38,7 +38,9 @@ fi
 if [ -z "${PHP_EXTENSIONS}" ]; then
 	if [ -n "${EMBED}" ] && [ -f "${EMBED}/composer.json" ]; then
 		cd "${EMBED}"
-		PHP_EXTENSIONS="$(composer check-platform-reqs --no-dev 2>/dev/null | grep ^ext | sed -e 's/^ext-//' -e 's/ .*//' | xargs | tr ' ' ',')"
+		# read the composer.json file and extract the required PHP extensions
+		# remove internal extensions from the list: https://github.com/crazywhalecc/static-php-cli/blob/4b16631d45a57370b4747df15c8f105130e96d03/src/globals/defines.php#L26-L34
+		PHP_EXTENSIONS="$(composer check-platform-reqs --no-dev 2>/dev/null | grep ^ext | sed -e 's/^ext-core//' -e 's/^ext-hash//' -e 's/^ext-json//' -e 's/^ext-pcre//' -e 's/^ext-reflection//' -e 's/^ext-spl//' -e 's/^ext-standard//' -e 's/^ext-//' -e 's/ .*//' | xargs | tr ' ' ',')"
 		export PHP_EXTENSIONS
 		cd -
 	else
@@ -137,8 +139,15 @@ else
 	${spcCommand} build --debug --enable-zts --build-embed ${extraOpts} "${PHP_EXTENSIONS}" --with-libs="${PHP_EXTENSION_LIBS}"
 fi
 
-if ! type "xcaddy" >/dev/null 2>&1; then
+if ! type "go" >/dev/null 2>&1; then
+	echo "The \"go\" command must be installed."
+	exit 1
+fi
+
+XCADDY_COMMAND="xcaddy"
+if ! type "$XCADDY_COMMAND" >/dev/null 2>&1; then
 	go install github.com/caddyserver/xcaddy/cmd/xcaddy@latest
+	XCADDY_COMMAND="$(go env GOPATH)/bin/xcaddy"
 fi
 
 curlGitHubHeaders=(--header "X-GitHub-Api-Version: 2022-11-28")
@@ -216,7 +225,7 @@ if [ "${os}" = "linux" ]; then
 
 			git checkout "$(git describe --tags "$(git rev-list --tags --max-count=1 || true)" || true)"
 
-			curl -fL --retry 5 https://raw.githubusercontent.com/tweag/rust-alpine-mimalloc/b26002b49d466a295ea8b50828cb7520a71a872a/mimalloc.diff -o mimalloc.diff
+			curl -fL --retry 5 https://raw.githubusercontent.com/tweag/rust-alpine-mimalloc/1a756444a5c1484d26af9cd39187752728416ba8/mimalloc.diff -o mimalloc.diff
 			patch -p1 <mimalloc.diff
 
 			mkdir -p out/
@@ -296,7 +305,7 @@ cd caddy/
 CGO_ENABLED=1 \
 	XCADDY_GO_BUILD_FLAGS="-buildmode=pie -tags cgo,netgo,osusergo,static_build,nobadger,nomysql,nopgx -ldflags \"-linkmode=external -extldflags '-static-pie ${extraExtldflags}' ${extraLdflags} -X 'github.com/caddyserver/caddy/v2.CustomVersion=FrankenPHP ${FRANKENPHP_VERSION} PHP ${LIBPHP_VERSION} Caddy'\"" \
 	XCADDY_DEBUG="${XCADDY_DEBUG}" \
-	xcaddy build \
+	${XCADDY_COMMAND} build \
 	--output "../dist/${bin}" \
 	${XCADDY_ARGS} \
 	--with github.com/dunglas/frankenphp=.. \
