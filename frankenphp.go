@@ -350,7 +350,7 @@ func Init(options ...Option) error {
 		return err
 	}
 
-	initAutoScaling(totalThreadCount, maxThreadCount, opt.scalingStrategy)
+	initAutoScaling(totalThreadCount, maxThreadCount)
 
 	if c := logger.Check(zapcore.InfoLevel, "FrankenPHP started 🐘"); c != nil {
 		c.Write(zap.String("php_version", Version().Version), zap.Int("num_threads", totalThreadCount), zap.Int("max_threads", maxThreadCount))

@@ -59,8 +59,6 @@ type FrankenPHPApp struct {
 	NumThreads int `json:"num_threads,omitempty"`
 	// MaxThreads limits how many threads can be started at runtime. Default 2x NumThreads
 	MaxThreads int `json:"max_threads,omitempty"`
-	// Scaling sets the scaling mode. Default: "on".
-	Scaling frankenphp.ScalingStrategy `json:"scaling,omitempty"`
 	// Workers configures the worker scripts to start.
 	Workers []workerConfig `json:"workers,omitempty"`
 }
@@ -79,7 +77,7 @@ func (f *FrankenPHPApp) Start() error {
 
 	opts := []frankenphp.Option{
 		frankenphp.WithNumThreads(f.NumThreads),
-		frankenphp.WithMaxThreads(f.MaxThreads, f.Scaling),
+		frankenphp.WithMaxThreads(f.MaxThreads),
 		frankenphp.WithLogger(logger),
 		frankenphp.WithMetrics(metrics),
 	}
@@ -139,18 +137,6 @@ func (f *FrankenPHPApp) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 				}
 
 				f.MaxThreads = int(v)
-			case "scaling":
-				if !d.NextArg() {
-					return d.ArgErr()
-				}
-				switch d.Val() {
-				case "on":
-					f.Scaling = frankenphp.ScalingStrategyNormal
-				case "off":
-					f.Scaling = frankenphp.ScalingStrategyNone
-				default:
-					return d.Errf("unknown scaling mode: %s", d.Val())
-				}
 			case "worker":
 				wc := workerConfig{}
 				if d.NextArg() {
@@ -221,7 +207,7 @@ func (f *FrankenPHPApp) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 }
 
 func parseGlobalOption(d *caddyfile.Dispenser, _ interface{}) (interface{}, error) {
-	app := &FrankenPHPApp{Scaling: frankenphp.ScalingStrategyNormal}
+	app := &FrankenPHPApp{}
 	if err := app.UnmarshalCaddyfile(d); err != nil {
 		return nil, err
 	}

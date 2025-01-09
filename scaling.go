@@ -4,7 +4,6 @@ package frankenphp
 import "C"
 import (
 	"errors"
-	"net/http"
 	"runtime"
 	"sync"
 	"sync/atomic"
@@ -15,10 +14,14 @@ import (
 
 // TODO: make speed of scaling dependant on CPU count?
 const (
+	// requests have to be stalled for at least this amount of time before scaling
+	minStallTime = 20 * time.Millisecond
 	// time to check for CPU usage before scaling a single thread
-	cpuProbeTime = 40 * time.Millisecond
+	cpuProbeTime = 100 * time.Millisecond
 	// do not scale over this amount of CPU usage
 	maxCpuUsageForScaling = 0.8
+	// upscale stalled threads every x milliseconds
+	upscaleCheckTime = 100 * time.Millisecond
 	// downscale idle threads every x seconds
 	downScaleCheckTime = 5 * time.Second
 	// max amount of threads stopped in one iteration of downScaleCheckTime
@@ -27,84 +30,31 @@ const (
 	maxThreadIdleTime = 5 * time.Second
 )
 
-type scalingStrategy interface {
-	apply(requestChan chan *http.Request, r *http.Request, scaleFunc func())
-}
-
-type scalingStrategyNormal struct {
-	minStallTime time.Duration
-	blockScaling atomic.Bool
-}
-type scalingStrategyNone struct{}
-
 var (
-	activeScalingStrategy scalingStrategy
-	autoScaledThreads     = []*phpThread{}
-	scalingMu             = new(sync.RWMutex)
-	cpuCount              = runtime.NumCPU()
+	autoScaledThreads = []*phpThread{}
+	scaleChan         = make(chan *FrankenPHPContext)
+	scalingMu         = new(sync.RWMutex)
+	cpuCount          = runtime.NumCPU()
+	disallowScaling   = atomic.Bool{}
 
 	MaxThreadsReachedError      = errors.New("max amount of overall threads reached")
 	CannotRemoveLastThreadError = errors.New("cannot remove last thread")
 	WorkerNotFoundError         = errors.New("worker not found for given filename")
 )
 
-// when scaling is disabled, just send the request to the channel
-func (s scalingStrategyNone) apply(requestChan chan *http.Request, r *http.Request, scaleFunc func()) {
-	requestChan <- r
-}
-
-// start a timer that triggers autoscaling
-// after triggering autoscaling, double the timer's length
-func (s *scalingStrategyNormal) apply(requestChan chan *http.Request, r *http.Request, scaleFunc func()) {
-	timeout := s.minStallTime
-	timer := time.NewTimer(timeout)
-
-	for {
-		select {
-		case requestChan <- r:
-			timer.Stop()
-			return
-		case <-timer.C:
-			if s.blockScaling.CompareAndSwap(false, true) {
-				go func() {
-					scaleFunc()
-					s.blockScaling.Store(false)
-				}()
-			}
-			timeout *= 2
-			timer.Reset(timeout)
-		}
-	}
-}
-
-func initAutoScaling(numThreads int, maxThreads int, s ScalingStrategy) {
-	if maxThreads <= numThreads || s == ScalingStrategyNone {
-		activeScalingStrategy = scalingStrategyNone{}
+func initAutoScaling(numThreads int, maxThreads int) {
+	if maxThreads <= numThreads {
 		return
 	}
-	activeScalingStrategy = &scalingStrategyNormal{
-		minStallTime: 5 * time.Millisecond,
-		blockScaling: atomic.Bool{},
-	}
-	autoScaledThreads = make([]*phpThread, 0, maxThreads-numThreads)
-	timer := time.NewTimer(downScaleCheckTime)
-	doneChan := mainThread.done
-	go func() {
-		for {
-			timer.Reset(downScaleCheckTime)
-			select {
-			case <-doneChan:
-				return
-			case <-timer.C:
-				downScaleThreads()
-			}
-		}
-	}()
+
+	maxScaledThreads := maxThreads - numThreads
+	autoScaledThreads = make([]*phpThread, 0, maxScaledThreads)
+	go startUpscalingThreads(mainThread.done, maxScaledThreads)
+	go startDownScalingThreads(mainThread.done)
 }
 
 func drainAutoScaling() {
 	scalingMu.Lock()
-	activeScalingStrategy = scalingStrategyNone{}
 	scalingMu.Unlock()
 }
 
@@ -199,8 +149,6 @@ func scaleWorkerThreads(worker *worker) {
 	scalingMu.Lock()
 	defer scalingMu.Unlock()
 
-	// TODO: is there an easy way to check if we are reaching memory limits?
-
 	if !mainThread.state.is(stateReady) || !probeCPUs(cpuProbeTime) {
 		return
 	}
@@ -232,8 +180,51 @@ func scaleRegularThreads() {
 	autoScaledThreads = append(autoScaledThreads, thread)
 }
 
+func startUpscalingThreads(done chan struct{}, maxScaledThreads int) {
+	for {
+		scalingMu.Lock()
+		scaledThreadCount := len(autoScaledThreads)
+		scalingMu.Unlock()
+		if scaledThreadCount >= maxScaledThreads {
+			time.Sleep(upscaleCheckTime)
+			continue
+		}
+
+		select {
+		case fc := <-scaleChan:
+			timeSinceStalled := time.Since(fc.startedAt)
+			if timeSinceStalled < minStallTime {
+				time.Sleep(upscaleCheckTime)
+				continue
+			}
+			// if the request has been waiting for too long, we need to scale up
+			worker, ok := workers[fc.scriptFilename]
+			if !ok {
+				scaleRegularThreads()
+			} else {
+				scaleWorkerThreads(worker)
+			}
+		case <-done:
+			return
+		}
+	}
+}
+
+func startDownScalingThreads(done chan struct{}) {
+	timer := time.NewTimer(downScaleCheckTime)
+	for {
+		select {
+		case <-done:
+			return
+		case <-timer.C:
+			deactivateThreads()
+			timer.Reset(downScaleCheckTime)
+		}
+	}
+}
+
 // Check all threads and remove those that have been inactive for too long
-func downScaleThreads() {
+func deactivateThreads() {
 	stoppedThreadCount := 0
 	scalingMu.Lock()
 	defer scalingMu.Unlock()
@@ -308,4 +299,17 @@ func logMaxThreadsReachedWarning(zapFields ...zap.Field) {
 		logger.Warn("could not increase max_threads, consider raising this limit", zapFields...)
 		lastMaxThreadsWarning = time.Now()
 	}
+}
+
+func getProcessAvailableMemory() uint64 {
+	return uint64(C.sysconf(C._SC_PHYS_PAGES) * C.sysconf(C._SC_PAGE_SIZE))
+}
+
+func logMemoryUsage() {
+	memory := getProcessAvailableMemory() / 1024 / 1024
+	logger.Warn("Memory", zap.Uint64("memory MB", memory))
+
+	//C.char *phpThreadMemoryLimit;
+	//C.cfg_get_string("filter.default", &phpThreadMemoryLimit);
+	//logger.Warn("phpThreadMemoryLimit", zap.String("phpThreadMemoryLimit", C.GoString(phpThreadMemoryLimit)))
 }

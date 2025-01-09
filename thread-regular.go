@@ -108,10 +108,19 @@ func handleRequestWithRegularPHPThreads(r *http.Request, fc *FrankenPHPContext) 
 
 	// if no thread was available, mark the request as queued and apply the scaling strategy
 	metrics.QueuedRequest()
-	activeScalingStrategy.apply(regularRequestChan, r, scaleRegularThreads)
-	metrics.DequeuedRequest()
-	<-fc.done
-	metrics.StopRequest()
+	for {
+		select {
+		case regularRequestChan <- r:
+			metrics.DequeuedRequest()
+			<-fc.done
+			metrics.StopRequest()
+			return
+		case <-mainThread.done:
+			return
+		case scaleChan <- fc:
+			// the request has triggered scaling, continue to wait for a thread
+		}
+	}
 }
 
 func attachRegularThread(thread *phpThread) {

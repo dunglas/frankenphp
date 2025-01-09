@@ -8,37 +8,10 @@ import (
 	"go.uber.org/zap"
 )
 
-func TestScalingStrategyShouldBeNoneOnLowMaxThreads(t *testing.T) {
-	doneChan := make(chan struct{})
-	initAutoScaling(1, 1, ScalingStrategyNormal)
-
-	assert.IsType(t, scalingStrategyNone{}, activeScalingStrategy)
-
-	close(doneChan)
-}
-
-func TestScalingStrategyShouldBeNormal(t *testing.T) {
-	doneChan := make(chan struct{})
-	initAutoScaling(1, 2, ScalingStrategyNormal)
-
-	assert.IsType(t, &scalingStrategyNormal{}, activeScalingStrategy)
-
-	close(doneChan)
-}
-
-func TestScalingStrategyShouldBeNoneWhenExplicitlySetToNone(t *testing.T) {
-	doneChan := make(chan struct{})
-	initAutoScaling(1, 2, ScalingStrategyNone)
-
-	assert.IsType(t, scalingStrategyNone{}, activeScalingStrategy)
-
-	close(doneChan)
-}
-
 func TestScaleARegularThreadUpAndDown(t *testing.T) {
 	assert.NoError(t, Init(
 		WithNumThreads(1),
-		WithMaxThreads(2, ScalingStrategyNormal),
+		WithMaxThreads(2),
 		WithLogger(zap.NewNop()),
 	))
 
@@ -67,7 +40,7 @@ func TestScaleAWorkerThreadUpAndDown(t *testing.T) {
 	workerPath := testDataPath + "/transition-worker-1.php"
 	assert.NoError(t, Init(
 		WithNumThreads(2),
-		WithMaxThreads(3, ScalingStrategyNormal),
+		WithMaxThreads(3),
 		WithWorkers(workerPath, 1, map[string]string{}, []string{}),
 		WithLogger(zap.NewNop()),
 	))

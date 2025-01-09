@@ -185,9 +185,17 @@ func (worker *worker) handleRequest(r *http.Request, fc *FrankenPHPContext) {
 
 	// if no thread was available, mark the request as queued and apply the scaling strategy
 	metrics.QueuedWorkerRequest(fc.scriptFilename)
-	activeScalingStrategy.apply(worker.requestChan, r, func() { scaleWorkerThreads(worker) })
-	metrics.DequeuedWorkerRequest(fc.scriptFilename)
-
-	<-fc.done
-	metrics.StopWorkerRequest(worker.fileName, time.Since(fc.startedAt))
+	for {
+		select {
+		case worker.requestChan <- r:
+			metrics.DequeuedWorkerRequest(fc.scriptFilename)
+			<-fc.done
+			metrics.StopWorkerRequest(worker.fileName, time.Since(fc.startedAt))
+			return
+		case <-mainThread.done:
+			return
+		case scaleChan <- fc:
+			// the request has triggered scaling, continue to wait for a thread
+		}
+	}
 }
