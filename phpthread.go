@@ -111,15 +111,15 @@ func (thread *phpThread) getActiveRequest() *http.Request {
 
 // small status message for debugging
 func (thread *phpThread) debugStatus() string {
-	requestStatusMessage := ""
+	reqState := ""
 	if waitTime := thread.state.waitTime(); waitTime > 0 {
-		requestStatusMessage = fmt.Sprintf(", waiting for %dms", waitTime)
+		reqState = fmt.Sprintf(", waiting for %dms", waitTime)
 	} else if r := thread.getActiveRequest(); r != nil {
 		fc := r.Context().Value(contextKey).(*FrankenPHPContext)
 		sinceMs := time.Since(fc.startedAt).Milliseconds()
-		requestStatusMessage = fmt.Sprintf(", handling %s for %dms ", r.URL.Path, sinceMs)
+		reqState = fmt.Sprintf(", handling %s for %dms ", fc.originalRequest.URL.Path, sinceMs)
 	}
-	return fmt.Sprintf("Thread %d (%s%s) %s", thread.threadIndex, thread.state.name(), requestStatusMessage, thread.handler.name())
+	return fmt.Sprintf("Thread %d (%s%s) %s", thread.threadIndex, thread.state.name(), reqState, thread.handler.name())
 }
 
 // Pin a string that is not null-terminated
