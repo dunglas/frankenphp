@@ -20,7 +20,7 @@ foreach ($directories as $dir) {
             
             if ($content !== $new_content) {
                 file_put_contents($file_path, $new_content);
-                echo "$file_path 中的 __forceinline 已替换为 inline\n";
+                echo "\"__forceinline\" in $file_path has been replace by \"inline\"\n";
             }
         }
     }
