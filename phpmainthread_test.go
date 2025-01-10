@@ -17,7 +17,7 @@ import (
 var testDataPath, _ = filepath.Abs("./testdata")
 
 func TestStartAndStopTheMainThreadWithOneInactiveThread(t *testing.T) {
-	logger = zap.NewNop()                   // the logger needs to not be nil
+	logger = zap.NewNop()                        // the logger needs to not be nil
 	assert.NoError(t, initPHPThreads(1, 1, nil)) // boot 1 thread
 
 	assert.Len(t, phpThreads, 1)
