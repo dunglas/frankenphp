@@ -22,16 +22,10 @@ func TestScaleARegularThreadUpAndDown(t *testing.T) {
 	assert.Equal(t, stateReady, autoScaledThread.state.get())
 	assert.IsType(t, &regularThread{}, autoScaledThread.handler)
 
-	// on the first down-scale, the thread will be marked as inactive
+	// on down-scale, the thread will be marked as inactive
 	setLongWaitTime(autoScaledThread)
 	deactivateThreads()
 	assert.IsType(t, &inactiveThread{}, autoScaledThread.handler)
-
-	// on the second down-scale, the thread will be removed
-	autoScaledThread.state.waitFor(stateInactive)
-	setLongWaitTime(autoScaledThread)
-	deactivateThreads()
-	assert.Equal(t, stateReserved, autoScaledThread.state.get())
 
 	Shutdown()
 }
@@ -51,16 +45,10 @@ func TestScaleAWorkerThreadUpAndDown(t *testing.T) {
 	scaleWorkerThread(workers[workerPath])
 	assert.Equal(t, stateReady, autoScaledThread.state.get())
 
-	// on the first down-scale, the thread will be marked as inactive
+	// on down-scale, the thread will be marked as inactive
 	setLongWaitTime(autoScaledThread)
 	deactivateThreads()
 	assert.IsType(t, &inactiveThread{}, autoScaledThread.handler)
-
-	// on the second down-scale, the thread will be removed
-	autoScaledThread.state.waitFor(stateInactive)
-	setLongWaitTime(autoScaledThread)
-	deactivateThreads()
-	assert.Equal(t, stateReserved, autoScaledThread.state.get())
 
 	Shutdown()
 }

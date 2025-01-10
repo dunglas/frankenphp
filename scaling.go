@@ -56,10 +56,11 @@ func initAutoScaling(numThreads int, maxThreads int) {
 
 func drainAutoScaling() {
 	scalingMu.Lock()
+	logger.Debug("shutting down autoscalin", zap.Int("num scaled threads", len(autoScaledThreads)))
 	scalingMu.Unlock()
 }
 
-// turn the first inactive/reserved thread into a regular thread
+// AddRegularThread adds one regular PHP thread at runtime if max_threads are not yet reached
 func AddRegularThread() (int, error) {
 	scalingMu.Lock()
 	defer scalingMu.Unlock()
@@ -77,7 +78,7 @@ func addRegularThread() (*phpThread, error) {
 	return thread, nil
 }
 
-// remove the last regular thread
+// RemoveRegularThread removes one regular PHP thread at runtime, won't remove the last thread
 func RemoveRegularThread() (int, error) {
 	scalingMu.Lock()
 	defer scalingMu.Unlock()
@@ -97,7 +98,7 @@ func removeRegularThread() error {
 	return nil
 }
 
-// turn the first inactive/reserved thread into a worker thread
+// AddWorkerThread adds one PHP worker thread at runtime if max_threads are not yet reached
 func AddWorkerThread(workerFileName string) (int, error) {
 	worker, ok := workers[workerFileName]
 	if !ok {
@@ -119,7 +120,7 @@ func addWorkerThread(worker *worker) (*phpThread, error) {
 	return thread, nil
 }
 
-// remove the last worker thread
+// RemoveWorkerThread removes one PHP worker thread at runtime, won't remove the last thread
 func RemoveWorkerThread(workerFileName string) (int, error) {
 	worker, ok := workers[workerFileName]
 	if !ok {
@@ -254,14 +255,15 @@ func deactivateThreads() {
 			continue
 		}
 
+		// TODO: reactivate thread-shutdown once there's a way around leaky PECL extensions like #1299
 		// if threads are already inactive, shut them down
-		if thread.state.is(stateInactive) && waitTime > maxThreadIdleTime.Milliseconds() {
-			logger.Debug("auto-stopping thread", zap.Int("threadIndex", thread.threadIndex))
-			thread.shutdown()
-			stoppedThreadCount++
-			autoScaledThreads = append(autoScaledThreads[:i], autoScaledThreads[i+1:]...)
-			continue
-		}
+		//if thread.state.is(stateInactive) && waitTime > maxThreadIdleTime.Milliseconds() {
+		//	logger.Debug("auto-stopping thread", zap.Int("threadIndex", thread.threadIndex))
+		//	thread.shutdown()
+		//	stoppedThreadCount++
+		//	autoScaledThreads = append(autoScaledThreads[:i], autoScaledThreads[i+1:]...)
+		//	continue
+		//}
 	}
 }
 

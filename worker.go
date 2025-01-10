@@ -90,6 +90,7 @@ func drainWorkers() {
 	watcher.DrainWatcher()
 }
 
+// RestartWorkers attempts to restart all worker threads gracefully
 func RestartWorkers() {
 	// disallow scaling threads while restarting workers
 	scalingMu.Lock()
@@ -124,9 +125,10 @@ func RestartWorkers() {
 	}
 }
 
+// WorkerFileNames returns the list of worker file names
 func WorkerFileNames() []string {
 	workerNames := make([]string, 0, len(workers))
-	for fileName, _ := range workers {
+	for fileName := range workers {
 		workerNames = append(workerNames, fileName)
 	}
 	return workerNames
