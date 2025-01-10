@@ -740,7 +740,7 @@ frankenphp_register_variable_from_request_info(zend_string *zKey, char *value,
     frankenphp_register_trusted_var(zKey, value, strlen(value),
                                     Z_ARRVAL_P(track_vars_array));
   } else if (must_be_present) {
-    frankenphp_register_trusted_var(zKey, "", 0, Z_ARRVAL_P(track_vars_array));
+    frankenphp_register_trusted_var(zKey, NULL, 0, Z_ARRVAL_P(track_vars_array));
   }
 }
 
@@ -749,7 +749,7 @@ void frankenphp_register_variables_from_request_info(
     zend_string *path_translated, zend_string *query_string,
     zend_string *auth_user, zend_string *request_method) {
   frankenphp_register_variable_from_request_info(
-      content_type, (char *)SG(request_info).content_type, false,
+      content_type, (char *)SG(request_info).content_type, true,
       track_vars_array);
   frankenphp_register_variable_from_request_info(
       path_translated, (char *)SG(request_info).path_translated, false,
