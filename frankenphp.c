@@ -12,7 +12,6 @@
 #include <php_ini.h>
 #include <php_main.h>
 #include <php_output.h>
-#include <rfc1867.h>
 #include <php_variables.h>
 #include <pthread.h>
 #include <sapi/embed/php_embed.h>
