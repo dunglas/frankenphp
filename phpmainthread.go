@@ -17,6 +17,7 @@ type phpMainThread struct {
 	done       chan struct{}
 	numThreads int
 	maxThreads int
+	phpIniOverrides map[string]string
 }
 
 var (
@@ -27,12 +28,13 @@ var (
 // start the main PHP thread
 // start a fixed number of inactive PHP threads
 // reserve a fixed number of possible PHP threads
-func initPHPThreads(numThreads int, numMaxThreads int) error {
+func initPHPThreads(numThreads int, numMaxThreads int, phpIniOverrides map[string]string) error {
 	mainThread = &phpMainThread{
 		state:      newThreadState(),
 		done:       make(chan struct{}),
 		numThreads: numThreads,
 		maxThreads: numMaxThreads,
+		phpIniOverrides: phpIniOverrides,
 	}
 
 	// initialize the first thread
@@ -110,8 +112,16 @@ func (mainThread *phpMainThread) start() error {
 	if C.frankenphp_new_main_thread(C.int(mainThread.numThreads)) != 0 {
 		return MainThreadCreationError
 	}
+	for k,v := range mainThread.phpIniOverrides {
+		C.frankenphp_set_ini_override(C.CString(k), C.CString(v))
+	}
+
 	mainThread.state.waitFor(stateReady)
 	return nil
+}
+
+func (mainThread *phpMainThread) start() error {
+
 }
 
 func getInactivePHPThread() *phpThread {
