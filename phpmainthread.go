@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/dunglas/frankenphp/internal/memory"
 	"go.uber.org/zap"
 )
 
@@ -164,25 +165,21 @@ func (mainThread *phpMainThread) overridePHPIni() {
 	}
 }
 
-// figure out how many threads can be started based on memory_limit from php.ini
+// max_threads = auto
+// Estimate the amount of threads, based on the system's memory limit
+// and PHP's per-thread memory_limit (php.ini)
 func (mainThread *phpMainThread) setAutomaticMaxThreads() {
 	if mainThread.maxThreads >= 0 {
 		return
 	}
-	perThreadMemoryLimit := uint64(C.frankenphp_get_current_memory_limit())
-	if perThreadMemoryLimit <= 0 {
+	perThreadMemoryLimit := int64(C.frankenphp_get_current_memory_limit())
+	totalSysMemory := memory.Total()
+	if perThreadMemoryLimit <= 0 || totalMemory == 0 {
 		return
 	}
-	maxAllowedThreads := getProcessAvailableMemory() / perThreadMemoryLimit
+	maxAllowedThreads := totalSysMemory / uint64(perThreadMemoryLimit)
 	mainThread.maxThreads = int(maxAllowedThreads)
 	logger.Info("Automatic thread limit", zap.Int("phpMemoryLimit(MB)", int(perThreadMemoryLimit/1024/1024)), zap.Int("maxThreads", mainThread.maxThreads))
-}
-
-// Gets all available memory in bytes
-// Should be unix compatible - TODO: verify that it is on all important platforms
-// On potential Windows support this would need to be done differently
-func getProcessAvailableMemory() uint64 {
-	return uint64(C.sysconf(C._SC_PHYS_PAGES) * C.sysconf(C._SC_PAGE_SIZE))
 }
 
 //export go_frankenphp_shutdown_main_thread
