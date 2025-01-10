@@ -112,8 +112,6 @@ func (mainThread *phpMainThread) start() error {
 		return MainThreadCreationError
 	}
 
-	// overwrite php.ini config (if necessary)
-
 	mainThread.state.waitFor(stateReady)
 	return nil
 }
@@ -160,8 +158,8 @@ func (mainThread *phpMainThread) overridePHPIni() {
 	}
 	for k, v := range mainThread.phpIniOverrides {
 		C.frankenphp_overwrite_ini_configuraton(
-			C.go_string{C.ulong(len(k)), toUnsafeChar(k)},
-			C.go_string{C.ulong(len(v)), toUnsafeChar(v)},
+			C.go_string{C.size_t(len(k)), toUnsafeChar(k)},
+			C.go_string{C.size_t(len(v)), toUnsafeChar(v)},
 		)
 	}
 }
@@ -177,7 +175,7 @@ func (mainThread *phpMainThread) setAutomaticMaxThreads() {
 	}
 	maxAllowedThreads := getProcessAvailableMemory() / perThreadMemoryLimit
 	mainThread.maxThreads = int(maxAllowedThreads)
-	logger.Info("Automatic thread limit", zap.Int("phpMemoryLimit MB", int(perThreadMemoryLimit/1024/1024)), zap.Int("maxThreads", mainThread.maxThreads))
+	logger.Info("Automatic thread limit", zap.Int("phpMemoryLimit(MB)", int(perThreadMemoryLimit/1024/1024)), zap.Int("maxThreads", mainThread.maxThreads))
 }
 
 // Gets all available memory in bytes
