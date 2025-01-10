@@ -740,7 +740,8 @@ frankenphp_register_variable_from_request_info(zend_string *zKey, char *value,
     frankenphp_register_trusted_var(zKey, value, strlen(value),
                                     Z_ARRVAL_P(track_vars_array));
   } else if (must_be_present) {
-    frankenphp_register_trusted_var(zKey, NULL, 0, Z_ARRVAL_P(track_vars_array));
+    frankenphp_register_trusted_var(zKey, NULL, 0,
+                                    Z_ARRVAL_P(track_vars_array));
   }
 }
 
