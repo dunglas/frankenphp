@@ -117,7 +117,11 @@ func (thread *phpThread) debugStatus() string {
 	} else if r := thread.getActiveRequest(); r != nil {
 		fc := r.Context().Value(contextKey).(*FrankenPHPContext)
 		sinceMs := time.Since(fc.startedAt).Milliseconds()
-		reqState = fmt.Sprintf(", handling %s for %dms ", fc.originalRequest.URL.Path, sinceMs)
+		path := r.URL.Path
+		if fc.originalRequest != nil {
+			path = fc.originalRequest.URL.Path
+		}
+		reqState = fmt.Sprintf(", handling %s for %dms ", path, sinceMs)
 	}
 	return fmt.Sprintf("Thread %d (%s%s) %s", thread.threadIndex, thread.state.name(), reqState, thread.handler.name())
 }
