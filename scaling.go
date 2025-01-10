@@ -16,7 +16,7 @@ import (
 // TODO: make speed of scaling dependant on CPU count?
 const (
 	// requests have to be stalled for at least this amount of time before scaling
-	minStallTime = 20 * time.Millisecond
+	minStallTime = 5 * time.Millisecond
 	// time to check for CPU usage before scaling a single thread
 	cpuProbeTime = 100 * time.Millisecond
 	// do not scale over this amount of CPU usage
