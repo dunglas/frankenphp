@@ -513,3 +513,42 @@ func TestAllDefinedServerVars(t *testing.T) {
 		expectedBody,
 	)
 }
+
+func TestPHPIniOverride(t *testing.T) {
+	tester := caddytest.NewTester(t)
+	tester.InitServer(`
+		{
+			skip_install_trust
+			admin localhost:2999
+			http_port `+testPort+`
+
+			frankenphp {
+				num_threads 2
+				worker ../testdata/ini.php 1
+				php_ini max_execution_time 100
+				php_ini memory_limit 10000000
+			}
+		}
+
+		localhost:`+testPort+` {
+			route {
+				root ../testdata
+				php
+			}
+		}
+		`, "caddyfile")
+
+	// test twice to ensure the ini setting is not lost
+	for i := 0; i < 2; i++ {
+		tester.AssertGetResponse(
+			"http://localhost:"+testPort+"/ini.php?key=max_execution_time",
+			http.StatusOK,
+			"max_execution_time:100",
+		)
+		tester.AssertGetResponse(
+			"http://localhost:"+testPort+"/ini.php?key=memory_limit",
+			http.StatusOK,
+			"memory_limit:10000000",
+		)
+	}
+}

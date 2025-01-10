@@ -155,7 +155,7 @@ func go_frankenphp_main_thread_is_ready() {
 // override php.ini directives with those set in the Caddy config
 // this needs to happen on each thread and before script execution
 func (mainThread *phpMainThread) overridePHPIni() {
-	if meinThread.phpIniOverrides == nil {
+	if mainThread.phpIniOverrides == nil {
 		return
 	}
 	for k, v := range mainThread.phpIniOverrides {
