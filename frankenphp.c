@@ -12,6 +12,7 @@
 #include <php_ini.h>
 #include <php_main.h>
 #include <php_output.h>
+#include <rfc1867.h>
 #include <php_variables.h>
 #include <pthread.h>
 #include <sapi/embed/php_embed.h>
@@ -135,9 +136,6 @@ static void frankenphp_worker_request_shutdown() {
   zend_end_try();
 
   zend_set_memory_limit(PG(memory_limit));
-  /* TODO: remove next line when https://github.com/php/php-src/pull/14499 will
-   * be available */
-  SG(rfc1867_uploaded_files) = NULL;
 }
 
 PHPAPI void get_full_env(zval *track_vars_array) {
