@@ -18,7 +18,7 @@ var testDataPath, _ = filepath.Abs("./testdata")
 
 func TestStartAndStopTheMainThreadWithOneInactiveThread(t *testing.T) {
 	logger = zap.NewNop()                   // the logger needs to not be nil
-	assert.NoError(t, initPHPThreads(1, 1)) // boot 1 thread
+	assert.NoError(t, initPHPThreads(1, 1, nil)) // boot 1 thread
 
 	assert.Len(t, phpThreads, 1)
 	assert.Equal(t, 0, phpThreads[0].threadIndex)
@@ -30,7 +30,7 @@ func TestStartAndStopTheMainThreadWithOneInactiveThread(t *testing.T) {
 
 func TestTransitionRegularThreadToWorkerThread(t *testing.T) {
 	logger = zap.NewNop()
-	assert.NoError(t, initPHPThreads(1, 1))
+	assert.NoError(t, initPHPThreads(1, 1, nil))
 
 	// transition to regular thread
 	convertToRegularThread(phpThreads[0])
@@ -53,7 +53,7 @@ func TestTransitionRegularThreadToWorkerThread(t *testing.T) {
 
 func TestTransitionAThreadBetween2DifferentWorkers(t *testing.T) {
 	logger = zap.NewNop()
-	assert.NoError(t, initPHPThreads(1, 1))
+	assert.NoError(t, initPHPThreads(1, 1, nil))
 	firstWorker := getDummyWorker("transition-worker-1.php")
 	secondWorker := getDummyWorker("transition-worker-2.php")
 

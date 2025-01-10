@@ -148,6 +148,10 @@ func go_frankenphp_before_script_execution(threadIndex C.uintptr_t) *C.char {
 	if scriptName == "" {
 		return nil
 	}
+
+	// overwrite php.ini config (if necessary)
+	mainThread.overridePHPIni()
+
 	// return the name of the PHP script that should be executed
 	return thread.pinCString(scriptName)
 }

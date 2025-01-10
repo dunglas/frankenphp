@@ -4,7 +4,6 @@ package frankenphp
 import "C"
 import (
 	"fmt"
-	"strconv"
 	"sync"
 
 	"go.uber.org/zap"
@@ -13,10 +12,10 @@ import (
 // represents the main PHP thread
 // the thread needs to keep running as long as all other threads are running
 type phpMainThread struct {
-	state      *threadState
-	done       chan struct{}
-	numThreads int
-	maxThreads int
+	state           *threadState
+	done            chan struct{}
+	numThreads      int
+	maxThreads      int
 	phpIniOverrides map[string]string
 }
 
@@ -30,10 +29,10 @@ var (
 // reserve a fixed number of possible PHP threads
 func initPHPThreads(numThreads int, numMaxThreads int, phpIniOverrides map[string]string) error {
 	mainThread = &phpMainThread{
-		state:      newThreadState(),
-		done:       make(chan struct{}),
-		numThreads: numThreads,
-		maxThreads: numMaxThreads,
+		state:           newThreadState(),
+		done:            make(chan struct{}),
+		numThreads:      numThreads,
+		maxThreads:      numMaxThreads,
 		phpIniOverrides: phpIniOverrides,
 	}
 
@@ -112,16 +111,11 @@ func (mainThread *phpMainThread) start() error {
 	if C.frankenphp_new_main_thread(C.int(mainThread.numThreads)) != 0 {
 		return MainThreadCreationError
 	}
-	for k,v := range mainThread.phpIniOverrides {
-		C.frankenphp_set_ini_override(C.CString(k), C.CString(v))
-	}
+
+	// overwrite php.ini config (if necessary)
 
 	mainThread.state.waitFor(stateReady)
 	return nil
-}
-
-func (mainThread *phpMainThread) start() error {
-
 }
 
 func getInactivePHPThread() *phpThread {
@@ -147,11 +141,9 @@ func getPHPThreadAtState(state stateID) *phpThread {
 }
 
 //export go_frankenphp_main_thread_is_ready
-func go_frankenphp_main_thread_is_ready(memory_limit *C.char) {
-	if mainThread.maxThreads == -1 && memory_limit != nil {
-		mainThread.setAutomaticThreadLimit(C.GoString(memory_limit))
-	}
-
+func go_frankenphp_main_thread_is_ready() {
+	mainThread.overridePHPIni()
+	mainThread.setAutomaticMaxThreads()
 	if mainThread.maxThreads < mainThread.numThreads {
 		mainThread.maxThreads = mainThread.numThreads
 	}
@@ -160,40 +152,29 @@ func go_frankenphp_main_thread_is_ready(memory_limit *C.char) {
 	mainThread.state.waitFor(stateDone)
 }
 
+// override php.ini directives with those set in the Caddy config
+// this needs to happen on each thread and before script execution
+func (mainThread *phpMainThread) overridePHPIni() {
+	for k, v := range mainThread.phpIniOverrides {
+		C.frankenphp_overwrite_ini_configuraton(
+			C.go_string{C.ulong(len(k)), toUnsafeChar(k)},
+			C.go_string{C.ulong(len(v)), toUnsafeChar(v)},
+		)
+	}
+}
+
 // figure out how many threads can be started based on memory_limit from php.ini
-func (mainThread *phpMainThread) setAutomaticThreadLimit(phpMemoryLimit string) {
-	perThreadMemoryLimit := parsePHPMemoryLimit(phpMemoryLimit)
+func (mainThread *phpMainThread) setAutomaticMaxThreads() {
+	if mainThread.maxThreads >= 0 {
+		return
+	}
+	perThreadMemoryLimit := uint64(C.frankenphp_get_current_memory_limit())
 	if perThreadMemoryLimit <= 0 {
 		return
 	}
 	maxAllowedThreads := getProcessAvailableMemory() / perThreadMemoryLimit
 	mainThread.maxThreads = int(maxAllowedThreads)
-	logger.Info("Automatic thread limit", zap.String("phpMemoryLimit", phpMemoryLimit), zap.Int("maxThreads", mainThread.maxThreads))
-}
-
-// Convert the memory limit from php.ini to bytes
-// The memory limit in PHP is either post-fixed with an M or G
-// Without postfix it's in bytes, -1 means no limit
-func parsePHPMemoryLimit(memoryLimit string) uint64 {
-	multiplier := 1
-	lastChar := memoryLimit[len(memoryLimit)-1]
-	if lastChar == 'M' {
-		multiplier = 1024 * 1024
-		memoryLimit = memoryLimit[:len(memoryLimit)-1]
-	} else if lastChar == 'G' {
-		multiplier = 1024 * 1024 * 1024
-		memoryLimit = memoryLimit[:len(memoryLimit)-1]
-	}
-
-	bytes, err := strconv.Atoi(memoryLimit)
-	if err != nil {
-		logger.Warn("Could not parse PHP memory limit (assuming unlimited)", zap.String("memoryLimit", memoryLimit), zap.Error(err))
-		return 0
-	}
-	if bytes < 0 {
-		return 0
-	}
-	return uint64(bytes * multiplier)
+	logger.Info("Automatic thread limit", zap.Int("phpMemoryLimit MB", int(perThreadMemoryLimit/1024/1024)), zap.Int("maxThreads", mainThread.maxThreads))
 }
 
 // Gets all available memory in bytes

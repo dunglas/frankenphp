@@ -333,7 +333,7 @@ func Init(options ...Option) error {
 		logger.Warn(`ZTS is not enabled, only 1 thread will be available, recompile PHP using the "--enable-zts" configuration option or performance will be degraded`)
 	}
 
-	if err := initPHPThreads(totalThreadCount, maxThreadCount); err != nil {
+	if err := initPHPThreads(totalThreadCount, maxThreadCount, opt.phpIniOverrides); err != nil {
 		return err
 	}
 

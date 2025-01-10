@@ -71,6 +71,8 @@ void frankenphp_register_variable_safe(char *key, char *var, size_t val_len,
 zend_string *frankenphp_init_persistent_string(const char *string, size_t len);
 void frankenphp_release_zend_string(zend_string *z_string);
 int frankenphp_reset_opcache(void);
+void frankenphp_overwrite_ini_configuraton(go_string key, go_string value);
+int frankenphp_get_current_memory_limit();
 
 void frankenphp_register_bulk(
     zval *track_vars_array, ht_key_value_pair remote_addr,

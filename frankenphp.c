@@ -956,11 +956,7 @@ static void *php_main(void *arg) {
   cfg_get_string("filter.default", &default_filter);
   should_filter_var = default_filter != NULL;
 
-  /* forward the configured memory limit to go for scaling configurations */
-  char *php_memory_limit;
-  cfg_get_string("memory_limit", &php_memory_limit);
-
-  go_frankenphp_main_thread_is_ready(php_memory_limit);
+  go_frankenphp_main_thread_is_ready();
 
   /* channel closed, shutdown gracefully */
   frankenphp_sapi_module.shutdown(&frankenphp_sapi_module);
@@ -1227,4 +1223,16 @@ int frankenphp_reset_opcache(void) {
     return frankenphp_execute_php_function("opcache_reset");
   }
   return 0;
+}
+
+void frankenphp_overwrite_ini_configuraton(go_string key, go_string value) {
+	zend_string *z_key = zend_string_init(key.data, key.len, 0);
+	zend_string *z_value = zend_string_init(value.data, value.len, 0);
+	zend_alter_ini_entry(z_key, z_value, PHP_INI_SYSTEM, PHP_INI_STAGE_ACTIVATE);
+	zend_string_release_ex(z_key, 0);
+	zend_string_release_ex(z_value, 0);
+}
+
+int frankenphp_get_current_memory_limit() {
+	return PG(memory_limit);
 }

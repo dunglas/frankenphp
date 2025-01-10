@@ -61,6 +61,8 @@ type FrankenPHPApp struct {
 	MaxThreads int `json:"max_threads,omitempty"`
 	// Workers configures the worker scripts to start.
 	Workers []workerConfig `json:"workers,omitempty"`
+	// Overwrites the default php ini configuration
+	PhpIniOverrides map[string]string `json:"php_ini,omitempty"`
 }
 
 // CaddyModule returns the Caddy module information.
@@ -80,6 +82,7 @@ func (f *FrankenPHPApp) Start() error {
 		frankenphp.WithMaxThreads(f.MaxThreads),
 		frankenphp.WithLogger(logger),
 		frankenphp.WithMetrics(metrics),
+		frankenphp.WithPhpIniOverrides(f.PhpIniOverrides),
 	}
 	for _, w := range f.Workers {
 		opts = append(opts, frankenphp.WithWorkers(repl.ReplaceKnown(w.FileName, ""), w.Num, w.Env, w.Watch))
@@ -142,6 +145,18 @@ func (f *FrankenPHPApp) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 				}
 
 				f.MaxThreads = int(v)
+			case "php_ini":
+				if !d.NextArg() {
+					return d.ArgErr()
+				}
+				key := d.Val()
+				if !d.NextArg() {
+					return d.ArgErr()
+				}
+				if f.PhpIniOverrides == nil {
+					f.PhpIniOverrides = make(map[string]string)
+				}
+				f.PhpIniOverrides[key] = d.Val()
 			case "worker":
 				wc := workerConfig{}
 				if d.NextArg() {
