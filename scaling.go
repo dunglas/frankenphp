@@ -56,7 +56,7 @@ func initAutoScaling(numThreads int, maxThreads int) {
 
 func drainAutoScaling() {
 	scalingMu.Lock()
-	logger.Debug("shutting down autoscalin", zap.Int("num scaled threads", len(autoScaledThreads)))
+	logger.Debug("shutting down autoscalin", zap.Int("autoScaledThreads", len(autoScaledThreads)))
 	scalingMu.Unlock()
 }
 

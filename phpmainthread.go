@@ -70,6 +70,7 @@ func initPHPThreads(numThreads int, numMaxThreads int, phpIniOverrides map[strin
 	return nil
 }
 
+// ThreadDebugStatus prints the state of all PHP threads - debugging purposes only
 func ThreadDebugStatus() string {
 	statusMessage := ""
 	reservedThreadCount := 0
@@ -173,13 +174,13 @@ func (mainThread *phpMainThread) setAutomaticMaxThreads() {
 		return
 	}
 	perThreadMemoryLimit := int64(C.frankenphp_get_current_memory_limit())
-	totalOSMemory := memory.Total()
+	totalOSMemory := memory.TotalSysMemory()
 	if perThreadMemoryLimit <= 0 || totalOSMemory == 0 {
 		return
 	}
 	maxAllowedThreads := totalOSMemory / uint64(perThreadMemoryLimit)
 	mainThread.maxThreads = int(maxAllowedThreads)
-	logger.Info("Automatic thread limit", zap.Int("phpMemoryLimit(MB)", int(perThreadMemoryLimit/1024/1024)), zap.Int("maxThreads", mainThread.maxThreads))
+	logger.Info("Automatic thread limit", zap.Int("perThreadMemoryLimitMB", int(perThreadMemoryLimit/1024/1024)), zap.Int("maxThreads", mainThread.maxThreads))
 }
 
 //export go_frankenphp_shutdown_main_thread
