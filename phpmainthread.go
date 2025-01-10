@@ -173,11 +173,11 @@ func (mainThread *phpMainThread) setAutomaticMaxThreads() {
 		return
 	}
 	perThreadMemoryLimit := int64(C.frankenphp_get_current_memory_limit())
-	totalSysMemory := memory.Total()
-	if perThreadMemoryLimit <= 0 || totalMemory == 0 {
+	totalOSMemory := memory.Total()
+	if perThreadMemoryLimit <= 0 || totalOSMemory == 0 {
 		return
 	}
-	maxAllowedThreads := totalSysMemory / uint64(perThreadMemoryLimit)
+	maxAllowedThreads := totalOSMemory / uint64(perThreadMemoryLimit)
 	mainThread.maxThreads = int(maxAllowedThreads)
 	logger.Info("Automatic thread limit", zap.Int("phpMemoryLimit(MB)", int(perThreadMemoryLimit/1024/1024)), zap.Int("maxThreads", mainThread.maxThreads))
 }
