@@ -233,7 +233,9 @@ func TestAutoScaleWorkerThreads(t *testing.T) {
 	assert.Contains(t, threadInfo, autoScaledThread)
 }
 
-func TestAutoScaleRegularThreads(t *testing.T) {
+// Note: PHP default memory limit is 128MB
+// This Test assumes that we have at least 2 times that available
+func TestAutoScaleRegularThreadsOnAutomaticThreadLimit(t *testing.T) {
 	wg := sync.WaitGroup{}
 	maxTries := 10
 	requestsPerTry := 200
@@ -245,7 +247,7 @@ func TestAutoScaleRegularThreads(t *testing.T) {
 			http_port `+testPort+`
 
 			frankenphp {
-				max_threads 10
+				max_threads auto
 				num_threads 1
 			}
 		}

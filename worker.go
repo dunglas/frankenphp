@@ -192,8 +192,6 @@ func (worker *worker) handleRequest(r *http.Request, fc *FrankenPHPContext) {
 			<-fc.done
 			metrics.StopWorkerRequest(worker.fileName, time.Since(fc.startedAt))
 			return
-		case <-mainThread.done:
-			return
 		case scaleChan <- fc:
 			// the request has triggered scaling, continue to wait for a thread
 		}

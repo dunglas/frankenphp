@@ -1,6 +1,7 @@
 package frankenphp
 
 //#include "frankenphp.h"
+//#include <sys/resource.h>
 import "C"
 import (
 	"errors"
@@ -145,7 +146,7 @@ func removeWorkerThread(worker *worker) error {
 }
 
 // Add a worker PHP threads automatically
-func scaleWorkerThreads(worker *worker) {
+func scaleWorkerThread(worker *worker) {
 	scalingMu.Lock()
 	defer scalingMu.Unlock()
 
@@ -155,7 +156,7 @@ func scaleWorkerThreads(worker *worker) {
 
 	thread, err := addWorkerThread(worker)
 	if err != nil {
-		logMaxThreadsReachedWarning(zap.String("worker", worker.fileName), zap.Error(err))
+		logger.Warn("could not increase max_threads, consider raising this limit", zap.String("worker", worker.fileName), zap.Error(err))
 		return
 	}
 
@@ -163,7 +164,7 @@ func scaleWorkerThreads(worker *worker) {
 }
 
 // Add a regular PHP thread automatically
-func scaleRegularThreads() {
+func scaleRegularThread() {
 	scalingMu.Lock()
 	defer scalingMu.Unlock()
 
@@ -173,7 +174,7 @@ func scaleRegularThreads() {
 
 	thread, err := addRegularThread()
 	if err != nil {
-		logMaxThreadsReachedWarning(zap.Error(err))
+		logger.Warn("could not increase max_threads, consider raising this limit", zap.Error(err))
 		return
 	}
 
@@ -193,16 +194,18 @@ func startUpscalingThreads(done chan struct{}, maxScaledThreads int) {
 		select {
 		case fc := <-scaleChan:
 			timeSinceStalled := time.Since(fc.startedAt)
+
+			// if the request has not been stalled long enough, wait and repeat
 			if timeSinceStalled < minStallTime {
 				time.Sleep(upscaleCheckTime)
 				continue
 			}
-			// if the request has been waiting for too long, we need to scale up
-			worker, ok := workers[fc.scriptFilename]
-			if !ok {
-				scaleRegularThreads()
+
+			// if the request has been stalled long enough, scale
+			if worker, ok := workers[fc.scriptFilename]; ok {
+				scaleWorkerThread(worker)
 			} else {
-				scaleWorkerThreads(worker)
+				scaleRegularThread()
 			}
 		case <-done:
 			return
@@ -289,27 +292,4 @@ func probeCPUs(probeTime time.Duration) bool {
 	cpuUsage := elapsedCpuTime / elapsedTime / float64(cpuCount)
 
 	return cpuUsage < maxCpuUsageForScaling
-}
-
-// only log the maximum amount of threads reached warning once per minute
-var lastMaxThreadsWarning = time.Time{}
-
-func logMaxThreadsReachedWarning(zapFields ...zap.Field) {
-	if lastMaxThreadsWarning.Add(time.Minute).Before(time.Now()) {
-		logger.Warn("could not increase max_threads, consider raising this limit", zapFields...)
-		lastMaxThreadsWarning = time.Now()
-	}
-}
-
-func getProcessAvailableMemory() uint64 {
-	return uint64(C.sysconf(C._SC_PHYS_PAGES) * C.sysconf(C._SC_PAGE_SIZE))
-}
-
-func logMemoryUsage() {
-	memory := getProcessAvailableMemory() / 1024 / 1024
-	logger.Warn("Memory", zap.Uint64("memory MB", memory))
-
-	//C.char *phpThreadMemoryLimit;
-	//C.cfg_get_string("filter.default", &phpThreadMemoryLimit);
-	//logger.Warn("phpThreadMemoryLimit", zap.String("phpThreadMemoryLimit", C.GoString(phpThreadMemoryLimit)))
 }

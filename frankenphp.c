@@ -78,7 +78,7 @@ typedef struct frankenphp_server_context {
   bool finished;
 } frankenphp_server_context;
 
-__thread bool should_filter_var = 0;
+bool should_filter_var = 0;
 __thread frankenphp_server_context *local_ctx = NULL;
 __thread uintptr_t thread_index;
 __thread zval *os_environment = NULL;
@@ -886,12 +886,6 @@ static void *php_thread(void *arg) {
 
   local_ctx = malloc(sizeof(frankenphp_server_context));
 
-  /* check if a default filter is set in php.ini and only filter if
-   * it is, this is deprecated and will be removed in PHP 9 */
-  char *default_filter;
-  cfg_get_string("filter.default", &default_filter);
-  should_filter_var = default_filter != NULL;
-
   // loop until Go signals to stop
   char *scriptName = NULL;
   while ((scriptName = go_frankenphp_before_script_execution(thread_index))) {
@@ -956,7 +950,17 @@ static void *php_main(void *arg) {
 
   frankenphp_sapi_module.startup(&frankenphp_sapi_module);
 
-  go_frankenphp_main_thread_is_ready();
+  /* check if a default filter is set in php.ini and only filter if
+   * it is, this is deprecated and will be removed in PHP 9 */
+  char *default_filter;
+  cfg_get_string("filter.default", &default_filter);
+  should_filter_var = default_filter != NULL;
+
+  /* forward the configured memory limit to go for scaling configurations */
+  char *php_memory_limit;
+  cfg_get_string("memory_limit", &php_memory_limit);
+
+  go_frankenphp_main_thread_is_ready(php_memory_limit);
 
   /* channel closed, shutdown gracefully */
   frankenphp_sapi_module.shutdown(&frankenphp_sapi_module);

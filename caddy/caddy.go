@@ -131,6 +131,11 @@ func (f *FrankenPHPApp) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 					return d.ArgErr()
 				}
 
+				if d.Val() == "auto" {
+					f.MaxThreads = -1
+					continue
+				}
+
 				v, err := strconv.ParseUint(d.Val(), 10, 32)
 				if err != nil {
 					return err

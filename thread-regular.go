@@ -106,7 +106,7 @@ func handleRequestWithRegularPHPThreads(r *http.Request, fc *FrankenPHPContext) 
 		// no thread was available
 	}
 
-	// if no thread was available, mark the request as queued and apply the scaling strategy
+	// if no thread was available, mark the request as queued and fan it out to all threads
 	metrics.QueuedRequest()
 	for {
 		select {
@@ -114,8 +114,6 @@ func handleRequestWithRegularPHPThreads(r *http.Request, fc *FrankenPHPContext) 
 			metrics.DequeuedRequest()
 			<-fc.done
 			metrics.StopRequest()
-			return
-		case <-mainThread.done:
 			return
 		case scaleChan <- fc:
 			// the request has triggered scaling, continue to wait for a thread

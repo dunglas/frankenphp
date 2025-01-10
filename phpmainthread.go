@@ -4,7 +4,10 @@ package frankenphp
 import "C"
 import (
 	"fmt"
+	"strconv"
 	"sync"
+
+	"go.uber.org/zap"
 )
 
 // represents the main PHP thread
@@ -13,6 +16,7 @@ type phpMainThread struct {
 	state      *threadState
 	done       chan struct{}
 	numThreads int
+	maxThreads int
 }
 
 var (
@@ -28,18 +32,25 @@ func initPHPThreads(numThreads int, numMaxThreads int) error {
 		state:      newThreadState(),
 		done:       make(chan struct{}),
 		numThreads: numThreads,
+		maxThreads: numMaxThreads,
 	}
-	phpThreads = make([]*phpThread, numMaxThreads)
 
-	// initialize all threads as inactive
+	// initialize the first thread
 	// this needs to happen before starting the main thread
 	// since some extensions access environment variables on startup
-	for i := 0; i < numMaxThreads; i++ {
-		phpThreads[i] = newPHPThread(i)
-	}
+	// the threadIndex on the main thread defaults to 0 -> phpThreads[0].Pin(...)
+	initialThread := newPHPThread(0)
+	phpThreads = []*phpThread{initialThread}
 
 	if err := mainThread.start(); err != nil {
 		return err
+	}
+
+	// initialize all other threads
+	phpThreads = make([]*phpThread, mainThread.maxThreads)
+	phpThreads[0] = initialThread
+	for i := 1; i < mainThread.maxThreads; i++ {
+		phpThreads[i] = newPHPThread(i)
 	}
 
 	// start the underlying C threads
@@ -126,9 +137,60 @@ func getPHPThreadAtState(state stateID) *phpThread {
 }
 
 //export go_frankenphp_main_thread_is_ready
-func go_frankenphp_main_thread_is_ready() {
+func go_frankenphp_main_thread_is_ready(memory_limit *C.char) {
+	if mainThread.maxThreads == -1 && memory_limit != nil {
+		mainThread.setAutomaticThreadLimit(C.GoString(memory_limit))
+	}
+
+	if mainThread.maxThreads < mainThread.numThreads {
+		mainThread.maxThreads = mainThread.numThreads
+	}
+
 	mainThread.state.set(stateReady)
 	mainThread.state.waitFor(stateDone)
+}
+
+// figure out how many threads can be started based on memory_limit from php.ini
+func (mainThread *phpMainThread) setAutomaticThreadLimit(phpMemoryLimit string) {
+	perThreadMemoryLimit := parsePHPMemoryLimit(phpMemoryLimit)
+	if perThreadMemoryLimit <= 0 {
+		return
+	}
+	maxAllowedThreads := getProcessAvailableMemory() / perThreadMemoryLimit
+	mainThread.maxThreads = int(maxAllowedThreads)
+	logger.Info("Automatic thread limit", zap.String("phpMemoryLimit", phpMemoryLimit), zap.Int("maxThreads", mainThread.maxThreads))
+}
+
+// Convert the memory limit from php.ini to bytes
+// The memory limit in PHP is either post-fixed with an M or G
+// Without postfix it's in bytes, -1 means no limit
+func parsePHPMemoryLimit(memoryLimit string) uint64 {
+	multiplier := 1
+	lastChar := memoryLimit[len(memoryLimit)-1]
+	if lastChar == 'M' {
+		multiplier = 1024 * 1024
+		memoryLimit = memoryLimit[:len(memoryLimit)-1]
+	} else if lastChar == 'G' {
+		multiplier = 1024 * 1024 * 1024
+		memoryLimit = memoryLimit[:len(memoryLimit)-1]
+	}
+
+	bytes, err := strconv.Atoi(memoryLimit)
+	if err != nil {
+		logger.Warn("Could not parse PHP memory limit (assuming unlimited)", zap.String("memoryLimit", memoryLimit), zap.Error(err))
+		return 0
+	}
+	if bytes < 0 {
+		return 0
+	}
+	return uint64(bytes * multiplier)
+}
+
+// Gets all available memory in bytes
+// Should be unix compatible - TODO: verify that it is on all important platforms
+// On potential Windows support this would need to be done differently
+func getProcessAvailableMemory() uint64 {
+	return uint64(C.sysconf(C._SC_PHYS_PAGES) * C.sysconf(C._SC_PAGE_SIZE))
 }
 
 //export go_frankenphp_shutdown_main_thread
