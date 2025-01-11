@@ -52,7 +52,7 @@ set the `GOMEMLIMIT` environment variable to the available amount of memory.
 
 For more details, [the Go documentation page dedicated to this subject](https://pkg.go.dev/runtime#hdr-Environment_Variables) is a must-read to get the most out of the runtime.
 
-## `php_server` and `file_server` performance
+## `php_server` and `try_files`
 
 The `php_server` directive includes a `file_server` by default. Besides static files, `php_server` will also try to serve your
 application's index and directory index files (/path/ -> /path/index.php). If you don't need directory indices,
