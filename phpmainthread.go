@@ -167,20 +167,21 @@ func (mainThread *phpMainThread) overridePHPIni() {
 }
 
 // max_threads = auto
-// Estimate the amount of threads, based on the system's memory limit
-// and PHP's per-thread memory_limit (php.ini)
+// Estimate the amount of threads based on php.ini and system memory_limit
+// If unable to get the system's memory limit, simply double num_threads
 func (mainThread *phpMainThread) setAutomaticMaxThreads() {
 	if mainThread.maxThreads >= 0 {
 		return
 	}
 	perThreadMemoryLimit := int64(C.frankenphp_get_current_memory_limit())
-	totalOSMemory := memory.TotalSysMemory()
-	if perThreadMemoryLimit <= 0 || totalOSMemory == 0 {
+	totalSysMemory := memory.TotalSysMemory()
+	if perThreadMemoryLimit <= 0 || totalSysMemory == 0 {
+		mainThread.maxThreads = mainThread.numThreads * 2
 		return
 	}
-	maxAllowedThreads := totalOSMemory / uint64(perThreadMemoryLimit)
+	maxAllowedThreads := totalSysMemory / uint64(perThreadMemoryLimit)
 	mainThread.maxThreads = int(maxAllowedThreads)
-	logger.Info("Automatic thread limit", zap.Int("perThreadMemoryLimitMB", int(perThreadMemoryLimit/1024/1024)), zap.Int("maxThreads", mainThread.maxThreads))
+	logger.Debug("Automatic thread limit", zap.Int("perThreadMemoryLimitMB", int(perThreadMemoryLimit/1024/1024)), zap.Int("maxThreads", mainThread.maxThreads))
 }
 
 //export go_frankenphp_shutdown_main_thread

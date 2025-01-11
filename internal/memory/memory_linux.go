@@ -1,10 +1,13 @@
+//go:build linux
+// +build linux
+
 package memory
 
-import "golang.org/x/sys/unix"
+import "syscall"
 
 func TotalSysMemory() uint64 {
-	sysInfo := &unix.Sysinfo_t{}
-	err := unix.Sysinfo(sysInfo)
+	sysInfo := &syscall.Sysinfo_t{}
+	err := syscall.Sysinfo(sysInfo)
 	if err != nil {
 		return 0
 	}

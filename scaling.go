@@ -5,11 +5,11 @@ package frankenphp
 import "C"
 import (
 	"errors"
-	"runtime"
 	"sync"
 	"sync/atomic"
 	"time"
 
+	"github.com/dunglas/frankenphp/internal/cpu"
 	"go.uber.org/zap"
 )
 
@@ -35,7 +35,6 @@ var (
 	autoScaledThreads = []*phpThread{}
 	scaleChan         = make(chan *FrankenPHPContext)
 	scalingMu         = new(sync.RWMutex)
-	cpuCount          = runtime.NumCPU()
 	disallowScaling   = atomic.Bool{}
 
 	MaxThreadsReachedError      = errors.New("max amount of overall threads reached")
@@ -151,7 +150,12 @@ func scaleWorkerThread(worker *worker) {
 	scalingMu.Lock()
 	defer scalingMu.Unlock()
 
-	if !mainThread.state.is(stateReady) || !probeCPUs(cpuProbeTime) {
+	if !mainThread.state.is(stateReady) {
+		return
+	}
+
+	// probe CPU usage before scaling
+	if !cpu.ProbeCPUs(cpuProbeTime, maxCpuUsageForScaling, mainThread.done) {
 		return
 	}
 
@@ -169,7 +173,12 @@ func scaleRegularThread() {
 	scalingMu.Lock()
 	defer scalingMu.Unlock()
 
-	if !mainThread.state.is(stateReady) || !probeCPUs(cpuProbeTime) {
+	if !mainThread.state.is(stateReady) {
+		return
+	}
+
+	// probe CPU usage before scaling
+	if !cpu.ProbeCPUs(cpuProbeTime, maxCpuUsageForScaling, mainThread.done) {
 		return
 	}
 
@@ -255,8 +264,9 @@ func deactivateThreads() {
 			continue
 		}
 
-		// TODO: reactivate thread-shutdown once there's a way around leaky PECL extensions like #1299
-		// if threads are already inactive, shut them down
+		// TODO: Completely stopping threads is more memory efficient
+		// Some PECL extensions like #1296 will prevent threads from fully stopping (they leak memory)
+		// Reactivate this if there is a better solution or workaround
 		//if thread.state.is(stateInactive) && waitTime > maxThreadIdleTime.Milliseconds() {
 		//	logger.Debug("auto-stopping thread", zap.Int("threadIndex", thread.threadIndex))
 		//	thread.shutdown()
@@ -265,33 +275,4 @@ func deactivateThreads() {
 		//	continue
 		//}
 	}
-}
-
-// probe the CPU usage of all PHP Threads
-// if CPUs are not busy, most threads are likely waiting for I/O, so we should scale
-// if CPUs are already busy we won't gain much by scaling and want to avoid the overhead of doing so
-// time spent by the go runtime or other processes is not considered
-func probeCPUs(probeTime time.Duration) bool {
-	var start, end, cpuStart, cpuEnd C.struct_timespec
-
-	// note: clock_gettime is a POSIX function
-	// on Windows we'd need to use QueryPerformanceCounter instead
-	C.clock_gettime(C.CLOCK_MONOTONIC, &start)
-	C.clock_gettime(C.CLOCK_PROCESS_CPUTIME_ID, &cpuStart)
-
-	timer := time.NewTimer(probeTime)
-	select {
-	case <-mainThread.done:
-		return false
-	case <-timer.C:
-	}
-
-	C.clock_gettime(C.CLOCK_MONOTONIC, &end)
-	C.clock_gettime(C.CLOCK_PROCESS_CPUTIME_ID, &cpuEnd)
-
-	elapsedTime := float64(end.tv_sec-start.tv_sec)*1e9 + float64(end.tv_nsec-start.tv_nsec)
-	elapsedCpuTime := float64(cpuEnd.tv_sec-cpuStart.tv_sec)*1e9 + float64(cpuEnd.tv_nsec-cpuStart.tv_nsec)
-	cpuUsage := elapsedCpuTime / elapsedTime / float64(cpuCount)
-
-	return cpuUsage < maxCpuUsageForScaling
 }

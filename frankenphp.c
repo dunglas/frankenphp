@@ -1226,10 +1226,11 @@ int frankenphp_reset_opcache(void) {
   return 0;
 }
 
+/* Overwrite the php.ini configuration before starting a script */
 void frankenphp_overwrite_ini_configuraton(go_string key, go_string value) {
   zend_string *z_key = zend_string_init(key.data, key.len, 0);
   zend_string *z_value = zend_string_init(value.data, value.len, 0);
-  zend_alter_ini_entry(z_key, z_value, PHP_INI_SYSTEM, PHP_INI_STAGE_ACTIVATE);
+  zend_alter_ini_entry(z_key, z_value, PHP_INI_USER, PHP_INI_STAGE_ACTIVATE);
   zend_string_release_ex(z_key, 0);
   zend_string_release_ex(z_value, 0);
 }
