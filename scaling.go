@@ -42,13 +42,16 @@ var (
 	WorkerNotFoundError         = errors.New("worker not found for given filename")
 )
 
-func initAutoScaling(numThreads int, maxThreads int) {
-	if maxThreads <= numThreads {
+func initAutoScaling(mainThread *phpMainThread) {
+	if mainThread.maxThreads <= mainThread.numThreads {
 		return
 	}
 
-	maxScaledThreads := maxThreads - numThreads
+	maxScaledThreads := mainThread.maxThreads - mainThread.numThreads
+	scalingMu.Lock()
 	autoScaledThreads = make([]*phpThread, 0, maxScaledThreads)
+	scalingMu.Unlock()
+
 	go startUpscalingThreads(mainThread.done, maxScaledThreads)
 	go startDownScalingThreads(mainThread.done)
 }
@@ -197,8 +200,13 @@ func startUpscalingThreads(done chan struct{}, maxScaledThreads int) {
 		scaledThreadCount := len(autoScaledThreads)
 		scalingMu.Unlock()
 		if scaledThreadCount >= maxScaledThreads {
-			time.Sleep(upscaleCheckTime)
-			continue
+			// we have reached max_threads, check again later
+			select {
+			case <-done:
+				return
+			case <-time.After(downScaleCheckTime):
+				continue
+			}
 		}
 
 		select {
@@ -207,8 +215,12 @@ func startUpscalingThreads(done chan struct{}, maxScaledThreads int) {
 
 			// if the request has not been stalled long enough, wait and repeat
 			if timeSinceStalled < minStallTime {
-				time.Sleep(upscaleCheckTime)
-				continue
+				select {
+				case <-done:
+					return
+				case <-time.After(minStallTime - timeSinceStalled):
+					continue
+				}
 			}
 
 			// if the request has been stalled long enough, scale
@@ -224,14 +236,12 @@ func startUpscalingThreads(done chan struct{}, maxScaledThreads int) {
 }
 
 func startDownScalingThreads(done chan struct{}) {
-	timer := time.NewTimer(downScaleCheckTime)
 	for {
 		select {
 		case <-done:
 			return
-		case <-timer.C:
+		case <-time.After(downScaleCheckTime):
 			deactivateThreads()
-			timer.Reset(downScaleCheckTime)
 		}
 	}
 }

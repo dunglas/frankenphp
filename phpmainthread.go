@@ -28,7 +28,7 @@ var (
 // start the main PHP thread
 // start a fixed number of inactive PHP threads
 // reserve a fixed number of possible PHP threads
-func initPHPThreads(numThreads int, numMaxThreads int, phpIniOverrides map[string]string) error {
+func initPHPThreads(numThreads int, numMaxThreads int, phpIniOverrides map[string]string) (*phpMainThread, error) {
 	mainThread = &phpMainThread{
 		state:           newThreadState(),
 		done:            make(chan struct{}),
@@ -45,7 +45,7 @@ func initPHPThreads(numThreads int, numMaxThreads int, phpIniOverrides map[strin
 	phpThreads = []*phpThread{initialThread}
 
 	if err := mainThread.start(); err != nil {
-		return err
+		return nil, err
 	}
 
 	// initialize all other threads
@@ -67,7 +67,7 @@ func initPHPThreads(numThreads int, numMaxThreads int, phpIniOverrides map[strin
 	}
 	ready.Wait()
 
-	return nil
+	return mainThread, nil
 }
 
 // ThreadDebugStatus prints the state of all PHP threads - debugging purposes only

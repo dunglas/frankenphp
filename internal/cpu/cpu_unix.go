@@ -23,11 +23,10 @@ func ProbeCPUs(probeTime time.Duration, maxCPUUsage float64, abort chan struct{}
 	C.clock_gettime(C.CLOCK_MONOTONIC, &start)
 	C.clock_gettime(C.CLOCK_PROCESS_CPUTIME_ID, &cpuStart)
 
-	timer := time.NewTimer(probeTime)
 	select {
 	case <-abort:
 		return false
-	case <-timer.C:
+	case <-time.After(probeTime):
 	}
 
 	C.clock_gettime(C.CLOCK_MONOTONIC, &end)

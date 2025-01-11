@@ -333,7 +333,8 @@ func Init(options ...Option) error {
 		logger.Warn(`ZTS is not enabled, only 1 thread will be available, recompile PHP using the "--enable-zts" configuration option or performance will be degraded`)
 	}
 
-	if err := initPHPThreads(totalThreadCount, maxThreadCount, opt.phpIniOverrides); err != nil {
+	mainThread, err := initPHPThreads(totalThreadCount, maxThreadCount, opt.phpIniOverrides)
+	if err != nil {
 		return err
 	}
 
@@ -348,7 +349,7 @@ func Init(options ...Option) error {
 		return err
 	}
 
-	initAutoScaling(mainThread.numThreads, mainThread.maxThreads)
+	initAutoScaling(mainThread)
 
 	if c := logger.Check(zapcore.InfoLevel, "FrankenPHP started 🐘"); c != nil {
 		c.Write(zap.String("php_version", Version().Version), zap.Int("num_threads", mainThread.numThreads), zap.Int("max_threads", mainThread.maxThreads))

@@ -10,11 +10,10 @@ import (
 
 // The fallback always determines that the CPU limits are not reached
 func ProbeCPUs(probeTime time.Duration, maxCPUUsage float64, abort chan struct{}) bool {
-	timer := time.NewTimer(probeTime)
 	select {
 	case <-abort:
 		return false
-	case <-timer.C:
+	case <-time.After(probeTime):
 		return true
 	}
 }
