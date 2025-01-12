@@ -37,6 +37,7 @@ func initPHPThreads(numThreads int, numMaxThreads int, phpIniOverrides map[strin
 	}
 
 	// convert the php.ini overrides from the Caddy config to a C string
+	// TODO: if needed this would also be possible on a per-thread basis
 	if phpIniOverrides != nil {
 		overrides := ""
 		for k, v := range phpIniOverrides {
