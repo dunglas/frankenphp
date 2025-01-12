@@ -952,7 +952,7 @@ static void *php_main(void *arg) {
   /* overwrite php.ini with settings from the Caddy config */
   char *php_ini_overrides = go_get_php_ini_overrides();
   if (php_ini_overrides != NULL) {
-	frankenphp_sapi_module.ini_entries = php_ini_overrides;
+    frankenphp_sapi_module.ini_entries = php_ini_overrides;
   }
 
   frankenphp_sapi_module.startup(&frankenphp_sapi_module);
