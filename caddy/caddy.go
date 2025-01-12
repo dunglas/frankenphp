@@ -27,6 +27,8 @@ import (
 
 const defaultDocumentRoot = "public"
 
+var iniError = errors.New("'php_ini' must be in the format: php_ini \"<key>\" \"<value>\"")
+
 func init() {
 	caddy.RegisterModule(FrankenPHPApp{})
 	caddy.RegisterModule(FrankenPHPModule{})
@@ -147,16 +149,19 @@ func (f *FrankenPHPApp) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 				f.MaxThreads = int(v)
 			case "php_ini":
 				if !d.NextArg() {
-					return d.ArgErr()
+					return iniError
 				}
 				key := d.Val()
 				if !d.NextArg() {
-					return d.ArgErr()
+					return iniError
 				}
 				if f.PhpIniOverrides == nil {
 					f.PhpIniOverrides = make(map[string]string)
 				}
 				f.PhpIniOverrides[key] = d.Val()
+				if d.NextArg() {
+					return iniError
+				}
 			case "worker":
 				wc := workerConfig{}
 				if d.NextArg() {
