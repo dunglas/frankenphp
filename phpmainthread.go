@@ -17,7 +17,7 @@ type phpMainThread struct {
 	done            chan struct{}
 	numThreads      int
 	maxThreads      int
-	phpIniOverrides map[string]string
+	phpIniOverrides *C.char
 }
 
 var (
@@ -30,11 +30,19 @@ var (
 // reserve a fixed number of possible PHP threads
 func initPHPThreads(numThreads int, numMaxThreads int, phpIniOverrides map[string]string) (*phpMainThread, error) {
 	mainThread = &phpMainThread{
-		state:           newThreadState(),
-		done:            make(chan struct{}),
-		numThreads:      numThreads,
-		maxThreads:      numMaxThreads,
-		phpIniOverrides: phpIniOverrides,
+		state:      newThreadState(),
+		done:       make(chan struct{}),
+		numThreads: numThreads,
+		maxThreads: numMaxThreads,
+	}
+
+	// convert the php.ini overrides from the Caddy config to a C string
+	if phpIniOverrides != nil {
+		overrides := ""
+		for k, v := range phpIniOverrides {
+			overrides += fmt.Sprintf("%s=%s\n", k, v)
+		}
+		mainThread.phpIniOverrides = C.CString(overrides)
 	}
 
 	// initialize the first thread
@@ -142,7 +150,6 @@ func getPHPThreadAtState(state stateID) *phpThread {
 
 //export go_frankenphp_main_thread_is_ready
 func go_frankenphp_main_thread_is_ready() {
-	mainThread.overridePHPIni()
 	mainThread.setAutomaticMaxThreads()
 	if mainThread.maxThreads < mainThread.numThreads {
 		mainThread.maxThreads = mainThread.numThreads
@@ -150,20 +157,6 @@ func go_frankenphp_main_thread_is_ready() {
 
 	mainThread.state.set(stateReady)
 	mainThread.state.waitFor(stateDone)
-}
-
-// override php.ini directives with those set in the Caddy config
-// this needs to happen on each thread and before script execution
-func (mainThread *phpMainThread) overridePHPIni() {
-	if mainThread.phpIniOverrides == nil {
-		return
-	}
-	for k, v := range mainThread.phpIniOverrides {
-		C.frankenphp_overwrite_ini_configuraton(
-			C.go_string{C.size_t(len(k)), toUnsafeChar(k)},
-			C.go_string{C.size_t(len(v)), toUnsafeChar(v)},
-		)
-	}
 }
 
 // max_threads = auto
@@ -187,4 +180,9 @@ func (mainThread *phpMainThread) setAutomaticMaxThreads() {
 //export go_frankenphp_shutdown_main_thread
 func go_frankenphp_shutdown_main_thread() {
 	mainThread.state.set(stateReserved)
+}
+
+//export go_get_php_ini_overrides
+func go_get_php_ini_overrides() *C.char {
+	return mainThread.phpIniOverrides
 }
