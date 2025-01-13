@@ -9,36 +9,37 @@ import (
 	"net/http"
 	"path/filepath"
 	"strings"
+	"unsafe"
 )
 
-var knownServerKeys = map[string]struct{}{
-	"CONTENT_LENGTH\x00":    {},
-	"DOCUMENT_ROOT\x00":     {},
-	"DOCUMENT_URI\x00":      {},
-	"GATEWAY_INTERFACE\x00": {},
-	"HTTP_HOST\x00":         {},
-	"HTTPS\x00":             {},
-	"PATH_INFO\x00":         {},
-	"PHP_SELF\x00":          {},
-	"REMOTE_ADDR\x00":       {},
-	"REMOTE_HOST\x00":       {},
-	"REMOTE_PORT\x00":       {},
-	"REQUEST_SCHEME\x00":    {},
-	"SCRIPT_FILENAME\x00":   {},
-	"SCRIPT_NAME\x00":       {},
-	"SERVER_NAME\x00":       {},
-	"SERVER_PORT\x00":       {},
-	"SERVER_PROTOCOL\x00":   {},
-	"SERVER_SOFTWARE\x00":   {},
-	"SSL_PROTOCOL\x00":      {},
-	"AUTH_TYPE\x00":         {},
-	"REMOTE_IDENT\x00":      {},
-	"CONTENT_TYPE\x00":      {},
-	"PATH_TRANSLATED\x00":   {},
-	"QUERY_STRING\x00":      {},
-	"REMOTE_USER\x00":       {},
-	"REQUEST_METHOD\x00":    {},
-	"REQUEST_URI\x00":       {},
+var knownServerKeys = []string{
+	"CONTENT_LENGTH",
+	"DOCUMENT_ROOT",
+	"DOCUMENT_URI",
+	"GATEWAY_INTERFACE",
+	"HTTP_HOST",
+	"HTTPS",
+	"PATH_INFO",
+	"PHP_SELF",
+	"REMOTE_ADDR",
+	"REMOTE_HOST",
+	"REMOTE_PORT",
+	"REQUEST_SCHEME",
+	"SCRIPT_FILENAME",
+	"SCRIPT_NAME",
+	"SERVER_NAME",
+	"SERVER_PORT",
+	"SERVER_PROTOCOL",
+	"SERVER_SOFTWARE",
+	"SSL_PROTOCOL",
+	"AUTH_TYPE",
+	"REMOTE_IDENT",
+	"CONTENT_TYPE",
+	"PATH_TRANSLATED",
+	"QUERY_STRING",
+	"REMOTE_USER",
+	"REQUEST_METHOD",
+	"REQUEST_URI",
 }
 
 // computeKnownVariables returns a set of CGI environment variables for the request.
@@ -60,58 +61,26 @@ func addKnownVariablesToServer(thread *phpThread, request *http.Request, fc *Fra
 	ip = strings.Replace(ip, "[", "", 1)
 	ip = strings.Replace(ip, "]", "", 1)
 
-	ra, raOK := fc.env["REMOTE_ADDR\x00"]
-	if raOK {
-		registerTrustedVar(keys["REMOTE_ADDR\x00"], ra, trackVarsArray, thread)
-	} else {
-		registerTrustedVar(keys["REMOTE_ADDR\x00"], ip, trackVarsArray, thread)
-	}
-
-	if rh, ok := fc.env["REMOTE_HOST\x00"]; ok {
-		registerTrustedVar(keys["REMOTE_HOST\x00"], rh, trackVarsArray, thread) // For speed, remote host lookups disabled
-	} else {
-		if raOK {
-			registerTrustedVar(keys["REMOTE_HOST\x00"], ra, trackVarsArray, thread)
-		} else {
-			registerTrustedVar(keys["REMOTE_HOST\x00"], ip, trackVarsArray, thread)
-		}
-	}
-
-	registerTrustedVar(keys["REMOTE_PORT\x00"], port, trackVarsArray, thread)
-	registerTrustedVar(keys["DOCUMENT_ROOT\x00"], fc.documentRoot, trackVarsArray, thread)
-	registerTrustedVar(keys["PATH_INFO\x00"], fc.pathInfo, trackVarsArray, thread)
-	registerTrustedVar(keys["PHP_SELF\x00"], request.URL.Path, trackVarsArray, thread)
-	registerTrustedVar(keys["DOCUMENT_URI\x00"], fc.docURI, trackVarsArray, thread)
-	registerTrustedVar(keys["SCRIPT_FILENAME\x00"], fc.scriptFilename, trackVarsArray, thread)
-	registerTrustedVar(keys["SCRIPT_NAME\x00"], fc.scriptName, trackVarsArray, thread)
-
+	var https string
+	var sslProtocol string
 	var rs string
 	if request.TLS == nil {
 		rs = "http"
-		registerTrustedVar(keys["HTTPS\x00"], "", trackVarsArray, thread)
-		registerTrustedVar(keys["SSL_PROTOCOL\x00"], "", trackVarsArray, thread)
+		https = ""
+		sslProtocol = ""
 	} else {
 		rs = "https"
-		if h, ok := fc.env["HTTPS\x00"]; ok {
-			registerTrustedVar(keys["HTTPS\x00"], h, trackVarsArray, thread)
-		} else {
-			registerTrustedVar(keys["HTTPS\x00"], "on", trackVarsArray, thread)
-		}
+		https = "on"
 
 		// and pass the protocol details in a manner compatible with apache's mod_ssl
 		// (which is why these have an SSL_ prefix and not TLS_).
-		if pr, ok := fc.env["SSL_PROTOCOL\x00"]; ok {
-			registerTrustedVar(keys["SSL_PROTOCOL\x00"], pr, trackVarsArray, thread)
+		if v, ok := tlsProtocolStrings[request.TLS.Version]; ok {
+			sslProtocol = v
 		} else {
-			if v, ok := tlsProtocolStrings[request.TLS.Version]; ok {
-				registerTrustedVar(keys["SSL_PROTOCOL\x00"], v, trackVarsArray, thread)
-			} else {
-				registerTrustedVar(keys["SSL_PROTOCOL\x00"], "", trackVarsArray, thread)
-			}
+			sslProtocol = ""
 		}
 	}
 
-	registerTrustedVar(keys["REQUEST_SCHEME\x00"], rs, trackVarsArray, thread)
 	reqHost, reqPort, _ := net.SplitHostPort(request.Host)
 
 	if reqHost == "" {
@@ -132,45 +101,64 @@ func addKnownVariablesToServer(thread *phpThread, request *http.Request, fc *Fra
 		}
 	}
 
-	registerTrustedVar(keys["SERVER_NAME\x00"], reqHost, trackVarsArray, thread)
-	if reqPort != "" {
-		registerTrustedVar(keys["SERVER_PORT\x00"], reqPort, trackVarsArray, thread)
+	serverPort := reqPort
+	contentLength := request.Header.Get("Content-Length")
+
+	var requestURI string
+	if fc.originalRequest != nil {
+		requestURI = fc.originalRequest.URL.RequestURI()
 	} else {
-		registerTrustedVar(keys["SERVER_PORT\x00"], "", trackVarsArray, thread)
+		requestURI = request.URL.RequestURI()
 	}
 
-	// Variables defined in CGI 1.1 spec
-	// Some variables are unused but cleared explicitly to prevent
-	// the parent environment from interfering.
-
-	// These values can not be overridden
-	registerTrustedVar(keys["CONTENT_LENGTH\x00"], request.Header.Get("Content-Length"), trackVarsArray, thread)
-	registerTrustedVar(keys["GATEWAY_INTERFACE\x00"], "CGI/1.1", trackVarsArray, thread)
-	registerTrustedVar(keys["SERVER_PROTOCOL\x00"], request.Proto, trackVarsArray, thread)
-	registerTrustedVar(keys["SERVER_SOFTWARE\x00"], "FrankenPHP", trackVarsArray, thread)
-	registerTrustedVar(keys["HTTP_HOST\x00"], request.Host, trackVarsArray, thread) // added here, since not always part of headers
-
-	// These values are always empty but must be defined:
-	registerTrustedVar(keys["AUTH_TYPE\x00"], "", trackVarsArray, thread)
-	registerTrustedVar(keys["REMOTE_IDENT\x00"], "", trackVarsArray, thread)
+	C.frankenphp_register_bulk(
+		trackVarsArray,
+		packCgiVariable(keys["REMOTE_ADDR"], ip),
+		packCgiVariable(keys["REMOTE_HOST"], ip),
+		packCgiVariable(keys["REMOTE_PORT"], port),
+		packCgiVariable(keys["DOCUMENT_ROOT"], fc.documentRoot),
+		packCgiVariable(keys["PATH_INFO"], fc.pathInfo),
+		packCgiVariable(keys["PHP_SELF"], request.URL.Path),
+		packCgiVariable(keys["DOCUMENT_URI"], fc.docURI),
+		packCgiVariable(keys["SCRIPT_FILENAME"], fc.scriptFilename),
+		packCgiVariable(keys["SCRIPT_NAME"], fc.scriptName),
+		packCgiVariable(keys["HTTPS"], https),
+		packCgiVariable(keys["SSL_PROTOCOL"], sslProtocol),
+		packCgiVariable(keys["REQUEST_SCHEME"], rs),
+		packCgiVariable(keys["SERVER_NAME"], reqHost),
+		packCgiVariable(keys["SERVER_PORT"], serverPort),
+		// Variables defined in CGI 1.1 spec
+		// Some variables are unused but cleared explicitly to prevent
+		// the parent environment from interfering.
+		// These values can not be overridden
+		packCgiVariable(keys["CONTENT_LENGTH"], contentLength),
+		packCgiVariable(keys["GATEWAY_INTERFACE"], "CGI/1.1"),
+		packCgiVariable(keys["SERVER_PROTOCOL"], request.Proto),
+		packCgiVariable(keys["SERVER_SOFTWARE"], "FrankenPHP"),
+		packCgiVariable(keys["HTTP_HOST"], request.Host),
+		// These values are always empty but must be defined:
+		packCgiVariable(keys["AUTH_TYPE"], ""),
+		packCgiVariable(keys["REMOTE_IDENT"], ""),
+		// Request uri of the original request
+		packCgiVariable(keys["REQUEST_URI"], requestURI),
+	)
 
 	// These values are already present in the SG(request_info), so we'll register them from there
 	C.frankenphp_register_variables_from_request_info(
 		trackVarsArray,
-		keys["CONTENT_TYPE\x00"],
-		keys["PATH_TRANSLATED\x00"],
-		keys["QUERY_STRING\x00"],
-		keys["REMOTE_USER\x00"],
-		keys["REQUEST_METHOD\x00"],
-		keys["REQUEST_URI\x00"],
+		keys["CONTENT_TYPE"],
+		keys["PATH_TRANSLATED"],
+		keys["QUERY_STRING"],
+		keys["REMOTE_USER"],
+		keys["REQUEST_METHOD"],
 	)
 }
 
-func registerTrustedVar(key *C.zend_string, value string, trackVarsArray *C.zval, thread *phpThread) {
-	C.frankenphp_register_trusted_var(key, thread.pinString(value), C.int(len(value)), trackVarsArray)
+func packCgiVariable(key *C.zend_string, value string) C.ht_key_value_pair {
+	return C.ht_key_value_pair{key, toUnsafeChar(value), C.size_t(len(value))}
 }
 
-func addHeadersToServer(thread *phpThread, request *http.Request, fc *FrankenPHPContext, trackVarsArray *C.zval) {
+func addHeadersToServer(request *http.Request, fc *FrankenPHPContext, trackVarsArray *C.zval) {
 	for field, val := range request.Header {
 		k, ok := headerKeyCache.Get(field)
 		if !ok {
@@ -183,13 +171,13 @@ func addHeadersToServer(thread *phpThread, request *http.Request, fc *FrankenPHP
 		}
 
 		v := strings.Join(val, ", ")
-		C.frankenphp_register_variable_safe(thread.pinString(k), thread.pinString(v), C.size_t(len(v)), trackVarsArray)
+		C.frankenphp_register_variable_safe(toUnsafeChar(k), toUnsafeChar(v), C.size_t(len(v)), trackVarsArray)
 	}
 }
 
-func addPreparedEnvToServer(thread *phpThread, fc *FrankenPHPContext, trackVarsArray *C.zval) {
+func addPreparedEnvToServer(fc *FrankenPHPContext, trackVarsArray *C.zval) {
 	for k, v := range fc.env {
-		C.frankenphp_register_variable_safe(thread.pinString(k), thread.pinString(v), C.size_t(len(v)), trackVarsArray)
+		C.frankenphp_register_variable_safe(toUnsafeChar(k), toUnsafeChar(v), C.size_t(len(v)), trackVarsArray)
 	}
 	fc.env = nil
 }
@@ -199,9 +187,8 @@ func getKnownVariableKeys(thread *phpThread) map[string]*C.zend_string {
 		return thread.knownVariableKeys
 	}
 	threadServerKeys := make(map[string]*C.zend_string)
-	for k := range knownServerKeys {
-		keyWithoutNull := strings.Replace(k, "\x00", "", -1)
-		threadServerKeys[k] = C.frankenphp_init_persistent_string(thread.pinString(keyWithoutNull), C.size_t(len(keyWithoutNull)))
+	for _, k := range knownServerKeys {
+		threadServerKeys[k] = C.frankenphp_init_persistent_string(toUnsafeChar(k), C.size_t(len(k)))
 	}
 	thread.knownVariableKeys = threadServerKeys
 	return threadServerKeys
@@ -214,8 +201,8 @@ func go_register_variables(threadIndex C.uintptr_t, trackVarsArray *C.zval) {
 	fc := r.Context().Value(contextKey).(*FrankenPHPContext)
 
 	addKnownVariablesToServer(thread, r, fc, trackVarsArray)
-	addHeadersToServer(thread, r, fc, trackVarsArray)
-	addPreparedEnvToServer(thread, fc, trackVarsArray)
+	addHeadersToServer(r, fc, trackVarsArray)
+	addPreparedEnvToServer(fc, trackVarsArray)
 }
 
 //export go_frankenphp_release_known_variable_keys
@@ -289,3 +276,8 @@ func sanitizedPathJoin(root, reqPath string) string {
 }
 
 const separator = string(filepath.Separator)
+
+func toUnsafeChar(s string) *C.char {
+	sData := unsafe.StringData(s)
+	return (*C.char)(unsafe.Pointer(sData))
+}

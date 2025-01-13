@@ -596,12 +596,14 @@ func TestAllDefinedServerVars(t *testing.T) {
 		localhost:`+testPort+` {
 			route {
 			    root ../testdata
+			    # rewrite to test that the original path is passed as $REQUEST_URI
+			    rewrite /server-all-vars-ordered.php/path
 				php
 			}
 		}
 		`, "caddyfile")
 	tester.AssertPostResponseBody(
-		"http://user@localhost:"+testPort+"/server-all-vars-ordered.php/path?specialChars=%3E\\x00%00</>",
+		"http://user@localhost:"+testPort+"/original-path?specialChars=%3E\\x00%00</>",
 		[]string{
 			"Content-Type: application/x-www-form-urlencoded",
 			"Content-Length: 14", // maliciously set to 14
