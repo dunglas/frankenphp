@@ -29,7 +29,7 @@ func TestWorkersShouldReloadOnMatchingPattern(t *testing.T) {
 	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
 		requestBodyHasReset := pollForWorkerReset(t, handler, maxTimesToPollForChanges)
 		assert.True(t, requestBodyHasReset)
-	}, &testOptions{nbParrallelRequests: 1, nbWorkers: 1, workerScript: "worker-with-watcher.php", watch: watch})
+	}, &testOptions{nbParallelRequests: 1, nbWorkers: 1, workerScript: "worker-with-watcher.php", watch: watch})
 }
 
 func TestWorkersShouldNotReloadOnExcludingPattern(t *testing.T) {
@@ -38,7 +38,7 @@ func TestWorkersShouldNotReloadOnExcludingPattern(t *testing.T) {
 	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
 		requestBodyHasReset := pollForWorkerReset(t, handler, minTimesToPollForChanges)
 		assert.False(t, requestBodyHasReset)
-	}, &testOptions{nbParrallelRequests: 1, nbWorkers: 1, workerScript: "worker-with-watcher.php", watch: watch})
+	}, &testOptions{nbParallelRequests: 1, nbWorkers: 1, workerScript: "worker-with-watcher.php", watch: watch})
 }
 
 func fetchBody(method string, url string, handler func(http.ResponseWriter, *http.Request)) string {
