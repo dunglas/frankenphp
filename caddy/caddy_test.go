@@ -608,7 +608,7 @@ func TestAllDefinedServerVars(t *testing.T) {
 			"Content-Type: application/x-www-form-urlencoded",
 			"Content-Length: 14", // maliciously set to 14
 			"Special-Chars: <%00>",
-			"Host: Malicous Host",
+			"Host: Malicious Host",
 			"X-Empty-Header:",
 		},
 		bytes.NewBufferString("foo=bar"),

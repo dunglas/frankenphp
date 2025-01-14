@@ -43,7 +43,7 @@ func TestWorker(t *testing.T) {
 		body2, _ := io.ReadAll(resp2.Body)
 
 		assert.Contains(t, string(body2), fmt.Sprintf("Requests handled: %d", i*2+1))
-	}, &testOptions{workerScript: "worker.php", nbWorkers: 1, nbParrallelRequests: 1})
+	}, &testOptions{workerScript: "worker.php", nbWorkers: 1, nbParallelRequests: 1})
 }
 
 func TestWorkerDie(t *testing.T) {
@@ -51,7 +51,7 @@ func TestWorkerDie(t *testing.T) {
 		req := httptest.NewRequest("GET", "http://example.com/die.php", nil)
 		w := httptest.NewRecorder()
 		handler(w, req)
-	}, &testOptions{workerScript: "die.php", nbWorkers: 1, nbParrallelRequests: 10})
+	}, &testOptions{workerScript: "die.php", nbWorkers: 1, nbParallelRequests: 10})
 }
 
 func TestNonWorkerModeAlwaysWorks(t *testing.T) {
@@ -90,7 +90,7 @@ func TestWorkerEnv(t *testing.T) {
 		body, _ := io.ReadAll(resp.Body)
 
 		assert.Equal(t, fmt.Sprintf("bar%d", i), string(body))
-	}, &testOptions{workerScript: "worker-env.php", nbWorkers: 1, env: map[string]string{"FOO": "bar"}, nbParrallelRequests: 10})
+	}, &testOptions{workerScript: "worker-env.php", nbWorkers: 1, env: map[string]string{"FOO": "bar"}, nbParallelRequests: 10})
 }
 
 func TestWorkerGetOpt(t *testing.T) {
@@ -150,5 +150,5 @@ func TestWorkerHasOSEnvironmentVariableInSERVER(t *testing.T) {
 
 		assert.Contains(t, string(body), "CUSTOM_OS_ENV_VARIABLE")
 		assert.Contains(t, string(body), "custom_env_variable_value")
-	}, &testOptions{workerScript: "worker.php", nbWorkers: 1, nbParrallelRequests: 1})
+	}, &testOptions{workerScript: "worker.php", nbWorkers: 1, nbParallelRequests: 1})
 }

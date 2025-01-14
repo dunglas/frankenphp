@@ -31,7 +31,7 @@ Refer to "[Building Custom Docker Image](docker.md)" for more details and option
 and to learn how to customize the configuration, install PHP extensions and Caddy modules.
 
 If your project uses Composer,
-be sure to include it in the Docker image and to install your depedencies.
+be sure to include it in the Docker image and to install your dependencies.
 
 Then, add a `compose.yaml` file:
 
