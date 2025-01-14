@@ -41,7 +41,7 @@ type testOptions struct {
 	watch               []string
 	nbWorkers           int
 	env                 map[string]string
-	nbParallelRequests int
+	nbParallelRequests  int
 	realServer          bool
 	logger              *zap.Logger
 	initOpts            []frankenphp.Option
