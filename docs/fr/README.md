@@ -85,3 +85,4 @@ frankenphp php-cli /path/to/your/script.php
 * [Drupal](https://github.com/dunglas/frankenphp-drupal)
 * [Joomla](https://github.com/alexandreelise/frankenphp-joomla)
 * [TYPO3](https://github.com/ochorocho/franken-typo3)
+* [Magento2](https://github.com/ekino/frankenphp-magento2)
