@@ -1,35 +1,34 @@
 {
-	debug
+	#debug
 	frankenphp {
-		#worker ./index.php
+		max_threads 0
+		worker {
+			file /go/src/app/testdata/worker-with-counter.php
+			#watch ./**/*.{php,yaml,yml,twig,env}
+			num 7
+		}
+		#worker /go/src/app/testdata/debug.php
+		php_ini max_execution_time -1
+		php_ini max_execution_time 5
+		php_ini max_execution_time 6
+		php_ini max_execution_time 7
 	}
+	#servers {
+        #enable_full_duplex
+    #}
+
+    servers {
+        #metrics
+    }
 }
 
-http:// {
-	log
+:80 {
+
 	route {
-		root * .
-		# Add trailing slash for directory requests
-		@canonicalPath {
-			file {path}/index.php
-			not path */
-		}
-		redir @canonicalPath {path}/ 308
-
-		# If the requested file does not exist, try index files
-		@indexFiles file {
-			try_files {path} {path}/index.php index.php
-			split_path .php
-		}
-		rewrite @indexFiles {http.matchers.file.relative}
-
-		encode zstd br gzip
-
-		# FrankenPHP!
-		@phpFiles path *.php
-		php @phpFiles
-		file_server
-
-		respond 404
+		# everything that is not in /assets is handled by your index or worker PHP file
+        rewrite worker-with-counter.php
+        php {
+            root /go/src/app/testdata # explicitly adding the root here allows for better caching
+        }
 	}
 }
