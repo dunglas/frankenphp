@@ -13,12 +13,12 @@ import (
 	"go.uber.org/zap"
 )
 
-// TODO: make speed of scaling dependant on CPU count?
+// TODO: these constants need some real-world trial
 const (
 	// requests have to be stalled for at least this amount of time before scaling
 	minStallTime = 5 * time.Millisecond
 	// time to check for CPU usage before scaling a single thread
-	cpuProbeTime = 100 * time.Millisecond
+	cpuProbeTime = 120 * time.Millisecond
 	// do not scale over this amount of CPU usage
 	maxCpuUsageForScaling = 0.8
 	// upscale stalled threads every x milliseconds
