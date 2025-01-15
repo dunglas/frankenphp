@@ -3,10 +3,14 @@ package frankenphp
 // #include "frankenphp.h"
 import "C"
 import (
+	"fmt"
 	"net/http"
 	"runtime"
 	"sync"
+	"time"
 	"unsafe"
+
+	"go.uber.org/zap"
 )
 
 // representation of the actual underlying PHP thread
@@ -25,6 +29,7 @@ type phpThread struct {
 
 // interface that defines how the callbacks from the C thread should be handled
 type threadHandler interface {
+	name() string
 	beforeScriptExecution() string
 	afterScriptExecution(exitStatus int)
 	getActiveRequest() *http.Request
@@ -33,21 +38,56 @@ type threadHandler interface {
 func newPHPThread(threadIndex int) *phpThread {
 	return &phpThread{
 		threadIndex: threadIndex,
-		drainChan:   make(chan struct{}),
 		requestChan: make(chan *http.Request),
 		handlerMu:   &sync.Mutex{},
 		state:       newThreadState(),
 	}
 }
 
+// boot the underlying PHP thread
+func (thread *phpThread) boot() {
+	// thread must be in reserved state to boot
+	if !thread.state.compareAndSwap(stateReserved, stateBooting) {
+		logger.Error("thread is not in reserved state", zap.Int("threadIndex", thread.threadIndex), zap.Int("state", int(thread.state.get())))
+		return
+	}
+
+	// boot threads as inactive
+	thread.handlerMu.Lock()
+	thread.handler = &inactiveThread{thread: thread}
+	thread.drainChan = make(chan struct{})
+	thread.handlerMu.Unlock()
+
+	// start the actual posix thread - TODO: try this with go threads instead
+	if !C.frankenphp_new_php_thread(C.uintptr_t(thread.threadIndex)) {
+		logger.Panic("unable to create thread", zap.Int("threadIndex", thread.threadIndex))
+	}
+	thread.state.waitFor(stateInactive)
+}
+
+// shutdown the underlying PHP thread
+func (thread *phpThread) shutdown() {
+	if !thread.state.requestSafeStateChange(stateShuttingDown) {
+		// already shutting down or done
+		return
+	}
+	close(thread.drainChan)
+	thread.state.waitFor(stateDone)
+	thread.drainChan = make(chan struct{})
+
+	// threads go back to the reserved state from which they can be booted again
+	if mainThread.state.is(stateReady) {
+		thread.state.set(stateReserved)
+	}
+}
+
 // change the thread handler safely
 // must be called from outside the PHP thread
 func (thread *phpThread) setHandler(handler threadHandler) {
-	logger.Debug("setHandler")
 	thread.handlerMu.Lock()
 	defer thread.handlerMu.Unlock()
 	if !thread.state.requestSafeStateChange(stateTransitionRequested) {
-		// no state change allowed == shutdown
+		// no state change allowed == shutdown or done
 		return
 	}
 	close(thread.drainChan)
@@ -68,6 +108,27 @@ func (thread *phpThread) transitionToNewHandler() string {
 
 func (thread *phpThread) getActiveRequest() *http.Request {
 	return thread.handler.getActiveRequest()
+}
+
+// small status message for debugging
+func (thread *phpThread) debugStatus() string {
+	reqState := ""
+	if waitTime := thread.state.waitTime(); waitTime > 0 {
+		reqState = fmt.Sprintf(", waiting for %dms", waitTime)
+	} else if r := thread.getActiveRequest(); r != nil {
+		fc := r.Context().Value(contextKey).(*FrankenPHPContext)
+		path := r.URL.Path
+		if fc.originalRequest != nil {
+			path = fc.originalRequest.URL.Path
+		}
+		if fc.responseWriter == nil {
+			reqState = fmt.Sprintf(", executing worker script: %s ", path)
+		} else {
+			sinceMs := time.Since(fc.startedAt).Milliseconds()
+			reqState = fmt.Sprintf(", handling %s for %dms ", path, sinceMs)
+		}
+	}
+	return fmt.Sprintf("Thread %d (%s%s) %s", thread.threadIndex, thread.state.name(), reqState, thread.handler.name())
 }
 
 // Pin a string that is not null-terminated
@@ -96,6 +157,7 @@ func go_frankenphp_before_script_execution(threadIndex C.uintptr_t) *C.char {
 	if scriptName == "" {
 		return nil
 	}
+
 	// return the name of the PHP script that should be executed
 	return thread.pinCString(scriptName)
 }

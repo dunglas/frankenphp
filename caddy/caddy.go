@@ -27,9 +27,12 @@ import (
 
 const defaultDocumentRoot = "public"
 
+var iniError = errors.New("'php_ini' must be in the format: php_ini \"<key>\" \"<value>\"")
+
 func init() {
 	caddy.RegisterModule(FrankenPHPApp{})
 	caddy.RegisterModule(FrankenPHPModule{})
+	caddy.RegisterModule(FrankenPHPAdmin{})
 
 	httpcaddyfile.RegisterGlobalOption("frankenphp", parseGlobalOption)
 
@@ -56,8 +59,12 @@ type workerConfig struct {
 type FrankenPHPApp struct {
 	// NumThreads sets the number of PHP threads to start. Default: 2x the number of available CPUs.
 	NumThreads int `json:"num_threads,omitempty"`
+	// MaxThreads limits how many threads can be started at runtime. Default 2x NumThreads
+	MaxThreads int `json:"max_threads,omitempty"`
 	// Workers configures the worker scripts to start.
 	Workers []workerConfig `json:"workers,omitempty"`
+	// Overwrites the default php ini configuration
+	PhpIniOverrides map[string]string `json:"php_ini,omitempty"`
 }
 
 // CaddyModule returns the Caddy module information.
@@ -72,7 +79,13 @@ func (f *FrankenPHPApp) Start() error {
 	repl := caddy.NewReplacer()
 	logger := caddy.Log()
 
-	opts := []frankenphp.Option{frankenphp.WithNumThreads(f.NumThreads), frankenphp.WithLogger(logger), frankenphp.WithMetrics(metrics)}
+	opts := []frankenphp.Option{
+		frankenphp.WithNumThreads(f.NumThreads),
+		frankenphp.WithMaxThreads(f.MaxThreads),
+		frankenphp.WithLogger(logger),
+		frankenphp.WithMetrics(metrics),
+		frankenphp.WithPhpIniOverrides(f.PhpIniOverrides),
+	}
 	for _, w := range f.Workers {
 		opts = append(opts, frankenphp.WithWorkers(repl.ReplaceKnown(w.FileName, ""), w.Num, w.Env, w.Watch))
 	}
@@ -118,6 +131,37 @@ func (f *FrankenPHPApp) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 				}
 
 				f.NumThreads = v
+			case "max_threads":
+				if !d.NextArg() {
+					return d.ArgErr()
+				}
+
+				if d.Val() == "auto" {
+					f.MaxThreads = -1
+					continue
+				}
+
+				v, err := strconv.ParseUint(d.Val(), 10, 32)
+				if err != nil {
+					return err
+				}
+
+				f.MaxThreads = int(v)
+			case "php_ini":
+				if !d.NextArg() {
+					return iniError
+				}
+				key := d.Val()
+				if !d.NextArg() {
+					return iniError
+				}
+				if f.PhpIniOverrides == nil {
+					f.PhpIniOverrides = make(map[string]string)
+				}
+				f.PhpIniOverrides[key] = d.Val()
+				if d.NextArg() {
+					return iniError
+				}
 			case "worker":
 				wc := workerConfig{}
 				if d.NextArg() {

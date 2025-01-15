@@ -78,7 +78,7 @@ typedef struct frankenphp_server_context {
   bool finished;
 } frankenphp_server_context;
 
-__thread bool should_filter_var = 0;
+bool should_filter_var = 0;
 __thread frankenphp_server_context *local_ctx = NULL;
 __thread uintptr_t thread_index;
 __thread zval *os_environment = NULL;
@@ -740,7 +740,8 @@ frankenphp_register_variable_from_request_info(zend_string *zKey, char *value,
     frankenphp_register_trusted_var(zKey, value, strlen(value),
                                     Z_ARRVAL_P(track_vars_array));
   } else if (must_be_present) {
-    frankenphp_register_trusted_var(zKey, "", 0, Z_ARRVAL_P(track_vars_array));
+    frankenphp_register_trusted_var(zKey, NULL, 0,
+                                    Z_ARRVAL_P(track_vars_array));
   }
 }
 
@@ -749,7 +750,7 @@ void frankenphp_register_variables_from_request_info(
     zend_string *path_translated, zend_string *query_string,
     zend_string *auth_user, zend_string *request_method) {
   frankenphp_register_variable_from_request_info(
-      content_type, (char *)SG(request_info).content_type, false,
+      content_type, (char *)SG(request_info).content_type, true,
       track_vars_array);
   frankenphp_register_variable_from_request_info(
       path_translated, (char *)SG(request_info).path_translated, false,
@@ -886,12 +887,6 @@ static void *php_thread(void *arg) {
 
   local_ctx = malloc(sizeof(frankenphp_server_context));
 
-  /* check if a default filter is set in php.ini and only filter if
-   * it is, this is deprecated and will be removed in PHP 9 */
-  char *default_filter;
-  cfg_get_string("filter.default", &default_filter);
-  should_filter_var = default_filter != NULL;
-
   // loop until Go signals to stop
   char *scriptName = NULL;
   while ((scriptName = go_frankenphp_before_script_execution(thread_index))) {
@@ -952,9 +947,21 @@ static void *php_main(void *arg) {
   memcpy(frankenphp_sapi_module.ini_entries, HARDCODED_INI,
          sizeof(HARDCODED_INI));
 #endif
+#else
+  /* overwrite php.ini with settings from the Caddy config */
+  char *php_ini_overrides = go_get_php_ini_overrides();
+  if (php_ini_overrides != NULL) {
+    frankenphp_sapi_module.ini_entries = php_ini_overrides;
+  }
 #endif
 
   frankenphp_sapi_module.startup(&frankenphp_sapi_module);
+
+  /* check if a default filter is set in php.ini and only filter if
+   * it is, this is deprecated and will be removed in PHP 9 */
+  char *default_filter;
+  cfg_get_string("filter.default", &default_filter);
+  should_filter_var = default_filter != NULL;
 
   go_frankenphp_main_thread_is_ready();
 
@@ -1224,3 +1231,5 @@ int frankenphp_reset_opcache(void) {
   }
   return 0;
 }
+
+int frankenphp_get_current_memory_limit() { return PG(memory_limit); }
