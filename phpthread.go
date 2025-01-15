@@ -116,12 +116,16 @@ func (thread *phpThread) debugStatus() string {
 		reqState = fmt.Sprintf(", waiting for %dms", waitTime)
 	} else if r := thread.getActiveRequest(); r != nil {
 		fc := r.Context().Value(contextKey).(*FrankenPHPContext)
-		sinceMs := time.Since(fc.startedAt).Milliseconds()
 		path := r.URL.Path
 		if fc.originalRequest != nil {
 			path = fc.originalRequest.URL.Path
 		}
-		reqState = fmt.Sprintf(", handling %s for %dms ", path, sinceMs)
+		if fc.responseWriter == nil {
+			reqState = fmt.Sprintf(", executing worker script: %s ", path)
+		} else {
+			sinceMs := time.Since(fc.startedAt).Milliseconds()
+			reqState = fmt.Sprintf(", handling %s for %dms ", path, sinceMs)
+		}
 	}
 	return fmt.Sprintf("Thread %d (%s%s) %s", thread.threadIndex, thread.state.name(), reqState, thread.handler.name())
 }
