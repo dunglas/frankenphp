@@ -17,6 +17,7 @@ import (
 // identified by the index in the phpThreads slice
 type phpThread struct {
 	runtime.Pinner
+
 	threadIndex       int
 	knownVariableKeys map[string]*C.zend_string
 	requestChan       chan *http.Request
