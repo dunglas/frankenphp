@@ -121,3 +121,10 @@ The frankenphp.exe needs some shared libraries in the same directory to run. Lik
 `php_openssl.dll` `php8embed.dll` `php8ts.dll` in `C:\php-sdk\phpdev\vs16\x64\php-8.3.0\x64\Release_TS`.  
 You could use `ldd frankenphp.exe` `ldd php8ts.dll` in 'MSYS2 MINGW64', or `dumpbin /dependents frankenphp.exe` `dumpbin /dependents php8ts.dll` in php-sdk console to see libriaries that need by frankenphp.exe.  
 The .dll files start with 'php_' are php extensions, you can find them in `C:\php-sdk\phpdev\vs16\x64\php-8.3.0\x64\Release_TS`. In order to use the extensions, you need to move them to the same path as frankenphp and edit php.ini in this path.
+
+# Principle
+
+First, the windows cgo support MinGW-w64 compiler suite is more complete. In fact all GNU C compilers are relatively ok, but almost all cgo compilation is based on MinGW-w64.  
+Second, PHP offical only recommand compile with Visual C++(MSVC).  
+
+So the core problem is to make Mingw-w64 compiler set could link with .dll that PHP on Windows. The `patch.php` does those work, see its comments for more details.

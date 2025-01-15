@@ -1,4 +1,9 @@
 <?php
+/* --------------------------------
+This script aim to modify the php-8.3.0 source code to achieve two things:
+    1. Remove specifics that are supported by msvc but not by mingw-w64-gcc;
+    2. Modify the Makefile so that could get php8embeded.dll.
+   --------------------------------*/
 
 $file_path = 'Zend/zend_portability.h';
 $content = file_get_contents($file_path);
