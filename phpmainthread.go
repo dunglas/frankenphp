@@ -17,7 +17,7 @@ type phpMainThread struct {
 	done            chan struct{}
 	numThreads      int
 	maxThreads      int
-	phpIniOverrides *C.char
+	phpIniOverrides map[string]string
 }
 
 var (
@@ -30,20 +30,11 @@ var (
 // reserve a fixed number of possible PHP threads
 func initPHPThreads(numThreads int, numMaxThreads int, phpIniOverrides map[string]string) (*phpMainThread, error) {
 	mainThread = &phpMainThread{
-		state:      newThreadState(),
-		done:       make(chan struct{}),
-		numThreads: numThreads,
-		maxThreads: numMaxThreads,
-	}
-
-	// convert the php.ini overrides from the Caddy config to a C string
-	// TODO: if needed this would also be possible on a per-thread basis
-	if phpIniOverrides != nil {
-		overrides := ""
-		for k, v := range phpIniOverrides {
-			overrides += fmt.Sprintf("%s=%s\n", k, v)
-		}
-		mainThread.phpIniOverrides = C.CString(overrides)
+		state:           newThreadState(),
+		done:            make(chan struct{}),
+		numThreads:      numThreads,
+		maxThreads:      numMaxThreads,
+		phpIniOverrides: phpIniOverrides,
 	}
 
 	// initialize the first thread
@@ -185,5 +176,15 @@ func go_frankenphp_shutdown_main_thread() {
 
 //export go_get_php_ini_overrides
 func go_get_php_ini_overrides() *C.char {
-	return mainThread.phpIniOverrides
+	if mainThread.phpIniOverrides == nil {
+		return nil
+	}
+
+	// convert the php.ini overrides from the Caddy config to a C string
+	// TODO: if needed this would also be possible on a per-thread basis
+	overrides := ""
+	for k, v := range mainThread.phpIniOverrides {
+		overrides += fmt.Sprintf("%s=%s\n", k, v)
+	}
+	return C.CString(overrides)
 }
