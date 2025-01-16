@@ -33,6 +33,5 @@ func ProbeCPUs(probeTime time.Duration, maxCPUUsage float64, abort chan struct{}
 	elapsedCpuTime := float64(cpuEnd.tv_sec-cpuStart.tv_sec)*1e9 + float64(cpuEnd.tv_nsec-cpuStart.tv_nsec)
 	cpuUsage := elapsedCpuTime / elapsedTime / float64(cpuCount)
 
-	println("CPU usage:", int(cpuUsage*100))
 	return cpuUsage < maxCPUUsage
 }

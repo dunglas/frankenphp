@@ -22,7 +22,8 @@ type phpThread struct {
 	knownVariableKeys map[string]*C.zend_string
 	requestChan       chan *http.Request
 	drainChan         chan struct{}
-	handlerMu         *sync.Mutex
+	handlerMu         sync.Mutex
+	requestMu         sync.Mutex
 	handler           threadHandler
 	state             *threadState
 }
@@ -39,7 +40,6 @@ func newPHPThread(threadIndex int) *phpThread {
 	return &phpThread{
 		threadIndex: threadIndex,
 		requestChan: make(chan *http.Request),
-		handlerMu:   &sync.Mutex{},
 		state:       newThreadState(),
 	}
 }
@@ -110,13 +110,22 @@ func (thread *phpThread) getActiveRequest() *http.Request {
 	return thread.handler.getActiveRequest()
 }
 
+// get the active request from outside the PHP thread
+func (thread *phpThread) getActiveRequestSafely() *http.Request {
+	thread.handlerMu.Lock()
+	thread.requestMu.Lock()
+	r := thread.getActiveRequest()
+	thread.requestMu.Unlock()
+	thread.handlerMu.Unlock()
+	return r
+}
+
 // small status message for debugging
 func (thread *phpThread) debugStatus() string {
 	reqState := ""
-	thread.handlerMu.Lock()
 	if waitTime := thread.state.waitTime(); waitTime > 0 {
 		reqState = fmt.Sprintf(", waiting for %dms", waitTime)
-	} else if r := thread.getActiveRequest(); r != nil {
+	} else if r := thread.getActiveRequestSafely(); r != nil {
 		fc := r.Context().Value(contextKey).(*FrankenPHPContext)
 		path := r.URL.Path
 		if fc.originalRequest != nil {
@@ -129,7 +138,6 @@ func (thread *phpThread) debugStatus() string {
 			reqState = fmt.Sprintf(", handling %s for %dms ", path, sinceMs)
 		}
 	}
-	thread.handlerMu.Unlock()
 
 	return fmt.Sprintf("Thread %d (%s%s) %s", thread.threadIndex, thread.state.name(), reqState, thread.handler.name())
 }
