@@ -1,7 +1,5 @@
 //go:build !unix
 
-// -build unix
-
 package cpu
 
 import (
