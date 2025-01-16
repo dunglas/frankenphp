@@ -52,10 +52,24 @@ set the `GOMEMLIMIT` environment variable to the available amount of memory.
 
 For more details, [the Go documentation page dedicated to this subject](https://pkg.go.dev/runtime#hdr-Environment_Variables) is a must-read to get the most out of the runtime.
 
-## `php_server` and `try_files`
+## `file_server`
 
-The `php_server` directive includes a `file_server` by default. Besides static files, `php_server` will also try to serve your
-application's index and directory index files (/path/ -> /path/index.php). If you don't need directory indices,
+By default, the `php_server` directive automatically sets up a file server to
+serve static files (assets) stored in the root directory.
+
+This feature is convenient, but comes with a cost.
+To disable it, use the following config:
+
+```caddyfile
+php_server {
+    file_server off
+}
+```
+
+## `try_files`
+
+Besides static files and php files, `php_server` will also try to serve your application's index
+and directory index files (/path/ -> /path/index.php). If you don't need directory indices,
 you can disable them by explicitly defining `try_files` like this:
 
 ```caddyfile
