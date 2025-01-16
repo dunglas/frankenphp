@@ -125,15 +125,6 @@ func RestartWorkers() {
 	}
 }
 
-// WorkerFileNames returns the absolute path to all worker files
-func WorkerFileNames() []string {
-	workerNames := make([]string, 0, len(workers))
-	for fileName := range workers {
-		workerNames = append(workerNames, fileName)
-	}
-	return workerNames
-}
-
 func getDirectoriesToWatch(workerOpts []workerOpt) []string {
 	directoriesToWatch := []string{}
 	for _, w := range workerOpts {

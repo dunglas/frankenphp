@@ -58,16 +58,8 @@ func initAutoScaling(mainThread *phpMainThread) {
 
 func drainAutoScaling() {
 	scalingMu.Lock()
-	logger.Debug("shutting down autoscalin", zap.Int("autoScaledThreads", len(autoScaledThreads)))
+	logger.Debug("shutting down autoscaling", zap.Int("autoScaledThreads", len(autoScaledThreads)))
 	scalingMu.Unlock()
-}
-
-// AddRegularThread adds one regular PHP thread at runtime if max_threads are not yet reached
-func AddRegularThread() (int, error) {
-	scalingMu.Lock()
-	defer scalingMu.Unlock()
-	_, err := addRegularThread()
-	return countRegularThreads(), err
 }
 
 func addRegularThread() (*phpThread, error) {
@@ -78,14 +70,6 @@ func addRegularThread() (*phpThread, error) {
 	convertToRegularThread(thread)
 	thread.state.waitFor(stateReady, stateShuttingDown, stateReserved)
 	return thread, nil
-}
-
-// RemoveRegularThread removes one regular PHP thread at runtime, won't remove the last thread
-func RemoveRegularThread() (int, error) {
-	scalingMu.Lock()
-	defer scalingMu.Unlock()
-	err := removeRegularThread()
-	return countRegularThreads(), err
 }
 
 func removeRegularThread() error {
@@ -100,18 +84,6 @@ func removeRegularThread() error {
 	return nil
 }
 
-// AddWorkerThread adds one PHP worker thread at runtime if max_threads are not yet reached
-func AddWorkerThread(workerFileName string) (int, error) {
-	worker, ok := workers[workerFileName]
-	if !ok {
-		return 0, WorkerNotFoundError
-	}
-	scalingMu.Lock()
-	defer scalingMu.Unlock()
-	_, err := addWorkerThread(worker)
-	return worker.countThreads(), err
-}
-
 func addWorkerThread(worker *worker) (*phpThread, error) {
 	thread := getInactivePHPThread()
 	if thread == nil {
@@ -120,19 +92,6 @@ func addWorkerThread(worker *worker) (*phpThread, error) {
 	convertToWorkerThread(thread, worker)
 	thread.state.waitFor(stateReady, stateShuttingDown, stateReserved)
 	return thread, nil
-}
-
-// RemoveWorkerThread removes one PHP worker thread at runtime, won't remove the last thread
-func RemoveWorkerThread(workerFileName string) (int, error) {
-	worker, ok := workers[workerFileName]
-	if !ok {
-		return 0, WorkerNotFoundError
-	}
-	scalingMu.Lock()
-	defer scalingMu.Unlock()
-	err := removeWorkerThread(worker)
-
-	return worker.countThreads(), err
 }
 
 func removeWorkerThread(worker *worker) error {

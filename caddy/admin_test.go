@@ -1,10 +1,8 @@
 package caddy_test
 
 import (
-	"fmt"
 	"io"
 	"net/http"
-	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
@@ -43,95 +41,6 @@ func TestRestartWorkerViaAdminApi(t *testing.T) {
 	tester.AssertGetResponse("http://localhost:"+testPort+"/", http.StatusOK, "requests:1")
 }
 
-func TestRemoveWorkerThreadsViaAdminApi(t *testing.T) {
-	absWorkerPath, _ := filepath.Abs("../testdata/sleep.php")
-	tester := caddytest.NewTester(t)
-	tester.InitServer(`
-		{
-			skip_install_trust
-			admin localhost:2999
-			http_port `+testPort+`
-
-			frankenphp {
-				num_threads 6
-				max_threads 6
-				worker ../testdata/sleep.php 4
-			}
-		}
-
-		localhost:`+testPort+` {
-			route {
-				root ../testdata
-				rewrite sleep.php
-				php
-			}
-		}
-		`, "caddyfile")
-
-	// make a request to the worker to make sure it's running
-	tester.AssertGetResponse("http://localhost:"+testPort, http.StatusOK, "slept for 0 ms and worked for 0 iterations")
-
-	// remove a thread
-	expectedMessage := fmt.Sprintf("New thread count: 3 %s\n", absWorkerPath)
-	assertAdminResponse(t, tester, "DELETE", "threads?worker", http.StatusOK, expectedMessage)
-
-	// remove 2 threads
-	expectedMessage = fmt.Sprintf("New thread count: 1 %s\n", absWorkerPath)
-	assertAdminResponse(t, tester, "DELETE", "threads?worker&count=2", http.StatusOK, expectedMessage)
-
-	// get 400 status if removing the last thread
-	assertAdminResponse(t, tester, "DELETE", "threads?worker", http.StatusBadRequest, "")
-
-	// make a request to the worker to make sure it's still running
-	tester.AssertGetResponse("http://localhost:"+testPort, http.StatusOK, "slept for 0 ms and worked for 0 iterations")
-}
-
-func TestAddWorkerThreadsViaAdminApi(t *testing.T) {
-	absWorkerPath, _ := filepath.Abs("../testdata/worker-with-counter.php")
-	tester := caddytest.NewTester(t)
-	tester.InitServer(`
-		{
-			skip_install_trust
-			admin localhost:2999
-			http_port `+testPort+`
-
-			frankenphp {
-				max_threads 10
-				num_threads 3
-				worker ../testdata/worker-with-counter.php 1
-			}
-		}
-
-		localhost:`+testPort+` {
-			route {
-				root ../testdata
-				rewrite worker-with-counter.php
-				php
-			}
-		}
-		`, "caddyfile")
-
-	// make a request to the worker to make sure it's running
-	tester.AssertGetResponse("http://localhost:"+testPort+"/", http.StatusOK, "requests:1")
-
-	// get 400 status if the filename is wrong
-	assertAdminResponse(t, tester, "PUT", "threads?worker=wrong.php", http.StatusBadRequest, "")
-
-	// add a thread
-	expectedMessage := fmt.Sprintf("New thread count: 2 %s\n", absWorkerPath)
-	assertAdminResponse(t, tester, "PUT", "threads?worker=counter.php", http.StatusOK, expectedMessage)
-
-	// add 2 threads
-	expectedMessage = fmt.Sprintf("New thread count: 4 %s\n", absWorkerPath)
-	assertAdminResponse(t, tester, "PUT", "threads?worker&=counter.php&count=2", http.StatusOK, expectedMessage)
-
-	// get 400 status if adding too many threads
-	assertAdminResponse(t, tester, "PUT", "threads?worker&=counter.php&count=100", http.StatusBadRequest, "")
-
-	// make a request to the worker to make sure it's still running
-	tester.AssertGetResponse("http://localhost:"+testPort+"/", http.StatusOK, "requests:2")
-}
-
 func TestShowTheCorrectThreadDebugStatus(t *testing.T) {
 	tester := caddytest.NewTester(t)
 	tester.InitServer(`
@@ -141,10 +50,10 @@ func TestShowTheCorrectThreadDebugStatus(t *testing.T) {
 			http_port `+testPort+`
 
 			frankenphp {
-				num_threads 6
-				max_threads 12
-				worker ../testdata/worker-with-counter.php 2
-				worker ../testdata/index.php 2
+				num_threads 3
+				max_threads 6
+				worker ../testdata/worker-with-counter.php 1
+				worker ../testdata/index.php 1
 			}
 		}
 
@@ -157,25 +66,16 @@ func TestShowTheCorrectThreadDebugStatus(t *testing.T) {
 		}
 		`, "caddyfile")
 
-	// should create a 'worker-with-counter.php' thread at index 6
-	assertAdminResponse(t, tester, "PUT", "threads?worker=counter.php", http.StatusOK, "")
-	// should remove the 'index.php' worker thread at index 5
-	assertAdminResponse(t, tester, "DELETE", "threads?worker=index.php", http.StatusOK, "")
-	// should remove a regular thread at index 1
-	assertAdminResponse(t, tester, "DELETE", "threads", http.StatusOK, "")
-
 	threadInfo := getAdminResponseBody(t, tester, "GET", "threads")
 
 	// assert that the correct threads are present in the thread info
 	assert.Contains(t, threadInfo, "Thread 0")
-	assert.NotContains(t, threadInfo, "Thread 1")
+	assert.Contains(t, threadInfo, "Thread 1")
 	assert.Contains(t, threadInfo, "Thread 2")
-	assert.Contains(t, threadInfo, "Thread 3")
-	assert.Contains(t, threadInfo, "Thread 4")
-	assert.NotContains(t, threadInfo, "Thread 5")
-	assert.Contains(t, threadInfo, "Thread 6")
-	assert.NotContains(t, threadInfo, "Thread 7")
-	assert.Contains(t, threadInfo, "7 additional threads can be started at runtime")
+	assert.NotContains(t, threadInfo, "Thread 3")
+	assert.Contains(t, threadInfo, "3 additional threads can be started at runtime")
+	assert.Contains(t, threadInfo, "worker-with-counter.php")
+	assert.Contains(t, threadInfo, "index.php")
 }
 
 func TestAutoScaleWorkerThreads(t *testing.T) {

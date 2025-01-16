@@ -5,8 +5,6 @@ import (
 	"github.com/caddyserver/caddy/v2"
 	"github.com/dunglas/frankenphp"
 	"net/http"
-	"strconv"
-	"strings"
 )
 
 type FrankenPHPAdmin struct{}
@@ -45,59 +43,7 @@ func (admin *FrankenPHPAdmin) restartWorkers(w http.ResponseWriter, r *http.Requ
 }
 
 func (admin *FrankenPHPAdmin) threads(w http.ResponseWriter, r *http.Request) error {
-	switch r.Method {
-	case http.MethodPut:
-		return admin.changeThreads(w, r, admin.getCountFromRequest(r))
-	case http.MethodDelete:
-		return admin.changeThreads(w, r, -admin.getCountFromRequest(r))
-	case http.MethodGet:
-		return admin.success(w, frankenphp.ThreadDebugStatus())
-	default:
-		return admin.error(http.StatusMethodNotAllowed, fmt.Errorf("method not allowed, try: GET,PUT,DELETE"))
-	}
-}
-
-func (admin *FrankenPHPAdmin) changeThreads(w http.ResponseWriter, r *http.Request, count int) error {
-	if !r.URL.Query().Has("worker") {
-		return admin.changeRegularThreads(w, count)
-	}
-	workerFilename := admin.getWorkerBySuffix(r.URL.Query().Get("worker"))
-
-	return admin.changeWorkerThreads(w, count, workerFilename)
-}
-
-func (admin *FrankenPHPAdmin) changeWorkerThreads(w http.ResponseWriter, num int, workerFilename string) error {
-	method := frankenphp.AddWorkerThread
-	if num < 0 {
-		num = -num
-		method = frankenphp.RemoveWorkerThread
-	}
-	message := ""
-	for i := 0; i < num; i++ {
-		threadCount, err := method(workerFilename)
-		if err != nil {
-			return admin.error(http.StatusBadRequest, err)
-		}
-		message = fmt.Sprintf("New thread count: %d %s\n", threadCount, workerFilename)
-	}
-	return admin.success(w, message)
-}
-
-func (admin *FrankenPHPAdmin) changeRegularThreads(w http.ResponseWriter, num int) error {
-	method := frankenphp.AddRegularThread
-	if num < 0 {
-		num = -num
-		method = frankenphp.RemoveRegularThread
-	}
-	message := ""
-	for i := 0; i < num; i++ {
-		threadCount, err := method()
-		if err != nil {
-			return admin.error(http.StatusBadRequest, err)
-		}
-		message = fmt.Sprintf("New thread count: %d Regular Threads\n", threadCount)
-	}
-	return admin.success(w, message)
+	return admin.success(w, frankenphp.ThreadDebugStatus())
 }
 
 func (admin *FrankenPHPAdmin) success(w http.ResponseWriter, message string) error {
@@ -108,25 +54,4 @@ func (admin *FrankenPHPAdmin) success(w http.ResponseWriter, message string) err
 
 func (admin *FrankenPHPAdmin) error(statusCode int, err error) error {
 	return caddy.APIError{HTTPStatus: statusCode, Err: err}
-}
-
-func (admin *FrankenPHPAdmin) getCountFromRequest(r *http.Request) int {
-	value := r.URL.Query().Get("count")
-	if value == "" {
-		return 1
-	}
-	i, err := strconv.Atoi(value)
-	if err != nil {
-		return 1
-	}
-	return i
-}
-
-func (admin *FrankenPHPAdmin) getWorkerBySuffix(pattern string) string {
-	for _, workerFilename := range frankenphp.WorkerFileNames() {
-		if strings.HasSuffix(workerFilename, pattern) {
-			return workerFilename
-		}
-	}
-	return ""
 }
