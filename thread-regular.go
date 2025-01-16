@@ -137,11 +137,3 @@ func detachRegularThread(thread *phpThread) {
 	}
 	regularThreadMu.Unlock()
 }
-
-func countRegularThreads() int {
-	regularThreadMu.RLock()
-	l := len(regularThreads)
-	regularThreadMu.RUnlock()
-
-	return l
-}
