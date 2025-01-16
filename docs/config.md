@@ -51,8 +51,8 @@ Optionally, the number of threads to create and [worker scripts](worker.md) to s
 {
 	frankenphp {
 		num_threads <num_threads> # Sets the number of PHP threads to start. Default: 2x the number of available CPUs.
-		max_threads <num_threads> # Limits the number of additional PHP threads that can be started at runtime. Default: num_threads.
-		php_ini <key> <value> # Overrides a single PHP configuration. Can be specified more than once for multiple overrides.
+		max_threads <num_threads> # Limits the number of additional PHP threads that can be started at runtime. Default: num_threads. Can be set to 'auto'.
+		php_ini <key> <value> # Set a php.ini directive. Can be used several times to set multiple directives.
 		worker {
 			file <path> # Sets the path to the worker script.
 			num <num> # Sets the number of PHP threads to start, defaults to 2x the number of available CPUs.
@@ -229,7 +229,7 @@ To load [additional PHP configuration files](https://www.php.net/manual/en/confi
 the `PHP_INI_SCAN_DIR` environment variable can be used.
 When set, PHP will load all the file with the `.ini` extension present in the given directories.
 
-You can also overwrite single configurations using the `php_ini` directive in the `Caddyfile`:
+You can also change the PHP configuration using the `php_ini` directive in the `Caddyfile`:
 
 ```caddyfile
 {

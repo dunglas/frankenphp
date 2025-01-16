@@ -180,7 +180,7 @@ func go_get_custom_php_ini() *C.char {
 		return nil
 	}
 
-	// convert the php.ini from options.go to a C string
+	// pass the php.ini overrides to PHP before startup
 	// TODO: if needed this would also be possible on a per-thread basis
 	overrides := ""
 	for k, v := range mainThread.phpIni {
