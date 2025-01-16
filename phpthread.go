@@ -113,6 +113,7 @@ func (thread *phpThread) getActiveRequest() *http.Request {
 // small status message for debugging
 func (thread *phpThread) debugStatus() string {
 	reqState := ""
+	thread.handlerMu.Lock()
 	if waitTime := thread.state.waitTime(); waitTime > 0 {
 		reqState = fmt.Sprintf(", waiting for %dms", waitTime)
 	} else if r := thread.getActiveRequest(); r != nil {
@@ -128,6 +129,8 @@ func (thread *phpThread) debugStatus() string {
 			reqState = fmt.Sprintf(", handling %s for %dms ", path, sinceMs)
 		}
 	}
+	thread.handlerMu.Unlock()
+
 	return fmt.Sprintf("Thread %d (%s%s) %s", thread.threadIndex, thread.state.name(), reqState, thread.handler.name())
 }
 
