@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-var cpuCount = runtime.NumCPU()
+var cpuCount = runtime.GOMAXPROCS(0)
 
 // probe the CPU usage of the process
 // if CPUs are not busy, most threads are likely waiting for I/O, so we should scale
