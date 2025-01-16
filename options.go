@@ -11,12 +11,12 @@ type Option func(h *opt) error
 //
 // If you change this, also update the Caddy module and the documentation.
 type opt struct {
-	numThreads      int
-	maxThreads      int
-	workers         []workerOpt
-	logger          *zap.Logger
-	metrics         Metrics
-	phpIniOverrides map[string]string
+	numThreads int
+	maxThreads int
+	workers    []workerOpt
+	logger     *zap.Logger
+	metrics    Metrics
+	phpIni     map[string]string
 }
 
 type workerOpt struct {
@@ -69,10 +69,10 @@ func WithLogger(l *zap.Logger) Option {
 	}
 }
 
-// WithPhpIniOverrides configures the PHP ini overrides.
-func WithPhpIniOverrides(overrides map[string]string) Option {
+// WithPhpIni configures user defined PHP ini settings.
+func WithPhpIni(overrides map[string]string) Option {
 	return func(o *opt) error {
-		o.phpIniOverrides = overrides
+		o.phpIni = overrides
 		return nil
 	}
 }

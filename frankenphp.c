@@ -948,8 +948,8 @@ static void *php_main(void *arg) {
          sizeof(HARDCODED_INI));
 #endif
 #else
-  /* overwrite php.ini with settings from the Caddy config */
-  char *php_ini_overrides = go_get_php_ini_overrides();
+  /* overwrite php.ini with custom user settings */
+  char *php_ini_overrides = go_get_custom_php_ini();
   if (php_ini_overrides != NULL) {
     frankenphp_sapi_module.ini_entries = php_ini_overrides;
   }
