@@ -643,6 +643,9 @@ func go_read_cookies(threadIndex C.uintptr_t) *C.char {
 		return nil
 	}
 
+	// remove potential null bytes
+	cookie = strings.ReplaceAll(cookie, "\x00", "")
+
 	// freed in frankenphp_free_request_context()
 	return C.CString(cookie)
 }

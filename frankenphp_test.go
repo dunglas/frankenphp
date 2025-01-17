@@ -334,8 +334,8 @@ func TestMalformedCookie(t *testing.T) {
 		assert.Contains(t, string(body), "'foo_' => 'bar'")
 		assert.Contains(t, string(body), "'_dot_' => 'val  '")
 
-		// to stay consistent with fpm/nginx, we expect the cookie to get truncated at the null byte
-		assert.NotContains(t, string(body), "'PHPSESSID' => '1234'")
+		// PHPSESSID should still be present since we remove the null byte
+		assert.Contains(t, string(body), "'PHPSESSID' => '1234'")
 	}, &testOptions{nbParrallelRequests: 1})
 }
 
