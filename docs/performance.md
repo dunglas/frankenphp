@@ -66,6 +66,44 @@ php_server {
 }
 ```
 
+## `try_files`
+
+Besides static files and PHP files, `php_server` will also try to serve your application's index
+and directory index files (`/path/` -> `/path/index.php`). If you don't need directory indices,
+you can disable them by explicitly defining `try_files` like this:
+
+```caddyfile
+php_server {
+    try_files {path} index.php
+    root /root/to/your/app # explicitly adding the root here allows for better caching
+}
+```
+
+This can significantly reduce the number of unnecessary file operations.
+
+An alternate approach with 0 unnecessary file system operations would be to instead use the `php` directive and split
+files from PHP by path. This approach works well if your entire application is served by one entry file.
+An example [configuration](config.md#caddyfile-config) that serves static files behind an `/assets` folder could look like this:
+
+```caddyfile
+route {
+    @assets {
+        path /assets/*
+    }
+
+    # everything behind /assets is handled by the file server
+    file_server @assets {
+        root /root/to/your/app
+    }
+
+    # everything that is not in /assets is handled by your index or worker PHP file
+    rewrite index.php
+    php {
+        root /root/to/your/app # explicitly adding the root here allows for better caching
+    }
+}
+```
+
 ## Placeholders
 
 You can use [placeholders](https://caddyserver.com/docs/conventions#placeholders) in the `root` and `env` directives.
