@@ -43,7 +43,6 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/maypok86/otter"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	// debug on Linux
@@ -524,17 +523,6 @@ func go_ub_write(threadIndex C.uintptr_t, cBuf *C.char, length C.int) (C.size_t,
 	return C.size_t(i), C.bool(clientHasClosed(r))
 }
 
-// There are around 60 common request headers according to https://en.wikipedia.org/wiki/List_of_HTTP_header_fields#Request_fields
-// Give some space for custom headers
-var headerKeyCache = func() otter.Cache[string, string] {
-	c, err := otter.MustBuilder[string, string](256).Build()
-	if err != nil {
-		panic(err)
-	}
-
-	return c
-}()
-
 //export go_apache_request_headers
 func go_apache_request_headers(threadIndex C.uintptr_t, hasActiveRequest bool) (*C.go_string, C.size_t) {
 	thread := phpThreads[threadIndex]
@@ -650,19 +638,13 @@ func go_read_post(threadIndex C.uintptr_t, cBuf *C.char, countBytes C.size_t) (r
 
 //export go_read_cookies
 func go_read_cookies(threadIndex C.uintptr_t) *C.char {
-	r := phpThreads[threadIndex].getActiveRequest()
-
-	cookies := r.Cookies()
-	if len(cookies) == 0 {
+	cookie := phpThreads[threadIndex].getActiveRequest().Header.Get("Cookie")
+	if cookie == "" {
 		return nil
-	}
-	cookieStrings := make([]string, len(cookies))
-	for i, cookie := range cookies {
-		cookieStrings[i] = cookie.String()
 	}
 
 	// freed in frankenphp_free_request_context()
-	return C.CString(strings.Join(cookieStrings, "; "))
+	return C.CString(cookie)
 }
 
 //export go_log

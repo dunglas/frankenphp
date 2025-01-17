@@ -662,6 +662,12 @@ void frankenphp_register_trusted_var(zend_string *z_key, char *value,
   }
 }
 
+void frankenphp_register_single(zend_string *z_key, char *value,
+                                     size_t val_len, zval *track_vars_array){
+  HashTable *ht = Z_ARRVAL_P(track_vars_array);
+  frankenphp_register_trusted_var(z_key, value, val_len, ht);
+}
+
 /* Register known $_SERVER variables in bulk to avoid cgo overhead */
 void frankenphp_register_bulk(
     zval *track_vars_array, ht_key_value_pair remote_addr,
