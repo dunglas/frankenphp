@@ -74,14 +74,10 @@ jobs:
         debug: [false]
         mimalloc: [false]
         include:
-          - qemu: false
           - platform: linux/amd64
-            qemu: false
           - platform: linux/amd64
-            qemu: false
             debug: true
           - platform: linux/amd64
-            qemu: false
             mimalloc: true
     name: Build ${{ matrix.platform }} static binary${{ matrix.debug && ' (debug)' || '' }}${{ matrix.mimalloc && ' (mimalloc)' || '' }}
     runs-on: ${{ startsWith(matrix.platform, 'linux/arm') && 'ubuntu-24.04-arm' || 'ubuntu-24.04' }}
@@ -95,11 +91,6 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ needs.prepare.outputs.ref }}
-      - name: Set up QEMU
-        if: matrix.qemu
-        uses: docker/setup-qemu-action@v3
-        with:
-          platforms: ${{ matrix.platform }}
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
         with:
