@@ -755,7 +755,7 @@ void frankenphp_register_variables_from_request_info(
     zend_string *path_translated, zend_string *query_string,
     zend_string *auth_user, zend_string *request_method) {
   frankenphp_register_variable_from_request_info(
-      content_type, (char *)SG(request_info).content_type, false,
+      content_type, (char *)SG(request_info).content_type, true,
       track_vars_array);
   frankenphp_register_variable_from_request_info(
       path_translated, (char *)SG(request_info).path_translated, false,

@@ -75,7 +75,6 @@ var commonRequestHeaders = map[string]string{
 	"CF-Visitor":                        "HTTP_CF_VISITOR",
 	"CF-Request-ID":                     "HTTP_CF_REQUEST_ID",
 	"CF-IPCountry":                      "HTTP_CF_IPCOUNTRY",
-	"X-Cloud-Trace-Context":             "HTTP_X_CLOUD_TRACE_CONTEXT",
 	"X-Device-Type":                     "HTTP_X_DEVICE_TYPE",
 	"X-Network-Info":                    "HTTP_X_NETWORK_INFO",
 	"Accept-Patch":                      "HTTP_ACCEPT_PATCH",
@@ -85,7 +84,6 @@ var commonRequestHeaders = map[string]string{
 	"X-Correlation-ID":                  "HTTP_X_CORRELATION_ID",
 	"X-Client-ID":                       "HTTP_X_CLIENT_ID",
 	"X-Debug-Info":                      "HTTP_X_DEBUG_INFO",
-	"X-Amzn-Trace-Id":                   "HTTP_X_AMZN_TRACE_ID",
 	"Alt-Svc":                           "HTTP_ALT_SVC",
 	"Early-Data":                        "HTTP_EARLY_DATA",
 }
