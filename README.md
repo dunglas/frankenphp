@@ -60,7 +60,8 @@ frankenphp php-cli /path/to/your/script.php
 
 ## Docs
 
-* [The worker mode](https://frankenphp.dev/docs/worker/)
+* [Classic mode](https://frankenphp.dev/docs/classic/)
+* [Worker mode](https://frankenphp.dev/docs/worker/)
 * [Early Hints support (103 HTTP status code)](https://frankenphp.dev/docs/early-hints/)
 * [Real-time](https://frankenphp.dev/docs/mercure/)
 * [Configuration](https://frankenphp.dev/docs/config/)
@@ -86,3 +87,4 @@ frankenphp php-cli /path/to/your/script.php
 * [Drupal](https://github.com/dunglas/frankenphp-drupal)
 * [Joomla](https://github.com/alexandreelise/frankenphp-joomla)
 * [TYPO3](https://github.com/ochorocho/franken-typo3)
+* [Magento2](https://github.com/ekino/frankenphp-magento2)

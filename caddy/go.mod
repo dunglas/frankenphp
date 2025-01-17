@@ -10,9 +10,9 @@ require (
 	github.com/caddyserver/caddy/v2 v2.9.1
 	github.com/caddyserver/certmagic v0.21.6
 	github.com/dunglas/caddy-cbrotli v1.0.0
-	github.com/dunglas/frankenphp v1.3.6
-	github.com/dunglas/mercure/caddy v0.18.0
-	github.com/dunglas/vulcain/caddy v1.1.0
+	github.com/dunglas/frankenphp v1.4.0
+	github.com/dunglas/mercure/caddy v0.18.1
+	github.com/dunglas/vulcain/caddy v1.1.1
 	github.com/prometheus/client_golang v1.20.5
 	github.com/spf13/cobra v1.8.1
 	github.com/stretchr/testify v1.10.0
@@ -54,8 +54,8 @@ require (
 	github.com/dgryski/go-farm v0.0.0-20240924180020-3414d57e47da // indirect
 	github.com/dlclark/regexp2 v1.11.4 // indirect
 	github.com/dunglas/httpsfv v1.0.2 // indirect
-	github.com/dunglas/mercure v0.18.0 // indirect
-	github.com/dunglas/vulcain v1.1.0 // indirect
+	github.com/dunglas/mercure v0.18.1 // indirect
+	github.com/dunglas/vulcain v1.1.1 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/francoispqt/gojay v1.2.13 // indirect

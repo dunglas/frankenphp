@@ -8,7 +8,7 @@ However, it is possible to substantially improve performance using an appropriat
 By default, FrankenPHP starts 2 times more threads and workers (in worker mode) than the available numbers of CPU.
 
 The appropriate values depend heavily on how your application is written, what it does and your hardware.
-We strongly recommend changing these values.
+We strongly recommend changing these values. For best system stability, it is recommended to have `num_threads` x `memory_limit` < `available_memory`.
 
 To find the right values, it's best to run load tests simulating real traffic.
 [k6](https://k6.io) and [Gatling](https://gatling.io) are good tools for this.
@@ -63,6 +63,44 @@ To disable it, use the following config:
 ```caddyfile
 php_server {
     file_server off
+}
+```
+
+## `try_files`
+
+Besides static files and PHP files, `php_server` will also try to serve your application's index
+and directory index files (`/path/` -> `/path/index.php`). If you don't need directory indices,
+you can disable them by explicitly defining `try_files` like this:
+
+```caddyfile
+php_server {
+    try_files {path} index.php
+    root /root/to/your/app # explicitly adding the root here allows for better caching
+}
+```
+
+This can significantly reduce the number of unnecessary file operations.
+
+An alternate approach with 0 unnecessary file system operations would be to instead use the `php` directive and split
+files from PHP by path. This approach works well if your entire application is served by one entry file.
+An example [configuration](config.md#caddyfile-config) that serves static files behind an `/assets` folder could look like this:
+
+```caddyfile
+route {
+    @assets {
+        path /assets/*
+    }
+
+    # everything behind /assets is handled by the file server
+    file_server @assets {
+        root /root/to/your/app
+    }
+
+    # everything that is not in /assets is handled by your index or worker PHP file
+    rewrite index.php
+    php {
+        root /root/to/your/app # explicitly adding the root here allows for better caching
+    }
 }
 ```
 
