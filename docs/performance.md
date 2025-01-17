@@ -68,7 +68,7 @@ php_server {
 
 ## `try_files`
 
-Besides static files and php files, `php_server` will also try to serve your application's index
+Besides static files and PHP files, `php_server` will also try to serve your application's index
 and directory index files (/path/ -> /path/index.php). If you don't need directory indices,
 you can disable them by explicitly defining `try_files` like this:
 
