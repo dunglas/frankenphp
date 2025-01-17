@@ -228,18 +228,6 @@ func go_register_variables(threadIndex C.uintptr_t, trackVarsArray *C.zval) {
 	addPreparedEnvToServer(fc, trackVarsArray)
 }
 
-//export go_frankenphp_release_known_variable_keys
-func go_frankenphp_release_known_variable_keys(threadIndex C.uintptr_t) {
-	thread := phpThreads[threadIndex]
-	if thread.knownVariableKeys == nil {
-		return
-	}
-	for _, v := range thread.knownVariableKeys {
-		C.frankenphp_release_zend_string(v)
-	}
-	thread.knownVariableKeys = nil
-}
-
 // splitPos returns the index where path should
 // be split based on SplitPath.
 //

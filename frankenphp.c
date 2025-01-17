@@ -905,8 +905,6 @@ static void *php_thread(void *arg) {
                                          frankenphp_execute_script(scriptName));
   }
 
-  go_frankenphp_release_known_variable_keys(thread_index);
-
 #ifdef ZTS
   ts_free_thread();
 #endif
