@@ -131,8 +131,8 @@ func tearDownWorkerScript(handler *workerThread, exitStatus int) {
 
 	// on exit status 1 we apply an exponential backoff when restarting
 	metrics.StopWorker(worker.fileName, StopReasonCrash)
-	if handler.backoff.recordFailure() {
-		if !watcherIsEnabled && !handler.inRequest {
+	if !handler.inRequest && handler.backoff.recordFailure() {
+		if !watcherIsEnabled {
 			logger.Panic("too many consecutive worker failures", zap.String("worker", worker.fileName), zap.Int("failures", handler.backoff.failureCount))
 		}
 		logger.Warn("many consecutive worker failures", zap.String("worker", worker.fileName), zap.Int("failures", handler.backoff.failureCount))
