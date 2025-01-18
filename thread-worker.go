@@ -21,6 +21,7 @@ type workerThread struct {
 	fakeRequest   *http.Request
 	workerRequest *http.Request
 	backoff       *exponentialBackoff
+	inRequest     bool // true if the worker is currently handling a request
 }
 
 func convertToWorkerThread(thread *phpThread, worker *worker) {
@@ -131,13 +132,14 @@ func tearDownWorkerScript(handler *workerThread, exitStatus int) {
 	// on exit status 1 we apply an exponential backoff when restarting
 	metrics.StopWorker(worker.fileName, StopReasonCrash)
 	if handler.backoff.recordFailure() {
-		if !watcherIsEnabled {
+		if !watcherIsEnabled && !handler.inRequest {
 			logger.Panic("too many consecutive worker failures", zap.String("worker", worker.fileName), zap.Int("failures", handler.backoff.failureCount))
 		}
 		logger.Warn("many consecutive worker failures", zap.String("worker", worker.fileName), zap.Int("failures", handler.backoff.failureCount))
 	}
 }
 
+// waitForWorkerRequest is called during frankenphp_handle_request in the php worker script.
 func (handler *workerThread) waitForWorkerRequest() bool {
 	// unpin any memory left over from previous requests
 	handler.thread.Unpin()
@@ -172,6 +174,7 @@ func (handler *workerThread) waitForWorkerRequest() bool {
 	if c := logger.Check(zapcore.DebugLevel, "request handling started"); c != nil {
 		c.Write(zap.String("worker", handler.worker.fileName), zap.String("url", r.RequestURI))
 	}
+	handler.inRequest = true
 
 	if err := updateServerContext(handler.thread, r, false, true); err != nil {
 		// Unexpected error or invalid request
@@ -185,15 +188,20 @@ func (handler *workerThread) waitForWorkerRequest() bool {
 
 		return handler.waitForWorkerRequest()
 	}
+
 	return true
 }
 
+// go_frankenphp_worker_handle_request_start is called at the start of every php request served.
+//
 //export go_frankenphp_worker_handle_request_start
 func go_frankenphp_worker_handle_request_start(threadIndex C.uintptr_t) C.bool {
 	handler := phpThreads[threadIndex].handler.(*workerThread)
 	return C.bool(handler.waitForWorkerRequest())
 }
 
+// go_frankenphp_finish_worker_request is called at the end of every php request served.
+//
 //export go_frankenphp_finish_worker_request
 func go_frankenphp_finish_worker_request(threadIndex C.uintptr_t) {
 	thread := phpThreads[threadIndex]
@@ -202,6 +210,7 @@ func go_frankenphp_finish_worker_request(threadIndex C.uintptr_t) {
 
 	maybeCloseContext(fc)
 	thread.handler.(*workerThread).workerRequest = nil
+	thread.handler.(*workerThread).inRequest = false
 
 	if c := fc.logger.Check(zapcore.DebugLevel, "request handling finished"); c != nil {
 		c.Write(zap.String("worker", fc.scriptFilename), zap.String("url", r.RequestURI))
