@@ -33,7 +33,6 @@ var commonRequestHeaders = map[string]string{
 	"Transfer-Encoding":         "HTTP_TRANSFER_ENCODING",
 	"Upgrade":                   "HTTP_UPGRADE",
 	"DNT":                       "HTTP_DNT",
-	"Authorization-Bearer":      "HTTP_AUTHORIZATION_BEARER",
 	// Browser security headers
 	"Sec-Fetch-Dest":             "HTTP_SEC_FETCH_DEST",
 	"Sec-Fetch-Mode":             "HTTP_SEC_FETCH_MODE",
@@ -92,6 +91,9 @@ var commonRequestHeaders = map[string]string{
 	"Priority":            "HTTP_PRIORITY",
 	"TE":                  "HTTP_TE",
 	"Trailer":             "HTTP_TRAILER",
+	"Range":               "HTTP_RANGE",
+	"Clear-Site-Data":     "HTTP_CLEAR_SITE_DATA",
+	"Etag":                "HTTP_ETAG",
 }
 
 func GetCommonHeader(key string) string {

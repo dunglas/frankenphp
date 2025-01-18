@@ -1,6 +1,8 @@
 <pre>
 CONTENT_LENGTH:7
 HTTP_CONTENT_LENGTH:7
+CONTENT_TYPE:application/x-www-form-urlencoded
+HTTP_CONTENT_TYPE:application/x-www-form-urlencoded
 HTTP_SPECIAL_CHARS:<%00>
 DOCUMENT_ROOT:{documentRoot}
 DOCUMENT_URI:/server-all-vars-ordered.php
@@ -8,10 +10,8 @@ GATEWAY_INTERFACE:CGI/1.1
 HTTP_HOST:localhost:{testPort}
 HTTPS:
 PATH_INFO:/path
-CONTENT_TYPE:application/x-www-form-urlencoded
 DOCUMENT_ROOT:{documentRoot}
 REMOTE_ADDR:127.0.0.1
-CONTENT_LENGTH:7
 PHP_SELF:/server-all-vars-ordered.php/path
 REMOTE_HOST:127.0.0.1
 REQUEST_SCHEME:http
@@ -24,7 +24,6 @@ SERVER_SOFTWARE:FrankenPHP
 SSL_PROTOCOL:
 AUTH_TYPE:
 REMOTE_IDENT:
-CONTENT_TYPE:application/x-www-form-urlencoded
 PATH_TRANSLATED:{documentRoot}/path
 QUERY_STRING:specialChars=%3E\x00%00</>
 REMOTE_USER:user
