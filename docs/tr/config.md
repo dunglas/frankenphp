@@ -15,7 +15,7 @@ Docker'da şablonlar imajlar içinde sağlanır:
 ```dockerfile
 FROM dunglas/frankenphp
 
-# Developement:
+# Development:
 RUN cp $PHP_INI_DIR/php.ini-development $PHP_INI_DIR/php.ini
 
 # Veya production:
