@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestAllHardCodedHeadersAreWellFormed(t *testing.T) {
+func TestAllHeadersAreCorrect(t *testing.T) {
 	for header, phpHeader := range commonRequestHeaders {
 		expectedPHPHeader := GetUnCommonHeader(header)
 		hardCodedHeader := phpHeader + "\x00"
