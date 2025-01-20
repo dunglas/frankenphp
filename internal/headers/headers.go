@@ -11,7 +11,6 @@ var headerNameReplacer = strings.NewReplacer(" ", "_", "-", "_")
 
 // see also: https://en.wikipedia.org/wiki/List_of_HTTP_header_fields#Standard_request_fields
 var commonRequestHeaders = map[string]string{
-	// headers start
 	"Accept":                            "HTTP_ACCEPT",
 	"Accept-Charset":                    "HTTP_ACCEPT_CHARSET",
 	"Accept-Encoding":                   "HTTP_ACCEPT_ENCODING",
@@ -96,9 +95,6 @@ var commonRequestHeaders = map[string]string{
 	"X-Csrf-Token":                      "HTTP_X_CSRF_TOKEN",
 	"X-Request-ID":                      "HTTP_X_REQUEST_ID",
 	"X-Correlation-ID":                  "HTTP_X_CORRELATION_ID",
-	// headers end
-
-	// common 3rd party headers
 	// Cloudflare/Cloudfront/Google Cloud headers
 	"Cloudflare-Visitor":        "HTTP_CLOUDFLARE_VISITOR",
 	"Cloudfront-Viewer-Address": "HTTP_CLOUDFRONT_VIEWER_ADDRESS",
