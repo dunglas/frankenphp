@@ -431,7 +431,7 @@ PHP_FUNCTION(frankenphp_handle_request) {
   }
 
   /*
-   * If an exception occured, print the message to the client before closing the
+   * If an exception occurred, print the message to the client before closing the
    * connection
    */
   if (EG(exception)) {
