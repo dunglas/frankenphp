@@ -107,7 +107,7 @@ var commonRequestHeaders = map[string]string{
 	"X-Device-Type":             "HTTP_X_DEVICE_TYPE",
 	"X-Network-Info":            "HTTP_X_NETWORK_INFO",
 	"X-Client-ID":               "HTTP_X_CLIENT_ID",
-	"X-Livewire": "HTTP_X_LIVEWIRE",
+	"X-Livewire":                "HTTP_X_LIVEWIRE",
 }
 
 func GetCommonHeader(key string) string {
