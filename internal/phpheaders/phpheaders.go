@@ -1,4 +1,4 @@
-package headers
+package phpheaders
 
 import (
 	"strings"

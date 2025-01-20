@@ -11,7 +11,7 @@ import (
 	"strings"
 	"unsafe"
 
-	"github.com/dunglas/frankenphp/internal/headers"
+	"github.com/dunglas/frankenphp/internal/phpheaders"
 )
 
 var knownServerKeys = []string{
@@ -169,7 +169,7 @@ func addHeadersToServer(request *http.Request, thread *phpThread, fc *FrankenPHP
 		}
 
 		// if the header name could not be cached, register it inefficiently
-		k := headers.GetUnCommonHeader(field)
+		k := phpheaders.GetUnCommonHeader(field)
 		v := strings.Join(val, ", ")
 		C.frankenphp_register_variable_safe(toUnsafeChar(k), toUnsafeChar(v), C.size_t(len(v)), trackVarsArray)
 	}
@@ -205,7 +205,7 @@ func getCachedHeaderKey(thread *phpThread, key string) *C.zend_string {
 	}
 
 	// try to cache cache the header as zend_string
-	commonKey := headers.GetCommonHeader(key)
+	commonKey := phpheaders.GetCommonHeader(key)
 	if commonKey == "" {
 		return nil
 	}
