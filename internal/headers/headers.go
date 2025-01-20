@@ -9,7 +9,6 @@ import (
 // All other headers must be prefixed with 'HTTP_' and sanitized
 var headerNameReplacer = strings.NewReplacer(" ", "_", "-", "_")
 
-// see also: https://en.wikipedia.org/wiki/List_of_HTTP_header_fields#Standard_request_fields
 var commonRequestHeaders = map[string]string{
 	"Accept":                            "HTTP_ACCEPT",
 	"Accept-Charset":                    "HTTP_ACCEPT_CHARSET",
@@ -108,7 +107,6 @@ var commonRequestHeaders = map[string]string{
 	"X-Device-Type":             "HTTP_X_DEVICE_TYPE",
 	"X-Network-Info":            "HTTP_X_NETWORK_INFO",
 	"X-Client-ID":               "HTTP_X_CLIENT_ID",
-	// header from #1181
 	"X-Livewire": "HTTP_X_LIVEWIRE",
 }
 
