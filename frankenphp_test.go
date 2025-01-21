@@ -336,7 +336,7 @@ func TestMalformedCookie(t *testing.T) {
 
 		// PHPSESSID should still be present since we remove the null byte
 		assert.Contains(t, string(body), "'PHPSESSID' => '1234'")
-	}, &testOptions{nbParrallelRequests: 1})
+	}, &testOptions{})
 }
 
 func TestSession_module(t *testing.T) { testSession(t, nil) }
