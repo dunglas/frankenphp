@@ -431,8 +431,8 @@ PHP_FUNCTION(frankenphp_handle_request) {
   }
 
   /*
-   * If an exception occurred, print the message to the client before closing the
-   * connection
+   * If an exception occurred, print the message to the client before
+   * closing the connection
    */
   if (EG(exception)) {
     zend_exception_error(EG(exception), E_ERROR);
@@ -929,7 +929,7 @@ static void *php_main(void *arg) {
 #else
   php_tsrm_startup();
 #endif
-  /*tsrm_error_set(TSRM_ERROR_LEVEL_INFO, NULL);*/
+/*tsrm_error_set(TSRM_ERROR_LEVEL_INFO, NULL);*/
 #ifdef PHP_WIN32
   ZEND_TSRMLS_CACHE_UPDATE();
 #endif
