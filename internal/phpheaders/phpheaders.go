@@ -6,9 +6,7 @@ import (
 
 // Translate header names to PHP header names
 // All headers in 'commonHeaders' can be cached and registered safely
-// All other headers must be prefixed with 'HTTP_' and sanitized
-var headerNameReplacer = strings.NewReplacer(" ", "_", "-", "_")
-
+// All other headers must be sanitized
 var commonRequestHeaders = map[string]string{
 	"Accept":                            "HTTP_ACCEPT",
 	"Accept-Charset":                    "HTTP_ACCEPT_CHARSET",
@@ -94,7 +92,7 @@ var commonRequestHeaders = map[string]string{
 	"X-Csrf-Token":                      "HTTP_X_CSRF_TOKEN",
 	"X-Request-ID":                      "HTTP_X_REQUEST_ID",
 	"X-Correlation-ID":                  "HTTP_X_CORRELATION_ID",
-	// Cloudflare/Cloudfront/Google Cloud headers
+	// Additional CDN/Framework headers
 	"Cloudflare-Visitor":        "HTTP_CLOUDFLARE_VISITOR",
 	"Cloudfront-Viewer-Address": "HTTP_CLOUDFRONT_VIEWER_ADDRESS",
 	"Cloudfront-Viewer-Country": "HTTP_CLOUDFRONT_VIEWER_COUNTRY",
@@ -109,6 +107,8 @@ var commonRequestHeaders = map[string]string{
 	"X-Client-ID":               "HTTP_X_CLIENT_ID",
 	"X-Livewire":                "HTTP_X_LIVEWIRE",
 }
+
+var headerNameReplacer = strings.NewReplacer(" ", "_", "-", "_")
 
 func GetCommonHeader(key string) string {
 	return commonRequestHeaders[key]

@@ -37,14 +37,14 @@ import (
 )
 
 type testOptions struct {
-	workerScript        string
-	watch               []string
-	nbWorkers           int
-	env                 map[string]string
-	nbParallelRequests  int
-	realServer          bool
-	logger              *zap.Logger
-	initOpts            []frankenphp.Option
+	workerScript       string
+	watch              []string
+	nbWorkers          int
+	env                map[string]string
+	nbParallelRequests int
+	realServer         bool
+	logger             *zap.Logger
+	initOpts           []frankenphp.Option
 }
 
 func runTest(t *testing.T, test func(func(http.ResponseWriter, *http.Request), *httptest.Server, int), opts *testOptions) {
@@ -336,7 +336,7 @@ func TestMalformedCookie(t *testing.T) {
 
 		// PHPSESSID should still be present since we remove the null byte
 		assert.Contains(t, string(body), "'PHPSESSID' => '1234'")
-	}, &testOptions{})
+	}, &testOptions{nbParallelRequests: 1})
 }
 
 func TestSession_module(t *testing.T) { testSession(t, nil) }

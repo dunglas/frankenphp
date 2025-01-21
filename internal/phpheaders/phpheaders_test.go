@@ -1,9 +1,8 @@
 package phpheaders
 
 import (
-	"testing"
-
 	"github.com/stretchr/testify/assert"
+	"testing"
 )
 
 func TestAllHeadersAreCorrect(t *testing.T) {
