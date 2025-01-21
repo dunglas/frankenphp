@@ -135,9 +135,6 @@ static void frankenphp_worker_request_shutdown() {
   zend_end_try();
 
   zend_set_memory_limit(PG(memory_limit));
-  /* TODO: remove next line when https://github.com/php/php-src/pull/14499 will
-   * be available */
-  SG(rfc1867_uploaded_files) = NULL;
 }
 
 PHPAPI void get_full_env(zval *track_vars_array) {
@@ -434,7 +431,7 @@ PHP_FUNCTION(frankenphp_handle_request) {
   }
 
   /*
-   * If an exception occured, print the message to the client before
+   * If an exception occurred, print the message to the client before
    * closing the connection
    */
   if (EG(exception)) {
