@@ -434,8 +434,8 @@ PHP_FUNCTION(frankenphp_handle_request) {
   }
 
   /*
-   * If an exception occured, print the message to the client before closing the
-   * connection
+   * If an exception occured, print the message to the client before
+   * closing the connection
    */
   if (EG(exception)) {
     zend_exception_error(EG(exception), E_ERROR);

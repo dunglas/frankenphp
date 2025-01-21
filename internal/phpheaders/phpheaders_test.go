@@ -9,7 +9,8 @@ import (
 func TestAllHeadersAreCorrect(t *testing.T) {
 	for header, phpHeader := range commonRequestHeaders {
 		expectedPHPHeader := GetUnCommonHeader(header)
-		hardCodedHeader := phpHeader + "\x00"
-		assert.Equal(t, hardCodedHeader, expectedPHPHeader, "header is not well formed: "+phpHeader)
+		// trim the null byte from the expectedPHPHeader
+		expectedPHPHeader = expectedPHPHeader[:len(expectedPHPHeader)-1]
+		assert.Equal(t, phpHeader, expectedPHPHeader, "header is not well formed: "+phpHeader)
 	}
 }
