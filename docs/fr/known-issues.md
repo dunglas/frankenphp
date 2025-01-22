@@ -28,7 +28,7 @@ Le binaire autonome et les images docker basées sur Alpine (`dunglas/frankenphp
 ## Utilisation de `https://127.0.0.1` avec Docker
 
 Par défaut, FrankenPHP génère un certificat TLS pour `localhost`.
-C'est l'option est la plus simple et est recommandée pour le développement local.
+C'est l'option la plus simple et recommandée pour le développement local.
 
 Si vous voulez vraiment utiliser `127.0.0.1` comme hôte, il est possible de configure FrankenPHP pour générer un certificat pour cela en définissant le nom du serveur à `127.0.0.1`.
 

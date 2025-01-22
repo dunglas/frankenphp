@@ -1,6 +1,6 @@
 // In all tests, headers added to requests are copied on the heap using strings.Clone.
 // This was originally a workaround for https://github.com/golang/go/issues/65286#issuecomment-1920087884 (fixed in Go 1.22),
-// but this allows to catch panics occuring in real life but not when the string is in the internal binary memory.
+// but this allows to catch panics occurring in real life but not when the string is in the internal binary memory.
 
 package frankenphp_test
 
@@ -41,7 +41,7 @@ type testOptions struct {
 	watch               []string
 	nbWorkers           int
 	env                 map[string]string
-	nbParrallelRequests int
+	nbParallelRequests  int
 	realServer          bool
 	logger              *zap.Logger
 	initOpts            []frankenphp.Option
@@ -51,8 +51,8 @@ func runTest(t *testing.T, test func(func(http.ResponseWriter, *http.Request), *
 	if opts == nil {
 		opts = &testOptions{}
 	}
-	if opts.nbParrallelRequests == 0 {
-		opts.nbParrallelRequests = 100
+	if opts.nbParallelRequests == 0 {
+		opts.nbParallelRequests = 100
 	}
 
 	cwd, _ := os.Getwd()
@@ -87,8 +87,8 @@ func runTest(t *testing.T, test func(func(http.ResponseWriter, *http.Request), *
 	}
 
 	var wg sync.WaitGroup
-	wg.Add(opts.nbParrallelRequests)
-	for i := 0; i < opts.nbParrallelRequests; i++ {
+	wg.Add(opts.nbParallelRequests)
+	for i := 0; i < opts.nbParallelRequests; i++ {
 		go func(i int) {
 			test(handler, ts, i)
 			wg.Done()
@@ -850,7 +850,7 @@ func BenchmarkServerSuperGlobal(b *testing.B) {
 	cwd, _ := os.Getwd()
 	testDataDir := cwd + "/testdata/"
 
-	// Mimicks headers of a request sent by Firefox to GitHub
+	// Mimics headers of a request sent by Firefox to GitHub
 	headers := http.Header{}
 	headers.Add(strings.Clone("Accept"), strings.Clone("text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8"))
 	headers.Add(strings.Clone("Accept-Encoding"), strings.Clone("gzip, deflate, br"))

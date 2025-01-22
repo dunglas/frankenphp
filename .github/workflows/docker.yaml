@@ -29,7 +29,7 @@ env:
   IMAGE_NAME: ${{ (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.version) || startsWith(github.ref, 'refs/tags/')) && 'dunglas/frankenphp' || 'dunglas/frankenphp-dev' }}
 jobs:
   prepare:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       # Push if it's a scheduled job, a tag, or if we're committing to the main branch
       push: ${{ (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.version) || startsWith(github.ref, 'refs/tags/') || (github.ref == 'refs/heads/main' && github.event_name != 'pull_request')) && true || false }}
@@ -100,7 +100,7 @@ jobs:
           VERSION: ${{ (github.ref_type == 'tag' && github.ref_name) || steps.check.outputs.ref || 'dev' }}
           PHP_VERSION: ${{ steps.check.outputs.php_version }}
   build:
-    runs-on: ubuntu-latest
+    runs-on: ${{ startsWith(matrix.platform, 'linux/arm') && 'ubuntu-24.04-arm' || 'ubuntu-24.04' }}
     needs:
       - prepare
     if: ${{ !fromJson(needs.prepare.outputs.skip) }}
@@ -111,12 +111,8 @@ jobs:
         platform: ${{ fromJson(needs.prepare.outputs.platforms) }}
         include:
           - race: ""
-            qemu: true
           - platform: linux/amd64
-            qemu: false
             race: "-race" # The Go race detector is only supported on amd64
-          - platform: linux/386
-            qemu: false
         exclude:
           # arm/v6 is only available for Alpine: https://github.com/docker-library/golang/issues/502
           - variant: php-${{ needs.prepare.outputs.php82_version }}-bookworm
@@ -132,11 +128,6 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ needs.prepare.outputs.ref }}
-      - name: Set up QEMU
-        if: matrix.qemu
-        uses: docker/setup-qemu-action@v3
-        with:
-          platforms: ${{ matrix.platform }}
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
         with:
@@ -202,7 +193,7 @@ jobs:
           if-no-files-found: error
           retention-days: 1
       - name: Run tests
-        if: ${{ !matrix.qemu && !fromJson(needs.prepare.outputs.push) }}
+        if: ${{ !fromJson(needs.prepare.outputs.push) }}
         run: |
           docker run --platform=${{ matrix.platform }} --rm \
             "$(jq -r '."builder-${{ matrix.variant }}"."containerimage.config.digest"' <<< "${METADATA}")" \
@@ -211,7 +202,7 @@ jobs:
           METADATA: ${{ steps.build.outputs.metadata }}
   # Adapted from https://docs.docker.com/build/ci/github-actions/multi-platform/
   push:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs:
       - prepare
       - build
