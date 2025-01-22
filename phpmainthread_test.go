@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/dunglas/frankenphp/internal/phpheaders"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
 )
@@ -134,6 +135,14 @@ func TestTransitionThreadsWhileDoingRequests(t *testing.T) {
 	wg.Wait()
 	isRunning.Store(false)
 	Shutdown()
+}
+
+// Note: this test is here since it would break compilation when put into the phpheaders package
+func TestAllCommonHeadersAreCorrect(t *testing.T) {
+	for header, phpHeader := range phpheaders.CommonRequestHeaders {
+		expectedPHPHeader := phpheaders.GetUnCommonHeader(header)
+		assert.Equal(t, phpHeader+"\x00", expectedPHPHeader, "header is not well formed: "+phpHeader)
+	}
 }
 
 func getDummyWorker(fileName string) *worker {

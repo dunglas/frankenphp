@@ -7,7 +7,7 @@ import (
 // Translate header names to PHP header names
 // All headers in 'commonHeaders' can be cached and registered safely
 // All other headers must be sanitized
-var commonRequestHeaders = map[string]string{
+var CommonRequestHeaders = map[string]string{
 	"Accept":                            "HTTP_ACCEPT",
 	"Accept-Charset":                    "HTTP_ACCEPT_CHARSET",
 	"Accept-Encoding":                   "HTTP_ACCEPT_ENCODING",
@@ -111,7 +111,7 @@ var commonRequestHeaders = map[string]string{
 var headerNameReplacer = strings.NewReplacer(" ", "_", "-", "_")
 
 func GetCommonHeader(key string) string {
-	return commonRequestHeaders[key]
+	return CommonRequestHeaders[key]
 }
 
 func GetUnCommonHeader(key string) string {
