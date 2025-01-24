@@ -725,10 +725,15 @@ void frankenphp_register_bulk(
                                   request_uri.val_len, ht);
 }
 
-/** Persistent strings are ignored by the PHP GC, we have to release these
- * ourselves **/
+/** Create an immutable zend_string that lasts for the whole process **/
 zend_string *frankenphp_init_persistent_string(const char *string, size_t len) {
-  return zend_string_init(string, len, 1);
+  /* persistent strings will be ignored by the GC at the end of a request */
+  zend_string *z_string = zend_string_init(string, len, 1);
+
+  /* interned strings will not be ref counted by the GC */
+  GC_ADD_FLAGS(z_string, IS_STR_INTERNED);
+
+  return z_string;
 }
 
 void frankenphp_release_zend_string(zend_string *z_string) {

@@ -5,15 +5,18 @@ import "C"
 import (
 	"sync"
 
+	"github.com/dunglas/frankenphp/internal/phpheaders"
 	"go.uber.org/zap"
 )
 
 // represents the main PHP thread
 // the thread needs to keep running as long as all other threads are running
 type phpMainThread struct {
-	state      *threadState
-	done       chan struct{}
-	numThreads int
+	state           *threadState
+	done            chan struct{}
+	numThreads      int
+	commonHeaders   map[string]*C.zend_string
+	knownServerKeys map[string]*C.zend_string
 }
 
 var (
@@ -86,6 +89,19 @@ func (mainThread *phpMainThread) start() error {
 		return MainThreadCreationError
 	}
 	mainThread.state.waitFor(stateReady)
+
+	// cache common request headers as zend_strings (HTTP_ACCEPT, HTTP_USER_AGENT, etc.)
+	mainThread.commonHeaders = make(map[string]*C.zend_string, len(phpheaders.CommonRequestHeaders))
+	for key, phpKey := range phpheaders.CommonRequestHeaders {
+		mainThread.commonHeaders[key] = C.frankenphp_init_persistent_string(C.CString(phpKey), C.size_t(len(phpKey)))
+	}
+
+	// cache $_SERVER keys as zend_strings (SERVER_PROTOCOL, SERVER_SOFTWARE, etc.)
+	mainThread.knownServerKeys = make(map[string]*C.zend_string, len(knownServerKeys))
+	for _, phpKey := range knownServerKeys {
+		mainThread.knownServerKeys[phpKey] = C.frankenphp_init_persistent_string(toUnsafeChar(phpKey), C.size_t(len(phpKey)))
+	}
+
 	return nil
 }
 

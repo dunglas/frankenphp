@@ -49,7 +49,7 @@ var knownServerKeys = []string{
 // TODO: handle this case https://github.com/caddyserver/caddy/issues/3718
 // Inspired by https://github.com/caddyserver/caddy/blob/master/modules/caddyhttp/reverseproxy/fastcgi/fastcgi.go
 func addKnownVariablesToServer(thread *phpThread, request *http.Request, fc *FrankenPHPContext, trackVarsArray *C.zval) {
-	keys := getKnownVariableKeys(thread)
+	keys := mainThread.knownServerKeys
 	// Separate remote IP and port; more lenient than net.SplitHostPort
 	var ip, port string
 	if idx := strings.LastIndex(request.RemoteAddr, ":"); idx > -1 {
@@ -162,13 +162,14 @@ func packCgiVariable(key *C.zend_string, value string) C.ht_key_value_pair {
 
 func addHeadersToServer(request *http.Request, thread *phpThread, fc *FrankenPHPContext, trackVarsArray *C.zval) {
 	for field, val := range request.Header {
-		if k := getCachedHeaderKey(thread, field); k != nil {
+		if k := mainThread.commonHeaders[field]; k != nil {
 			v := strings.Join(val, ", ")
 			C.frankenphp_register_single(k, toUnsafeChar(v), C.size_t(len(v)), trackVarsArray)
 			continue
 		}
 
-		// if the header name could not be cached, register it inefficiently
+		// if the header name could not be cached, it needs to be registered safely
+		// this is more inefficient but allows additional sanitizing by PHP
 		k := phpheaders.GetUnCommonHeader(field)
 		v := strings.Join(val, ", ")
 		C.frankenphp_register_variable_safe(toUnsafeChar(k), toUnsafeChar(v), C.size_t(len(v)), trackVarsArray)
@@ -180,39 +181,6 @@ func addPreparedEnvToServer(fc *FrankenPHPContext, trackVarsArray *C.zval) {
 		C.frankenphp_register_variable_safe(toUnsafeChar(k), toUnsafeChar(v), C.size_t(len(v)), trackVarsArray)
 	}
 	fc.env = nil
-}
-
-func getKnownVariableKeys(thread *phpThread) map[string]*C.zend_string {
-	if thread.knownVariableKeys != nil {
-		return thread.knownVariableKeys
-	}
-	threadServerKeys := make(map[string]*C.zend_string)
-	for _, k := range knownServerKeys {
-		threadServerKeys[k] = C.frankenphp_init_persistent_string(toUnsafeChar(k), C.size_t(len(k)))
-	}
-	thread.knownVariableKeys = threadServerKeys
-	return threadServerKeys
-}
-
-func getCachedHeaderKey(thread *phpThread, key string) *C.zend_string {
-	if thread.knownHeaderKeys == nil {
-		thread.knownHeaderKeys = make(map[string]*C.zend_string)
-	}
-
-	// check if the header exists as cached zend_string
-	if h, ok := thread.knownHeaderKeys[key]; ok {
-		return h
-	}
-
-	// try to cache the header as zend_string
-	commonKey := phpheaders.GetCommonHeader(key)
-	if commonKey == "" {
-		return nil
-	}
-
-	zendHeader := C.frankenphp_init_persistent_string(toUnsafeChar(commonKey), C.size_t(len(commonKey)))
-	thread.knownHeaderKeys[key] = zendHeader
-	return zendHeader
 }
 
 //export go_register_variables

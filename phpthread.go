@@ -14,14 +14,12 @@ import (
 type phpThread struct {
 	runtime.Pinner
 
-	threadIndex       int
-	knownVariableKeys map[string]*C.zend_string
-	knownHeaderKeys   map[string]*C.zend_string
-	requestChan       chan *http.Request
-	drainChan         chan struct{}
-	handlerMu         *sync.Mutex
-	handler           threadHandler
-	state             *threadState
+	threadIndex int
+	requestChan chan *http.Request
+	drainChan   chan struct{}
+	handlerMu   *sync.Mutex
+	handler     threadHandler
+	state       *threadState
 }
 
 // interface that defines how the callbacks from the C thread should be handled
@@ -117,7 +115,5 @@ func go_frankenphp_after_script_execution(threadIndex C.uintptr_t, exitStatus C.
 func go_frankenphp_on_thread_shutdown(threadIndex C.uintptr_t) {
 	thread := phpThreads[threadIndex]
 	thread.Unpin()
-	thread.knownVariableKeys = nil
-	thread.knownHeaderKeys = nil
 	thread.state.set(stateDone)
 }

@@ -112,7 +112,8 @@ var CommonRequestHeaders = map[string]string{
 	"X-Livewire":                "HTTP_X_LIVEWIRE",
 }
 
-// We will cache even some uncommon headers to reduce the overhead of sanitizing them
+// Cache up to 256 uncommon headers
+// This is ~2.5x faster than converting the header each time
 var headerKeyCache = func() otter.Cache[string, string] {
 	c, err := otter.MustBuilder[string, string](256).Build()
 	if err != nil {
@@ -123,10 +124,6 @@ var headerKeyCache = func() otter.Cache[string, string] {
 }()
 
 var headerNameReplacer = strings.NewReplacer(" ", "_", "-", "_")
-
-func GetCommonHeader(key string) string {
-	return CommonRequestHeaders[key]
-}
 
 func GetUnCommonHeader(key string) string {
 	phpHeaderKey, ok := headerKeyCache.Get(key)
