@@ -7,6 +7,7 @@ import (
 // Translate header names to PHP header names
 // All headers in 'commonHeaders' can be cached and registered safely
 // All other headers must be sanitized
+// Note: net/http will capitalize lowercase headers, so we don't need to worry about case sensitivity
 var CommonRequestHeaders = map[string]string{
 	"Accept":                            "HTTP_ACCEPT",
 	"Accept-Charset":                    "HTTP_ACCEPT_CHARSET",
@@ -48,15 +49,15 @@ var CommonRequestHeaders = map[string]string{
 	"Referer":                           "HTTP_REFERER",
 	"RTT":                               "HTTP_RTT",
 	"Save-Data":                         "HTTP_SAVE_DATA",
-	"Sec-CH-UA":                         "HTTP_SEC_CH_UA",
-	"Sec-CH-UA-Arch":                    "HTTP_SEC_CH_UA_ARCH",
-	"Sec-CH-UA-Bitness":                 "HTTP_SEC_CH_UA_BITNESS",
-	"Sec-CH-UA-Full-Version":            "HTTP_SEC_CH_UA_FULL_VERSION",
-	"Sec-CH-UA-Full-Version-List":       "HTTP_SEC_CH_UA_FULL_VERSION_LIST",
-	"Sec-CH-UA-Mobile":                  "HTTP_SEC_CH_UA_MOBILE",
-	"Sec-CH-UA-Model":                   "HTTP_SEC_CH_UA_MODEL",
-	"Sec-CH-UA-Platform":                "HTTP_SEC_CH_UA_PLATFORM",
-	"Sec-CH-UA-Platform-Version":        "HTTP_SEC_CH_UA_PLATFORM_VERSION",
+	"Sec-Ch-Ua":                         "HTTP_SEC_CH_UA",
+	"Sec-Ch-Ua-Arch":                    "HTTP_SEC_CH_UA_ARCH",
+	"Sec-Ch-Ua-Bitness":                 "HTTP_SEC_CH_UA_BITNESS",
+	"Sec-Ch-Ua-Full-Version":            "HTTP_SEC_CH_UA_FULL_VERSION",
+	"Sec-Ch-Ua-Full-Version-List":       "HTTP_SEC_CH_UA_FULL_VERSION_LIST",
+	"Sec-Ch-Ua-Mobile":                  "HTTP_SEC_CH_UA_MOBILE",
+	"Sec-Ch-Ua-Model":                   "HTTP_SEC_CH_UA_MODEL",
+	"Sec-Ch-Ua-Platform":                "HTTP_SEC_CH_UA_PLATFORM",
+	"Sec-Ch-Ua-Platform-Version":        "HTTP_SEC_CH_UA_PLATFORM_VERSION",
 	"Sec-Fetch-Dest":                    "HTTP_SEC_FETCH_DEST",
 	"Sec-Fetch-Mode":                    "HTTP_SEC_FETCH_MODE",
 	"Sec-Fetch-Site":                    "HTTP_SEC_FETCH_SITE",
@@ -64,6 +65,7 @@ var CommonRequestHeaders = map[string]string{
 	"Sec-GPC":                           "HTTP_SEC_GPC",
 	"Service-Worker-Navigation-Preload": "HTTP_SERVICE_WORKER_NAVIGATION_PRELOAD",
 	"TE":                                "HTTP_TE",
+	"Priority":                          "HTTP_PRIORITY",
 	"Trailer":                           "HTTP_TRAILER",
 	"Transfer-Encoding":                 "HTTP_TRANSFER_ENCODING",
 	"Upgrade":                           "HTTP_UPGRADE",
