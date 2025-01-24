@@ -204,7 +204,7 @@ func getCachedHeaderKey(thread *phpThread, key string) *C.zend_string {
 		return h
 	}
 
-	// try to cache cache the header as zend_string
+	// try to cache the header as zend_string
 	commonKey := phpheaders.GetCommonHeader(key)
 	if commonKey == "" {
 		return nil
