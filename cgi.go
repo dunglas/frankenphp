@@ -162,6 +162,7 @@ func packCgiVariable(key *C.zend_string, value string) C.ht_key_value_pair {
 
 func addHeadersToServer(request *http.Request, thread *phpThread, fc *FrankenPHPContext, trackVarsArray *C.zval) {
 	for field, val := range request.Header {
+		logger.Info(field)
 		if k := getCachedHeaderKey(thread, field); k != nil {
 			v := strings.Join(val, ", ")
 			C.frankenphp_register_single(k, toUnsafeChar(v), C.size_t(len(v)), trackVarsArray)

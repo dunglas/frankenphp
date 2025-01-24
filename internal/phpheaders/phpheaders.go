@@ -2,6 +2,8 @@ package phpheaders
 
 import (
 	"strings"
+
+	"github.com/maypok86/otter"
 )
 
 // Translate header names to PHP header names
@@ -25,12 +27,12 @@ var CommonRequestHeaders = map[string]string{
 	"Cookie":                            "HTTP_COOKIE",
 	"Date":                              "HTTP_DATE",
 	"Device-Memory":                     "HTTP_DEVICE_MEMORY",
-	"DNT":                               "HTTP_DNT",
+	"Dnt":                               "HTTP_DNT",
 	"Downlink":                          "HTTP_DOWNLINK",
-	"DPR":                               "HTTP_DPR",
+	"Dpr":                               "HTTP_DPR",
 	"Early-Data":                        "HTTP_EARLY_DATA",
-	"ECT":                               "HTTP_ECT",
-	"AM-I":                              "HTTP_AM_I",
+	"Ect":                               "HTTP_ECT",
+	"Am-I":                              "HTTP_AM_I",
 	"Expect":                            "HTTP_EXPECT",
 	"Forwarded":                         "HTTP_FORWARDED",
 	"From":                              "HTTP_FROM",
@@ -47,7 +49,7 @@ var CommonRequestHeaders = map[string]string{
 	"Proxy-Authorization":               "HTTP_PROXY_AUTHORIZATION",
 	"Range":                             "HTTP_RANGE",
 	"Referer":                           "HTTP_REFERER",
-	"RTT":                               "HTTP_RTT",
+	"Rtt":                               "HTTP_RTT",
 	"Save-Data":                         "HTTP_SAVE_DATA",
 	"Sec-Ch-Ua":                         "HTTP_SEC_CH_UA",
 	"Sec-Ch-Ua-Arch":                    "HTTP_SEC_CH_UA_ARCH",
@@ -62,9 +64,9 @@ var CommonRequestHeaders = map[string]string{
 	"Sec-Fetch-Mode":                    "HTTP_SEC_FETCH_MODE",
 	"Sec-Fetch-Site":                    "HTTP_SEC_FETCH_SITE",
 	"Sec-Fetch-User":                    "HTTP_SEC_FETCH_USER",
-	"Sec-GPC":                           "HTTP_SEC_GPC",
+	"Sec-Gpc":                           "HTTP_SEC_GPC",
 	"Service-Worker-Navigation-Preload": "HTTP_SERVICE_WORKER_NAVIGATION_PRELOAD",
-	"TE":                                "HTTP_TE",
+	"Te":                                "HTTP_TE",
 	"Priority":                          "HTTP_PRIORITY",
 	"Trailer":                           "HTTP_TRAILER",
 	"Transfer-Encoding":                 "HTTP_TRANSFER_ENCODING",
@@ -79,36 +81,46 @@ var CommonRequestHeaders = map[string]string{
 	"X-Forwarded-For":                   "HTTP_X_FORWARDED_FOR",
 	"X-Forwarded-Host":                  "HTTP_X_FORWARDED_HOST",
 	"X-Forwarded-Proto":                 "HTTP_X_FORWARDED_PROTO",
-	"A-IM":                              "HTTP_A_IM",
+	"A-Im":                              "HTTP_A_IM",
 	"Accept-Datetime":                   "HTTP_ACCEPT_DATETIME",
-	"Content-MD5":                       "HTTP_CONTENT_MD5",
-	"HTTP2-Settings":                    "HTTP_HTTP2_SETTINGS",
+	"Content-Md5":                       "HTTP_CONTENT_MD5",
+	"Http2-Settings":                    "HTTP_HTTP2_SETTINGS",
 	"Prefer":                            "HTTP_PREFER",
 	"X-Requested-With":                  "HTTP_X_REQUESTED_WITH",
 	"Front-End-Https":                   "HTTP_FRONT_END_HTTPS",
 	"X-Http-Method-Override":            "HTTP_X_HTTP_METHOD_OVERRIDE",
-	"X-ATT-DeviceId":                    "HTTP_X_ATT_DEVICEID",
+	"X-Att-Deviceid":                    "HTTP_X_ATT_DEVICEID",
 	"X-Wap-Profile":                     "HTTP_X_WAP_PROFILE",
 	"Proxy-Connection":                  "HTTP_PROXY_CONNECTION",
-	"X-UIDH":                            "HTTP_X_UIDH",
+	"X-Uidh":                            "HTTP_X_UIDH",
 	"X-Csrf-Token":                      "HTTP_X_CSRF_TOKEN",
-	"X-Request-ID":                      "HTTP_X_REQUEST_ID",
-	"X-Correlation-ID":                  "HTTP_X_CORRELATION_ID",
+	"X-Request-Id":                      "HTTP_X_REQUEST_ID",
+	"X-Correlation-Id":                  "HTTP_X_CORRELATION_ID",
 	// Additional CDN/Framework headers
 	"Cloudflare-Visitor":        "HTTP_CLOUDFLARE_VISITOR",
 	"Cloudfront-Viewer-Address": "HTTP_CLOUDFRONT_VIEWER_ADDRESS",
 	"Cloudfront-Viewer-Country": "HTTP_CLOUDFRONT_VIEWER_COUNTRY",
 	"X-Amzn-Trace-Id":           "HTTP_X_AMZN_TRACE_ID",
 	"X-Cloud-Trace-Context":     "HTTP_X_CLOUD_TRACE_CONTEXT",
-	"CF-Ray":                    "HTTP_CF_RAY",
-	"CF-Visitor":                "HTTP_CF_VISITOR",
-	"CF-Request-ID":             "HTTP_CF_REQUEST_ID",
-	"CF-IPCountry":              "HTTP_CF_IPCOUNTRY",
+	"Cf-Ray":                    "HTTP_CF_RAY",
+	"Cf-Visitor":                "HTTP_CF_VISITOR",
+	"Cf-Request-Id":             "HTTP_CF_REQUEST_ID",
+	"Cf-Ipcountry":              "HTTP_CF_IPCOUNTRY",
 	"X-Device-Type":             "HTTP_X_DEVICE_TYPE",
 	"X-Network-Info":            "HTTP_X_NETWORK_INFO",
-	"X-Client-ID":               "HTTP_X_CLIENT_ID",
+	"X-Client-Id":               "HTTP_X_CLIENT_ID",
 	"X-Livewire":                "HTTP_X_LIVEWIRE",
 }
+
+// We will cache even some uncommon headers to reduce the overhead of sanitizing them
+var headerKeyCache = func() otter.Cache[string, string] {
+	c, err := otter.MustBuilder[string, string](256).Build()
+	if err != nil {
+		panic(err)
+	}
+
+	return c
+}()
 
 var headerNameReplacer = strings.NewReplacer(" ", "_", "-", "_")
 
@@ -117,5 +129,11 @@ func GetCommonHeader(key string) string {
 }
 
 func GetUnCommonHeader(key string) string {
-	return "HTTP_" + headerNameReplacer.Replace(strings.ToUpper(key)) + "\x00"
+	phpHeaderKey, ok := headerKeyCache.Get(key)
+	if !ok {
+		phpHeaderKey = "HTTP_" + headerNameReplacer.Replace(strings.ToUpper(key)) + "\x00"
+		headerKeyCache.SetIfAbsent(key, phpHeaderKey)
+	}
+
+	return phpHeaderKey
 }
