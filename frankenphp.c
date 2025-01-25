@@ -442,6 +442,14 @@ PHP_FUNCTION(frankenphp_handle_request) {
   ctx->has_active_request = false;
   go_frankenphp_finish_worker_request(thread_index);
 
+  // remove any elements that have 1 gc reference (it only exists in the resource list)
+  zval *val;
+  ZEND_HASH_FOREACH_VAL(&EG(regular_list), val) {
+    if (GC_REFCOUNT(Z_RES_P(val)) == 1) {
+      zend_hash_packed_del_val(&EG(regular_list), val);
+    }
+  } ZEND_HASH_FOREACH_END();
+
   RETURN_TRUE;
 }
 
