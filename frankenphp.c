@@ -442,16 +442,17 @@ PHP_FUNCTION(frankenphp_handle_request) {
   ctx->has_active_request = false;
   go_frankenphp_finish_worker_request(thread_index);
 
-  /* free any php_stream resources that are not php source files and are
-   unreferenced PHP resources are stored in the thread-local HashTable
-   EG(regular_list) */
+  /*
+   * free any php_stream resources that are not php source files
+   * resources are stored EG(regular_list), see zend_list.c
+   */
   zend_resource *val;
   ZEND_HASH_FOREACH_PTR(&EG(regular_list), val) {
     /* verify the resource is a stream */
     if (val->type == php_file_le_stream()) {
       php_stream *stream = (php_stream *)val->ptr;
       if (stream != NULL && stream->ops != &php_stream_stdio_ops &&
-          GC_REFCOUNT(val) == 1) {
+          !stream->is_persistent && GC_REFCOUNT(val) == 1) {
         zend_list_delete(val);
       }
     }
