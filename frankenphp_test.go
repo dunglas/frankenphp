@@ -37,14 +37,14 @@ import (
 )
 
 type testOptions struct {
-	workerScript        string
-	watch               []string
-	nbWorkers           int
-	env                 map[string]string
-	nbParallelRequests  int
-	realServer          bool
-	logger              *zap.Logger
-	initOpts            []frankenphp.Option
+	workerScript       string
+	watch              []string
+	nbWorkers          int
+	env                map[string]string
+	nbParallelRequests int
+	realServer         bool
+	logger             *zap.Logger
+	initOpts           []frankenphp.Option
 }
 
 func runTest(t *testing.T, test func(func(http.ResponseWriter, *http.Request), *httptest.Server, int), opts *testOptions) {
@@ -936,6 +936,22 @@ func testRejectInvalidHeaders(t *testing.T, opts *testOptions) {
 			assert.Contains(t, string(body), "invalid")
 		}, opts)
 	}
+}
+
+// Worker mode will clean up unreferenced streams between requests
+// Make sure referenced streams are not cleaned up
+func TestFileStreamInWorkerMode(t *testing.T) {
+	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, _ int) {
+
+		resp1 := fetchBody("GET", "http://example.com/file-stream.php", handler)
+		assert.Equal(t, resp1, "word1")
+
+		resp2 := fetchBody("GET", "http://example.com/file-stream.php", handler)
+		assert.Equal(t, resp2, "word2")
+
+		resp3 := fetchBody("GET", "http://example.com/file-stream.php", handler)
+		assert.Equal(t, resp3, "word3")
+	}, &testOptions{workerScript: "file-stream.php", nbParallelRequests: 1, nbWorkers: 1})
 }
 
 // To run this fuzzing test use: go test -fuzz FuzzRequest
