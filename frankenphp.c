@@ -135,6 +135,23 @@ static void frankenphp_worker_request_shutdown() {
   zend_end_try();
 
   zend_set_memory_limit(PG(memory_limit));
+
+  /*
+   * free any php_stream resources that are not php source files
+   * all resources are stored in EG(regular_list), see zend_list.c
+   */
+  zend_resource *val;
+  ZEND_HASH_FOREACH_PTR(&EG(regular_list), val) {
+    /* verify the resource is a stream */
+    if (val->type == php_file_le_stream()) {
+      php_stream *stream = (php_stream *)val->ptr;
+      if (stream != NULL && stream->ops != &php_stream_stdio_ops &&
+          !stream->is_persistent && GC_REFCOUNT(val) == 1) {
+        zend_list_delete(val);
+      }
+    }
+  }
+  ZEND_HASH_FOREACH_END();
 }
 
 PHPAPI void get_full_env(zval *track_vars_array) {
@@ -746,7 +763,7 @@ void frankenphp_register_variables_from_request_info(
     zend_string *path_translated, zend_string *query_string,
     zend_string *auth_user, zend_string *request_method) {
   frankenphp_register_variable_from_request_info(
-      content_type, (char *)SG(request_info).content_type, false,
+      content_type, (char *)SG(request_info).content_type, true,
       track_vars_array);
   frankenphp_register_variable_from_request_info(
       path_translated, (char *)SG(request_info).path_translated, false,
@@ -903,6 +920,9 @@ static void *php_thread(void *arg) {
 #endif
 
   go_frankenphp_on_thread_shutdown(thread_index);
+
+  free(local_ctx);
+  local_ctx = NULL;
 
   return NULL;
 }
