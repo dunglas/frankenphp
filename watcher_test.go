@@ -3,7 +3,6 @@
 package frankenphp_test
 
 import (
-	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
