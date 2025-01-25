@@ -137,7 +137,7 @@ static void frankenphp_worker_request_shutdown() {
   zend_set_memory_limit(PG(memory_limit));
 
   /*
-   * free any php_stream resources that are not php source files
+   * free php_stream resources that are temporary (php_stream_temp_ops)
    * all resources are stored in EG(regular_list), see zend_list.c
    */
   zend_resource *val;
@@ -145,7 +145,7 @@ static void frankenphp_worker_request_shutdown() {
     /* verify the resource is a stream */
     if (val->type == php_file_le_stream()) {
       php_stream *stream = (php_stream *)val->ptr;
-      if (stream != NULL && stream->ops != &php_stream_stdio_ops &&
+      if (stream != NULL && stream->ops == &php_stream_temp_ops &&
           !stream->is_persistent && GC_REFCOUNT(val) == 1) {
         zend_list_delete(val);
       }
