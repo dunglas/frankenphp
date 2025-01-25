@@ -942,7 +942,6 @@ func testRejectInvalidHeaders(t *testing.T, opts *testOptions) {
 // Make sure referenced streams are not cleaned up
 func TestFileStreamInWorkerMode(t *testing.T) {
 	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, _ int) {
-
 		resp1 := fetchBody("GET", "http://example.com/file-stream.php", handler)
 		assert.Equal(t, resp1, "word1")
 
