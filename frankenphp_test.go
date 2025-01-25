@@ -994,3 +994,13 @@ func FuzzRequest(f *testing.F) {
 		}, &testOptions{workerScript: "request-headers.php"})
 	})
 }
+
+func fetchBody(method string, url string, handler func(http.ResponseWriter, *http.Request)) string {
+	req := httptest.NewRequest(method, url, nil)
+	w := httptest.NewRecorder()
+	handler(w, req)
+	resp := w.Result()
+	body, _ := io.ReadAll(resp.Body)
+
+	return string(body)
+}
