@@ -904,6 +904,9 @@ static void *php_thread(void *arg) {
 
   go_frankenphp_on_thread_shutdown(thread_index);
 
+  free(local_ctx);
+  local_ctx = NULL;
+
   return NULL;
 }
 
