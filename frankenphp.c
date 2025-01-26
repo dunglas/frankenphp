@@ -113,7 +113,7 @@ static void frankenphp_destroy_super_globals() {
  * streams are globally registered in EG(regular_list), see zend_list.c
  * this fixes a leak when reading the body of a request
  */
-static void frankenphp_release_temporary_streams(){
+static void frankenphp_release_temporary_streams() {
   zend_resource *val;
   int stream_type = php_file_le_stream();
   ZEND_HASH_FOREACH_PTR(&EG(regular_list), val) {
@@ -121,7 +121,8 @@ static void frankenphp_release_temporary_streams(){
     if (val->type == stream_type) {
       php_stream *stream = (php_stream *)val->ptr;
       if (stream != NULL && stream->ops == &php_stream_temp_ops &&
-          !stream->is_persistent && stream->__exposed == 0 && GC_REFCOUNT(val) == 1) {
+          !stream->is_persistent && stream->__exposed == 0 &&
+          GC_REFCOUNT(val) == 1) {
         zend_list_close(val);
         zend_list_delete(val);
       }
