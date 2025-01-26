@@ -108,6 +108,28 @@ static void frankenphp_destroy_super_globals() {
   zend_end_try();
 }
 
+/*
+ * free php_stream resources that are temporary (php_stream_temp_ops)
+ * streams are globally registered in EG(regular_list), see zend_list.c
+ * this fixes a leak when reading the body of a request
+ */
+static void frankenphp_release_temporary_streams(){
+  zend_resource *val;
+  int stream_type = php_file_le_stream();
+  ZEND_HASH_FOREACH_PTR(&EG(regular_list), val) {
+    /* verify the resource is a stream */
+    if (val->type == stream_type) {
+      php_stream *stream = (php_stream *)val->ptr;
+      if (stream != NULL && stream->ops == &php_stream_temp_ops &&
+          !stream->is_persistent && stream->__exposed == 0 && GC_REFCOUNT(val) == 1) {
+        zend_list_close(val);
+        zend_list_delete(val);
+      }
+    }
+  }
+  ZEND_HASH_FOREACH_END();
+}
+
 /* Adapted from php_request_shutdown */
 static void frankenphp_worker_request_shutdown() {
   /* Flush all output buffers */
@@ -135,23 +157,6 @@ static void frankenphp_worker_request_shutdown() {
   zend_end_try();
 
   zend_set_memory_limit(PG(memory_limit));
-
-  /*
-   * free php_stream resources that are temporary (php_stream_temp_ops)
-   * all resources are stored in EG(regular_list), see zend_list.c
-   */
-  zend_resource *val;
-  ZEND_HASH_FOREACH_PTR(&EG(regular_list), val) {
-    /* verify the resource is a stream */
-    if (val->type == php_file_le_stream()) {
-      php_stream *stream = (php_stream *)val->ptr;
-      if (stream != NULL && stream->ops == &php_stream_temp_ops &&
-          !stream->is_persistent && GC_REFCOUNT(val) == 1) {
-        zend_list_delete(val);
-      }
-    }
-  }
-  ZEND_HASH_FOREACH_END();
 }
 
 PHPAPI void get_full_env(zval *track_vars_array) {
@@ -179,6 +184,7 @@ static int frankenphp_worker_request_startup() {
 
   zend_try {
     frankenphp_destroy_super_globals();
+    frankenphp_release_temporary_streams();
     php_output_activate();
 
     /* initialize global variables */
