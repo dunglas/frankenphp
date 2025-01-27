@@ -48,9 +48,9 @@ func initAutoScaling(mainThread *phpMainThread) {
 		return
 	}
 
+	scalingMu.Lock()
 	scaleChan = make(chan *FrankenPHPContext)
 	maxScaledThreads := mainThread.maxThreads - mainThread.numThreads
-	scalingMu.Lock()
 	autoScaledThreads = make([]*phpThread, 0, maxScaledThreads)
 	scalingMu.Unlock()
 
