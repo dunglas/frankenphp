@@ -54,7 +54,7 @@ func initAutoScaling(mainThread *phpMainThread) {
 	autoScaledThreads = make([]*phpThread, 0, maxScaledThreads)
 	scalingMu.Unlock()
 
-	go startUpscalingThreads(mainThread.done, maxScaledThreads)
+	go startUpscalingThreads(maxScaledThreads, scaleChan, mainThread.done)
 	go startDownScalingThreads(mainThread.done)
 }
 
@@ -155,7 +155,7 @@ func scaleRegularThread() {
 	autoScaledThreads = append(autoScaledThreads, thread)
 }
 
-func startUpscalingThreads(done chan struct{}, maxScaledThreads int) {
+func startUpscalingThreads(maxScaledThreads int, scale chan *FrankenPHPContext, done chan struct{}) {
 	for {
 		scalingMu.Lock()
 		scaledThreadCount := len(autoScaledThreads)
@@ -171,7 +171,7 @@ func startUpscalingThreads(done chan struct{}, maxScaledThreads int) {
 		}
 
 		select {
-		case fc := <-scaleChan:
+		case fc := <-scale:
 			timeSinceStalled := time.Since(fc.startedAt)
 
 			// if the request has not been stalled long enough, wait and repeat
