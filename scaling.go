@@ -32,8 +32,8 @@ const (
 )
 
 var (
+	scaleChan         chan *FrankenPHPContext
 	autoScaledThreads = []*phpThread{}
-	scaleChan         = make(chan *FrankenPHPContext)
 	scalingMu         = new(sync.RWMutex)
 	disallowScaling   = atomic.Bool{}
 
@@ -44,9 +44,11 @@ var (
 
 func initAutoScaling(mainThread *phpMainThread) {
 	if mainThread.maxThreads <= mainThread.numThreads {
+		scaleChan = nil
 		return
 	}
 
+	scaleChan = make(chan *FrankenPHPContext)
 	maxScaledThreads := mainThread.maxThreads - mainThread.numThreads
 	scalingMu.Lock()
 	autoScaledThreads = make([]*phpThread, 0, maxScaledThreads)
