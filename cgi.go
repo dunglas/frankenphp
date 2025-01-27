@@ -10,6 +10,8 @@ import (
 	"path/filepath"
 	"strings"
 	"unsafe"
+
+	"github.com/dunglas/frankenphp/internal/phpheaders"
 )
 
 var knownServerKeys = []string{
@@ -47,7 +49,7 @@ var knownServerKeys = []string{
 // TODO: handle this case https://github.com/caddyserver/caddy/issues/3718
 // Inspired by https://github.com/caddyserver/caddy/blob/master/modules/caddyhttp/reverseproxy/fastcgi/fastcgi.go
 func addKnownVariablesToServer(thread *phpThread, request *http.Request, fc *FrankenPHPContext, trackVarsArray *C.zval) {
-	keys := getKnownVariableKeys(thread)
+	keys := mainThread.knownServerKeys
 	// Separate remote IP and port; more lenient than net.SplitHostPort
 	var ip, port string
 	if idx := strings.LastIndex(request.RemoteAddr, ":"); idx > -1 {
@@ -158,18 +160,17 @@ func packCgiVariable(key *C.zend_string, value string) C.ht_key_value_pair {
 	return C.ht_key_value_pair{key, toUnsafeChar(value), C.size_t(len(value))}
 }
 
-func addHeadersToServer(request *http.Request, fc *FrankenPHPContext, trackVarsArray *C.zval) {
+func addHeadersToServer(request *http.Request, thread *phpThread, fc *FrankenPHPContext, trackVarsArray *C.zval) {
 	for field, val := range request.Header {
-		k, ok := headerKeyCache.Get(field)
-		if !ok {
-			k = "HTTP_" + headerNameReplacer.Replace(strings.ToUpper(field)) + "\x00"
-			headerKeyCache.SetIfAbsent(field, k)
-		}
-
-		if _, ok := fc.env[k]; ok {
+		if k := mainThread.commonHeaders[field]; k != nil {
+			v := strings.Join(val, ", ")
+			C.frankenphp_register_single(k, toUnsafeChar(v), C.size_t(len(v)), trackVarsArray)
 			continue
 		}
 
+		// if the header name could not be cached, it needs to be registered safely
+		// this is more inefficient but allows additional sanitizing by PHP
+		k := phpheaders.GetUnCommonHeader(field)
 		v := strings.Join(val, ", ")
 		C.frankenphp_register_variable_safe(toUnsafeChar(k), toUnsafeChar(v), C.size_t(len(v)), trackVarsArray)
 	}
@@ -182,18 +183,6 @@ func addPreparedEnvToServer(fc *FrankenPHPContext, trackVarsArray *C.zval) {
 	fc.env = nil
 }
 
-func getKnownVariableKeys(thread *phpThread) map[string]*C.zend_string {
-	if thread.knownVariableKeys != nil {
-		return thread.knownVariableKeys
-	}
-	threadServerKeys := make(map[string]*C.zend_string)
-	for _, k := range knownServerKeys {
-		threadServerKeys[k] = C.frankenphp_init_persistent_string(toUnsafeChar(k), C.size_t(len(k)))
-	}
-	thread.knownVariableKeys = threadServerKeys
-	return threadServerKeys
-}
-
 //export go_register_variables
 func go_register_variables(threadIndex C.uintptr_t, trackVarsArray *C.zval) {
 	thread := phpThreads[threadIndex]
@@ -201,20 +190,10 @@ func go_register_variables(threadIndex C.uintptr_t, trackVarsArray *C.zval) {
 	fc := r.Context().Value(contextKey).(*FrankenPHPContext)
 
 	addKnownVariablesToServer(thread, r, fc, trackVarsArray)
-	addHeadersToServer(r, fc, trackVarsArray)
-	addPreparedEnvToServer(fc, trackVarsArray)
-}
+	addHeadersToServer(r, thread, fc, trackVarsArray)
 
-//export go_frankenphp_release_known_variable_keys
-func go_frankenphp_release_known_variable_keys(threadIndex C.uintptr_t) {
-	thread := phpThreads[threadIndex]
-	if thread.knownVariableKeys == nil {
-		return
-	}
-	for _, v := range thread.knownVariableKeys {
-		C.frankenphp_release_zend_string(v)
-	}
-	thread.knownVariableKeys = nil
+	// The Prepared Environment is registered last and can overwrite any previous values
+	addPreparedEnvToServer(fc, trackVarsArray)
 }
 
 // splitPos returns the index where path should
@@ -244,8 +223,6 @@ var tlsProtocolStrings = map[uint16]string{
 	tls.VersionTLS12: "TLSv1.2",
 	tls.VersionTLS13: "TLSv1.3",
 }
-
-var headerNameReplacer = strings.NewReplacer(" ", "_", "-", "_")
 
 // SanitizedPathJoin performs filepath.Join(root, reqPath) that
 // is safe against directory traversal attacks. It uses logic

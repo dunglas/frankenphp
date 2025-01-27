@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/dunglas/frankenphp/internal/phpheaders"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
 )
@@ -134,6 +135,22 @@ func TestTransitionThreadsWhileDoingRequests(t *testing.T) {
 	wg.Wait()
 	isRunning.Store(false)
 	Shutdown()
+}
+
+// Note: this test is here since it would break compilation when put into the phpheaders package
+func TestAllCommonHeadersAreCorrect(t *testing.T) {
+	fakeRequest := httptest.NewRequest("GET", "http://localhost", nil)
+
+	for header, phpHeader := range phpheaders.CommonRequestHeaders {
+		// verify that common and uncommon headers return the same result
+		expectedPHPHeader := phpheaders.GetUnCommonHeader(header)
+		assert.Equal(t, phpHeader+"\x00", expectedPHPHeader, "header is not well formed: "+phpHeader)
+
+		// net/http will capitalize lowercase headers, verify that headers are capitalized
+		fakeRequest.Header.Add(header, "foo")
+		_, ok := fakeRequest.Header[header]
+		assert.True(t, ok, "header is not correctly capitalized: "+header)
+	}
 }
 
 func getDummyWorker(fileName string) *worker {

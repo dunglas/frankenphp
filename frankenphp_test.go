@@ -321,6 +321,31 @@ func testCookies(t *testing.T, opts *testOptions) {
 	}, opts)
 }
 
+func TestMalformedCookie(t *testing.T) {
+	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
+		req := httptest.NewRequest("GET", "http://example.com/cookies.php", nil)
+		req.Header.Add("Cookie", "foo =bar; ===;;==;  .dot.=val  ;\x00 ; PHPSESSID=1234")
+		// Muliple Cookie header should be joined https://www.rfc-editor.org/rfc/rfc7540#section-8.1.2.5
+		req.Header.Add("Cookie", "secondCookie=test; secondCookie=overwritten")
+		w := httptest.NewRecorder()
+		handler(w, req)
+
+		resp := w.Result()
+		body, _ := io.ReadAll(resp.Body)
+
+		assert.Contains(t, string(body), "'foo_' => 'bar'")
+		assert.Contains(t, string(body), "'_dot_' => 'val  '")
+
+		// PHPSESSID should still be present since we remove the null byte
+		assert.Contains(t, string(body), "'PHPSESSID' => '1234'")
+
+		// The cookie in the second headers should be present
+		// but it should not be overwritten by following values
+		assert.Contains(t, string(body), "'secondCookie' => 'test'")
+
+	}, &testOptions{nbParallelRequests: 1})
+}
+
 func TestSession_module(t *testing.T) { testSession(t, nil) }
 func TestSession_worker(t *testing.T) {
 	testSession(t, &testOptions{workerScript: "session.php"})

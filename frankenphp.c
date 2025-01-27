@@ -683,6 +683,12 @@ void frankenphp_register_trusted_var(zend_string *z_key, char *value,
   }
 }
 
+void frankenphp_register_single(zend_string *z_key, char *value, size_t val_len,
+                                zval *track_vars_array) {
+  HashTable *ht = Z_ARRVAL_P(track_vars_array);
+  frankenphp_register_trusted_var(z_key, value, val_len, ht);
+}
+
 /* Register known $_SERVER variables in bulk to avoid cgo overhead */
 void frankenphp_register_bulk(
     zval *track_vars_array, ht_key_value_pair remote_addr,
@@ -743,10 +749,15 @@ void frankenphp_register_bulk(
                                   request_uri.val_len, ht);
 }
 
-/** Persistent strings are ignored by the PHP GC, we have to release these
- * ourselves **/
+/** Create an immutable zend_string that lasts for the whole process **/
 zend_string *frankenphp_init_persistent_string(const char *string, size_t len) {
-  return zend_string_init(string, len, 1);
+  /* persistent strings will be ignored by the GC at the end of a request */
+  zend_string *z_string = zend_string_init(string, len, 1);
+
+  /* interned strings will not be ref counted by the GC */
+  GC_ADD_FLAGS(z_string, IS_STR_INTERNED);
+
+  return z_string;
 }
 
 void frankenphp_release_zend_string(zend_string *z_string) {
@@ -919,8 +930,6 @@ static void *php_thread(void *arg) {
     go_frankenphp_after_script_execution(thread_index,
                                          frankenphp_execute_script(scriptName));
   }
-
-  go_frankenphp_release_known_variable_keys(thread_index);
 
 #ifdef ZTS
   ts_free_thread();
