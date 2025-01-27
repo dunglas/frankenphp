@@ -108,6 +108,29 @@ static void frankenphp_destroy_super_globals() {
   zend_end_try();
 }
 
+/*
+ * free php_stream resources that are temporary (php_stream_temp_ops)
+ * streams are globally registered in EG(regular_list), see zend_list.c
+ * this fixes a leak when reading the body of a request
+ */
+static void frankenphp_release_temporary_streams() {
+  zend_resource *val;
+  int stream_type = php_file_le_stream();
+  ZEND_HASH_FOREACH_PTR(&EG(regular_list), val) {
+    /* verify the resource is a stream */
+    if (val->type == stream_type) {
+      php_stream *stream = (php_stream *)val->ptr;
+      if (stream != NULL && stream->ops == &php_stream_temp_ops &&
+          !stream->is_persistent && stream->__exposed == 0 &&
+          GC_REFCOUNT(val) == 1) {
+        zend_list_close(val);
+        zend_list_delete(val);
+      }
+    }
+  }
+  ZEND_HASH_FOREACH_END();
+}
+
 /* Adapted from php_request_shutdown */
 static void frankenphp_worker_request_shutdown() {
   /* Flush all output buffers */
@@ -162,6 +185,7 @@ static int frankenphp_worker_request_startup() {
 
   zend_try {
     frankenphp_destroy_super_globals();
+    frankenphp_release_temporary_streams();
     php_output_activate();
 
     /* initialize global variables */
@@ -659,6 +683,12 @@ void frankenphp_register_trusted_var(zend_string *z_key, char *value,
   }
 }
 
+void frankenphp_register_single(zend_string *z_key, char *value, size_t val_len,
+                                zval *track_vars_array) {
+  HashTable *ht = Z_ARRVAL_P(track_vars_array);
+  frankenphp_register_trusted_var(z_key, value, val_len, ht);
+}
+
 /* Register known $_SERVER variables in bulk to avoid cgo overhead */
 void frankenphp_register_bulk(
     zval *track_vars_array, ht_key_value_pair remote_addr,
@@ -719,10 +749,15 @@ void frankenphp_register_bulk(
                                   request_uri.val_len, ht);
 }
 
-/** Persistent strings are ignored by the PHP GC, we have to release these
- * ourselves **/
+/** Create an immutable zend_string that lasts for the whole process **/
 zend_string *frankenphp_init_persistent_string(const char *string, size_t len) {
-  return zend_string_init(string, len, 1);
+  /* persistent strings will be ignored by the GC at the end of a request */
+  zend_string *z_string = zend_string_init(string, len, 1);
+
+  /* interned strings will not be ref counted by the GC */
+  GC_ADD_FLAGS(z_string, IS_STR_INTERNED);
+
+  return z_string;
 }
 
 void frankenphp_release_zend_string(zend_string *z_string) {
@@ -891,13 +926,14 @@ static void *php_thread(void *arg) {
                                          frankenphp_execute_script(scriptName));
   }
 
-  go_frankenphp_release_known_variable_keys(thread_index);
-
 #ifdef ZTS
   ts_free_thread();
 #endif
 
   go_frankenphp_on_thread_shutdown(thread_index);
+
+  free(local_ctx);
+  local_ctx = NULL;
 
   return NULL;
 }
