@@ -6,22 +6,21 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/dunglas/frankenphp/internal/phpheaders"
 	"github.com/dunglas/frankenphp/internal/memory"
+	"github.com/dunglas/frankenphp/internal/phpheaders"
 	"go.uber.org/zap"
 )
 
 // represents the main PHP thread
 // the thread needs to keep running as long as all other threads are running
 type phpMainThread struct {
-	state      *threadState
-	done       chan struct{}
-	numThreads int
-	maxThreads int
-	phpIni     map[string]string
+	state           *threadState
+	done            chan struct{}
+	numThreads      int
+	maxThreads      int
+	phpIni          map[string]string
 	commonHeaders   map[string]*C.zend_string
 	knownServerKeys map[string]*C.zend_string
-
 }
 
 var (

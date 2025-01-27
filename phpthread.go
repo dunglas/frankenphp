@@ -18,13 +18,13 @@ import (
 type phpThread struct {
 	runtime.Pinner
 
-	threadIndex       int
-	requestChan       chan *http.Request
-	drainChan         chan struct{}
-	handlerMu         sync.Mutex
-	requestMu         sync.Mutex
-	handler           threadHandler
-	state             *threadState
+	threadIndex int
+	requestChan chan *http.Request
+	drainChan   chan struct{}
+	handlerMu   sync.Mutex
+	requestMu   sync.Mutex
+	handler     threadHandler
+	state       *threadState
 }
 
 // interface that defines how the callbacks from the C thread should be handled
