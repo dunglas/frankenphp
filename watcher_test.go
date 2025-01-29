@@ -28,7 +28,7 @@ func TestWorkersShouldReloadOnMatchingPattern(t *testing.T) {
 	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
 		requestBodyHasReset := pollForWorkerReset(t, handler, maxTimesToPollForChanges)
 		assert.True(t, requestBodyHasReset)
-	}, &testOptions{nbParallelRequests: 1, nbWorkers: 1, workerScript: "worker-with-watcher.php", watch: watch})
+	}, &testOptions{nbParallelRequests: 1, nbWorkers: 1, workerScript: "worker-with-counter.php", watch: watch})
 }
 
 func TestWorkersShouldNotReloadOnExcludingPattern(t *testing.T) {
@@ -37,19 +37,19 @@ func TestWorkersShouldNotReloadOnExcludingPattern(t *testing.T) {
 	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
 		requestBodyHasReset := pollForWorkerReset(t, handler, minTimesToPollForChanges)
 		assert.False(t, requestBodyHasReset)
-	}, &testOptions{nbParallelRequests: 1, nbWorkers: 1, workerScript: "worker-with-watcher.php", watch: watch})
+	}, &testOptions{nbParallelRequests: 1, nbWorkers: 1, workerScript: "worker-with-counter.php", watch: watch})
 }
 
 func pollForWorkerReset(t *testing.T, handler func(http.ResponseWriter, *http.Request), limit int) bool {
 	// first we make an initial request to start the request counter
-	body := fetchBody("GET", "http://example.com/worker-with-watcher.php", handler)
+	body := fetchBody("GET", "http://example.com/worker-with-counter.php", handler)
 	assert.Equal(t, "requests:1", body)
 
 	// now we spam file updates and check if the request counter resets
 	for i := 0; i < limit; i++ {
 		updateTestFile("./testdata/files/test.txt", "updated", t)
 		time.Sleep(pollingTime * time.Millisecond)
-		body := fetchBody("GET", "http://example.com/worker-with-watcher.php", handler)
+		body := fetchBody("GET", "http://example.com/worker-with-counter.php", handler)
 		if body == "requests:1" {
 			return true
 		}

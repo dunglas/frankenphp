@@ -40,6 +40,10 @@ type Metrics interface {
 	// StartWorkerRequest collects started worker requests
 	StartWorkerRequest(name string)
 	Shutdown()
+	QueuedWorkerRequest(name string)
+	DequeuedWorkerRequest(name string)
+	QueuedRequest()
+	DequeuedRequest()
 }
 
 type nullMetrics struct{}
@@ -74,6 +78,13 @@ func (n nullMetrics) StartWorkerRequest(string) {
 func (n nullMetrics) Shutdown() {
 }
 
+func (n nullMetrics) QueuedWorkerRequest(name string) {}
+
+func (n nullMetrics) DequeuedWorkerRequest(name string) {}
+
+func (n nullMetrics) QueuedRequest()   {}
+func (n nullMetrics) DequeuedRequest() {}
+
 type PrometheusMetrics struct {
 	registry           prometheus.Registerer
 	totalThreads       prometheus.Counter
@@ -85,6 +96,8 @@ type PrometheusMetrics struct {
 	workerRestarts     map[string]prometheus.Counter
 	workerRequestTime  map[string]prometheus.Counter
 	workerRequestCount map[string]prometheus.Counter
+	workerQueueDepth   map[string]prometheus.Gauge
+	queueDepth         prometheus.Gauge
 	mu                 sync.Mutex
 }
 
@@ -213,6 +226,15 @@ func (m *PrometheusMetrics) TotalWorkers(name string, _ int) {
 		})
 		m.registry.MustRegister(m.workerRequestCount[identity])
 	}
+
+	if _, ok := m.workerQueueDepth[identity]; !ok {
+		m.workerQueueDepth[identity] = prometheus.NewGauge(prometheus.GaugeOpts{
+			Namespace: "frankenphp",
+			Subsystem: subsystem,
+			Name:      "worker_queue_depth",
+		})
+		m.registry.MustRegister(m.workerQueueDepth[identity])
+	}
 }
 
 func (m *PrometheusMetrics) TotalThreads(num int) {
@@ -244,9 +266,32 @@ func (m *PrometheusMetrics) StartWorkerRequest(name string) {
 	m.busyWorkers[name].Inc()
 }
 
+func (m *PrometheusMetrics) QueuedWorkerRequest(name string) {
+	if _, ok := m.workerQueueDepth[name]; !ok {
+		return
+	}
+	m.workerQueueDepth[name].Inc()
+}
+
+func (m *PrometheusMetrics) DequeuedWorkerRequest(name string) {
+	if _, ok := m.workerQueueDepth[name]; !ok {
+		return
+	}
+	m.workerQueueDepth[name].Dec()
+}
+
+func (m *PrometheusMetrics) QueuedRequest() {
+	m.queueDepth.Inc()
+}
+
+func (m *PrometheusMetrics) DequeuedRequest() {
+	m.queueDepth.Dec()
+}
+
 func (m *PrometheusMetrics) Shutdown() {
 	m.registry.Unregister(m.totalThreads)
 	m.registry.Unregister(m.busyThreads)
+	m.registry.Unregister(m.queueDepth)
 
 	for _, g := range m.totalWorkers {
 		m.registry.Unregister(g)
@@ -276,6 +321,10 @@ func (m *PrometheusMetrics) Shutdown() {
 		m.registry.Unregister(g)
 	}
 
+	for _, g := range m.workerQueueDepth {
+		m.registry.Unregister(g)
+	}
+
 	m.totalThreads = prometheus.NewCounter(prometheus.CounterOpts{
 		Name: "frankenphp_total_threads",
 		Help: "Total number of PHP threads",
@@ -291,9 +340,15 @@ func (m *PrometheusMetrics) Shutdown() {
 	m.workerRestarts = map[string]prometheus.Counter{}
 	m.workerCrashes = map[string]prometheus.Counter{}
 	m.readyWorkers = map[string]prometheus.Gauge{}
+	m.workerQueueDepth = map[string]prometheus.Gauge{}
+	m.queueDepth = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "frankenphp_queue_depth",
+		Help: "Number of regular queued requests",
+	})
 
 	m.registry.MustRegister(m.totalThreads)
 	m.registry.MustRegister(m.busyThreads)
+	m.registry.MustRegister(m.queueDepth)
 }
 
 func getWorkerNameForMetrics(name string) string {
@@ -325,10 +380,16 @@ func NewPrometheusMetrics(registry prometheus.Registerer) *PrometheusMetrics {
 		workerRestarts:     map[string]prometheus.Counter{},
 		workerCrashes:      map[string]prometheus.Counter{},
 		readyWorkers:       map[string]prometheus.Gauge{},
+		workerQueueDepth:   map[string]prometheus.Gauge{},
+		queueDepth: prometheus.NewGauge(prometheus.GaugeOpts{
+			Name: "frankenphp_queue_depth",
+			Help: "Number of regular queued requests",
+		}),
 	}
 
 	m.registry.MustRegister(m.totalThreads)
 	m.registry.MustRegister(m.busyThreads)
+	m.registry.MustRegister(m.queueDepth)
 
 	return m
 }
