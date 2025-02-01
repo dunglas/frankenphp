@@ -119,6 +119,12 @@ func RestartWorkers() {
 
 	ready.Wait()
 
+	// the first thread should reset the opcache
+	if len(threadsToRestart) > 0 {
+		threadsToRestart[0].state.set(stateOpcacheReset)
+		threadsToRestart[0].state.waitFor(stateYielding)
+	}
+
 	for _, thread := range threadsToRestart {
 		thread.drainChan = make(chan struct{})
 		thread.state.set(stateReady)
