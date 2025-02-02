@@ -45,7 +45,9 @@ func (handler *workerThread) beforeScriptExecution() string {
 		handler.worker.detachThread(handler.thread)
 		return handler.thread.transitionToNewHandler()
 	case stateRestarting:
-		return handler.restartGracefully()
+		handler.state.set(stateYielding)
+		handler.state.waitFor(stateReady, stateShuttingDown)
+		return handler.beforeScriptExecution()
 	case stateReady, stateTransitionComplete:
 		setupWorkerScript(handler, handler.worker)
 		return handler.worker.fileName
@@ -160,6 +162,15 @@ func (handler *workerThread) waitForWorkerRequest() bool {
 			c.Write(zap.String("worker", handler.worker.fileName))
 		}
 
+		// flush the opcache when restarting due to watcher or admin api
+		// note: this is done right before frankenphp_handle_request() returns 'false'
+		if handler.state.is(stateOpcacheReset) {
+			handler.state.set(stateRestarting)
+			handler.state.waitFor(stateOpcacheReset)
+			C.frankenphp_reset_opcache()
+			handler.state.set(stateReady)
+		}
+
 		return false
 	case r = <-handler.thread.requestChan:
 	case r = <-handler.worker.requestChan:
@@ -199,24 +210,6 @@ func (handler *workerThread) setFakeRequest(r *http.Request) {
 	handler.thread.requestMu.Lock()
 	handler.fakeRequest = r
 	handler.thread.requestMu.Unlock()
-}
-
-// When restarting gracefully, all threads wait for each other to finish
-// opcache_reset will be called once all threads are yielding
-func (handler *workerThread) restartGracefully() string {
-	handler.state.set(stateYielding)
-	handler.state.waitFor(stateReady, stateShuttingDown, stateOpcacheReset)
-
-	// one thread will be marked to flush the opcache
-	// this will avoid a race condition in opcache under high concurrency
-	if handler.state.is(stateOpcacheReset) {
-		C.frankenphp_reset_opcache()
-		logger.Debug("opcache reset", zap.Int("threadIndex", handler.thread.threadIndex))
-		handler.state.set(stateYielding)
-		handler.state.waitFor(stateReady, stateShuttingDown)
-	}
-
-	return handler.beforeScriptExecution()
 }
 
 // go_frankenphp_worker_handle_request_start is called at the start of every php request served.
