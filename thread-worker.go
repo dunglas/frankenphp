@@ -168,7 +168,7 @@ func (handler *workerThread) waitForWorkerRequest() bool {
 			handler.state.set(stateRestarting)
 			handler.state.waitFor(stateOpcacheReset)
 			C.frankenphp_reset_opcache()
-			handler.state.set(stateReady)
+			handler.state.set(stateRestarting)
 		}
 
 		return false
