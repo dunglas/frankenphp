@@ -231,6 +231,7 @@ func deactivateThreads() {
 			logger.Debug("auto-converting thread to inactive", zap.Int("threadIndex", thread.threadIndex))
 			convertToInactiveThread(thread)
 			stoppedThreadCount++
+			autoScaledThreads = append(autoScaledThreads[:i], autoScaledThreads[i+1:]...)
 
 			continue
 		}
