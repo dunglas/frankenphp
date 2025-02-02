@@ -60,8 +60,8 @@ func initPHPThreads(numThreads int, numMaxThreads int, phpIni map[string]string)
 
 	// start the underlying C threads
 	ready := sync.WaitGroup{}
-	ready.Add(maxThreads)
-	for i := 0; i < maxThreads; i++ {
+	ready.Add(numThreads)
+	for i := 0; i < numThreads; i++ {
 		thread := phpThreads[i]
 		go func() {
 			thread.boot()
