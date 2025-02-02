@@ -164,11 +164,8 @@ func (handler *workerThread) waitForWorkerRequest() bool {
 
 		// flush the opcache when restarting due to watcher or admin api
 		// note: this is done right before frankenphp_handle_request() returns 'false'
-		if handler.state.is(stateOpcacheReset) {
-			handler.state.set(stateRestarting)
-			handler.state.waitFor(stateOpcacheReset)
+		if handler.state.is(stateRestarting) {
 			C.frankenphp_reset_opcache()
-			handler.state.set(stateRestarting)
 		}
 
 		return false

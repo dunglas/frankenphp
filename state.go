@@ -22,7 +22,6 @@ const (
 	// states necessary for restarting workers
 	stateRestarting
 	stateYielding
-	stateOpcacheReset
 
 	// states necessary for transitioning between different handlers
 	stateTransitionRequested
@@ -42,7 +41,6 @@ var stateNames = map[stateID]string{
 	stateTransitionRequested:  "transition requested",
 	stateTransitionInProgress: "transition in progress",
 	stateTransitionComplete:   "transition complete",
-	stateOpcacheReset:         "opcache reset",
 }
 
 type threadState struct {

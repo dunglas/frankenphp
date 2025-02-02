@@ -98,8 +98,6 @@ func RestartWorkers() {
 
 	ready := sync.WaitGroup{}
 	threadsToRestart := make([]*phpThread, 0)
-	var threadToResetOpcache *phpThread
-
 	for _, worker := range workers {
 		worker.threadMutex.RLock()
 		ready.Add(len(worker.threads))
@@ -109,19 +107,8 @@ func RestartWorkers() {
 				// we'll proceed to restart all other threads anyways
 				continue
 			}
-			threadsToRestart = append(threadsToRestart, thread)
-
-			// one thread will reset the opcache
-			if threadToResetOpcache == nil {
-				threadToResetOpcache = thread
-				thread.state.set(stateOpcacheReset)
-				ready.Done()
-				close(thread.drainChan)
-				continue
-			}
-
 			close(thread.drainChan)
-
+			threadsToRestart = append(threadsToRestart, thread)
 			go func(thread *phpThread) {
 				thread.state.waitFor(stateYielding)
 				ready.Done()
@@ -131,15 +118,6 @@ func RestartWorkers() {
 	}
 
 	ready.Wait()
-
-	// ping-pong the thread state to make sure opcache reset is handled orderly
-	// at the end, all threads should be waiting in the 'yielding' state
-	// opcache can only reset safely if no thread is executing a script
-	if threadToResetOpcache != nil {
-		threadToResetOpcache.state.waitFor(stateRestarting)
-		threadToResetOpcache.state.set(stateOpcacheReset)
-		threadToResetOpcache.state.waitFor(stateYielding)
-	}
 
 	for _, thread := range threadsToRestart {
 		thread.drainChan = make(chan struct{})
