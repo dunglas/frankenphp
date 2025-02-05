@@ -182,7 +182,11 @@ func allPossibleTransitions(worker1Path string, worker2Path string) []func(*phpT
 	return []func(*phpThread){
 		convertToRegularThread,
 		func(thread *phpThread) { thread.shutdown() },
-		func(thread *phpThread) { thread.boot() },
+		func(thread *phpThread) {
+			if thread.state.is(stateReserved) {
+				thread.boot()
+			}
+		},
 		func(thread *phpThread) { convertToWorkerThread(thread, workers[worker1Path]) },
 		convertToInactiveThread,
 		func(thread *phpThread) { convertToWorkerThread(thread, workers[worker2Path]) },

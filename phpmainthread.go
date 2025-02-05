@@ -9,6 +9,7 @@ import (
 	"github.com/dunglas/frankenphp/internal/memory"
 	"github.com/dunglas/frankenphp/internal/phpheaders"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 // represents the main PHP thread
@@ -28,9 +29,9 @@ var (
 	mainThread *phpMainThread
 )
 
-// start the main PHP thread
-// start a fixed number of inactive PHP threads
-// reserve a fixed number of possible PHP threads
+// initPHPThreads starts the main PHP thread,
+// a fixed number of inactive PHP threads
+// and reserves a fixed number of possible PHP threads
 func initPHPThreads(numThreads int, numMaxThreads int, phpIni map[string]string) (*phpMainThread, error) {
 	mainThread = &phpMainThread{
 		state:      newThreadState(),
@@ -73,7 +74,7 @@ func initPHPThreads(numThreads int, numMaxThreads int, phpIni map[string]string)
 	return mainThread, nil
 }
 
-// ThreadDebugStatus prints the state of all PHP threads - debugging purposes only
+// EXPERIMENTAL: ThreadDebugStatus prints the state of all PHP threads - debugging purposes only
 func ThreadDebugStatus() string {
 	statusMessage := ""
 	reservedThreadCount := 0
@@ -135,16 +136,20 @@ func (mainThread *phpMainThread) start() error {
 }
 
 func getInactivePHPThread() *phpThread {
-	thread := getPHPThreadAtState(stateInactive)
-	if thread != nil {
-		return thread
+	for _, thread := range phpThreads {
+		if thread.state.is(stateInactive) {
+			return thread
+		}
 	}
-	thread = getPHPThreadAtState(stateReserved)
-	if thread == nil {
-		return nil
+
+	for _, thread := range phpThreads {
+		if thread.state.compareAndSwap(stateReserved, stateBootRequested) {
+			thread.boot()
+			return thread
+		}
 	}
-	thread.boot()
-	return thread
+
+	return nil
 }
 
 func getPHPThreadAtState(state stateID) *phpThread {
@@ -168,7 +173,7 @@ func go_frankenphp_main_thread_is_ready() {
 }
 
 // max_threads = auto
-// Estimate the amount of threads based on php.ini and system memory_limit
+// setAutomaticMaxThreads estimates the amount of threads based on php.ini and system memory_limit
 // If unable to get the system's memory limit, simply double num_threads
 func (mainThread *phpMainThread) setAutomaticMaxThreads() {
 	if mainThread.maxThreads >= 0 {
@@ -182,7 +187,10 @@ func (mainThread *phpMainThread) setAutomaticMaxThreads() {
 	}
 	maxAllowedThreads := totalSysMemory / uint64(perThreadMemoryLimit)
 	mainThread.maxThreads = int(maxAllowedThreads)
-	logger.Debug("Automatic thread limit", zap.Int("perThreadMemoryLimitMB", int(perThreadMemoryLimit/1024/1024)), zap.Int("maxThreads", mainThread.maxThreads))
+
+	if c := logger.Check(zapcore.DebugLevel, "Automatic thread limit"); c != nil {
+		c.Write(zap.Int("perThreadMemoryLimitMB", int(perThreadMemoryLimit/1024/1024)), zap.Int("maxThreads", mainThread.maxThreads))
+	}
 }
 
 //export go_frankenphp_shutdown_main_thread

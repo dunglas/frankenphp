@@ -1,5 +1,3 @@
-//go:build unix
-
 package cpu
 
 // #include <time.h>
@@ -11,7 +9,7 @@ import (
 
 var cpuCount = runtime.GOMAXPROCS(0)
 
-// probe the CPU usage of the process
+// ProbeCPUs probes the CPU usage of the process
 // if CPUs are not busy, most threads are likely waiting for I/O, so we should scale
 // if CPUs are already busy we won't gain much by scaling and want to avoid the overhead of doing so
 func ProbeCPUs(probeTime time.Duration, maxCPUUsage float64, abort chan struct{}) bool {

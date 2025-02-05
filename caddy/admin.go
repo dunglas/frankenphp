@@ -17,6 +17,7 @@ func (FrankenPHPAdmin) CaddyModule() caddy.ModuleInfo {
 	}
 }
 
+// EXPERIMENTAL: These routes are not yet stable and may change in the future.
 func (admin FrankenPHPAdmin) Routes() []caddy.AdminRoute {
 	return []caddy.AdminRoute{
 		{

@@ -11,9 +11,9 @@ import (
 
 	"github.com/dunglas/frankenphp/internal/cpu"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
-// TODO: these constants need some real-world trial
 const (
 	// requests have to be stalled for at least this amount of time before scaling
 	minStallTime = 5 * time.Millisecond
@@ -109,7 +109,7 @@ func removeWorkerThread(worker *worker) error {
 	return nil
 }
 
-// Add a worker PHP threads automatically
+// scaleWorkerThread adds a worker PHP thread automatically
 func scaleWorkerThread(worker *worker) {
 	scalingMu.Lock()
 	defer scalingMu.Unlock()
@@ -125,14 +125,16 @@ func scaleWorkerThread(worker *worker) {
 
 	thread, err := addWorkerThread(worker)
 	if err != nil {
-		logger.Warn("could not increase max_threads, consider raising this limit", zap.String("worker", worker.fileName), zap.Error(err))
+		if c := logger.Check(zapcore.WarnLevel, "could not increase max_threads, consider raising this limit"); c != nil {
+			c.Write(zap.String("worker", worker.fileName), zap.Error(err))
+		}
 		return
 	}
 
 	autoScaledThreads = append(autoScaledThreads, thread)
 }
 
-// Add a regular PHP thread automatically
+// scaleRegularThread adds a regular PHP thread automatically
 func scaleRegularThread() {
 	scalingMu.Lock()
 	defer scalingMu.Unlock()
@@ -148,7 +150,9 @@ func scaleRegularThread() {
 
 	thread, err := addRegularThread()
 	if err != nil {
-		logger.Warn("could not increase max_threads, consider raising this limit", zap.Error(err))
+		if c := logger.Check(zapcore.WarnLevel, "could not increase max_threads, consider raising this limit"); c != nil {
+			c.Write(zap.Error(err))
+		}
 		return
 	}
 
@@ -207,7 +211,7 @@ func startDownScalingThreads(done chan struct{}) {
 	}
 }
 
-// Check all threads and remove those that have been inactive for too long
+// deactivateThreads checks all threads and removes those that have been inactive for too long
 func deactivateThreads() {
 	stoppedThreadCount := 0
 	scalingMu.Lock()
@@ -228,7 +232,9 @@ func deactivateThreads() {
 
 		// convert threads to inactive if they have been idle for too long
 		if thread.state.is(stateReady) && waitTime > maxThreadIdleTime.Milliseconds() {
-			logger.Debug("auto-converting thread to inactive", zap.Int("threadIndex", thread.threadIndex))
+			if c := logger.Check(zapcore.DebugLevel, "auto-converting thread to inactive"); c != nil {
+				c.Write(zap.Int("threadIndex", thread.threadIndex))
+			}
 			convertToInactiveThread(thread)
 			stoppedThreadCount++
 			autoScaledThreads = append(autoScaledThreads[:i], autoScaledThreads[i+1:]...)
@@ -240,7 +246,9 @@ func deactivateThreads() {
 		// Some PECL extensions like #1296 will prevent threads from fully stopping (they leak memory)
 		// Reactivate this if there is a better solution or workaround
 		//if thread.state.is(stateInactive) && waitTime > maxThreadIdleTime.Milliseconds() {
-		//	logger.Debug("auto-stopping thread", zap.Int("threadIndex", thread.threadIndex))
+		//	if c := logger.Check(zapcore.DebugLevel, "auto-stopping thread"); c != nil {
+		//    c.Write(zap.Int("threadIndex", thread.threadIndex))
+		//  }
 		//	thread.shutdown()
 		//	stoppedThreadCount++
 		//	autoScaledThreads = append(autoScaledThreads[:i], autoScaledThreads[i+1:]...)

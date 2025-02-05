@@ -12,6 +12,7 @@ const (
 	// livecycle states of a thread
 	stateReserved stateID = iota
 	stateBooting
+	stateBootRequested
 	stateShuttingDown
 	stateDone
 
@@ -158,7 +159,7 @@ func (ts *threadState) requestSafeStateChange(nextState stateID) bool {
 	return ts.requestSafeStateChange(nextState)
 }
 
-// the thread reached a stable state and is waiting for requests or shutdown
+// markAsWaiting hints that the thread reached a stable state and is waiting for requests or shutdown
 func (ts *threadState) markAsWaiting(isWaiting bool) {
 	ts.mu.Lock()
 	if isWaiting {
@@ -170,7 +171,7 @@ func (ts *threadState) markAsWaiting(isWaiting bool) {
 	ts.mu.Unlock()
 }
 
-// the time since the thread is waiting in a stable state in ms
+// waitTime returns the time since the thread is waiting in a stable state in ms
 func (ts *threadState) waitTime() int64 {
 	ts.mu.RLock()
 	waitTime := int64(0)
