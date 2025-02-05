@@ -24,7 +24,7 @@ unpredictable. The `max_threads` allows FrankenPHP to automatically spawn additi
 figure out how many threads you need to handle your traffic and can make the server more resilient to latency spikes.
 If set to `auto`, the limit will be estimated based on the `memory_limit` in your `php.ini`. If not able to do so,
 `auto` will instead default to 2x `num_threads`.
-`max_threads is similar to [PHP FPM's `pm.max_children`](https://www.php.net/manual/en/install.fpm.configuration.php#pm.max-children).
+`max_threads is similar to PHP FPM's [pm.max_children](https://www.php.net/manual/en/install.fpm.configuration.php#pm.max-children).
 
 ## Worker Mode
 
