@@ -3,11 +3,9 @@ package frankenphp
 // #include "frankenphp.h"
 import "C"
 import (
-	"fmt"
 	"net/http"
 	"runtime"
 	"sync"
-	"time"
 	"unsafe"
 
 	"go.uber.org/zap"
@@ -17,7 +15,6 @@ import (
 // identified by the index in the phpThreads slice
 type phpThread struct {
 	runtime.Pinner
-
 	threadIndex int
 	requestChan chan *http.Request
 	drainChan   chan struct{}
@@ -117,28 +114,6 @@ func (thread *phpThread) getActiveRequestSafely() *http.Request {
 	thread.requestMu.Unlock()
 	thread.handlerMu.Unlock()
 	return r
-}
-
-// debugStatus creates a small status message for debugging purposes
-func (thread *phpThread) debugStatus() string {
-	reqState := ""
-	if waitTime := thread.state.waitTime(); waitTime > 0 {
-		reqState = fmt.Sprintf(", waiting for %dms", waitTime)
-	} else if r := thread.getActiveRequestSafely(); r != nil {
-		fc := r.Context().Value(contextKey).(*FrankenPHPContext)
-		path := r.URL.Path
-		if fc.originalRequest != nil {
-			path = fc.originalRequest.URL.Path
-		}
-		if fc.responseWriter == nil {
-			reqState = fmt.Sprintf(", executing worker script: %s ", path)
-		} else {
-			sinceMs := time.Since(fc.startedAt).Milliseconds()
-			reqState = fmt.Sprintf(", handling %s for %dms ", path, sinceMs)
-		}
-	}
-
-	return fmt.Sprintf("Thread %d (%s%s) %s", thread.threadIndex, thread.state.name(), reqState, thread.handler.name())
 }
 
 // Pin a string that is not null-terminated

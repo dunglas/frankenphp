@@ -1,6 +1,7 @@
 package caddy
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/caddyserver/caddy/v2"
 	"github.com/dunglas/frankenphp"
@@ -44,7 +45,13 @@ func (admin *FrankenPHPAdmin) restartWorkers(w http.ResponseWriter, r *http.Requ
 }
 
 func (admin *FrankenPHPAdmin) threads(w http.ResponseWriter, r *http.Request) error {
-	return admin.success(w, frankenphp.ThreadDebugStatus())
+	debugState := frankenphp.DebugState()
+	prettyJson, err := json.MarshalIndent(debugState, "", "    ")
+	if err != nil {
+		return admin.error(http.StatusInternalServerError, err)
+	}
+
+	return admin.success(w, string(prettyJson))
 }
 
 func (admin *FrankenPHPAdmin) success(w http.ResponseWriter, message string) error {

@@ -1,13 +1,14 @@
 package caddy_test
 
 import (
+	"encoding/json"
 	"io"
 	"net/http"
-	"strings"
 	"sync"
 	"testing"
 
 	"github.com/caddyserver/caddy/v2/caddytest"
+	"github.com/dunglas/frankenphp"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -66,16 +67,14 @@ func TestShowTheCorrectThreadDebugStatus(t *testing.T) {
 		}
 		`, "caddyfile")
 
-	threadInfo := getAdminResponseBody(t, tester, "GET", "threads")
+	debugState := getDebugState(t, tester)
 
 	// assert that the correct threads are present in the thread info
-	assert.Contains(t, threadInfo, "Thread 0")
-	assert.Contains(t, threadInfo, "Thread 1")
-	assert.Contains(t, threadInfo, "Thread 2")
-	assert.NotContains(t, threadInfo, "Thread 3")
-	assert.Contains(t, threadInfo, "3 additional threads can be started at runtime")
-	assert.Contains(t, threadInfo, "worker-with-counter.php")
-	assert.Contains(t, threadInfo, "index.php")
+	assert.Equal(t, debugState.ThreadDebugStates[0].State, "ready")
+	assert.Contains(t, debugState.ThreadDebugStates[1].Name, "worker-with-counter.php")
+	assert.Contains(t, debugState.ThreadDebugStates[2].Name, "index.php")
+	assert.Equal(t, debugState.ReservedThreadCount, 3)
+	assert.Len(t, debugState.ThreadDebugStates, 3)
 }
 
 func TestAutoScaleWorkerThreads(t *testing.T) {
@@ -107,11 +106,7 @@ func TestAutoScaleWorkerThreads(t *testing.T) {
 
 	// spam an endpoint that simulates IO
 	endpoint := "http://localhost:" + testPort + "/?sleep=2&work=1000"
-	autoScaledThread := "Thread 2"
-
-	// first assert that the thread is not already present
-	threadInfo := getAdminResponseBody(t, tester, "GET", "threads")
-	assert.NotContains(t, threadInfo, autoScaledThread)
+	amountOfThreads := len(getDebugState(t, tester).ThreadDebugStates)
 
 	// try to spawn the additional threads by spamming the server
 	for tries := 0; tries < maxTries; tries++ {
@@ -123,14 +118,15 @@ func TestAutoScaleWorkerThreads(t *testing.T) {
 			}()
 		}
 		wg.Wait()
-		threadInfo = getAdminResponseBody(t, tester, "GET", "threads")
-		if strings.Contains(threadInfo, autoScaledThread) {
+
+		amountOfThreads = len(getDebugState(t, tester).ThreadDebugStates)
+		if amountOfThreads > 2 {
 			break
 		}
 	}
 
-	// assert that the autoscaled thread is present in the threadInfo
-	assert.Contains(t, threadInfo, autoScaledThread)
+	// assert that there are now more threads than before
+	assert.NotEqual(t, amountOfThreads, 2)
 }
 
 // Note this test requires at least 2x40MB available memory for the process
@@ -162,11 +158,7 @@ func TestAutoScaleRegularThreadsOnAutomaticThreadLimit(t *testing.T) {
 
 	// spam an endpoint that simulates IO
 	endpoint := "http://localhost:" + testPort + "/sleep.php?sleep=2&work=1000"
-	autoScaledThread := "Thread 1"
-
-	// first assert that the thread is not already present
-	threadInfo := getAdminResponseBody(t, tester, "GET", "threads")
-	assert.NotContains(t, threadInfo, autoScaledThread)
+	amountOfThreads := len(getDebugState(t, tester).ThreadDebugStates)
 
 	// try to spawn the additional threads by spamming the server
 	for tries := 0; tries < maxTries; tries++ {
@@ -178,14 +170,15 @@ func TestAutoScaleRegularThreadsOnAutomaticThreadLimit(t *testing.T) {
 			}()
 		}
 		wg.Wait()
-		threadInfo = getAdminResponseBody(t, tester, "GET", "threads")
-		if strings.Contains(threadInfo, autoScaledThread) {
+
+		amountOfThreads = len(getDebugState(t, tester).ThreadDebugStates)
+		if amountOfThreads > 1 {
 			break
 		}
 	}
 
-	// assert that the autoscaled thread is present in the threadInfo
-	assert.Contains(t, threadInfo, autoScaledThread)
+	// assert that there are now more threads present
+	assert.NotEqual(t, amountOfThreads, 1)
 }
 
 func assertAdminResponse(t *testing.T, tester *caddytest.Tester, method string, path string, expectedStatus int, expectedBody string) {
@@ -209,4 +202,14 @@ func getAdminResponseBody(t *testing.T, tester *caddytest.Tester, method string,
 	assert.NoError(t, err)
 
 	return string(bytes)
+}
+
+func getDebugState(t *testing.T, tester *caddytest.Tester) frankenphp.FrankenPHPDebugState {
+	threadStates := getAdminResponseBody(t, tester, "GET", "threads")
+
+	var debugStates frankenphp.FrankenPHPDebugState
+	err := json.Unmarshal([]byte(threadStates), &debugStates)
+	assert.NoError(t, err)
+
+	return debugStates
 }

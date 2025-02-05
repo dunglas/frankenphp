@@ -42,7 +42,7 @@ func (handler *inactiveThread) afterScriptExecution(exitStatus int) {
 }
 
 func (handler *inactiveThread) getActiveRequest() *http.Request {
-	panic("inactive threads have no requests")
+	return nil
 }
 
 func (handler *inactiveThread) name() string {

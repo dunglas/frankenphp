@@ -74,21 +74,6 @@ func initPHPThreads(numThreads int, numMaxThreads int, phpIni map[string]string)
 	return mainThread, nil
 }
 
-// EXPERIMENTAL: ThreadDebugStatus prints the state of all PHP threads - debugging purposes only
-func ThreadDebugStatus() string {
-	statusMessage := ""
-	reservedThreadCount := 0
-	for _, thread := range phpThreads {
-		if thread.state.is(stateReserved) {
-			reservedThreadCount++
-			continue
-		}
-		statusMessage += thread.debugStatus() + "\n"
-	}
-	statusMessage += fmt.Sprintf("%d additional threads can be started at runtime\n", reservedThreadCount)
-	return statusMessage
-}
-
 func drainPHPThreads() {
 	doneWG := sync.WaitGroup{}
 	doneWG.Add(len(phpThreads))
