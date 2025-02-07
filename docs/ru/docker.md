@@ -77,6 +77,7 @@ FROM dunglas/frankenphp AS runner
 # Заменяем официальный бинарный файл на пользовательский с добавленными модулями
 COPY --from=builder /usr/local/bin/frankenphp /usr/local/bin/frankenphp
 ```
+
 Образ `builder`, предоставляемый FrankenPHP, содержит скомпилированную версию `libphp`.  
 [Образы builder](https://hub.docker.com/r/dunglas/frankenphp/tags?name=builder) доступны для всех версий FrankenPHP и PHP, как для Debian, так и для Alpine.
 
