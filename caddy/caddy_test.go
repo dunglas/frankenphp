@@ -656,8 +656,8 @@ func TestPHPIniBlockConfiguration(t *testing.T) {
 			frankenphp {
 				num_threads 1
 				php_ini {
-					opcache.enable 1
-					opcache.jit tracing
+					max_execution_time 15
+					memory_limit 20000000
 				}
 			}
 		}
@@ -670,8 +670,8 @@ func TestPHPIniBlockConfiguration(t *testing.T) {
 		}
 		`, "caddyfile")
 
-	testSingleIniConfiguration(tester, "opcache.enable", "1")
-	testSingleIniConfiguration(tester, "opcache.jit", "tracing")
+	testSingleIniConfiguration(tester, "max_execution_time", "15")
+	testSingleIniConfiguration(tester, "memory_limit", "20000000")
 }
 
 func testSingleIniConfiguration(tester *caddytest.Tester, key string, value string) {
