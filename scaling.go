@@ -60,7 +60,9 @@ func initAutoScaling(mainThread *phpMainThread) {
 
 func drainAutoScaling() {
 	scalingMu.Lock()
-	logger.Debug("shutting down autoscaling", zap.Int("autoScaledThreads", len(autoScaledThreads)))
+	if c := logger.Check(zapcore.DebugLevel, "shutting down autoscaling"); c != nil {
+		c.Write(zap.Int("autoScaledThreads", len(autoScaledThreads)))
+	}
 	scalingMu.Unlock()
 }
 
