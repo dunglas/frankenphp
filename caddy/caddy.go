@@ -148,20 +148,41 @@ func (f *FrankenPHPApp) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 
 				f.MaxThreads = int(v)
 			case "php_ini":
-				if !d.NextArg() {
-					return iniError
+				parseIniLine := func(d *caddyfile.Dispenser) error {
+					key := d.Val()
+					if !d.NextArg() {
+						return iniError
+					}
+					if f.PhpIni == nil {
+						f.PhpIni = make(map[string]string)
+					}
+					f.PhpIni[key] = d.Val()
+					if d.NextArg() {
+						return iniError
+					}
+
+					return nil
 				}
-				key := d.Val()
-				if !d.NextArg() {
-					return iniError
+
+				isBlock := false
+				for d.NextBlock(1) {
+					isBlock = true
+					err := parseIniLine(d)
+					if err != nil {
+						return err
+					}
 				}
-				if f.PhpIni == nil {
-					f.PhpIni = make(map[string]string)
+
+				if !isBlock {
+					if !d.NextArg() {
+						return iniError
+					}
+					err := parseIniLine(d)
+					if err != nil {
+						return err
+					}
 				}
-				f.PhpIni[key] = d.Val()
-				if d.NextArg() {
-					return iniError
-				}
+
 			case "worker":
 				wc := workerConfig{}
 				if d.NextArg() {

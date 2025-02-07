@@ -617,7 +617,7 @@ func TestAllDefinedServerVars(t *testing.T) {
 	)
 }
 
-func TestPHPIniOverride(t *testing.T) {
+func TestPHPIniConfiguration(t *testing.T) {
 	tester := caddytest.NewTester(t)
 	tester.InitServer(`
 		{
@@ -641,17 +641,46 @@ func TestPHPIniOverride(t *testing.T) {
 		}
 		`, "caddyfile")
 
+	testSingleIniConfiguration(tester, "max_execution_time", "100")
+	testSingleIniConfiguration(tester, "memory_limit", "10000000")
+}
+
+func TestPHPIniBlockConfiguration(t *testing.T) {
+	tester := caddytest.NewTester(t)
+	tester.InitServer(`
+		{
+			skip_install_trust
+			admin localhost:2999
+			http_port `+testPort+`
+
+			frankenphp {
+				num_threads 1
+				php_ini {
+					opcache.enable 1
+					opcache.jit tracing
+				}
+			}
+		}
+
+		localhost:`+testPort+` {
+			route {
+				root ../testdata
+				php
+			}
+		}
+		`, "caddyfile")
+
+	testSingleIniConfiguration(tester, "opcache.enable", "1")
+	testSingleIniConfiguration(tester, "opcache.jit", "tracing")
+}
+
+func testSingleIniConfiguration(tester *caddytest.Tester, key string, value string) {
 	// test twice to ensure the ini setting is not lost
 	for i := 0; i < 2; i++ {
 		tester.AssertGetResponse(
-			"http://localhost:"+testPort+"/ini.php?key=max_execution_time",
+			"http://localhost:"+testPort+"/ini.php?key="+key,
 			http.StatusOK,
-			"max_execution_time:100",
-		)
-		tester.AssertGetResponse(
-			"http://localhost:"+testPort+"/ini.php?key=memory_limit",
-			http.StatusOK,
-			"memory_limit:10000000",
+			key+":"+value,
 		)
 	}
 }

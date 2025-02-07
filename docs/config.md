@@ -235,7 +235,13 @@ You can also change the PHP configuration using the `php_ini` directive in the `
 {
     frankenphp {
         php_ini memory_limit 256M
-        php_ini max_execution_time 15
+
+        # or
+
+        php_ini {
+            memory_limit 256M
+            max_execution_time 15
+        }
     }
 }
 ```
