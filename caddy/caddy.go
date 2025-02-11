@@ -57,7 +57,7 @@ type FrankenPHPApp struct {
 	// Workers configures the worker scripts to start.
 	Workers []workerConfig `json:"workers,omitempty"`
 
-	metrics *frankenphp.PrometheusMetrics
+	metrics frankenphp.Metrics
 }
 
 // CaddyModule returns the Caddy module information.
