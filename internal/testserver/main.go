@@ -21,7 +21,7 @@ func main() {
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		req, err := frankenphp.NewRequestWithContext(r)
-		if err == nil {
+		if err != nil {
 			panic(err)
 		}
 
