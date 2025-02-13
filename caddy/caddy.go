@@ -58,6 +58,7 @@ type FrankenPHPApp struct {
 	Workers []workerConfig `json:"workers,omitempty"`
 
 	metrics frankenphp.Metrics
+	logger  *zap.Logger
 }
 
 // CaddyModule returns the Caddy module information.
@@ -71,15 +72,15 @@ func (f FrankenPHPApp) CaddyModule() caddy.ModuleInfo {
 // Provision sets up the module.
 func (f *FrankenPHPApp) Provision(ctx caddy.Context) error {
 	f.metrics = frankenphp.NewPrometheusMetrics(ctx.GetMetricsRegistry())
+	f.logger = ctx.Logger()
 
 	return nil
 }
 
 func (f *FrankenPHPApp) Start() error {
 	repl := caddy.NewReplacer()
-	logger := caddy.Log()
 
-	opts := []frankenphp.Option{frankenphp.WithNumThreads(f.NumThreads), frankenphp.WithLogger(logger), frankenphp.WithMetrics(f.metrics)}
+	opts := []frankenphp.Option{frankenphp.WithNumThreads(f.NumThreads), frankenphp.WithLogger(f.logger), frankenphp.WithMetrics(f.metrics)}
 	for _, w := range f.Workers {
 		opts = append(opts, frankenphp.WithWorkers(repl.ReplaceKnown(w.FileName, ""), w.Num, w.Env, w.Watch))
 	}
@@ -93,7 +94,7 @@ func (f *FrankenPHPApp) Start() error {
 }
 
 func (f *FrankenPHPApp) Stop() error {
-	caddy.Log().Info("FrankenPHP stopped 🐘")
+	f.logger.Info("FrankenPHP stopped 🐘")
 
 	// attempt a graceful shutdown if caddy is exiting
 	// note: Exiting() is currently marked as 'experimental'
@@ -233,7 +234,7 @@ func (FrankenPHPModule) CaddyModule() caddy.ModuleInfo {
 
 // Provision sets up the module.
 func (f *FrankenPHPModule) Provision(ctx caddy.Context) error {
-	f.logger = ctx.Logger(f)
+	f.logger = ctx.Logger()
 
 	if f.Root == "" {
 		if frankenphp.EmbeddedAppPath == "" {
