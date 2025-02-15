@@ -31,11 +31,12 @@ func TestScaleARegularThreadUpAndDown(t *testing.T) {
 }
 
 func TestScaleAWorkerThreadUpAndDown(t *testing.T) {
+	workerName := "worker1"
 	workerPath := testDataPath + "/transition-worker-1.php"
 	assert.NoError(t, Init(
 		WithNumThreads(2),
 		WithMaxThreads(3),
-		WithWorkers(workerPath, 1, map[string]string{}, []string{}),
+		WithWorkers(workerName, workerPath, 1, map[string]string{}, []string{}),
 		WithLogger(zap.NewNop()),
 	))
 

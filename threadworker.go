@@ -76,7 +76,7 @@ func (handler *workerThread) name() string {
 
 func setupWorkerScript(handler *workerThread, worker *worker) {
 	handler.backoff.wait()
-	metrics.StartWorker(worker.fileName)
+	metrics.StartWorker(worker.name)
 
 	// Create a dummy request to set up the worker
 	fc, err := newDummyContext(
@@ -96,7 +96,7 @@ func setupWorkerScript(handler *workerThread, worker *worker) {
 	handler.isBootingScript = true
 	clearSandboxedEnv(handler.thread)
 	if c := logger.Check(zapcore.DebugLevel, "starting"); c != nil {
-		c.Write(zap.String("worker", worker.fileName), zap.Int("thread", handler.thread.threadIndex))
+		c.Write(zap.String("worker", worker.name), zap.Int("thread", handler.thread.threadIndex))
 	}
 }
 
@@ -114,30 +114,30 @@ func tearDownWorkerScript(handler *workerThread, exitStatus int) {
 	// on exit status 0 we just run the worker script again
 	if exitStatus == 0 && !handler.isBootingScript {
 		// TODO: make the max restart configurable
-		metrics.StopWorker(worker.fileName, StopReasonRestart)
+		metrics.StopWorker(worker.name, StopReasonRestart)
 		handler.backoff.recordSuccess()
 		if c := logger.Check(zapcore.DebugLevel, "restarting"); c != nil {
-			c.Write(zap.String("worker", worker.fileName))
+			c.Write(zap.String("worker", worker.name))
 		}
 		return
 	}
 
 	// worker has thrown a fatal error or has not reached frankenphp_handle_request
-	metrics.StopWorker(worker.fileName, StopReasonCrash)
+	metrics.StopWorker(worker.name, StopReasonCrash)
 
 	if !handler.isBootingScript {
 		// fatal error (could be due to timeouts, etc.)
 		return
 	}
 
-	logger.Error("worker script has not reached frankenphp_handle_request", zap.String("worker", worker.fileName))
+	logger.Error("worker script has not reached frankenphp_handle_request", zap.String("worker", worker.name))
 
 	// panic after exponential backoff if the worker has never reached frankenphp_handle_request
 	if handler.backoff.recordFailure() {
 		if !watcherIsEnabled && !handler.state.is(stateReady) {
-			logger.Panic("too many consecutive worker failures", zap.String("worker", worker.fileName), zap.Int("failures", handler.backoff.failureCount))
+			logger.Panic("too many consecutive worker failures", zap.String("worker", worker.name), zap.Int("failures", handler.backoff.failureCount))
 		}
-		logger.Warn("many consecutive worker failures", zap.String("worker", worker.fileName), zap.Int("failures", handler.backoff.failureCount))
+		logger.Warn("many consecutive worker failures", zap.String("worker", worker.name), zap.Int("failures", handler.backoff.failureCount))
 	}
 }
 
@@ -147,7 +147,7 @@ func (handler *workerThread) waitForWorkerRequest() bool {
 	handler.thread.Unpin()
 
 	if c := logger.Check(zapcore.DebugLevel, "waiting for request"); c != nil {
-		c.Write(zap.String("worker", handler.worker.fileName))
+		c.Write(zap.String("worker", handler.worker.name))
 	}
 
 	// Clear the first dummy request created to initialize the worker
@@ -162,7 +162,7 @@ func (handler *workerThread) waitForWorkerRequest() bool {
 	// 'stateTransitionComplete' is only true on the first boot of the worker script,
 	// while 'isBootingScript' is true on every boot of the worker script
 	if handler.state.is(stateTransitionComplete) {
-		metrics.ReadyWorker(handler.worker.fileName)
+		metrics.ReadyWorker(handler.worker.name)
 		handler.state.set(stateReady)
 	}
 
@@ -172,7 +172,7 @@ func (handler *workerThread) waitForWorkerRequest() bool {
 	select {
 	case <-handler.thread.drainChan:
 		if c := logger.Check(zapcore.DebugLevel, "shutting down"); c != nil {
-			c.Write(zap.String("worker", handler.worker.fileName))
+			c.Write(zap.String("worker", handler.worker.name))
 		}
 
 		// flush the opcache when restarting due to watcher or admin api
@@ -190,13 +190,21 @@ func (handler *workerThread) waitForWorkerRequest() bool {
 	handler.state.markAsWaiting(false)
 
 	if c := logger.Check(zapcore.DebugLevel, "request handling started"); c != nil {
+<<<<<<< HEAD
 		c.Write(zap.String("worker", handler.worker.fileName), zap.String("url", fc.request.RequestURI))
+=======
+		c.Write(zap.String("worker", handler.worker.name), zap.String("url", r.RequestURI))
+>>>>>>> b2c7235 (add worker name option and use it in logs and metrics, update tests)
 	}
 
 	if err := updateServerContext(handler.thread, fc, true); err != nil {
 		// Unexpected error or invalid request
 		if c := logger.Check(zapcore.DebugLevel, "unexpected error"); c != nil {
+<<<<<<< HEAD
 			c.Write(zap.String("worker", handler.worker.fileName), zap.String("url", fc.request.RequestURI), zap.Error(err))
+=======
+			c.Write(zap.String("worker", handler.worker.name), zap.String("url", r.RequestURI), zap.Error(err))
+>>>>>>> b2c7235 (add worker name option and use it in logs and metrics, update tests)
 		}
 		fc.rejectBadRequest(err.Error())
 		handler.workerContext = nil
