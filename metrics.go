@@ -1,16 +1,11 @@
 package frankenphp
 
 import (
-	"github.com/dunglas/frankenphp/internal/fastabs"
-	"regexp"
 	"sync"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 )
-
-var metricsNameRegex = regexp.MustCompile(`\W+`)
-var metricsNameFixRegex = regexp.MustCompile(`^_+|_+$`)
 
 const (
 	StopReasonCrash = iota
@@ -27,8 +22,6 @@ type Metrics interface {
 	ReadyWorker(name string)
 	// StopWorker collects stopped workers
 	StopWorker(name string, reason StopReason)
-	// TotalWorkers collects expected workers
-	TotalWorkers(name string, num int)
 	// TotalThreads collects total threads
 	TotalThreads(num int)
 	// StartRequest collects started requests
@@ -53,9 +46,6 @@ func (n nullMetrics) ReadyWorker(string) {
 func (n nullMetrics) StopWorker(string, StopReason) {
 }
 
-func (n nullMetrics) TotalWorkers(string, int) {
-}
-
 func (n nullMetrics) TotalThreads(int) {
 }
 
@@ -78,140 +68,119 @@ type PrometheusMetrics struct {
 	registry           prometheus.Registerer
 	totalThreads       prometheus.Counter
 	busyThreads        prometheus.Gauge
-	totalWorkers       map[string]prometheus.Gauge
-	busyWorkers        map[string]prometheus.Gauge
-	readyWorkers       map[string]prometheus.Gauge
-	workerCrashes      map[string]prometheus.Counter
-	workerRestarts     map[string]prometheus.Counter
-	workerRequestTime  map[string]prometheus.Counter
-	workerRequestCount map[string]prometheus.Counter
+	totalWorkers       *prometheus.GaugeVec
+	busyWorkers        *prometheus.GaugeVec
+	readyWorkers       *prometheus.GaugeVec
+	workerCrashes      *prometheus.CounterVec
+	workerRestarts     *prometheus.CounterVec
+	workerRequestTime  *prometheus.CounterVec
+	workerRequestCount *prometheus.CounterVec
 	mu                 sync.Mutex
+}
+
+func initWorkerMetrics(metrics Metrics) {
+	prometheusMetrics, ok := metrics.(*PrometheusMetrics)
+	if !ok {
+		return
+	}
+
+	prometheusMetrics.mu.Lock()
+	defer prometheusMetrics.mu.Unlock()
+
+	const ns, sub = "frankenphp", "worker"
+	basicLabels := []string{"worker"}
+
+	prometheusMetrics.totalWorkers = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Namespace: ns,
+		Name:      "total_workers",
+		Help:      "Total number of PHP workers for this worker",
+	}, basicLabels)
+	prometheusMetrics.registry.MustRegister(prometheusMetrics.totalWorkers)
+
+	prometheusMetrics.readyWorkers = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Namespace: ns,
+		Name:      "ready_workers",
+		Help:      "Running workers that have successfully called frankenphp_handle_request at least once",
+	}, basicLabels)
+	prometheusMetrics.registry.MustRegister(prometheusMetrics.readyWorkers)
+
+	prometheusMetrics.busyWorkers = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Namespace: ns,
+		Name:      "busy_workers",
+		Help:      "Number of busy PHP workers for this worker",
+	}, basicLabels)
+	prometheusMetrics.registry.MustRegister(prometheusMetrics.busyWorkers)
+
+	prometheusMetrics.workerCrashes = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Namespace: ns,
+		Subsystem: sub,
+		Name:      "crashes",
+		Help:      "Number of PHP worker crashes for this worker",
+	}, basicLabels)
+	prometheusMetrics.registry.MustRegister(prometheusMetrics.workerCrashes)
+
+	prometheusMetrics.workerRestarts = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Namespace: ns,
+		Subsystem: sub,
+		Name:      "restarts",
+		Help:      "Number of PHP worker restarts for this worker",
+	}, basicLabels)
+	prometheusMetrics.registry.MustRegister(prometheusMetrics.workerRestarts)
+
+	prometheusMetrics.workerRequestTime = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Namespace: ns,
+		Subsystem: sub,
+		Name:      "request_time",
+	}, basicLabels)
+	prometheusMetrics.registry.MustRegister(prometheusMetrics.workerRequestTime)
+
+	prometheusMetrics.workerRequestCount = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Namespace: ns,
+		Subsystem: sub,
+		Name:      "request_count",
+	}, basicLabels)
+	prometheusMetrics.registry.MustRegister(prometheusMetrics.workerRequestCount)
+}
+
+func (m *PrometheusMetrics) getLabels(name string) prometheus.Labels {
+	return prometheus.Labels{"worker": name}
 }
 
 func (m *PrometheusMetrics) StartWorker(name string) {
 	m.busyThreads.Inc()
 
 	// tests do not register workers before starting them
-	if _, ok := m.totalWorkers[name]; !ok {
+	if m.totalWorkers == nil {
 		return
 	}
-	m.totalWorkers[name].Inc()
+
+	m.totalWorkers.With(m.getLabels(name)).Inc()
 }
 
 func (m *PrometheusMetrics) ReadyWorker(name string) {
-	if _, ok := m.totalWorkers[name]; !ok {
+	if m.totalWorkers == nil {
 		return
 	}
 
-	m.readyWorkers[name].Inc()
+	m.readyWorkers.With(m.getLabels(name)).Inc()
 }
 
 func (m *PrometheusMetrics) StopWorker(name string, reason StopReason) {
 	m.busyThreads.Dec()
 
 	// tests do not register workers before starting them
-	if _, ok := m.totalWorkers[name]; !ok {
+	if m.totalWorkers == nil {
 		return
 	}
-	m.totalWorkers[name].Dec()
-	m.readyWorkers[name].Dec()
+	m.totalWorkers.With(m.getLabels(name)).Dec()
+	m.readyWorkers.With(m.getLabels(name)).Dec()
 
 	if reason == StopReasonCrash {
-		m.workerCrashes[name].Inc()
+		m.workerCrashes.With(m.getLabels(name)).Inc()
 	} else if reason == StopReasonRestart {
-		m.workerRestarts[name].Inc()
+		m.workerRestarts.With(m.getLabels(name)).Inc()
 	} else if reason == StopReasonShutdown {
-		m.totalWorkers[name].Dec()
-	}
-}
-
-func (m *PrometheusMetrics) getIdentity(name string) (string, error) {
-	actualName, err := fastabs.FastAbs(name)
-	if err != nil {
-		return name, err
-	}
-
-	return actualName, nil
-}
-
-func (m *PrometheusMetrics) TotalWorkers(name string, _ int) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	identity, err := m.getIdentity(name)
-	if err != nil {
-		// do not create metrics, let error propagate when worker is started
-		return
-	}
-
-	subsystem := getWorkerNameForMetrics(name)
-
-	if _, ok := m.totalWorkers[identity]; !ok {
-		m.totalWorkers[identity] = prometheus.NewGauge(prometheus.GaugeOpts{
-			Namespace: "frankenphp",
-			Subsystem: subsystem,
-			Name:      "total_workers",
-			Help:      "Total number of PHP workers for this worker",
-		})
-		m.registry.MustRegister(m.totalWorkers[identity])
-	}
-
-	if _, ok := m.workerCrashes[identity]; !ok {
-		m.workerCrashes[identity] = prometheus.NewCounter(prometheus.CounterOpts{
-			Namespace: "frankenphp",
-			Subsystem: subsystem,
-			Name:      "worker_crashes",
-			Help:      "Number of PHP worker crashes for this worker",
-		})
-		m.registry.MustRegister(m.workerCrashes[identity])
-	}
-
-	if _, ok := m.workerRestarts[identity]; !ok {
-		m.workerRestarts[identity] = prometheus.NewCounter(prometheus.CounterOpts{
-			Namespace: "frankenphp",
-			Subsystem: subsystem,
-			Name:      "worker_restarts",
-			Help:      "Number of PHP worker restarts for this worker",
-		})
-		m.registry.MustRegister(m.workerRestarts[identity])
-	}
-
-	if _, ok := m.readyWorkers[identity]; !ok {
-		m.readyWorkers[identity] = prometheus.NewGauge(prometheus.GaugeOpts{
-			Namespace: "frankenphp",
-			Subsystem: subsystem,
-			Name:      "ready_workers",
-			Help:      "Running workers that have successfully called frankenphp_handle_request at least once",
-		})
-		m.registry.MustRegister(m.readyWorkers[identity])
-	}
-
-	if _, ok := m.busyWorkers[identity]; !ok {
-		m.busyWorkers[identity] = prometheus.NewGauge(prometheus.GaugeOpts{
-			Namespace: "frankenphp",
-			Subsystem: subsystem,
-			Name:      "busy_workers",
-			Help:      "Number of busy PHP workers for this worker",
-		})
-		m.registry.MustRegister(m.busyWorkers[identity])
-	}
-
-	if _, ok := m.workerRequestTime[identity]; !ok {
-		m.workerRequestTime[identity] = prometheus.NewCounter(prometheus.CounterOpts{
-			Namespace: "frankenphp",
-			Subsystem: subsystem,
-			Name:      "worker_request_time",
-		})
-		m.registry.MustRegister(m.workerRequestTime[identity])
-	}
-
-	if _, ok := m.workerRequestCount[identity]; !ok {
-		m.workerRequestCount[identity] = prometheus.NewCounter(prometheus.CounterOpts{
-			Namespace: "frankenphp",
-			Subsystem: subsystem,
-			Name:      "worker_request_count",
-		})
-		m.registry.MustRegister(m.workerRequestCount[identity])
+		m.totalWorkers.With(m.getLabels(name)).Dec()
 	}
 }
 
@@ -228,53 +197,33 @@ func (m *PrometheusMetrics) StopRequest() {
 }
 
 func (m *PrometheusMetrics) StopWorkerRequest(name string, duration time.Duration) {
-	if _, ok := m.workerRequestTime[name]; !ok {
+	if m.workerRequestTime == nil {
 		return
 	}
 
-	m.workerRequestCount[name].Inc()
-	m.busyWorkers[name].Dec()
-	m.workerRequestTime[name].Add(duration.Seconds())
+	m.workerRequestCount.With(m.getLabels(name)).Inc()
+	m.busyWorkers.With(m.getLabels(name)).Dec()
+	m.workerRequestTime.With(m.getLabels(name)).Add(duration.Seconds())
 }
 
 func (m *PrometheusMetrics) StartWorkerRequest(name string) {
-	if _, ok := m.busyWorkers[name]; !ok {
+	if m.busyWorkers == nil {
 		return
 	}
-	m.busyWorkers[name].Inc()
+	m.busyWorkers.With(m.getLabels(name)).Inc()
 }
 
 func (m *PrometheusMetrics) Shutdown() {
 	m.registry.Unregister(m.totalThreads)
 	m.registry.Unregister(m.busyThreads)
 
-	for _, g := range m.totalWorkers {
-		m.registry.Unregister(g)
-	}
-
-	for _, g := range m.busyWorkers {
-		m.registry.Unregister(g)
-	}
-
-	for _, c := range m.workerRequestTime {
-		m.registry.Unregister(c)
-	}
-
-	for _, c := range m.workerRequestCount {
-		m.registry.Unregister(c)
-	}
-
-	for _, c := range m.workerCrashes {
-		m.registry.Unregister(c)
-	}
-
-	for _, c := range m.workerRestarts {
-		m.registry.Unregister(c)
-	}
-
-	for _, g := range m.readyWorkers {
-		m.registry.Unregister(g)
-	}
+	m.registry.Unregister(m.totalWorkers)
+	m.registry.Unregister(m.busyWorkers)
+	m.registry.Unregister(m.workerRequestTime)
+	m.registry.Unregister(m.workerRequestCount)
+	m.registry.Unregister(m.workerCrashes)
+	m.registry.Unregister(m.workerRestarts)
+	m.registry.Unregister(m.readyWorkers)
 
 	m.totalThreads = prometheus.NewCounter(prometheus.CounterOpts{
 		Name: "frankenphp_total_threads",
@@ -284,23 +233,16 @@ func (m *PrometheusMetrics) Shutdown() {
 		Name: "frankenphp_busy_threads",
 		Help: "Number of busy PHP threads",
 	})
-	m.totalWorkers = map[string]prometheus.Gauge{}
-	m.busyWorkers = map[string]prometheus.Gauge{}
-	m.workerRequestTime = map[string]prometheus.Counter{}
-	m.workerRequestCount = map[string]prometheus.Counter{}
-	m.workerRestarts = map[string]prometheus.Counter{}
-	m.workerCrashes = map[string]prometheus.Counter{}
-	m.readyWorkers = map[string]prometheus.Gauge{}
+	m.totalWorkers = nil
+	m.busyWorkers = nil
+	m.workerRequestTime = nil
+	m.workerRequestCount = nil
+	m.workerRestarts = nil
+	m.workerCrashes = nil
+	m.readyWorkers = nil
 
 	m.registry.MustRegister(m.totalThreads)
 	m.registry.MustRegister(m.busyThreads)
-}
-
-func getWorkerNameForMetrics(name string) string {
-	name = metricsNameRegex.ReplaceAllString(name, "_")
-	name = metricsNameFixRegex.ReplaceAllString(name, "")
-
-	return name
 }
 
 func NewPrometheusMetrics(registry prometheus.Registerer) *PrometheusMetrics {
@@ -318,13 +260,13 @@ func NewPrometheusMetrics(registry prometheus.Registerer) *PrometheusMetrics {
 			Name: "frankenphp_busy_threads",
 			Help: "Number of busy PHP threads",
 		}),
-		totalWorkers:       map[string]prometheus.Gauge{},
-		busyWorkers:        map[string]prometheus.Gauge{},
-		workerRequestTime:  map[string]prometheus.Counter{},
-		workerRequestCount: map[string]prometheus.Counter{},
-		workerRestarts:     map[string]prometheus.Counter{},
-		workerCrashes:      map[string]prometheus.Counter{},
-		readyWorkers:       map[string]prometheus.Gauge{},
+		totalWorkers:       nil,
+		busyWorkers:        nil,
+		workerRequestTime:  nil,
+		workerRequestCount: nil,
+		workerRestarts:     nil,
+		workerCrashes:      nil,
+		readyWorkers:       nil,
 	}
 
 	m.registry.MustRegister(m.totalThreads)

@@ -72,7 +72,7 @@ func (handler *workerThread) getActiveRequest() *http.Request {
 
 func setupWorkerScript(handler *workerThread, worker *worker) {
 	handler.backoff.wait()
-	metrics.StartWorker(worker.fileName)
+	metrics.StartWorker(worker.name)
 
 	// Create a dummy request to set up the worker
 	r, err := http.NewRequest(http.MethodGet, filepath.Base(worker.fileName), nil)
@@ -95,7 +95,7 @@ func setupWorkerScript(handler *workerThread, worker *worker) {
 
 	handler.fakeRequest = r
 	if c := logger.Check(zapcore.DebugLevel, "starting"); c != nil {
-		c.Write(zap.String("worker", worker.fileName), zap.Int("thread", handler.thread.threadIndex))
+		c.Write(zap.String("worker", worker.name), zap.Int("thread", handler.thread.threadIndex))
 	}
 }
 
@@ -119,10 +119,10 @@ func tearDownWorkerScript(handler *workerThread, exitStatus int) {
 	worker := handler.worker
 	if fc.exitStatus == 0 {
 		// TODO: make the max restart configurable
-		metrics.StopWorker(worker.fileName, StopReasonRestart)
+		metrics.StopWorker(worker.name, StopReasonRestart)
 		handler.backoff.recordSuccess()
 		if c := logger.Check(zapcore.DebugLevel, "restarting"); c != nil {
-			c.Write(zap.String("worker", worker.fileName))
+			c.Write(zap.String("worker", worker.name))
 		}
 		return
 	}
@@ -130,12 +130,12 @@ func tearDownWorkerScript(handler *workerThread, exitStatus int) {
 	// TODO: error status
 
 	// on exit status 1 we apply an exponential backoff when restarting
-	metrics.StopWorker(worker.fileName, StopReasonCrash)
+	metrics.StopWorker(worker.name, StopReasonCrash)
 	if !handler.inRequest && handler.backoff.recordFailure() {
 		if !watcherIsEnabled {
-			logger.Panic("too many consecutive worker failures", zap.String("worker", worker.fileName), zap.Int("failures", handler.backoff.failureCount))
+			logger.Panic("too many consecutive worker failures", zap.String("worker", worker.name), zap.Int("failures", handler.backoff.failureCount))
 		}
-		logger.Warn("many consecutive worker failures", zap.String("worker", worker.fileName), zap.Int("failures", handler.backoff.failureCount))
+		logger.Warn("many consecutive worker failures", zap.String("worker", worker.name), zap.Int("failures", handler.backoff.failureCount))
 	}
 }
 
@@ -145,18 +145,18 @@ func (handler *workerThread) waitForWorkerRequest() bool {
 	handler.thread.Unpin()
 
 	if c := logger.Check(zapcore.DebugLevel, "waiting for request"); c != nil {
-		c.Write(zap.String("worker", handler.worker.fileName))
+		c.Write(zap.String("worker", handler.worker.name))
 	}
 
 	if handler.state.compareAndSwap(stateTransitionComplete, stateReady) {
-		metrics.ReadyWorker(handler.worker.fileName)
+		metrics.ReadyWorker(handler.worker.name)
 	}
 
 	var r *http.Request
 	select {
 	case <-handler.thread.drainChan:
 		if c := logger.Check(zapcore.DebugLevel, "shutting down"); c != nil {
-			c.Write(zap.String("worker", handler.worker.fileName))
+			c.Write(zap.String("worker", handler.worker.name))
 		}
 
 		// execute opcache_reset if the restart was triggered by the watcher
@@ -172,14 +172,14 @@ func (handler *workerThread) waitForWorkerRequest() bool {
 	handler.workerRequest = r
 
 	if c := logger.Check(zapcore.DebugLevel, "request handling started"); c != nil {
-		c.Write(zap.String("worker", handler.worker.fileName), zap.String("url", r.RequestURI))
+		c.Write(zap.String("worker", handler.worker.name), zap.String("url", r.RequestURI))
 	}
 	handler.inRequest = true
 
 	if err := updateServerContext(handler.thread, r, false, true); err != nil {
 		// Unexpected error or invalid request
 		if c := logger.Check(zapcore.DebugLevel, "unexpected error"); c != nil {
-			c.Write(zap.String("worker", handler.worker.fileName), zap.String("url", r.RequestURI), zap.Error(err))
+			c.Write(zap.String("worker", handler.worker.name), zap.String("url", r.RequestURI), zap.Error(err))
 		}
 		fc := r.Context().Value(contextKey).(*FrankenPHPContext)
 		rejectRequest(fc.responseWriter, err.Error())

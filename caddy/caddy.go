@@ -41,6 +41,8 @@ func init() {
 }
 
 type workerConfig struct {
+	// Name for the worker
+	Name string `json:"name,omitempty"`
 	// FileName sets the path to the worker script.
 	FileName string `json:"file_name,omitempty"`
 	// Num sets the number of workers to start.
@@ -81,7 +83,7 @@ func (f *FrankenPHPApp) Start() error {
 
 	opts := []frankenphp.Option{frankenphp.WithNumThreads(f.NumThreads), frankenphp.WithLogger(logger), frankenphp.WithMetrics(f.metrics)}
 	for _, w := range f.Workers {
-		opts = append(opts, frankenphp.WithWorkers(repl.ReplaceKnown(w.FileName, ""), w.Num, w.Env, w.Watch))
+		opts = append(opts, frankenphp.WithWorkers(w.Name, repl.ReplaceKnown(w.FileName, ""), w.Num, w.Env, w.Watch))
 	}
 
 	frankenphp.Shutdown()
@@ -143,6 +145,11 @@ func (f *FrankenPHPApp) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 				for d.NextBlock(1) {
 					v := d.Val()
 					switch v {
+					case "name":
+						if !d.NextArg() {
+							return d.ArgErr()
+						}
+						wc.Name = d.Val()
 					case "file":
 						if !d.NextArg() {
 							return d.ArgErr()
@@ -176,14 +183,23 @@ func (f *FrankenPHPApp) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 							wc.Watch = append(wc.Watch, d.Val())
 						}
 					}
+				}
 
-					if wc.FileName == "" {
-						return errors.New(`the "file" argument must be specified`)
-					}
+				if wc.FileName == "" {
+					return errors.New(`the "file" argument must be specified`)
+				}
 
-					if frankenphp.EmbeddedAppPath != "" && filepath.IsLocal(wc.FileName) {
-						wc.FileName = filepath.Join(frankenphp.EmbeddedAppPath, wc.FileName)
+				if frankenphp.EmbeddedAppPath != "" && filepath.IsLocal(wc.FileName) {
+					wc.FileName = filepath.Join(frankenphp.EmbeddedAppPath, wc.FileName)
+				}
+
+				if wc.Name == "" {
+					// let worker initialization validate if the FileName is valid or not
+					name, _ := fastabs.FastAbs(wc.FileName)
+					if name == "" {
+						name = wc.FileName
 					}
+					wc.Name = name
 				}
 
 				f.Workers = append(f.Workers, wc)
