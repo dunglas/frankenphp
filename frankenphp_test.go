@@ -9,7 +9,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/dunglas/frankenphp/internal/fastabs"
 	"io"
 	"log"
 	"mime/multipart"
@@ -26,6 +25,8 @@ import (
 	"strings"
 	"sync"
 	"testing"
+
+	"github.com/dunglas/frankenphp/internal/fastabs"
 
 	"github.com/dunglas/frankenphp"
 	"github.com/stretchr/testify/assert"
@@ -65,7 +66,7 @@ func runTest(t *testing.T, test func(func(http.ResponseWriter, *http.Request), *
 
 	initOpts := []frankenphp.Option{frankenphp.WithLogger(opts.logger)}
 	if opts.workerScript != "" {
-		initOpts = append(initOpts, frankenphp.WithWorkers(testDataDir+opts.workerScript, opts.nbWorkers, opts.env, opts.watch))
+		initOpts = append(initOpts, frankenphp.WithWorkers("workerName", testDataDir+opts.workerScript, opts.nbWorkers, opts.env, opts.watch))
 	}
 	initOpts = append(initOpts, opts.initOpts...)
 	if opts.phpIni != nil {
