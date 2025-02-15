@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 )
 
 const (
@@ -90,56 +91,49 @@ func initWorkerMetrics(metrics Metrics) {
 	const ns, sub = "frankenphp", "worker"
 	basicLabels := []string{"worker"}
 
-	prometheusMetrics.totalWorkers = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+	prometheusMetrics.totalWorkers = promauto.With(prometheusMetrics.registry).NewGaugeVec(prometheus.GaugeOpts{
 		Namespace: ns,
 		Name:      "total_workers",
 		Help:      "Total number of PHP workers for this worker",
 	}, basicLabels)
-	prometheusMetrics.registry.MustRegister(prometheusMetrics.totalWorkers)
 
-	prometheusMetrics.readyWorkers = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+	prometheusMetrics.readyWorkers = promauto.With(prometheusMetrics.registry).NewGaugeVec(prometheus.GaugeOpts{
 		Namespace: ns,
 		Name:      "ready_workers",
 		Help:      "Running workers that have successfully called frankenphp_handle_request at least once",
 	}, basicLabels)
-	prometheusMetrics.registry.MustRegister(prometheusMetrics.readyWorkers)
 
-	prometheusMetrics.busyWorkers = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+	prometheusMetrics.busyWorkers = promauto.With(prometheusMetrics.registry).NewGaugeVec(prometheus.GaugeOpts{
 		Namespace: ns,
 		Name:      "busy_workers",
 		Help:      "Number of busy PHP workers for this worker",
 	}, basicLabels)
-	prometheusMetrics.registry.MustRegister(prometheusMetrics.busyWorkers)
 
-	prometheusMetrics.workerCrashes = prometheus.NewCounterVec(prometheus.CounterOpts{
+	prometheusMetrics.workerCrashes = promauto.With(prometheusMetrics.registry).NewCounterVec(prometheus.CounterOpts{
 		Namespace: ns,
 		Subsystem: sub,
 		Name:      "crashes",
 		Help:      "Number of PHP worker crashes for this worker",
 	}, basicLabels)
-	prometheusMetrics.registry.MustRegister(prometheusMetrics.workerCrashes)
 
-	prometheusMetrics.workerRestarts = prometheus.NewCounterVec(prometheus.CounterOpts{
+	prometheusMetrics.workerRestarts = promauto.With(prometheusMetrics.registry).NewCounterVec(prometheus.CounterOpts{
 		Namespace: ns,
 		Subsystem: sub,
 		Name:      "restarts",
 		Help:      "Number of PHP worker restarts for this worker",
 	}, basicLabels)
-	prometheusMetrics.registry.MustRegister(prometheusMetrics.workerRestarts)
 
-	prometheusMetrics.workerRequestTime = prometheus.NewCounterVec(prometheus.CounterOpts{
+	prometheusMetrics.workerRequestTime = promauto.With(prometheusMetrics.registry).NewCounterVec(prometheus.CounterOpts{
 		Namespace: ns,
 		Subsystem: sub,
 		Name:      "request_time",
 	}, basicLabels)
-	prometheusMetrics.registry.MustRegister(prometheusMetrics.workerRequestTime)
 
-	prometheusMetrics.workerRequestCount = prometheus.NewCounterVec(prometheus.CounterOpts{
+	prometheusMetrics.workerRequestCount = promauto.With(prometheusMetrics.registry).NewCounterVec(prometheus.CounterOpts{
 		Namespace: ns,
 		Subsystem: sub,
 		Name:      "request_count",
 	}, basicLabels)
-	prometheusMetrics.registry.MustRegister(prometheusMetrics.workerRequestCount)
 }
 
 func (m *PrometheusMetrics) getLabels(name string) prometheus.Labels {
@@ -179,8 +173,6 @@ func (m *PrometheusMetrics) StopWorker(name string, reason StopReason) {
 		m.workerCrashes.With(m.getLabels(name)).Inc()
 	} else if reason == StopReasonRestart {
 		m.workerRestarts.With(m.getLabels(name)).Inc()
-	} else if reason == StopReasonShutdown {
-		m.totalWorkers.With(m.getLabels(name)).Dec()
 	}
 }
 
