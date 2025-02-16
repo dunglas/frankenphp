@@ -5,6 +5,7 @@ package watcher
 import (
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -143,6 +144,21 @@ func TestInValidExtendedPatterns(t *testing.T) {
 	shouldNotMatch(t, "/path/{file.php,file.twig}", "/path/file.txt")
 	shouldNotMatch(t, "/path/{dir1,dir2}/file.php", "/path/dir3/file.php")
 	shouldNotMatch(t, "/path/{dir1,dir2}/**/*.php", "/path/dir1/subpath/file.txt")
+}
+
+func TestAnAssociatedEventTriggersTheWatcher(t *testing.T) {
+	watchPattern, err := parseFilePattern("/**/*.php")
+	assert.NoError(t, err)
+	watchPattern.trigger = make(chan struct{})
+
+	go handleWatcherEvent(watchPattern, "/path/temorary_file", "/path/file.php", 0, 0)
+
+	select {
+	case <-watchPattern.trigger:
+		assert.True(t, true)
+	case <-time.After(2 * time.Second):
+		assert.Fail(t, "associated watchPattern did not trigger after 2s")
+	}
 }
 
 func relativeDir(t *testing.T, relativePath string) string {
