@@ -35,7 +35,6 @@ var (
 	scaleChan         chan *FrankenPHPContext
 	autoScaledThreads = []*phpThread{}
 	scalingMu         = new(sync.RWMutex)
-	disallowScaling   = atomic.Bool{}
 
 	MaxThreadsReachedError      = errors.New("max amount of overall threads reached")
 	CannotRemoveLastThreadError = errors.New("cannot remove last thread")
