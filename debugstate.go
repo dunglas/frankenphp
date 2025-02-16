@@ -5,6 +5,7 @@ import (
 	"time"
 )
 
+// EXPERIMENTAL: ThreadDebugState prints the state of a single PHP thread - debugging purposes only
 type ThreadDebugState struct {
 	Index                      int
 	Name                       string
@@ -15,6 +16,7 @@ type ThreadDebugState struct {
 	WaitingSinceMilliseconds   int64
 }
 
+// EXPERIMENTAL: FrankenPHPDebugState prints the state of all PHP threads - debugging purposes only
 type FrankenPHPDebugState struct {
 	ThreadDebugStates   []ThreadDebugState
 	ReservedThreadCount int
