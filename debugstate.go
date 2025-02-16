@@ -1,19 +1,13 @@
 package frankenphp
 
-import (
-	"net/http"
-	"time"
-)
-
 // EXPERIMENTAL: ThreadDebugState prints the state of a single PHP thread - debugging purposes only
 type ThreadDebugState struct {
-	Index                      int
-	Name                       string
-	State                      string
-	IsHandlingRequest          bool
-	Path                       string
-	InRequestSinceMilliseconds int64
-	WaitingSinceMilliseconds   int64
+	Index                    int
+	Name                     string
+	State                    string
+	IsWaiting                bool
+	IsBusy                   bool
+	WaitingSinceMilliseconds int64
 }
 
 // EXPERIMENTAL: FrankenPHPDebugState prints the state of all PHP threads - debugging purposes only
@@ -41,29 +35,12 @@ func DebugState() FrankenPHPDebugState {
 
 // threadDebugState creates a small jsonable status message for debugging purposes
 func threadDebugState(thread *phpThread) ThreadDebugState {
-	debugState := ThreadDebugState{
+	return ThreadDebugState{
 		Index:                    thread.threadIndex,
 		Name:                     thread.handler.name(),
 		State:                    thread.state.name(),
+		IsWaiting:                thread.state.isInWaitingState(),
+		IsBusy:                   !thread.state.isInWaitingState(),
 		WaitingSinceMilliseconds: thread.state.waitTime(),
 	}
-
-	var r *http.Request
-	if r = thread.getActiveRequestSafely(); r == nil {
-		return debugState
-	}
-
-	fc := r.Context().Value(contextKey).(*FrankenPHPContext)
-	if fc.originalRequest != nil {
-		debugState.Path = fc.originalRequest.URL.Path
-	} else {
-		debugState.Path = r.URL.Path
-	}
-
-	if fc.responseWriter != nil {
-		debugState.IsHandlingRequest = true
-		debugState.InRequestSinceMilliseconds = time.Since(fc.startedAt).Milliseconds()
-	}
-
-	return debugState
 }

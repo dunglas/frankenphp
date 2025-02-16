@@ -19,7 +19,6 @@ type phpThread struct {
 	requestChan chan *http.Request
 	drainChan   chan struct{}
 	handlerMu   sync.Mutex
-	requestMu   sync.Mutex
 	handler     threadHandler
 	state       *threadState
 }
@@ -104,16 +103,6 @@ func (thread *phpThread) transitionToNewHandler() string {
 
 func (thread *phpThread) getActiveRequest() *http.Request {
 	return thread.handler.getActiveRequest()
-}
-
-// get the active request from outside the PHP thread
-func (thread *phpThread) getActiveRequestSafely() *http.Request {
-	thread.handlerMu.Lock()
-	thread.requestMu.Lock()
-	r := thread.getActiveRequest()
-	thread.requestMu.Unlock()
-	thread.handlerMu.Unlock()
-	return r
 }
 
 // Pin a string that is not null-terminated

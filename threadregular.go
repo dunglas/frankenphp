@@ -56,12 +56,6 @@ func (handler *regularThread) getActiveRequest() *http.Request {
 	return handler.activeRequest
 }
 
-func (handler *regularThread) setActiveRequest(r *http.Request) {
-	handler.thread.requestMu.Lock()
-	handler.activeRequest = r
-	handler.thread.requestMu.Unlock()
-}
-
 func (handler *regularThread) name() string {
 	return "Regular PHP Thread"
 }
@@ -77,7 +71,7 @@ func (handler *regularThread) waitForRequest() string {
 	case r = <-regularRequestChan:
 	}
 
-	handler.setActiveRequest(r)
+	handler.activeRequest = r
 	handler.state.markAsWaiting(false)
 	fc := r.Context().Value(contextKey).(*FrankenPHPContext)
 
@@ -97,7 +91,7 @@ func (handler *regularThread) afterRequest(exitStatus int) {
 	fc := handler.activeRequest.Context().Value(contextKey).(*FrankenPHPContext)
 	fc.exitStatus = exitStatus
 	maybeCloseContext(fc)
-	handler.setActiveRequest(nil)
+	handler.activeRequest = nil
 }
 
 func handleRequestWithRegularPHPThreads(r *http.Request, fc *FrankenPHPContext) {

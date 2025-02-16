@@ -6,7 +6,6 @@ import "C"
 import (
 	"errors"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/dunglas/frankenphp/internal/cpu"

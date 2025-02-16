@@ -171,6 +171,14 @@ func (ts *threadState) markAsWaiting(isWaiting bool) {
 	ts.mu.Unlock()
 }
 
+// isWaitingState returns true if a thread is waiting for a request or shutdown
+func (ts *threadState) isInWaitingState() bool {
+	ts.mu.RLock()
+	isWaiting := ts.isWaiting
+	ts.mu.RUnlock()
+	return isWaiting
+}
+
 // waitTime returns the time since the thread is waiting in a stable state in ms
 func (ts *threadState) waitTime() int64 {
 	ts.mu.RLock()

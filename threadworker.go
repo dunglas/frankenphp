@@ -98,7 +98,7 @@ func setupWorkerScript(handler *workerThread, worker *worker) {
 		panic(err)
 	}
 
-	handler.setFakeRequest(r)
+	handler.fakeRequest = r
 	if c := logger.Check(zapcore.DebugLevel, "starting"); c != nil {
 		c.Write(zap.String("worker", worker.fileName), zap.Int("thread", handler.thread.threadIndex))
 	}
@@ -110,12 +110,12 @@ func tearDownWorkerScript(handler *workerThread, exitStatus int) {
 	if handler.workerRequest != nil {
 		fc := handler.workerRequest.Context().Value(contextKey).(*FrankenPHPContext)
 		maybeCloseContext(fc)
-		handler.setWorkerRequest(nil)
+		handler.workerRequest = nil
 	}
 
 	fc := handler.fakeRequest.Context().Value(contextKey).(*FrankenPHPContext)
 	fc.exitStatus = exitStatus
-	handler.setFakeRequest(nil)
+	handler.fakeRequest = nil
 
 	// on exit status 0 we just run the worker script again
 	worker := handler.worker
@@ -174,7 +174,7 @@ func (handler *workerThread) waitForWorkerRequest() bool {
 	case r = <-handler.worker.requestChan:
 	}
 
-	handler.setWorkerRequest(r)
+	handler.workerRequest = r
 	handler.state.markAsWaiting(false)
 
 	if c := logger.Check(zapcore.DebugLevel, "request handling started"); c != nil {
@@ -196,18 +196,6 @@ func (handler *workerThread) waitForWorkerRequest() bool {
 	}
 
 	return true
-}
-
-func (handler *workerThread) setWorkerRequest(r *http.Request) {
-	handler.thread.requestMu.Lock()
-	handler.workerRequest = r
-	handler.thread.requestMu.Unlock()
-}
-
-func (handler *workerThread) setFakeRequest(r *http.Request) {
-	handler.thread.requestMu.Lock()
-	handler.fakeRequest = r
-	handler.thread.requestMu.Unlock()
 }
 
 // go_frankenphp_worker_handle_request_start is called at the start of every php request served.
