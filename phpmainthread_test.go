@@ -18,8 +18,9 @@ import (
 var testDataPath, _ = filepath.Abs("./testdata")
 
 func TestStartAndStopTheMainThreadWithOneInactiveThread(t *testing.T) {
-	logger = zap.NewNop()                // the logger needs to not be nil
-	assert.NoError(t, initPHPThreads(1)) // reserve 1 thread
+	logger = zap.NewNop()               // the logger needs to not be nil
+	_, err := initPHPThreads(1, 1, nil) // boot 1 thread
+	assert.NoError(t, err)
 
 	assert.Len(t, phpThreads, 1)
 	assert.Equal(t, 0, phpThreads[0].threadIndex)
@@ -31,7 +32,8 @@ func TestStartAndStopTheMainThreadWithOneInactiveThread(t *testing.T) {
 
 func TestTransitionRegularThreadToWorkerThread(t *testing.T) {
 	logger = zap.NewNop()
-	assert.NoError(t, initPHPThreads(1))
+	_, err := initPHPThreads(1, 1, nil)
+	assert.NoError(t, err)
 
 	// transition to regular thread
 	convertToRegularThread(phpThreads[0])
@@ -54,7 +56,8 @@ func TestTransitionRegularThreadToWorkerThread(t *testing.T) {
 
 func TestTransitionAThreadBetween2DifferentWorkers(t *testing.T) {
 	logger = zap.NewNop()
-	assert.NoError(t, initPHPThreads(1))
+	_, err := initPHPThreads(1, 1, nil)
+	assert.NoError(t, err)
 	firstWorker := getDummyWorker("transition-worker-1.php")
 	secondWorker := getDummyWorker("transition-worker-2.php")
 
@@ -76,43 +79,39 @@ func TestTransitionAThreadBetween2DifferentWorkers(t *testing.T) {
 	assert.Nil(t, phpThreads)
 }
 
+// try all possible handler transitions
+// takes around 200ms and is supposed to force race conditions
 func TestTransitionThreadsWhileDoingRequests(t *testing.T) {
 	numThreads := 10
 	numRequestsPerThread := 100
-	isRunning := atomic.Bool{}
-	isRunning.Store(true)
+	isDone := atomic.Bool{}
 	wg := sync.WaitGroup{}
 	worker1Path := testDataPath + "/transition-worker-1.php"
 	worker2Path := testDataPath + "/transition-worker-2.php"
 
 	assert.NoError(t, Init(
 		WithNumThreads(numThreads),
-		WithWorkers(worker1Path, 1, map[string]string{"ENV1": "foo"}, []string{}),
-		WithWorkers(worker2Path, 1, map[string]string{"ENV1": "foo"}, []string{}),
+		WithWorkers(worker1Path, 1, map[string]string{}, []string{}),
+		WithWorkers(worker2Path, 1, map[string]string{}, []string{}),
 		WithLogger(zap.NewNop()),
 	))
 
-	// randomly transition threads between regular, inactive and 2 worker threads
-	go func() {
-		for {
-			for i := 0; i < numThreads; i++ {
-				switch rand.IntN(4) {
-				case 0:
-					convertToRegularThread(phpThreads[i])
-				case 1:
-					convertToWorkerThread(phpThreads[i], workers[worker1Path])
-				case 2:
-					convertToWorkerThread(phpThreads[i], workers[worker2Path])
-				case 3:
-					convertToInactiveThread(phpThreads[i])
+	// try all possible permutations of transition, transition every ms
+	transitions := allPossibleTransitions(worker1Path, worker2Path)
+	for i := 0; i < numThreads; i++ {
+		go func(thread *phpThread, start int) {
+			for {
+				for j := start; j < len(transitions); j++ {
+					if isDone.Load() {
+						return
+					}
+					transitions[j](thread)
+					time.Sleep(time.Millisecond)
 				}
-				time.Sleep(time.Millisecond)
-				if !isRunning.Load() {
-					return
-				}
+				start = 0
 			}
-		}
-	}()
+		}(phpThreads[i], i)
+	}
 
 	// randomly do requests to the 3 endpoints
 	wg.Add(numThreads)
@@ -132,8 +131,9 @@ func TestTransitionThreadsWhileDoingRequests(t *testing.T) {
 		}(i)
 	}
 
+	// we are finished as soon as all 1000 requests are done
 	wg.Wait()
-	isRunning.Store(false)
+	isDone.Store(true)
 	Shutdown()
 }
 
@@ -175,4 +175,21 @@ func assertRequestBody(t *testing.T, url string, expected string) {
 	resp := w.Result()
 	body, _ := io.ReadAll(resp.Body)
 	assert.Equal(t, expected, string(body))
+}
+
+// create a mix of possible transitions of workers and regular threads
+func allPossibleTransitions(worker1Path string, worker2Path string) []func(*phpThread) {
+	return []func(*phpThread){
+		convertToRegularThread,
+		func(thread *phpThread) { thread.shutdown() },
+		func(thread *phpThread) {
+			if thread.state.is(stateReserved) {
+				thread.boot()
+			}
+		},
+		func(thread *phpThread) { convertToWorkerThread(thread, workers[worker1Path]) },
+		convertToInactiveThread,
+		func(thread *phpThread) { convertToWorkerThread(thread, workers[worker2Path]) },
+		convertToInactiveThread,
+	}
 }

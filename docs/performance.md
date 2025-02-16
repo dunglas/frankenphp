@@ -16,6 +16,16 @@ To find the right values, it's best to run load tests simulating real traffic.
 To configure the number of threads, use the `num_threads` option of the `php_server` and `php` directives.
 To change the number of workers, use the `num` option of the `worker` section of the `frankenphp` directive.
 
+### `max_threads`
+
+While it's always better to know exactly what your traffic will look like, real-life applications tend to be more
+unpredictable. The `max_threads` allows FrankenPHP to automatically spawn additional threads at runtime up to the specified limit.
+`max_threads` can help you
+figure out how many threads you need to handle your traffic and can make the server more resilient to latency spikes.
+If set to `auto`, the limit will be estimated based on the `memory_limit` in your `php.ini`. If not able to do so,
+`auto` will instead default to 2x `num_threads`.
+`max_threads is similar to PHP FPM's [pm.max_children](https://www.php.net/manual/en/install.fpm.configuration.php#pm.max-children).
+
 ## Worker Mode
 
 Enabling [the worker mode](worker.md) dramatically improves performance,

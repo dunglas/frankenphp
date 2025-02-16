@@ -3,10 +3,13 @@ package frankenphp
 // #include "frankenphp.h"
 import "C"
 import (
+	"fmt"
 	"sync"
 
+	"github.com/dunglas/frankenphp/internal/memory"
 	"github.com/dunglas/frankenphp/internal/phpheaders"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 // represents the main PHP thread
@@ -15,6 +18,8 @@ type phpMainThread struct {
 	state           *threadState
 	done            chan struct{}
 	numThreads      int
+	maxThreads      int
+	phpIni          map[string]string
 	commonHeaders   map[string]*C.zend_string
 	knownServerKeys map[string]*C.zend_string
 }
@@ -24,63 +29,72 @@ var (
 	mainThread *phpMainThread
 )
 
-// reserve a fixed number of PHP threads on the Go side
-func initPHPThreads(numThreads int) error {
+// initPHPThreads starts the main PHP thread,
+// a fixed number of inactive PHP threads
+// and reserves a fixed number of possible PHP threads
+func initPHPThreads(numThreads int, numMaxThreads int, phpIni map[string]string) (*phpMainThread, error) {
 	mainThread = &phpMainThread{
 		state:      newThreadState(),
 		done:       make(chan struct{}),
 		numThreads: numThreads,
+		maxThreads: numMaxThreads,
+		phpIni:     phpIni,
 	}
-	phpThreads = make([]*phpThread, numThreads)
 
-	// initialize all threads as inactive
+	// initialize the first thread
 	// this needs to happen before starting the main thread
 	// since some extensions access environment variables on startup
-	for i := 0; i < numThreads; i++ {
-		phpThreads[i] = newPHPThread(i)
-		convertToInactiveThread(phpThreads[i])
-	}
+	// the threadIndex on the main thread defaults to 0 -> phpThreads[0].Pin(...)
+	initialThread := newPHPThread(0)
+	phpThreads = []*phpThread{initialThread}
 
 	if err := mainThread.start(); err != nil {
-		return err
+		return nil, err
+	}
+
+	// initialize all other threads
+	phpThreads = make([]*phpThread, mainThread.maxThreads)
+	phpThreads[0] = initialThread
+	for i := 1; i < mainThread.maxThreads; i++ {
+		phpThreads[i] = newPHPThread(i)
 	}
 
 	// start the underlying C threads
 	ready := sync.WaitGroup{}
 	ready.Add(numThreads)
-	for _, thread := range phpThreads {
+	for i := 0; i < numThreads; i++ {
+		thread := phpThreads[i]
 		go func() {
-			if !C.frankenphp_new_php_thread(C.uintptr_t(thread.threadIndex)) {
-				logger.Panic("unable to create thread", zap.Int("threadIndex", thread.threadIndex))
-			}
-			thread.state.waitFor(stateInactive)
+			thread.boot()
 			ready.Done()
 		}()
 	}
 	ready.Wait()
 
-	return nil
+	return mainThread, nil
 }
 
 func drainPHPThreads() {
 	doneWG := sync.WaitGroup{}
 	doneWG.Add(len(phpThreads))
-	for _, thread := range phpThreads {
-		thread.handlerMu.Lock()
-		_ = thread.state.requestSafeStateChange(stateShuttingDown)
-		close(thread.drainChan)
-	}
+	mainThread.state.set(stateShuttingDown)
 	close(mainThread.done)
 	for _, thread := range phpThreads {
+		// shut down all reserved threads
+		if thread.state.compareAndSwap(stateReserved, stateDone) {
+			doneWG.Done()
+			continue
+		}
+		// shut down all active threads
 		go func(thread *phpThread) {
-			thread.state.waitFor(stateDone)
-			thread.handlerMu.Unlock()
+			thread.shutdown()
 			doneWG.Done()
 		}(thread)
 	}
+
 	doneWG.Wait()
-	mainThread.state.set(stateShuttingDown)
-	mainThread.state.waitFor(stateDone)
+	mainThread.state.set(stateDone)
+	mainThread.state.waitFor(stateReserved)
 	phpThreads = nil
 }
 
@@ -88,6 +102,7 @@ func (mainThread *phpMainThread) start() error {
 	if C.frankenphp_new_main_thread(C.int(mainThread.numThreads)) != 0 {
 		return MainThreadCreationError
 	}
+
 	mainThread.state.waitFor(stateReady)
 
 	// cache common request headers as zend_strings (HTTP_ACCEPT, HTTP_USER_AGENT, etc.)
@@ -111,16 +126,74 @@ func getInactivePHPThread() *phpThread {
 			return thread
 		}
 	}
-	panic("not enough threads reserved")
+
+	for _, thread := range phpThreads {
+		if thread.state.compareAndSwap(stateReserved, stateBootRequested) {
+			thread.boot()
+			return thread
+		}
+	}
+
+	return nil
+}
+
+func getPHPThreadAtState(state stateID) *phpThread {
+	for _, thread := range phpThreads {
+		if thread.state.is(state) {
+			return thread
+		}
+	}
+	return nil
 }
 
 //export go_frankenphp_main_thread_is_ready
 func go_frankenphp_main_thread_is_ready() {
+	mainThread.setAutomaticMaxThreads()
+	if mainThread.maxThreads < mainThread.numThreads {
+		mainThread.maxThreads = mainThread.numThreads
+	}
+
 	mainThread.state.set(stateReady)
-	mainThread.state.waitFor(stateShuttingDown)
+	mainThread.state.waitFor(stateDone)
+}
+
+// max_threads = auto
+// setAutomaticMaxThreads estimates the amount of threads based on php.ini and system memory_limit
+// If unable to get the system's memory limit, simply double num_threads
+func (mainThread *phpMainThread) setAutomaticMaxThreads() {
+	if mainThread.maxThreads >= 0 {
+		return
+	}
+	perThreadMemoryLimit := int64(C.frankenphp_get_current_memory_limit())
+	totalSysMemory := memory.TotalSysMemory()
+	if perThreadMemoryLimit <= 0 || totalSysMemory == 0 {
+		mainThread.maxThreads = mainThread.numThreads * 2
+		return
+	}
+	maxAllowedThreads := totalSysMemory / uint64(perThreadMemoryLimit)
+	mainThread.maxThreads = int(maxAllowedThreads)
+
+	if c := logger.Check(zapcore.DebugLevel, "Automatic thread limit"); c != nil {
+		c.Write(zap.Int("perThreadMemoryLimitMB", int(perThreadMemoryLimit/1024/1024)), zap.Int("maxThreads", mainThread.maxThreads))
+	}
 }
 
 //export go_frankenphp_shutdown_main_thread
 func go_frankenphp_shutdown_main_thread() {
-	mainThread.state.set(stateDone)
+	mainThread.state.set(stateReserved)
+}
+
+//export go_get_custom_php_ini
+func go_get_custom_php_ini() *C.char {
+	if mainThread.phpIni == nil {
+		return nil
+	}
+
+	// pass the php.ini overrides to PHP before startup
+	// TODO: if needed this would also be possible on a per-thread basis
+	overrides := ""
+	for k, v := range mainThread.phpIni {
+		overrides += fmt.Sprintf("%s=%s\n", k, v)
+	}
+	return C.CString(overrides)
 }
