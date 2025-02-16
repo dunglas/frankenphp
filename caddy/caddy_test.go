@@ -11,10 +11,10 @@ import (
 	"testing"
 
 	"github.com/dunglas/frankenphp"
-	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/testutil"
 	"github.com/stretchr/testify/require"
 
+	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddytest"
 )
 
@@ -374,7 +374,9 @@ func TestMetrics(t *testing.T) {
 	frankenphp_busy_threads 0
 	`
 
-	require.NoError(t, testutil.GatherAndCompare(prometheus.DefaultGatherer, strings.NewReader(expectedMetrics), "frankenphp_total_threads", "frankenphp_busy_threads"))
+	ctx := caddy.ActiveContext()
+
+	require.NoError(t, testutil.GatherAndCompare(ctx.GetMetricsRegistry(), strings.NewReader(expectedMetrics), "frankenphp_total_threads", "frankenphp_busy_threads"))
 }
 
 func TestWorkerMetrics(t *testing.T) {
@@ -462,9 +464,10 @@ func TestWorkerMetrics(t *testing.T) {
 	frankenphp_testdata_index_php_worker_restarts 0
 	`
 
+	ctx := caddy.ActiveContext()
 	require.NoError(t,
 		testutil.GatherAndCompare(
-			prometheus.DefaultGatherer,
+			ctx.GetMetricsRegistry(),
 			strings.NewReader(expectedMetrics),
 			"frankenphp_total_threads",
 			"frankenphp_busy_threads",
@@ -563,9 +566,10 @@ func TestAutoWorkerConfig(t *testing.T) {
 	frankenphp_testdata_index_php_worker_restarts 0
 	`
 
+	ctx := caddy.ActiveContext()
 	require.NoError(t,
 		testutil.GatherAndCompare(
-			prometheus.DefaultGatherer,
+			ctx.GetMetricsRegistry(),
 			strings.NewReader(expectedMetrics),
 			"frankenphp_total_threads",
 			"frankenphp_busy_threads",

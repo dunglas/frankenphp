@@ -7,12 +7,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/dunglas/frankenphp/internal/fastabs"
-	"github.com/prometheus/client_golang/prometheus"
 	"net/http"
 	"path/filepath"
 	"strconv"
 	"strings"
+
+	"github.com/dunglas/frankenphp/internal/fastabs"
 
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig"
@@ -43,8 +43,6 @@ func init() {
 	httpcaddyfile.RegisterDirectiveOrder("php_server", "before", "file_server")
 }
 
-var metrics = frankenphp.NewPrometheusMetrics(prometheus.DefaultRegisterer)
-
 type workerConfig struct {
 	// FileName sets the path to the worker script.
 	FileName string `json:"file_name,omitempty"`
@@ -65,6 +63,8 @@ type FrankenPHPApp struct {
 	Workers []workerConfig `json:"workers,omitempty"`
 	// Overwrites the default php ini configuration
 	PhpIni map[string]string `json:"php_ini,omitempty"`
+
+	metrics frankenphp.Metrics
 }
 
 // CaddyModule returns the Caddy module information.
@@ -75,6 +75,13 @@ func (f FrankenPHPApp) CaddyModule() caddy.ModuleInfo {
 	}
 }
 
+// Provision sets up the module.
+func (f *FrankenPHPApp) Provision(ctx caddy.Context) error {
+	f.metrics = frankenphp.NewPrometheusMetrics(ctx.GetMetricsRegistry())
+
+	return nil
+}
+
 func (f *FrankenPHPApp) Start() error {
 	repl := caddy.NewReplacer()
 	logger := caddy.Log()
@@ -83,7 +90,7 @@ func (f *FrankenPHPApp) Start() error {
 		frankenphp.WithNumThreads(f.NumThreads),
 		frankenphp.WithMaxThreads(f.MaxThreads),
 		frankenphp.WithLogger(logger),
-		frankenphp.WithMetrics(metrics),
+		frankenphp.WithMetrics(f.metrics),
 		frankenphp.WithPhpIni(f.PhpIni),
 	}
 	for _, w := range f.Workers {
@@ -740,6 +747,7 @@ func parsePhpServer(h httpcaddyfile.Helper) ([]httpcaddyfile.ConfigValue, error)
 // Interface guards
 var (
 	_ caddy.App                   = (*FrankenPHPApp)(nil)
+	_ caddy.Provisioner           = (*FrankenPHPApp)(nil)
 	_ caddy.Provisioner           = (*FrankenPHPModule)(nil)
 	_ caddyhttp.MiddlewareHandler = (*FrankenPHPModule)(nil)
 	_ caddyfile.Unmarshaler       = (*FrankenPHPModule)(nil)
