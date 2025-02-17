@@ -167,15 +167,11 @@ PHPAPI void get_full_env(zval *track_vars_array) {
     go_string key = full_env.r0[i * 2];
     go_string val = full_env.r0[i * 2 + 1];
 
-    // create PHP strings for key and value
-    zend_string *key_str = zend_string_init(key.data, key.len, 0);
+    // create PHP string for the value
     zend_string *val_str = zend_string_init(val.data, val.len, 0);
 
     // add to the associative array
-    add_assoc_str(track_vars_array, ZSTR_VAL(key_str), val_str);
-
-    // release the key string
-    zend_string_release(key_str);
+    add_assoc_str(track_vars_array, key.data, val_str);
   }
 }
 
