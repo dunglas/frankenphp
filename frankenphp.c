@@ -171,7 +171,7 @@ PHPAPI void get_full_env(zval *track_vars_array) {
     zend_string *val_str = zend_string_init(val.data, val.len, 0);
 
     // add to the associative array
-    add_assoc_str(track_vars_array, key.data, val_str);
+    add_assoc_str_ex(track_vars_array, key.data, key.len, val_str);
   }
 }
 
