@@ -155,7 +155,6 @@ func TestAnAssociatedEventTriggersTheWatcher(t *testing.T) {
 
 	select {
 	case <-watchPattern.trigger:
-		assert.True(t, true)
 	case <-time.After(2 * time.Second):
 		assert.Fail(t, "associated watchPattern did not trigger after 2s")
 	}
