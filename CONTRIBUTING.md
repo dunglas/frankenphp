@@ -11,7 +11,7 @@ docker build -t frankenphp-dev -f dev.Dockerfile .
 docker run --cap-add=SYS_PTRACE --security-opt seccomp=unconfined -p 8080:8080 -p 443:443 -p 443:443/udp -v $PWD:/go/src/app -it frankenphp-dev
 ```
 
-The image contains the usual development tools (Go, GDB, Valgrind, Neovim...).  
+The image contains the usual development tools (Go, GDB, Valgrind, Neovim...).
 
 If docker version is lower than 23.0, build is failed by dockerignore [pattern issue](https://github.com/moby/moby/pull/42676). Add directories to `.dockerignore`.
 
@@ -49,10 +49,13 @@ cd testdata/
 ../caddy/frankenphp/frankenphp run
 ```
 
-The server is listening on `127.0.0.1:8080`:
+The server is listening on `127.0.0.1:80`:
+
+> [!NOTE]
+> if you are using Docker, you will have to either bind container port 80 or execute from inside the container
 
 ```console
-curl -vk https://localhost/phpinfo.php
+curl -vk http://127.0.0.1/phpinfo.php
 ```
 
 ## Minimal test server

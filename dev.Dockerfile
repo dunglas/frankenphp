@@ -46,7 +46,7 @@ RUN apt-get update && \
 	echo 'set auto-load safe-path /' > /root/.gdbinit && \
 	echo '* soft core unlimited' >> /etc/security/limits.conf \
 	&& \
-	apt-get clean 
+	apt-get clean
 
 WORKDIR /usr/local/src/php
 RUN git clone --branch=PHP-8.4 https://github.com/php/php-src.git . && \
@@ -71,7 +71,9 @@ WORKDIR /usr/local/src/watcher
 RUN git clone https://github.com/e-dant/watcher . && \
 	cmake -S . -B build -DCMAKE_BUILD_TYPE=Release && \
 	cmake --build build/ && \
-	cmake --install build
+	cmake --install build && \
+	cp build/libwatcher-c.so /usr/local/lib/libwatcher-c.so && \
+	ldconfig
 
 WORKDIR /go/src/app
 COPY . .
