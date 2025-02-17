@@ -82,6 +82,7 @@ func retryWatching(watchPattern *watchPattern) {
 	failureMu.Lock()
 	defer failureMu.Unlock()
 	if watchPattern.failureCount >= maxFailureCount {
+		logger.Warn("gave up watching", zap.String("dir", watchPattern.dir))
 		return
 	}
 	logger.Info("watcher was closed prematurely, retrying...", zap.String("dir", watchPattern.dir))
@@ -152,17 +153,28 @@ func stopSession(session C.uintptr_t) {
 }
 
 //export go_handle_file_watcher_event
-func go_handle_file_watcher_event(path *C.char, eventType C.int, pathType C.int, handle C.uintptr_t) {
+func go_handle_file_watcher_event(path *C.char, associatedPath *C.char, eventType C.int, pathType C.int, handle C.uintptr_t) {
 	watchPattern := cgo.Handle(handle).Value().(*watchPattern)
-	goPath := C.GoString(path)
+	handleWatcherEvent(watchPattern, C.GoString(path), C.GoString(associatedPath), int(eventType), int(pathType))
+}
 
-	if watchPattern.allowReload(goPath, int(eventType), int(pathType)) {
-		watchPattern.trigger <- struct{}{}
+func handleWatcherEvent(watchPattern *watchPattern, path string, associatedPath string, eventType int, pathType int) {
+	// If the watcher prematurely sends the die@ event, retry watching
+	if pathType == 4 && strings.HasPrefix(path, "e/self/die@") && watcherIsActive.Load() {
+		retryWatching(watchPattern)
+		return
 	}
 
-	// If the watcher prematurely sends the die@ event, retry watching
-	if pathType == 4 && strings.HasPrefix(goPath, "e/self/die@") && watcherIsActive.Load() {
-		retryWatching(watchPattern)
+	if watchPattern.allowReload(path, eventType, pathType) {
+		watchPattern.trigger <- struct{}{}
+		return
+	}
+
+	// some editors create temporary files and never actually modify the original file
+	// so we need to also check the associated path of an event
+	// see https://github.com/dunglas/frankenphp/issues/1375
+	if associatedPath != "" && watchPattern.allowReload(associatedPath, eventType, pathType) {
+		watchPattern.trigger <- struct{}{}
 	}
 }
 
