@@ -20,7 +20,7 @@ func createPrometheusMetrics() *PrometheusMetrics {
 	}
 }
 
-func TestPrometheusMetrics_Initialization(t *testing.T) {
+func TestPrometheusMetrics_TotalWorkers(t *testing.T) {
 	m := createPrometheusMetrics()
 
 	require.Nil(t, m.totalWorkers)
@@ -31,7 +31,7 @@ func TestPrometheusMetrics_Initialization(t *testing.T) {
 	require.Nil(t, m.workerRequestTime)
 	require.Nil(t, m.workerRequestCount)
 
-	initWorkerMetrics(m)
+	m.TotalWorkers("test_worker", 2)
 
 	require.NotNil(t, m.totalWorkers)
 	require.NotNil(t, m.busyWorkers)
@@ -44,7 +44,7 @@ func TestPrometheusMetrics_Initialization(t *testing.T) {
 
 func TestPrometheusMetrics_StopWorkerRequest(t *testing.T) {
 	m := createPrometheusMetrics()
-	initWorkerMetrics(m)
+	m.TotalWorkers("test_worker", 2)
 	m.StopWorkerRequest("test_worker", 2*time.Second)
 
 	inputs := []struct {
@@ -100,7 +100,7 @@ func TestPrometheusMetrics_StopWorkerRequest(t *testing.T) {
 
 func TestPrometheusMetrics_StartWorkerRequest(t *testing.T) {
 	m := createPrometheusMetrics()
-	initWorkerMetrics(m)
+	m.TotalWorkers("test_worker", 2)
 	m.StartWorkerRequest("test_worker")
 
 	inputs := []struct {
@@ -134,7 +134,7 @@ func TestPrometheusMetrics_StartWorkerRequest(t *testing.T) {
 
 func TestPrometheusMetrics_TestStopReasonCrash(t *testing.T) {
 	m := createPrometheusMetrics()
-	initWorkerMetrics(m)
+	m.TotalWorkers("test_worker", 2)
 	m.StopWorker("test_worker", StopReasonCrash)
 
 	inputs := []struct {

@@ -247,14 +247,13 @@ var MaxThreads int
 func calculateMaxThreads(opt *opt) (int, int, error) {
 	maxProcs := runtime.GOMAXPROCS(0) * 2
 
-	initWorkerMetrics(metrics)
-
 	var numWorkers int
 	for i, w := range opt.workers {
 		if w.num <= 0 {
 			// https://github.com/dunglas/frankenphp/issues/126
 			opt.workers[i].num = maxProcs
 		}
+		metrics.TotalWorkers(w.name, w.num)
 
 		numWorkers += opt.workers[i].num
 	}
