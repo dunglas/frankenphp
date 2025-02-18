@@ -27,8 +27,6 @@ runs:
       shell: bash
       env:
         GH_TOKEN: ${{ github.token }}
-        # https://github.com/e-dant/watcher/issues/70
-        CXXFLAGS: -Wno-c++20-extensions
     - name: Update LD_LIBRARY_PATH
       run: |
         sudo sh -c "echo ${PWD}/watcher/target/lib > /etc/ld.so.conf.d/watcher.conf"
