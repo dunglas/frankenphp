@@ -121,8 +121,7 @@ static void frankenphp_release_temporary_streams() {
     if (val->type == stream_type) {
       php_stream *stream = (php_stream *)val->ptr;
       if (stream != NULL && stream->ops == &php_stream_temp_ops &&
-          stream->__exposed == 0 &&
-          GC_REFCOUNT(val) == 1) {
+          stream->__exposed == 0 && GC_REFCOUNT(val) == 1) {
         ZEND_ASSERT(!stream->is_persistent);
         zend_list_delete(val);
       }
