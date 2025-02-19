@@ -1,10 +1,12 @@
 package frankenphp
 
 import (
-	"github.com/dunglas/frankenphp/internal/fastabs"
+	"errors"
 	"regexp"
 	"sync"
 	"time"
+
+	"github.com/dunglas/frankenphp/internal/fastabs"
 
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -153,7 +155,10 @@ func (m *PrometheusMetrics) TotalWorkers(name string, _ int) {
 			Name:      "total_workers",
 			Help:      "Total number of PHP workers for this worker",
 		})
-		m.registry.MustRegister(m.totalWorkers[identity])
+		if err := m.registry.Register(m.totalWorkers[identity]); err != nil &&
+			!errors.As(err, &prometheus.AlreadyRegisteredError{}) {
+			panic(err)
+		}
 	}
 
 	if _, ok := m.workerCrashes[identity]; !ok {
@@ -163,7 +168,10 @@ func (m *PrometheusMetrics) TotalWorkers(name string, _ int) {
 			Name:      "worker_crashes",
 			Help:      "Number of PHP worker crashes for this worker",
 		})
-		m.registry.MustRegister(m.workerCrashes[identity])
+		if err := m.registry.Register(m.workerCrashes[identity]); err != nil &&
+			!errors.As(err, &prometheus.AlreadyRegisteredError{}) {
+			panic(err)
+		}
 	}
 
 	if _, ok := m.workerRestarts[identity]; !ok {
@@ -173,7 +181,10 @@ func (m *PrometheusMetrics) TotalWorkers(name string, _ int) {
 			Name:      "worker_restarts",
 			Help:      "Number of PHP worker restarts for this worker",
 		})
-		m.registry.MustRegister(m.workerRestarts[identity])
+		if err := m.registry.Register(m.workerRestarts[identity]); err != nil &&
+			!errors.As(err, &prometheus.AlreadyRegisteredError{}) {
+			panic(err)
+		}
 	}
 
 	if _, ok := m.readyWorkers[identity]; !ok {
@@ -183,7 +194,10 @@ func (m *PrometheusMetrics) TotalWorkers(name string, _ int) {
 			Name:      "ready_workers",
 			Help:      "Running workers that have successfully called frankenphp_handle_request at least once",
 		})
-		m.registry.MustRegister(m.readyWorkers[identity])
+		if err := m.registry.Register(m.readyWorkers[identity]); err != nil &&
+			!errors.As(err, &prometheus.AlreadyRegisteredError{}) {
+			panic(err)
+		}
 	}
 
 	if _, ok := m.busyWorkers[identity]; !ok {
@@ -193,7 +207,10 @@ func (m *PrometheusMetrics) TotalWorkers(name string, _ int) {
 			Name:      "busy_workers",
 			Help:      "Number of busy PHP workers for this worker",
 		})
-		m.registry.MustRegister(m.busyWorkers[identity])
+		if err := m.registry.Register(m.busyWorkers[identity]); err != nil &&
+			!errors.As(err, &prometheus.AlreadyRegisteredError{}) {
+			panic(err)
+		}
 	}
 
 	if _, ok := m.workerRequestTime[identity]; !ok {
@@ -202,7 +219,10 @@ func (m *PrometheusMetrics) TotalWorkers(name string, _ int) {
 			Subsystem: subsystem,
 			Name:      "worker_request_time",
 		})
-		m.registry.MustRegister(m.workerRequestTime[identity])
+		if err := m.registry.Register(m.workerRequestTime[identity]); err != nil &&
+			!errors.As(err, &prometheus.AlreadyRegisteredError{}) {
+			panic(err)
+		}
 	}
 
 	if _, ok := m.workerRequestCount[identity]; !ok {
@@ -211,7 +231,10 @@ func (m *PrometheusMetrics) TotalWorkers(name string, _ int) {
 			Subsystem: subsystem,
 			Name:      "worker_request_count",
 		})
-		m.registry.MustRegister(m.workerRequestCount[identity])
+		if err := m.registry.Register(m.workerRequestCount[identity]); err != nil &&
+			!errors.As(err, &prometheus.AlreadyRegisteredError{}) {
+			panic(err)
+		}
 	}
 }
 
@@ -292,8 +315,15 @@ func (m *PrometheusMetrics) Shutdown() {
 	m.workerCrashes = map[string]prometheus.Counter{}
 	m.readyWorkers = map[string]prometheus.Gauge{}
 
-	m.registry.MustRegister(m.totalThreads)
-	m.registry.MustRegister(m.busyThreads)
+	if err := m.registry.Register(m.totalThreads); err != nil &&
+		!errors.As(err, &prometheus.AlreadyRegisteredError{}) {
+		panic(err)
+	}
+
+	if err := m.registry.Register(m.busyThreads); err != nil &&
+		!errors.As(err, &prometheus.AlreadyRegisteredError{}) {
+		panic(err)
+	}
 }
 
 func getWorkerNameForMetrics(name string) string {
@@ -327,8 +357,15 @@ func NewPrometheusMetrics(registry prometheus.Registerer) *PrometheusMetrics {
 		readyWorkers:       map[string]prometheus.Gauge{},
 	}
 
-	m.registry.MustRegister(m.totalThreads)
-	m.registry.MustRegister(m.busyThreads)
+	if err := m.registry.Register(m.totalThreads); err != nil &&
+		!errors.As(err, &prometheus.AlreadyRegisteredError{}) {
+		panic(err)
+	}
+
+	if err := m.registry.Register(m.busyThreads); err != nil &&
+		!errors.As(err, &prometheus.AlreadyRegisteredError{}) {
+		panic(err)
+	}
 
 	return m
 }
