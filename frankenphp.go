@@ -333,7 +333,7 @@ func Init(options ...Option) error {
 	}
 
 	requestChan = make(chan *http.Request, opt.numThreads)
-	if err := initPHPThreads(totalThreadCount); err != nil {
+	if err := initPHPThreads(totalThreadCount, opt.phpIniIgnore, opt.phpIniIgnoreCwd); err != nil {
 		return err
 	}
 

@@ -15,6 +15,9 @@ type opt struct {
 	workers    []workerOpt
 	logger     *zap.Logger
 	metrics    Metrics
+	// sapi options
+	phpIniIgnore    bool
+	phpIniIgnoreCwd bool
 }
 
 type workerOpt struct {
@@ -54,6 +57,24 @@ func WithWorkers(fileName string, num int, env map[string]string, watch []string
 func WithLogger(l *zap.Logger) Option {
 	return func(o *opt) error {
 		o.logger = l
+
+		return nil
+	}
+}
+
+// WithPHPIniIgnore don't look for php.ini
+func WithPHPIniIgnore(ignore bool) Option {
+	return func(o *opt) error {
+		o.phpIniIgnore = ignore
+
+		return nil
+	}
+}
+
+// WithPHPIniIgnoreCwd don't look for php.ini in the current directory
+func WithPHPIniIgnoreCwd(ignoreCwd bool) Option {
+	return func(o *opt) error {
+		o.phpIniIgnoreCwd = ignoreCwd
 
 		return nil
 	}
