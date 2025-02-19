@@ -648,3 +648,71 @@ func TestAllDefinedServerVars(t *testing.T) {
 		expectedBody,
 	)
 }
+
+func TestPHPIniConfiguration(t *testing.T) {
+	tester := caddytest.NewTester(t)
+	tester.InitServer(`
+		{
+			skip_install_trust
+			admin localhost:2999
+			http_port `+testPort+`
+
+			frankenphp {
+				num_threads 2
+				worker ../testdata/ini.php 1
+				php_ini max_execution_time 100
+				php_ini memory_limit 10000000
+			}
+		}
+
+		localhost:`+testPort+` {
+			route {
+				root ../testdata
+				php
+			}
+		}
+		`, "caddyfile")
+
+	testSingleIniConfiguration(tester, "max_execution_time", "100")
+	testSingleIniConfiguration(tester, "memory_limit", "10000000")
+}
+
+func TestPHPIniBlockConfiguration(t *testing.T) {
+	tester := caddytest.NewTester(t)
+	tester.InitServer(`
+		{
+			skip_install_trust
+			admin localhost:2999
+			http_port `+testPort+`
+
+			frankenphp {
+				num_threads 1
+				php_ini {
+					max_execution_time 15
+					memory_limit 20000000
+				}
+			}
+		}
+
+		localhost:`+testPort+` {
+			route {
+				root ../testdata
+				php
+			}
+		}
+		`, "caddyfile")
+
+	testSingleIniConfiguration(tester, "max_execution_time", "15")
+	testSingleIniConfiguration(tester, "memory_limit", "20000000")
+}
+
+func testSingleIniConfiguration(tester *caddytest.Tester, key string, value string) {
+	// test twice to ensure the ini setting is not lost
+	for i := 0; i < 2; i++ {
+		tester.AssertGetResponse(
+			"http://localhost:"+testPort+"/ini.php?key="+key,
+			http.StatusOK,
+			key+":"+value,
+		)
+	}
+}

@@ -2,19 +2,21 @@ package frankenphp
 
 import (
 	"slices"
-	"strconv"
 	"sync"
+	"time"
 )
 
 type stateID uint8
 
 const (
-	// lifecycle states of a thread
-	stateBooting stateID = iota
+	// livecycle states of a thread
+	stateReserved stateID = iota
+	stateBooting
+	stateBootRequested
 	stateShuttingDown
 	stateDone
 
-	// these states are safe to transition from at any time
+	// these states are 'stable' and safe to transition from at any time
 	stateInactive
 	stateReady
 
@@ -28,10 +30,27 @@ const (
 	stateTransitionComplete
 )
 
+var stateNames = map[stateID]string{
+	stateReserved:             "reserved",
+	stateBooting:              "booting",
+	stateInactive:             "inactive",
+	stateReady:                "ready",
+	stateShuttingDown:         "shutting down",
+	stateDone:                 "done",
+	stateRestarting:           "restarting",
+	stateYielding:             "yielding",
+	stateTransitionRequested:  "transition requested",
+	stateTransitionInProgress: "transition in progress",
+	stateTransitionComplete:   "transition complete",
+}
+
 type threadState struct {
 	currentState stateID
 	mu           sync.RWMutex
 	subscribers  []stateSubscriber
+	// how long threads have been waiting in stable states
+	waitingSince time.Time
+	isWaiting    bool
 }
 
 type stateSubscriber struct {
@@ -41,7 +60,7 @@ type stateSubscriber struct {
 
 func newThreadState() *threadState {
 	return &threadState{
-		currentState: stateBooting,
+		currentState: stateReserved,
 		subscribers:  []stateSubscriber{},
 		mu:           sync.RWMutex{},
 	}
@@ -68,8 +87,7 @@ func (ts *threadState) compareAndSwap(compareTo stateID, swapTo stateID) bool {
 }
 
 func (ts *threadState) name() string {
-	// TODO: return the actual name for logging/metrics
-	return "state:" + strconv.Itoa(int(ts.get()))
+	return stateNames[ts.get()]
 }
 
 func (ts *threadState) get() stateID {
@@ -123,8 +141,8 @@ func (ts *threadState) waitFor(states ...stateID) {
 func (ts *threadState) requestSafeStateChange(nextState stateID) bool {
 	ts.mu.Lock()
 	switch ts.currentState {
-	// disallow state changes if shutting down
-	case stateShuttingDown, stateDone:
+	// disallow state changes if shutting down or done
+	case stateShuttingDown, stateDone, stateReserved:
 		ts.mu.Unlock()
 		return false
 	// ready and inactive are safe states to transition from
@@ -139,4 +157,35 @@ func (ts *threadState) requestSafeStateChange(nextState stateID) bool {
 	// wait for the state to change to a safe state
 	ts.waitFor(stateReady, stateInactive, stateShuttingDown)
 	return ts.requestSafeStateChange(nextState)
+}
+
+// markAsWaiting hints that the thread reached a stable state and is waiting for requests or shutdown
+func (ts *threadState) markAsWaiting(isWaiting bool) {
+	ts.mu.Lock()
+	if isWaiting {
+		ts.isWaiting = true
+		ts.waitingSince = time.Now()
+	} else {
+		ts.isWaiting = false
+	}
+	ts.mu.Unlock()
+}
+
+// isWaitingState returns true if a thread is waiting for a request or shutdown
+func (ts *threadState) isInWaitingState() bool {
+	ts.mu.RLock()
+	isWaiting := ts.isWaiting
+	ts.mu.RUnlock()
+	return isWaiting
+}
+
+// waitTime returns the time since the thread is waiting in a stable state in ms
+func (ts *threadState) waitTime() int64 {
+	ts.mu.RLock()
+	waitTime := int64(0)
+	if ts.isWaiting {
+		waitTime = time.Now().UnixMilli() - ts.waitingSince.UnixMilli()
+	}
+	ts.mu.RUnlock()
+	return waitTime
 }

@@ -128,6 +128,16 @@ A workaround to using this type of code in worker mode is to restart the worker 
 
 The previous worker snippet allows configuring a maximum number of request to handle by setting an environment variable named `MAX_REQUESTS`.
 
+### Restart Workers Manually
+
+While it's possible to restart workers [on file changes](config.md#watching-for-file-changes), it's also possible to restart all workers
+gracefully via the [Caddy admin API](https://caddyserver.com/docs/api). If the admin is enabled in your
+[Caddyfile](config.md#caddyfile-config), you can ping the restart endpoint with a simple POST request like this:
+
+```console
+curl -X POST http://localhost:2019/frankenphp/workers/restart
+```
+
 ### Worker Failures
 
 If a worker script crashes with a non-zero exit code, FrankenPHP will restart it with an exponential backoff strategy.

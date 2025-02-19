@@ -27,9 +27,12 @@ import (
 
 const defaultDocumentRoot = "public"
 
+var iniError = errors.New("'php_ini' must be in the format: php_ini \"<key>\" \"<value>\"")
+
 func init() {
 	caddy.RegisterModule(FrankenPHPApp{})
 	caddy.RegisterModule(FrankenPHPModule{})
+	caddy.RegisterModule(FrankenPHPAdmin{})
 
 	httpcaddyfile.RegisterGlobalOption("frankenphp", parseGlobalOption)
 
@@ -54,8 +57,12 @@ type workerConfig struct {
 type FrankenPHPApp struct {
 	// NumThreads sets the number of PHP threads to start. Default: 2x the number of available CPUs.
 	NumThreads int `json:"num_threads,omitempty"`
+	// MaxThreads limits how many threads can be started at runtime. Default 2x NumThreads
+	MaxThreads int `json:"max_threads,omitempty"`
 	// Workers configures the worker scripts to start.
 	Workers []workerConfig `json:"workers,omitempty"`
+	// Overwrites the default php ini configuration
+	PhpIni map[string]string `json:"php_ini,omitempty"`
 
 	metrics frankenphp.Metrics
 	logger  *zap.Logger
@@ -80,7 +87,13 @@ func (f *FrankenPHPApp) Provision(ctx caddy.Context) error {
 func (f *FrankenPHPApp) Start() error {
 	repl := caddy.NewReplacer()
 
-	opts := []frankenphp.Option{frankenphp.WithNumThreads(f.NumThreads), frankenphp.WithLogger(f.logger), frankenphp.WithMetrics(f.metrics)}
+	opts := []frankenphp.Option{
+		frankenphp.WithNumThreads(f.NumThreads),
+		frankenphp.WithMaxThreads(f.MaxThreads),
+		frankenphp.WithLogger(f.logger),
+		frankenphp.WithMetrics(f.metrics),
+		frankenphp.WithPhpIni(f.PhpIni),
+	}
 	for _, w := range f.Workers {
 		opts = append(opts, frankenphp.WithWorkers(repl.ReplaceKnown(w.FileName, ""), w.Num, w.Env, w.Watch))
 	}
@@ -126,6 +139,58 @@ func (f *FrankenPHPApp) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 				}
 
 				f.NumThreads = v
+			case "max_threads":
+				if !d.NextArg() {
+					return d.ArgErr()
+				}
+
+				if d.Val() == "auto" {
+					f.MaxThreads = -1
+					continue
+				}
+
+				v, err := strconv.ParseUint(d.Val(), 10, 32)
+				if err != nil {
+					return err
+				}
+
+				f.MaxThreads = int(v)
+			case "php_ini":
+				parseIniLine := func(d *caddyfile.Dispenser) error {
+					key := d.Val()
+					if !d.NextArg() {
+						return iniError
+					}
+					if f.PhpIni == nil {
+						f.PhpIni = make(map[string]string)
+					}
+					f.PhpIni[key] = d.Val()
+					if d.NextArg() {
+						return iniError
+					}
+
+					return nil
+				}
+
+				isBlock := false
+				for d.NextBlock(1) {
+					isBlock = true
+					err := parseIniLine(d)
+					if err != nil {
+						return err
+					}
+				}
+
+				if !isBlock {
+					if !d.NextArg() {
+						return iniError
+					}
+					err := parseIniLine(d)
+					if err != nil {
+						return err
+					}
+				}
+
 			case "worker":
 				wc := workerConfig{}
 				if d.NextArg() {
@@ -190,6 +255,10 @@ func (f *FrankenPHPApp) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 				f.Workers = append(f.Workers, wc)
 			}
 		}
+	}
+
+	if f.MaxThreads > 0 && f.NumThreads > 0 && f.MaxThreads < f.NumThreads {
+		return errors.New("'max_threads' must be greater than or equal to 'num_threads'")
 	}
 
 	return nil
