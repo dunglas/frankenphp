@@ -330,6 +330,26 @@ func TestMetrics(t *testing.T) {
 
 	localhost:`+testPort+` {
 		route {
+			mercure {
+				transport local
+				anonymous
+				publisher_jwt !ChangeMe!
+			}
+
+			php {
+				root ../testdata
+			}
+		}
+	}
+
+	example.com:`+testPort+` {
+		route {
+			mercure {
+				transport local
+				anonymous
+				publisher_jwt !ChangeMe!
+			}
+
 			php {
 				root ../testdata
 			}
@@ -395,6 +415,14 @@ func TestWorkerMetrics(t *testing.T) {
 	}
 
 	localhost:`+testPort+` {
+		route {
+			php {
+				root ../testdata
+			}
+		}
+	}
+
+	example.com:`+testPort+` {
 		route {
 			php {
 				root ../testdata
