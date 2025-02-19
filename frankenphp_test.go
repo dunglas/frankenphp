@@ -45,6 +45,7 @@ type testOptions struct {
 	realServer         bool
 	logger             *zap.Logger
 	initOpts           []frankenphp.Option
+	chdirToTest        bool
 }
 
 func runTest(t *testing.T, test func(func(http.ResponseWriter, *http.Request), *httptest.Server, int), opts *testOptions) {
@@ -57,6 +58,14 @@ func runTest(t *testing.T, test func(func(http.ResponseWriter, *http.Request), *
 
 	cwd, _ := os.Getwd()
 	testDataDir := cwd + "/testdata/"
+
+	if opts.chdirToTest {
+		errChdir := os.Chdir(testDataDir)
+		require.Nil(t, errChdir)
+		defer func() {
+			require.Nil(t, os.Chdir(cwd))
+		}()
+	}
 
 	if opts.logger == nil {
 		opts.logger = zaptest.NewLogger(t)
@@ -976,6 +985,46 @@ func TestFileStreamInWorkerMode(t *testing.T) {
 		resp3 := fetchBody("GET", "http://example.com/file-stream.php", handler)
 		assert.Equal(t, resp3, "word3")
 	}, &testOptions{workerScript: "file-stream.php", nbParallelRequests: 1, nbWorkers: 1})
+}
+
+func TestSearchIniDefault(t *testing.T) {
+	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
+		req := httptest.NewRequest("GET", "http://example.com/php_ini_loaded_file.php", nil)
+		w := httptest.NewRecorder()
+		handler(w, req)
+
+		resp := w.Result()
+		body, _ := io.ReadAll(resp.Body)
+
+		assert.Equal(t, "cwd", string(body))
+	}, &testOptions{chdirToTest: true})
+}
+
+func TestSearchIniIPHPIniIgnoreCwd(t *testing.T) {
+	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
+		req := httptest.NewRequest("GET", "http://example.com/php_ini_loaded_file.php", nil)
+		w := httptest.NewRecorder()
+		handler(w, req)
+
+		resp := w.Result()
+		body, _ := io.ReadAll(resp.Body)
+		bodyString := string(body)
+		// none - if not set global php.ini
+		assert.True(t, bodyString == "none" || bodyString == "global")
+	}, &testOptions{chdirToTest: true, initOpts: []frankenphp.Option{frankenphp.WithPHPIniIgnoreCwd(true)}})
+}
+
+func TestSearchIniPHPIniIgnore(t *testing.T) {
+	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
+		req := httptest.NewRequest("GET", "http://example.com/php_ini_loaded_file.php", nil)
+		w := httptest.NewRecorder()
+		handler(w, req)
+
+		resp := w.Result()
+		body, _ := io.ReadAll(resp.Body)
+
+		assert.Equal(t, "none", string(body))
+	}, &testOptions{chdirToTest: true, initOpts: []frankenphp.Option{frankenphp.WithPHPIniIgnore(true)}})
 }
 
 // To run this fuzzing test use: go test -fuzz FuzzRequest

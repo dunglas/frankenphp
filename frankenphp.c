@@ -968,7 +968,8 @@ static void *php_main(void *arg) {
 #endif
 
   sapi_startup(&frankenphp_sapi_module);
-
+  frankenphp_sapi_module.php_ini_ignore = go_get_php_ini_ignore();
+  frankenphp_sapi_module.php_ini_ignore_cwd = go_get_php_ini_ignore_cwd();
 #ifndef ZEND_MAX_EXECUTION_TIMERS
 #if (PHP_VERSION_ID >= 80300)
   frankenphp_sapi_module.ini_entries = HARDCODED_INI;

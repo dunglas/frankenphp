@@ -15,6 +15,8 @@ type phpMainThread struct {
 	state           *threadState
 	done            chan struct{}
 	numThreads      int
+	phpIniIgnore    bool
+	phpIniIgnoreCwd bool
 	commonHeaders   map[string]*C.zend_string
 	knownServerKeys map[string]*C.zend_string
 }
@@ -25,11 +27,13 @@ var (
 )
 
 // reserve a fixed number of PHP threads on the Go side
-func initPHPThreads(numThreads int) error {
+func initPHPThreads(numThreads int, phpIniIgnore bool, phpIniIgnoreCwd bool) error {
 	mainThread = &phpMainThread{
-		state:      newThreadState(),
-		done:       make(chan struct{}),
-		numThreads: numThreads,
+		state:           newThreadState(),
+		done:            make(chan struct{}),
+		numThreads:      numThreads,
+		phpIniIgnore:    phpIniIgnore,
+		phpIniIgnoreCwd: phpIniIgnoreCwd,
 	}
 	phpThreads = make([]*phpThread, numThreads)
 
@@ -123,4 +127,22 @@ func go_frankenphp_main_thread_is_ready() {
 //export go_frankenphp_shutdown_main_thread
 func go_frankenphp_shutdown_main_thread() {
 	mainThread.state.set(stateDone)
+}
+
+//export go_get_php_ini_ignore
+func go_get_php_ini_ignore() C.int {
+	if mainThread.phpIniIgnore {
+		return C.int(1)
+	} else {
+		return C.int(0)
+	}
+}
+
+//export go_get_php_ini_ignore_cwd
+func go_get_php_ini_ignore_cwd() C.int {
+	if mainThread.phpIniIgnoreCwd {
+		return C.int(1)
+	} else {
+		return C.int(0)
+	}
 }
