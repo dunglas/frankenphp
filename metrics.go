@@ -236,7 +236,7 @@ func (m *PrometheusMetrics) TotalWorkers(string, int) {
 		m.workerQueueDepth = prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Namespace: "frankenphp",
 			Subsystem: sub,
-			Name:      "worker_queue_depth",
+			Name:      "queue_depth",
 		}, basicLabels)
 		if err := m.registry.Register(m.workerQueueDepth); err != nil &&
 			!errors.As(err, &prometheus.AlreadyRegisteredError{}) {
