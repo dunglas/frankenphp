@@ -63,7 +63,7 @@ sudo make install
 
 ## Compiler l'application Go
 
-Vous pouvez maintenant compilez FrankenPHP :
+Vous pouvez maintenant compiler FrankenPHP :
 
 ```console
 curl -L https://github.com/dunglas/frankenphp/archive/refs/heads/main.tar.gz | tar xz
@@ -73,7 +73,7 @@ CGO_CFLAGS=$(php-config --includes) CGO_LDFLAGS="$(php-config --ldflags) $(php-c
 
 ### Utiliser xcaddy
 
-Alternativement, Vous pouvez utiliser [xcaddy](https://github.com/caddyserver/xcaddy) pour compiler FrankenPHP avec [des modules Caddy additionnels](https://caddyserver.com/docs/modules/):
+Alternativement, vous pouvez utiliser [xcaddy](https://github.com/caddyserver/xcaddy) pour compiler FrankenPHP avec [des modules Caddy additionnels](https://caddyserver.com/docs/modules/) :
 
 ```console
 CGO_ENABLED=1 \

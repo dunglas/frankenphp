@@ -339,7 +339,7 @@ func TestMalformedCookie(t *testing.T) {
 		// PHPSESSID should still be present since we remove the null byte
 		assert.Contains(t, string(body), "'PHPSESSID' => '1234'")
 
-		// The cookie in the second headers should be present
+		// The cookie in the second headers should be present,
 		// but it should not be overwritten by following values
 		assert.Contains(t, string(body), "'secondCookie' => 'test'")
 

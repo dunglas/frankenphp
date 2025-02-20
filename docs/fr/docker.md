@@ -42,7 +42,7 @@ RUN install-php-extensions \
 
 FrankenPHP est construit sur Caddy, et tous les [modules Caddy](https://caddyserver.com/docs/modules/) peuvent être utilisés avec FrankenPHP.
 
-La manière la plus simple d'installer des modules Caddy personnalisés est d'utiliser [xcaddy](https://github.com/caddyserver/xcaddy):
+La manière la plus simple d'installer des modules Caddy personnalisés est d'utiliser [xcaddy](https://github.com/caddyserver/xcaddy) :
 
 ```dockerfile
 FROM dunglas/frankenphp:builder AS builder

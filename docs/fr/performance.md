@@ -5,7 +5,7 @@ Cependant, il est possible d'améliorer considérablement les performances en ut
 
 ## Nombre de threads et de workers
 
-Par défaut, FrankenPHP démarre 2 fois plus de threads et de workers (en mode worker) que le nombre de CPU disponibles.
+Par défaut, FrankenPHP démarre deux fois plus de threads et de workers (en mode worker) que le nombre de CPU disponibles.
 
 Les valeurs appropriées dépendent fortement de la manière dont votre application est écrite, de ce qu'elle fait et de votre matériel.
 Nous recommandons vivement de modifier ces valeurs.
@@ -53,7 +53,7 @@ Pour plus de détails, [la page de documentation Go dédiée à ce sujet](https:
 
 ## `file_server`
 
-Par défaut, la directive `php_server` met automatiquement en place un serveur de fichiers pour
+Par défaut, la directive `php_server` met automatiquement en place un serveur de fichiers
 pour servir les fichiers statiques (assets) stockés dans le répertoire racine.
 
 Cette fonctionnalité est pratique, mais a un coût.
