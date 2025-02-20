@@ -146,86 +146,102 @@ func (m *PrometheusMetrics) TotalWorkers(string, int) {
 	const ns, sub = "frankenphp", "worker"
 	basicLabels := []string{"worker"}
 
-	m.totalWorkers = prometheus.NewGaugeVec(prometheus.GaugeOpts{
-		Namespace: ns,
-		Name:      "total_workers",
-		Help:      "Total number of PHP workers for this worker",
-	}, basicLabels)
-	if err := m.registry.Register(m.totalWorkers); err != nil &&
-		!errors.As(err, &prometheus.AlreadyRegisteredError{}) {
-		panic(err)
+	if m.totalWorkers == nil {
+		m.totalWorkers = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Namespace: ns,
+			Name:      "total_workers",
+			Help:      "Total number of PHP workers for this worker",
+		}, basicLabels)
+		if err := m.registry.Register(m.totalWorkers); err != nil &&
+			!errors.As(err, &prometheus.AlreadyRegisteredError{}) {
+			panic(err)
+		}
 	}
 
-	m.readyWorkers = prometheus.NewGaugeVec(prometheus.GaugeOpts{
-		Namespace: ns,
-		Name:      "ready_workers",
-		Help:      "Running workers that have successfully called frankenphp_handle_request at least once",
-	}, basicLabels)
-	if err := m.registry.Register(m.readyWorkers); err != nil &&
-		!errors.As(err, &prometheus.AlreadyRegisteredError{}) {
-		panic(err)
+	if m.readyWorkers == nil {
+		m.readyWorkers = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Namespace: ns,
+			Name:      "ready_workers",
+			Help:      "Running workers that have successfully called frankenphp_handle_request at least once",
+		}, basicLabels)
+		if err := m.registry.Register(m.readyWorkers); err != nil &&
+			!errors.As(err, &prometheus.AlreadyRegisteredError{}) {
+			panic(err)
+		}
 	}
 
-	m.busyWorkers = prometheus.NewGaugeVec(prometheus.GaugeOpts{
-		Namespace: ns,
-		Name:      "busy_workers",
-		Help:      "Number of busy PHP workers for this worker",
-	}, basicLabels)
-	if err := m.registry.Register(m.busyWorkers); err != nil &&
-		!errors.As(err, &prometheus.AlreadyRegisteredError{}) {
-		panic(err)
+	if m.busyWorkers == nil {
+		m.busyWorkers = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Namespace: ns,
+			Name:      "busy_workers",
+			Help:      "Number of busy PHP workers for this worker",
+		}, basicLabels)
+		if err := m.registry.Register(m.busyWorkers); err != nil &&
+			!errors.As(err, &prometheus.AlreadyRegisteredError{}) {
+			panic(err)
+		}
 	}
 
-	m.workerCrashes = prometheus.NewCounterVec(prometheus.CounterOpts{
-		Namespace: ns,
-		Subsystem: sub,
-		Name:      "crashes",
-		Help:      "Number of PHP worker crashes for this worker",
-	}, basicLabels)
-	if err := m.registry.Register(m.workerCrashes); err != nil &&
-		!errors.As(err, &prometheus.AlreadyRegisteredError{}) {
-		panic(err)
+	if m.workerCrashes == nil {
+		m.workerCrashes = prometheus.NewCounterVec(prometheus.CounterOpts{
+			Namespace: ns,
+			Subsystem: sub,
+			Name:      "crashes",
+			Help:      "Number of PHP worker crashes for this worker",
+		}, basicLabels)
+		if err := m.registry.Register(m.workerCrashes); err != nil &&
+			!errors.As(err, &prometheus.AlreadyRegisteredError{}) {
+			panic(err)
+		}
 	}
 
-	m.workerRestarts = prometheus.NewCounterVec(prometheus.CounterOpts{
-		Namespace: ns,
-		Subsystem: sub,
-		Name:      "restarts",
-		Help:      "Number of PHP worker restarts for this worker",
-	}, basicLabels)
-	if err := m.registry.Register(m.workerRestarts); err != nil &&
-		!errors.As(err, &prometheus.AlreadyRegisteredError{}) {
-		panic(err)
+	if m.workerRestarts == nil {
+		m.workerRestarts = prometheus.NewCounterVec(prometheus.CounterOpts{
+			Namespace: ns,
+			Subsystem: sub,
+			Name:      "restarts",
+			Help:      "Number of PHP worker restarts for this worker",
+		}, basicLabels)
+		if err := m.registry.Register(m.workerRestarts); err != nil &&
+			!errors.As(err, &prometheus.AlreadyRegisteredError{}) {
+			panic(err)
+		}
 	}
 
-	m.workerRequestTime = prometheus.NewCounterVec(prometheus.CounterOpts{
-		Namespace: ns,
-		Subsystem: sub,
-		Name:      "request_time",
-	}, basicLabels)
-	if err := m.registry.Register(m.workerRequestTime); err != nil &&
-		!errors.As(err, &prometheus.AlreadyRegisteredError{}) {
-		panic(err)
+	if m.workerRequestTime == nil {
+		m.workerRequestTime = prometheus.NewCounterVec(prometheus.CounterOpts{
+			Namespace: ns,
+			Subsystem: sub,
+			Name:      "request_time",
+		}, basicLabels)
+		if err := m.registry.Register(m.workerRequestTime); err != nil &&
+			!errors.As(err, &prometheus.AlreadyRegisteredError{}) {
+			panic(err)
+		}
 	}
 
-	m.workerRequestCount = prometheus.NewCounterVec(prometheus.CounterOpts{
-		Namespace: ns,
-		Subsystem: sub,
-		Name:      "request_count",
-	}, basicLabels)
-	if err := m.registry.Register(m.workerRequestCount); err != nil &&
-		!errors.As(err, &prometheus.AlreadyRegisteredError{}) {
-		panic(err)
+	if m.workerRequestCount == nil {
+		m.workerRequestCount = prometheus.NewCounterVec(prometheus.CounterOpts{
+			Namespace: ns,
+			Subsystem: sub,
+			Name:      "request_count",
+		}, basicLabels)
+		if err := m.registry.Register(m.workerRequestCount); err != nil &&
+			!errors.As(err, &prometheus.AlreadyRegisteredError{}) {
+			panic(err)
+		}
 	}
 
-	m.workerQueueDepth = prometheus.NewGaugeVec(prometheus.GaugeOpts{
-		Namespace: "frankenphp",
-		Subsystem: sub,
-		Name:      "worker_queue_depth",
-	}, basicLabels)
-	if err := m.registry.Register(m.workerQueueDepth); err != nil &&
-		!errors.As(err, &prometheus.AlreadyRegisteredError{}) {
-		panic(err)
+	if m.workerQueueDepth == nil {
+		m.workerQueueDepth = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Namespace: "frankenphp",
+			Subsystem: sub,
+			Name:      "worker_queue_depth",
+		}, basicLabels)
+		if err := m.registry.Register(m.workerQueueDepth); err != nil &&
+			!errors.As(err, &prometheus.AlreadyRegisteredError{}) {
+			panic(err)
+		}
 	}
 }
 
@@ -288,34 +304,42 @@ func (m *PrometheusMetrics) Shutdown() {
 
 	if m.totalWorkers != nil {
 		m.registry.Unregister(m.totalWorkers)
+		m.totalWorkers = nil
 	}
 
 	if m.busyWorkers != nil {
 		m.registry.Unregister(m.busyWorkers)
+		m.busyWorkers = nil
 	}
 
 	if m.workerRequestTime != nil {
 		m.registry.Unregister(m.workerRequestTime)
+		m.workerRequestTime = nil
 	}
 
 	if m.workerRequestCount != nil {
 		m.registry.Unregister(m.workerRequestCount)
+		m.workerRequestCount = nil
 	}
 
 	if m.workerCrashes != nil {
 		m.registry.Unregister(m.workerCrashes)
+		m.workerCrashes = nil
 	}
 
 	if m.workerRestarts != nil {
 		m.registry.Unregister(m.workerRestarts)
+		m.workerRestarts = nil
 	}
 
 	if m.readyWorkers != nil {
 		m.registry.Unregister(m.readyWorkers)
+		m.readyWorkers = nil
 	}
 
 	if m.workerQueueDepth != nil {
 		m.registry.Unregister(m.workerQueueDepth)
+		m.workerQueueDepth = nil
 	}
 
 	m.totalThreads = prometheus.NewCounter(prometheus.CounterOpts{
@@ -326,14 +350,6 @@ func (m *PrometheusMetrics) Shutdown() {
 		Name: "frankenphp_busy_threads",
 		Help: "Number of busy PHP threads",
 	})
-	m.totalWorkers = nil
-	m.busyWorkers = nil
-	m.workerRequestTime = nil
-	m.workerRequestCount = nil
-	m.workerRestarts = nil
-	m.workerCrashes = nil
-	m.readyWorkers = nil
-	m.workerQueueDepth = nil
 	m.queueDepth = prometheus.NewGauge(prometheus.GaugeOpts{
 		Name: "frankenphp_queue_depth",
 		Help: "Number of regular queued requests",
