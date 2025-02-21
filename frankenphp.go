@@ -714,13 +714,6 @@ func freeArgs(argv []*C.char) {
 	}
 }
 
-func executePHPFunction(functionName string) bool {
-	cFunctionName := C.CString(functionName)
-	defer C.free(unsafe.Pointer(cFunctionName))
-
-	return C.frankenphp_execute_php_function(cFunctionName) == 1
-}
-
 // Ensure that the request path does not contain null bytes
 func requestIsValid(r *http.Request, rw http.ResponseWriter) bool {
 	if !strings.Contains(r.URL.Path, "\x00") {
