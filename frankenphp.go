@@ -331,8 +331,7 @@ func updateServerContext(thread *phpThread, fc *FrankenPHPContext, isWorkerReque
 	cRequestUri := thread.pinCString(request.URL.RequestURI())
 
 	ret := C.frankenphp_update_server_context(
-		C.bool(isWorkerRequest),
-		C.bool(fc.responseWriter == nil),
+		C.bool(isWorkerRequest || fc.responseWriter == nil),
 
 		cMethod,
 		cQueryString,

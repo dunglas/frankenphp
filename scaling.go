@@ -128,6 +128,7 @@ func scaleWorkerThread(worker *worker) bool {
 		if c := logger.Check(zapcore.WarnLevel, "could not increase max_threads, consider raising this limit"); c != nil {
 			c.Write(zap.String("worker", worker.fileName), zap.Error(err))
 		}
+		return false
 	}
 
 	autoScaledThreads = append(autoScaledThreads, thread)
@@ -141,7 +142,7 @@ func scaleRegularThread() bool {
 	defer scalingMu.Unlock()
 
 	if !mainThread.state.is(stateReady) {
-		return false
+		return true
 	}
 
 	// probe CPU usage before scaling
@@ -154,6 +155,7 @@ func scaleRegularThread() bool {
 		if c := logger.Check(zapcore.WarnLevel, "could not increase max_threads, consider raising this limit"); c != nil {
 			c.Write(zap.Error(err))
 		}
+		return false
 	}
 
 	autoScaledThreads = append(autoScaledThreads, thread)

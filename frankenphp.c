@@ -72,12 +72,11 @@ frankenphp_config frankenphp_get_config() {
 
 bool should_filter_var = 0;
 __thread uintptr_t thread_index;
-__thread zval *os_environment = NULL;
 __thread bool is_worker_thread = false;
-__thread bool worker_ready = false;
+__thread zval *os_environment = NULL;
 
 static void frankenphp_free_request_context() {
-  if (SG(request_info).cookie_data != NULL){
+  if (SG(request_info).cookie_data != NULL) {
     free(SG(request_info).cookie_data);
     SG(request_info).cookie_data = NULL;
   }
@@ -165,6 +164,15 @@ PHPAPI void get_full_env(zval *track_vars_array) {
     // add to the associative array
     add_assoc_str_ex(track_vars_array, key.data, key.len, val_str);
   }
+}
+
+bool frankenphp_shutdown_dummy_request(void) {
+  if (SG(server_context) == NULL) {
+    return false;
+  }
+  frankenphp_worker_request_shutdown();
+
+  return true;
 }
 
 /* Adapted from php_request_startup() */
@@ -393,19 +401,13 @@ PHP_FUNCTION(frankenphp_handle_request) {
     RETURN_THROWS();
   }
 
-  if (!worker_ready) {
-    /* Clean the first dummy request created to initialize the worker */
-    frankenphp_worker_request_shutdown();
-    worker_ready = true;
-  }
-
 #ifdef ZEND_MAX_EXECUTION_TIMERS
   /* Disable timeouts while waiting for a request to handle */
   zend_unset_timeout();
 #endif
 
   bool request = go_frankenphp_worker_handle_request_start(thread_index);
-  if (!request){
+  if (!request) {
     RETURN_FALSE;
   }
   if (frankenphp_worker_request_startup() == FAILURE
@@ -507,17 +509,14 @@ static void frankenphp_request_shutdown() {
 }
 
 int frankenphp_update_server_context(
-    bool is_worker_request, bool is_fake_request,
+    bool is_worker_request,
 
     const char *request_method, char *query_string, zend_long content_length,
     char *path_translated, char *request_uri, const char *content_type,
     char *auth_user, char *auth_password, int proto_num) {
 
-  if (!is_worker_request){
-    worker_ready = false;
-  }
-  SG(server_context) = (void *) 1;
-  is_worker_thread = is_worker_request || is_fake_request;
+  SG(server_context) = (void *)1;
+  is_worker_thread = is_worker_request;
 
   // It is not reset by zend engine, set it to 200.
   SG(sapi_headers).http_response_code = 200;
@@ -576,7 +575,7 @@ static int frankenphp_send_headers(sapi_headers_struct *sapi_headers) {
 
   bool success = go_write_headers(thread_index, status, &sapi_headers->headers);
   if (success) {
-	return SAPI_HEADER_SENT_SUCCESSFULLY;
+    return SAPI_HEADER_SENT_SUCCESSFULLY;
   }
 
   return SAPI_HEADER_SEND_FAILED;

@@ -14,13 +14,13 @@ import (
 // executes the PHP worker script in a loop
 // implements the threadHandler interface
 type workerThread struct {
-	state         *threadState
-	thread        *phpThread
-	worker        *worker
-	fakeContext   *FrankenPHPContext
-	workerContext *FrankenPHPContext
-	backoff       *exponentialBackoff
-	inRequest     bool // true if the worker is currently handling a request
+	state              *threadState
+	thread             *phpThread
+	worker             *worker
+	fakeContext        *FrankenPHPContext
+	workerContext      *FrankenPHPContext
+	backoff            *exponentialBackoff
+	hasHandledRequests bool // true if the worker is currently handling a request
 }
 
 func convertToWorkerThread(thread *phpThread, worker *worker) {
@@ -116,6 +116,7 @@ func tearDownWorkerScript(handler *workerThread, exitStatus int) {
 		// TODO: make the max restart configurable
 		metrics.StopWorker(worker.fileName, StopReasonRestart)
 		handler.backoff.recordSuccess()
+		handler.hasHandledRequests = false
 		if c := logger.Check(zapcore.DebugLevel, "restarting"); c != nil {
 			c.Write(zap.String("worker", worker.fileName))
 		}
@@ -124,7 +125,7 @@ func tearDownWorkerScript(handler *workerThread, exitStatus int) {
 
 	// on exit status 1 we apply an exponential backoff when restarting
 	metrics.StopWorker(worker.fileName, StopReasonCrash)
-	if !handler.inRequest && handler.backoff.recordFailure() {
+	if !handler.hasHandledRequests && handler.backoff.recordFailure() {
 		if !watcherIsEnabled {
 			logger.Panic("too many consecutive worker failures", zap.String("worker", worker.fileName), zap.Int("failures", handler.backoff.failureCount))
 		}
@@ -141,13 +142,18 @@ func (handler *workerThread) waitForWorkerRequest() bool {
 		c.Write(zap.String("worker", handler.worker.fileName))
 	}
 
+	if !handler.hasHandledRequests {
+		// Clean the first dummy request created to initialize the worker
+		if !C.frankenphp_shutdown_dummy_request() {
+			panic("Not in CGI context")
+		}
+	}
+
 	// worker threads are 'ready' only after they first reach frankenphp_handle_request()
 	if handler.state.is(stateTransitionComplete) {
 		metrics.ReadyWorker(handler.worker.fileName)
 		handler.state.set(stateReady)
 	}
-
-	handler.state.markAsWaiting(true)
 
 	handler.state.markAsWaiting(true)
 
@@ -175,7 +181,7 @@ func (handler *workerThread) waitForWorkerRequest() bool {
 	if c := logger.Check(zapcore.DebugLevel, "request handling started"); c != nil {
 		c.Write(zap.String("worker", handler.worker.fileName), zap.String("url", fc.request.RequestURI))
 	}
-	handler.inRequest = true
+	handler.hasHandledRequests = true
 
 	if err := updateServerContext(handler.thread, fc, true); err != nil {
 		// Unexpected error or invalid request
