@@ -74,18 +74,6 @@ func addRegularThread() (*phpThread, error) {
 	return thread, nil
 }
 
-func removeRegularThread() error {
-	regularThreadMu.RLock()
-	if len(regularThreads) <= 1 {
-		regularThreadMu.RUnlock()
-		return CannotRemoveLastThreadError
-	}
-	thread := regularThreads[len(regularThreads)-1]
-	regularThreadMu.RUnlock()
-	thread.shutdown()
-	return nil
-}
-
 func addWorkerThread(worker *worker) (*phpThread, error) {
 	thread := getInactivePHPThread()
 	if thread == nil {
@@ -94,19 +82,6 @@ func addWorkerThread(worker *worker) (*phpThread, error) {
 	convertToWorkerThread(thread, worker)
 	thread.state.waitFor(stateReady, stateShuttingDown, stateReserved)
 	return thread, nil
-}
-
-func removeWorkerThread(worker *worker) error {
-	worker.threadMutex.RLock()
-	if len(worker.threads) <= 1 {
-		worker.threadMutex.RUnlock()
-		return CannotRemoveLastThreadError
-	}
-	thread := worker.threads[len(worker.threads)-1]
-	worker.threadMutex.RUnlock()
-	thread.shutdown()
-
-	return nil
 }
 
 // scaleWorkerThread adds a worker PHP thread automatically
