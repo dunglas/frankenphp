@@ -150,8 +150,10 @@ func (handler *workerThread) waitForWorkerRequest() bool {
 		c.Write(zap.String("worker", handler.worker.fileName))
 	}
 
-	if handler.state.compareAndSwap(stateTransitionComplete, stateReady) {
+	// worker threads are 'ready' only after they first reach frankenphp_handle_request()
+	if handler.state.is(stateTransitionComplete) {
 		metrics.ReadyWorker(handler.worker.fileName)
+		handler.state.set(stateReady)
 	}
 
 	handler.state.markAsWaiting(true)
