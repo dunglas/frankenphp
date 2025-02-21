@@ -3,7 +3,6 @@ package frankenphp
 // #include "frankenphp.h"
 import "C"
 import (
-	"net/http"
 	"path/filepath"
 	"time"
 
@@ -18,8 +17,8 @@ type workerThread struct {
 	state         *threadState
 	thread        *phpThread
 	worker        *worker
-	fakeRequest   *http.Request
-	workerRequest *http.Request
+	fakeContext   *FrankenPHPContext
+	workerContext *FrankenPHPContext
 	backoff       *exponentialBackoff
 	inRequest     bool // true if the worker is currently handling a request
 }
@@ -63,12 +62,12 @@ func (handler *workerThread) afterScriptExecution(exitStatus int) {
 	tearDownWorkerScript(handler, exitStatus)
 }
 
-func (handler *workerThread) getActiveRequest() *http.Request {
-	if handler.workerRequest != nil {
-		return handler.workerRequest
+func (handler *workerThread) getRequestContext() *FrankenPHPContext {
+	if handler.workerContext != nil {
+		return handler.workerContext
 	}
 
-	return handler.fakeRequest
+	return handler.fakeContext
 }
 
 func (handler *workerThread) name() string {
@@ -80,13 +79,8 @@ func setupWorkerScript(handler *workerThread, worker *worker) {
 	metrics.StartWorker(worker.fileName)
 
 	// Create a dummy request to set up the worker
-	r, err := http.NewRequest(http.MethodGet, filepath.Base(worker.fileName), nil)
-	if err != nil {
-		panic(err)
-	}
-
-	r, err = NewRequestWithContext(
-		r,
+	fc, err := newFakeContext(
+		filepath.Base(worker.fileName),
 		WithRequestDocumentRoot(filepath.Dir(worker.fileName), false),
 		WithRequestPreparedEnv(worker.env),
 	)
@@ -94,11 +88,11 @@ func setupWorkerScript(handler *workerThread, worker *worker) {
 		panic(err)
 	}
 
-	if err := updateServerContext(handler.thread, r, true, false); err != nil {
+	if err := updateServerContext(handler.thread, fc, false); err != nil {
 		panic(err)
 	}
 
-	handler.fakeRequest = r
+	handler.fakeContext = fc
 	if c := logger.Check(zapcore.DebugLevel, "starting"); c != nil {
 		c.Write(zap.String("worker", worker.fileName), zap.Int("thread", handler.thread.threadIndex))
 	}
@@ -107,15 +101,14 @@ func setupWorkerScript(handler *workerThread, worker *worker) {
 func tearDownWorkerScript(handler *workerThread, exitStatus int) {
 	// if the worker request is not nil, the script might have crashed
 	// make sure to close the worker request context
-	if handler.workerRequest != nil {
-		fc := handler.workerRequest.Context().Value(contextKey).(*FrankenPHPContext)
-		maybeCloseContext(fc)
-		handler.workerRequest = nil
+	if handler.workerContext != nil {
+		handler.workerContext.closeContext()
+		handler.workerContext = nil
 	}
 
-	fc := handler.fakeRequest.Context().Value(contextKey).(*FrankenPHPContext)
+	fc := handler.fakeContext
 	fc.exitStatus = exitStatus
-	handler.fakeRequest = nil
+	handler.fakeContext = nil
 
 	// on exit status 0 we just run the worker script again
 	worker := handler.worker
@@ -128,8 +121,6 @@ func tearDownWorkerScript(handler *workerThread, exitStatus int) {
 		}
 		return
 	}
-
-	// TODO: error status
 
 	// on exit status 1 we apply an exponential backoff when restarting
 	metrics.StopWorker(worker.fileName, StopReasonCrash)
@@ -158,7 +149,9 @@ func (handler *workerThread) waitForWorkerRequest() bool {
 
 	handler.state.markAsWaiting(true)
 
-	var r *http.Request
+	handler.state.markAsWaiting(true)
+
+	var fc *FrankenPHPContext
 	select {
 	case <-handler.thread.drainChan:
 		if c := logger.Check(zapcore.DebugLevel, "shutting down"); c != nil {
@@ -172,27 +165,25 @@ func (handler *workerThread) waitForWorkerRequest() bool {
 		}
 
 		return false
-	case r = <-handler.thread.requestChan:
-	case r = <-handler.worker.requestChan:
+	case fc = <-handler.thread.requestChan:
+	case fc = <-handler.worker.requestChan:
 	}
 
-	handler.workerRequest = r
+	handler.workerContext = fc
 	handler.state.markAsWaiting(false)
 
 	if c := logger.Check(zapcore.DebugLevel, "request handling started"); c != nil {
-		c.Write(zap.String("worker", handler.worker.fileName), zap.String("url", r.RequestURI))
+		c.Write(zap.String("worker", handler.worker.fileName), zap.String("url", fc.request.RequestURI))
 	}
 	handler.inRequest = true
 
-	if err := updateServerContext(handler.thread, r, false, true); err != nil {
+	if err := updateServerContext(handler.thread, fc, true); err != nil {
 		// Unexpected error or invalid request
 		if c := logger.Check(zapcore.DebugLevel, "unexpected error"); c != nil {
-			c.Write(zap.String("worker", handler.worker.fileName), zap.String("url", r.RequestURI), zap.Error(err))
+			c.Write(zap.String("worker", handler.worker.fileName), zap.String("url", fc.request.RequestURI), zap.Error(err))
 		}
-		fc := r.Context().Value(contextKey).(*FrankenPHPContext)
-		rejectRequest(fc.responseWriter, err.Error())
-		maybeCloseContext(fc)
-		handler.workerRequest = nil
+		fc.rejectBadRequest(err.Error())
+		handler.workerContext = nil
 
 		return handler.waitForWorkerRequest()
 	}
@@ -213,14 +204,13 @@ func go_frankenphp_worker_handle_request_start(threadIndex C.uintptr_t) C.bool {
 //export go_frankenphp_finish_worker_request
 func go_frankenphp_finish_worker_request(threadIndex C.uintptr_t) {
 	thread := phpThreads[threadIndex]
-	r := thread.getActiveRequest()
-	fc := r.Context().Value(contextKey).(*FrankenPHPContext)
+	fc := thread.getRequestContext()
 
-	maybeCloseContext(fc)
-	thread.handler.(*workerThread).workerRequest = nil
+	fc.closeContext()
+	thread.handler.(*workerThread).workerContext = nil
 
 	if c := fc.logger.Check(zapcore.DebugLevel, "request handling finished"); c != nil {
-		c.Write(zap.String("worker", fc.scriptFilename), zap.String("url", r.RequestURI))
+		c.Write(zap.String("worker", fc.scriptFilename), zap.String("url", fc.request.RequestURI))
 	}
 }
 
@@ -228,11 +218,10 @@ func go_frankenphp_finish_worker_request(threadIndex C.uintptr_t) {
 //
 //export go_frankenphp_finish_php_request
 func go_frankenphp_finish_php_request(threadIndex C.uintptr_t) {
-	r := phpThreads[threadIndex].getActiveRequest()
-	fc := r.Context().Value(contextKey).(*FrankenPHPContext)
-	maybeCloseContext(fc)
+	fc := phpThreads[threadIndex].getRequestContext()
+	fc.closeContext()
 
 	if c := fc.logger.Check(zapcore.DebugLevel, "request handling finished"); c != nil {
-		c.Write(zap.String("url", r.RequestURI))
+		c.Write(zap.String("url", fc.request.RequestURI))
 	}
 }

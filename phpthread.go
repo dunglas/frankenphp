@@ -3,7 +3,6 @@ package frankenphp
 // #include "frankenphp.h"
 import "C"
 import (
-	"net/http"
 	"runtime"
 	"sync"
 	"unsafe"
@@ -16,7 +15,7 @@ import (
 type phpThread struct {
 	runtime.Pinner
 	threadIndex int
-	requestChan chan *http.Request
+	requestChan chan *FrankenPHPContext
 	drainChan   chan struct{}
 	handlerMu   sync.Mutex
 	handler     threadHandler
@@ -28,13 +27,13 @@ type threadHandler interface {
 	name() string
 	beforeScriptExecution() string
 	afterScriptExecution(exitStatus int)
-	getActiveRequest() *http.Request
+	getRequestContext() *FrankenPHPContext
 }
 
 func newPHPThread(threadIndex int) *phpThread {
 	return &phpThread{
 		threadIndex: threadIndex,
-		requestChan: make(chan *http.Request),
+		requestChan: make(chan *FrankenPHPContext),
 		state:       newThreadState(),
 	}
 }
@@ -57,6 +56,7 @@ func (thread *phpThread) boot() {
 	if !C.frankenphp_new_php_thread(C.uintptr_t(thread.threadIndex)) {
 		logger.Panic("unable to create thread", zap.Int("threadIndex", thread.threadIndex))
 	}
+
 	thread.state.waitFor(stateInactive)
 }
 
@@ -101,8 +101,15 @@ func (thread *phpThread) transitionToNewHandler() string {
 	return thread.handler.beforeScriptExecution()
 }
 
-func (thread *phpThread) getActiveRequest() *http.Request {
-	return thread.handler.getActiveRequest()
+func (thread *phpThread) getRequestContext() *FrankenPHPContext {
+	return thread.handler.getRequestContext()
+}
+
+func (thread *phpThread) name() string {
+	thread.handlerMu.Lock()
+	name := thread.handler.name()
+	thread.handlerMu.Unlock()
+	return name
 }
 
 // Pin a string that is not null-terminated

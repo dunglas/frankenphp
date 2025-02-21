@@ -50,7 +50,7 @@ int frankenphp_new_main_thread(int num_threads);
 bool frankenphp_new_php_thread(uintptr_t thread_index);
 
 int frankenphp_update_server_context(
-    bool create, bool has_main_request, bool has_active_request,
+    bool is_worker_request, bool is_fake_request,
 
     const char *request_method, char *query_string, zend_long content_length,
     char *path_translated, char *request_uri, const char *content_type,

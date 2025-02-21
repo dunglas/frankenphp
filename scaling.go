@@ -74,6 +74,18 @@ func addRegularThread() (*phpThread, error) {
 	return thread, nil
 }
 
+func removeRegularThread() error {
+	regularThreadMu.RLock()
+	if len(regularThreads) <= 1 {
+		regularThreadMu.RUnlock()
+		return CannotRemoveLastThreadError
+	}
+	thread := regularThreads[len(regularThreads)-1]
+	regularThreadMu.RUnlock()
+	thread.shutdown()
+	return nil
+}
+
 func addWorkerThread(worker *worker) (*phpThread, error) {
 	thread := getInactivePHPThread()
 	if thread == nil {
@@ -84,18 +96,31 @@ func addWorkerThread(worker *worker) (*phpThread, error) {
 	return thread, nil
 }
 
+func removeWorkerThread(worker *worker) error {
+	worker.threadMutex.RLock()
+	if len(worker.threads) <= 1 {
+		worker.threadMutex.RUnlock()
+		return CannotRemoveLastThreadError
+	}
+	thread := worker.threads[len(worker.threads)-1]
+	worker.threadMutex.RUnlock()
+	thread.shutdown()
+
+	return nil
+}
+
 // scaleWorkerThread adds a worker PHP thread automatically
-func scaleWorkerThread(worker *worker) {
+func scaleWorkerThread(worker *worker) bool {
 	scalingMu.Lock()
 	defer scalingMu.Unlock()
 
 	if !mainThread.state.is(stateReady) {
-		return
+		return true
 	}
 
 	// probe CPU usage before scaling
 	if !cpu.ProbeCPUs(cpuProbeTime, maxCpuUsageForScaling, mainThread.done) {
-		return
+		return false
 	}
 
 	thread, err := addWorkerThread(worker)
@@ -103,24 +128,25 @@ func scaleWorkerThread(worker *worker) {
 		if c := logger.Check(zapcore.WarnLevel, "could not increase max_threads, consider raising this limit"); c != nil {
 			c.Write(zap.String("worker", worker.fileName), zap.Error(err))
 		}
-		return
 	}
 
 	autoScaledThreads = append(autoScaledThreads, thread)
+
+	return true
 }
 
 // scaleRegularThread adds a regular PHP thread automatically
-func scaleRegularThread() {
+func scaleRegularThread() bool {
 	scalingMu.Lock()
 	defer scalingMu.Unlock()
 
 	if !mainThread.state.is(stateReady) {
-		return
+		return false
 	}
 
 	// probe CPU usage before scaling
 	if !cpu.ProbeCPUs(cpuProbeTime, maxCpuUsageForScaling, mainThread.done) {
-		return
+		return false
 	}
 
 	thread, err := addRegularThread()
@@ -128,10 +154,11 @@ func scaleRegularThread() {
 		if c := logger.Check(zapcore.WarnLevel, "could not increase max_threads, consider raising this limit"); c != nil {
 			c.Write(zap.Error(err))
 		}
-		return
 	}
 
 	autoScaledThreads = append(autoScaledThreads, thread)
+
+	return true
 }
 
 func startUpscalingThreads(maxScaledThreads int, scale chan *FrankenPHPContext, done chan struct{}) {
@@ -165,9 +192,13 @@ func startUpscalingThreads(maxScaledThreads int, scale chan *FrankenPHPContext, 
 
 			// if the request has been stalled long enough, scale
 			if worker, ok := workers[fc.scriptFilename]; ok {
-				scaleWorkerThread(worker)
+				if !scaleWorkerThread(worker) {
+					time.Sleep(downScaleCheckTime)
+				}
 			} else {
-				scaleRegularThread()
+				if !scaleRegularThread() {
+					time.Sleep(downScaleCheckTime)
+				}
 			}
 		case <-done:
 			return

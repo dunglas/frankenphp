@@ -1,7 +1,6 @@
 package frankenphp
 
 import (
-	"net/http"
 	"sync"
 )
 
@@ -9,15 +8,15 @@ import (
 // executes PHP scripts in a web context
 // implements the threadHandler interface
 type regularThread struct {
-	state         *threadState
-	thread        *phpThread
-	activeRequest *http.Request
+	state          *threadState
+	thread         *phpThread
+	requestContext *FrankenPHPContext
 }
 
 var (
 	regularThreads     []*phpThread
 	regularThreadMu    = &sync.RWMutex{}
-	regularRequestChan chan *http.Request
+	regularRequestChan chan *FrankenPHPContext
 )
 
 func convertToRegularThread(thread *phpThread) {
@@ -52,8 +51,8 @@ func (handler *regularThread) afterScriptExecution(exitStatus int) {
 	handler.afterRequest(exitStatus)
 }
 
-func (handler *regularThread) getActiveRequest() *http.Request {
-	return handler.activeRequest
+func (handler *regularThread) getRequestContext() *FrankenPHPContext {
+	return handler.requestContext
 }
 
 func (handler *regularThread) name() string {
@@ -63,20 +62,19 @@ func (handler *regularThread) name() string {
 func (handler *regularThread) waitForRequest() string {
 	handler.state.markAsWaiting(true)
 
-	var r *http.Request
+	var fc *FrankenPHPContext
 	select {
 	case <-handler.thread.drainChan:
 		// go back to beforeScriptExecution
 		return handler.beforeScriptExecution()
-	case r = <-regularRequestChan:
+	case fc = <-regularRequestChan:
 	}
 
-	handler.activeRequest = r
+	handler.requestContext = fc
 	handler.state.markAsWaiting(false)
-	fc := r.Context().Value(contextKey).(*FrankenPHPContext)
 
-	if err := updateServerContext(handler.thread, r, true, false); err != nil {
-		rejectRequest(fc.responseWriter, err.Error())
+	if err := updateServerContext(handler.thread, fc, false); err != nil {
+		fc.rejectBadRequest(err.Error())
 		handler.afterRequest(0)
 		handler.thread.Unpin()
 		// go back to beforeScriptExecution
@@ -88,16 +86,16 @@ func (handler *regularThread) waitForRequest() string {
 }
 
 func (handler *regularThread) afterRequest(exitStatus int) {
-	fc := handler.activeRequest.Context().Value(contextKey).(*FrankenPHPContext)
+	fc := handler.requestContext
 	fc.exitStatus = exitStatus
-	maybeCloseContext(fc)
-	handler.activeRequest = nil
+	fc.closeContext()
+	handler.requestContext = nil
 }
 
-func handleRequestWithRegularPHPThreads(r *http.Request, fc *FrankenPHPContext) {
+func handleRequestWithRegularPHPThreads(fc *FrankenPHPContext) {
 	metrics.StartRequest()
 	select {
-	case regularRequestChan <- r:
+	case regularRequestChan <- fc:
 		// a thread was available to handle the request immediately
 		<-fc.done
 		metrics.StopRequest()
@@ -110,13 +108,22 @@ func handleRequestWithRegularPHPThreads(r *http.Request, fc *FrankenPHPContext) 
 	metrics.QueuedRequest()
 	for {
 		select {
-		case regularRequestChan <- r:
+		case regularRequestChan <- fc:
 			metrics.DequeuedRequest()
 			<-fc.done
 			metrics.StopRequest()
 			return
 		case scaleChan <- fc:
 			// the request has triggered scaling, continue to wait for a thread
+			continue
+		case <-fc.request.Context().Done():
+			// the request has been canceled by the client
+			return
+		case <-fc.busyTimeout():
+			// the request has benn stalled for longer than the maximum execution time
+			fc.rejectBadGateway()
+
+			return
 		}
 	}
 }
