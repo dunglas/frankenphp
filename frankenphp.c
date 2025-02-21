@@ -151,6 +151,16 @@ static void frankenphp_worker_request_shutdown() {
   zend_set_memory_limit(PG(memory_limit));
 }
 
+// shutdown the fake requests that starts the worker script
+bool frankenphp_shutdown_dummy_request(void) {
+  if (SG(server_context) == NULL) {
+    return false;
+  }
+  frankenphp_worker_request_shutdown();
+
+  return true;
+}
+
 PHPAPI void get_full_env(zval *track_vars_array) {
   struct go_getfullenv_return full_env = go_getfullenv(thread_index);
 
@@ -164,15 +174,6 @@ PHPAPI void get_full_env(zval *track_vars_array) {
     // add to the associative array
     add_assoc_str_ex(track_vars_array, key.data, key.len, val_str);
   }
-}
-
-bool frankenphp_shutdown_dummy_request(void) {
-  if (SG(server_context) == NULL) {
-    return false;
-  }
-  frankenphp_worker_request_shutdown();
-
-  return true;
 }
 
 /* Adapted from php_request_startup() */
@@ -246,7 +247,7 @@ PHP_FUNCTION(frankenphp_finish_request) { /* {{{ */
     RETURN_THROWS();
   }
 
-  if (go_is_request_finished(thread_index)) {
+  if (go_is_context_done(thread_index)) {
     RETURN_FALSE;
   }
 
@@ -550,6 +551,7 @@ static size_t frankenphp_ub_write(const char *str, size_t str_length) {
       go_ub_write(thread_index, (char *)str, str_length);
 
   if (result.r1) {
+    /* TODO: if an error is thrown here, it's not logged */
     php_handle_aborted_connection();
   }
 

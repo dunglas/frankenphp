@@ -577,8 +577,8 @@ func go_log(message *C.char, level C.int) {
 	}
 }
 
-//export go_is_request_finished
-func go_is_request_finished(threadIndex C.uintptr_t) C.bool {
+//export go_is_context_done
+func go_is_context_done(threadIndex C.uintptr_t) C.bool {
 	return C.bool(phpThreads[threadIndex].getRequestContext().isDone)
 }
 
