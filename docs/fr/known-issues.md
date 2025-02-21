@@ -30,7 +30,7 @@ Le binaire autonome et les images docker basées sur Alpine (`dunglas/frankenphp
 Par défaut, FrankenPHP génère un certificat TLS pour `localhost`.
 C'est l'option la plus simple et recommandée pour le développement local.
 
-Si vous voulez vraiment utiliser `127.0.0.1` comme hôte, il est possible de configure FrankenPHP pour générer un certificat pour cela en définissant le nom du serveur à `127.0.0.1`.
+Si vous voulez vraiment utiliser `127.0.0.1` comme hôte, il est possible de configurer FrankenPHP pour générer un certificat pour cela en définissant le nom du serveur à `127.0.0.1`.
 
 Malheureusement, cela ne suffit pas lors de l'utilisation de Docker à cause de [son système de gestion des réseaux](https://docs.docker.com/network/).
 Vous obtiendrez une erreur TLS similaire à `curl: (35) LibreSSL/3.3.6: error:1404B438:SSL routines:ST_CONNECT:tlsv1 alert internal error`.
@@ -47,7 +47,7 @@ docker run \
 
 Le pilote de réseau "hôte" n'est pas pris en charge sur Mac et Windows. Sur ces plateformes, vous devrez deviner l'adresse IP du conteneur et l'inclure dans les noms de serveur.
 
-Exécutez la commande `docker network inspect bridge` et inpectez la clef `Containers` pour identifier la dernière adresse IP attribuée sous la clef `IPv4Address`, puis incrémentez-la de un. Si aucun conteneur n'est en cours d'exécution, la première adresse IP attribuée est généralement `172.17.0.2`.
+Exécutez la commande `docker network inspect bridge` et inpectez la clef `Containers` pour identifier la dernière adresse IP attribuée sous la clef `IPv4Address`, puis incrémentez-la d'un. Si aucun conteneur n'est en cours d'exécution, la première adresse IP attribuée est généralement `172.17.0.2`.
 
 Ensuite, incluez ceci dans la variable d'environnement `SERVER_NAME` :
 
