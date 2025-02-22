@@ -120,7 +120,7 @@ func handleRequestWithRegularPHPThreads(fc *FrankenPHPContext) {
 			// the request has been canceled by the client
 			return
 		case <-fc.busyTimeout():
-			// the request has benn stalled for longer than the maximum execution time
+			// the request has benn stalled for too long and is rejected (504)
 			fc.rejectGatewayTimeout()
 
 			return
