@@ -803,37 +803,6 @@ func BenchmarkHelloWorld(b *testing.B) {
 	}
 }
 
-func BenchmarkWorker(b *testing.B) {
-	if err := frankenphp.Init(
-		frankenphp.WithLogger(zap.NewNop()),
-		frankenphp.WithWorkers("testdata/index.php", 0, map[string]string{}, []string{}),
-	); err != nil {
-		panic(err)
-	}
-	defer frankenphp.Shutdown()
-	cwd, _ := os.Getwd()
-	testDataDir := cwd + "/testdata"
-
-	handler := func(w http.ResponseWriter, r *http.Request) {
-		r, err := frankenphp.NewRequestWithContext(r, frankenphp.WithRequestResolvedDocumentRoot(testDataDir))
-		if err != nil {
-			panic(err)
-		}
-
-		if err := frankenphp.ServeHTTP(w, r); err != nil {
-			panic(err)
-		}
-	}
-
-	req := httptest.NewRequest("GET", "http://example.com/index.php", nil)
-	w := httptest.NewRecorder()
-
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		handler(w, req)
-	}
-}
-
 func BenchmarkEcho(b *testing.B) {
 	if err := frankenphp.Init(frankenphp.WithLogger(zap.NewNop())); err != nil {
 		panic(err)
