@@ -133,8 +133,8 @@ func (fc *FrankenPHPContext) validate() bool {
 	return false
 }
 
+// busyTimeout returns a channel that will be closed after busy_timeout
 func (fc *FrankenPHPContext) busyTimeout() <-chan time.Time {
-	//return nil
 	if busyTimeout <= 0 {
 		return nil
 	}
