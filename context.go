@@ -1,6 +1,7 @@
 package frankenphp
 
 import (
+	"context"
 	"net/http"
 	"os"
 	"strings"
@@ -36,7 +37,7 @@ type FrankenPHPContext struct {
 }
 
 // NewRequestWithContext creates a new FrankenPHP request context.
-func NewRequestWithContext(r *http.Request, opts ...RequestOption) (*FrankenPHPContext, error) {
+func NewRequestWithContext(r *http.Request, opts ...RequestOption) (*http.Request, error) {
 	fc := &FrankenPHPContext{
 		done:      make(chan interface{}),
 		startedAt: time.Now(),
@@ -88,7 +89,9 @@ func NewRequestWithContext(r *http.Request, opts ...RequestOption) (*FrankenPHPC
 	// SCRIPT_FILENAME is the absolute path of SCRIPT_NAME
 	fc.scriptFilename = sanitizedPathJoin(fc.documentRoot, fc.scriptName)
 
-	return fc, nil
+	c := context.WithValue(r.Context(), contextKey, fc)
+
+	return r.WithContext(c), nil
 }
 
 func newFakeContext(requestPath string, opts ...RequestOption) (*FrankenPHPContext, error) {
@@ -97,10 +100,12 @@ func newFakeContext(requestPath string, opts ...RequestOption) (*FrankenPHPConte
 		return nil, err
 	}
 
-	fc, err := NewRequestWithContext(r, opts...)
+	fr, err := NewRequestWithContext(r, opts...)
 	if err != nil {
 		return nil, err
 	}
+
+	fc := fr.Context().Value(contextKey).(*FrankenPHPContext)
 
 	return fc, nil
 }

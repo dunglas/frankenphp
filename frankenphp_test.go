@@ -73,10 +73,10 @@ func runTest(t *testing.T, test func(func(http.ResponseWriter, *http.Request), *
 	defer frankenphp.Shutdown()
 
 	handler := func(w http.ResponseWriter, r *http.Request) {
-		fc, err := frankenphp.NewRequestWithContext(r, frankenphp.WithRequestDocumentRoot(testDataDir, false))
+		r, err := frankenphp.NewRequestWithContext(r, frankenphp.WithRequestDocumentRoot(testDataDir, false))
 		assert.NoError(t, err)
 
-		err = frankenphp.ServeHTTP(w, fc)
+		err = frankenphp.ServeHTTP(w, r)
 		assert.NoError(t, err)
 	}
 
@@ -754,12 +754,12 @@ func ExampleServeHTTP() {
 	defer frankenphp.Shutdown()
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		fc, err := frankenphp.NewRequestWithContext(r, frankenphp.WithRequestDocumentRoot("/path/to/document/root", false))
+		r, err := frankenphp.NewRequestWithContext(r, frankenphp.WithRequestDocumentRoot("/path/to/document/root", false))
 		if err != nil {
 			panic(err)
 		}
 
-		if err := frankenphp.ServeHTTP(w, fc); err != nil {
+		if err := frankenphp.ServeHTTP(w, r); err != nil {
 			panic(err)
 		}
 	})
@@ -784,12 +784,12 @@ func BenchmarkHelloWorld(b *testing.B) {
 	testDataDir := cwd + "/testdata/"
 
 	handler := func(w http.ResponseWriter, r *http.Request) {
-		fc, err := frankenphp.NewRequestWithContext(r, frankenphp.WithRequestDocumentRoot(testDataDir, false))
+		r, err := frankenphp.NewRequestWithContext(r, frankenphp.WithRequestDocumentRoot(testDataDir, false))
 		if err != nil {
 			panic(err)
 		}
 
-		if err := frankenphp.ServeHTTP(w, fc); err != nil {
+		if err := frankenphp.ServeHTTP(w, r); err != nil {
 			panic(err)
 		}
 	}
@@ -815,12 +815,12 @@ func BenchmarkWorker(b *testing.B) {
 	testDataDir := cwd + "/testdata"
 
 	handler := func(w http.ResponseWriter, r *http.Request) {
-		fc, err := frankenphp.NewRequestWithContext(r, frankenphp.WithRequestResolvedDocumentRoot(testDataDir))
+		r, err := frankenphp.NewRequestWithContext(r, frankenphp.WithRequestResolvedDocumentRoot(testDataDir))
 		if err != nil {
 			panic(err)
 		}
 
-		if err := frankenphp.ServeHTTP(w, fc); err != nil {
+		if err := frankenphp.ServeHTTP(w, r); err != nil {
 			panic(err)
 		}
 	}
@@ -843,11 +843,11 @@ func BenchmarkEcho(b *testing.B) {
 	testDataDir := cwd + "/testdata/"
 
 	handler := func(w http.ResponseWriter, r *http.Request) {
-		fc, err := frankenphp.NewRequestWithContext(r, frankenphp.WithRequestDocumentRoot(testDataDir, false))
+		r, err := frankenphp.NewRequestWithContext(r, frankenphp.WithRequestDocumentRoot(testDataDir, false))
 		if err != nil {
 			panic(err)
 		}
-		if err := frankenphp.ServeHTTP(w, fc); err != nil {
+		if err := frankenphp.ServeHTTP(w, r); err != nil {
 			panic(err)
 		}
 	}
@@ -951,13 +951,13 @@ func BenchmarkServerSuperGlobal(b *testing.B) {
 	preparedEnv := frankenphp.PrepareEnv(env)
 
 	handler := func(w http.ResponseWriter, r *http.Request) {
-		fc, err := frankenphp.NewRequestWithContext(r, frankenphp.WithRequestDocumentRoot(testDataDir, false), frankenphp.WithRequestPreparedEnv(preparedEnv))
+		r, err := frankenphp.NewRequestWithContext(r, frankenphp.WithRequestDocumentRoot(testDataDir, false), frankenphp.WithRequestPreparedEnv(preparedEnv))
 		if err != nil {
 			panic(err)
 		}
 
 		r.Header = headers
-		if err := frankenphp.ServeHTTP(w, fc); err != nil {
+		if err := frankenphp.ServeHTTP(w, r); err != nil {
 			panic(err)
 		}
 	}

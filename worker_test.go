@@ -126,12 +126,12 @@ func ExampleServeHTTP_workers() {
 	defer frankenphp.Shutdown()
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		fc, err := frankenphp.NewRequestWithContext(r, frankenphp.WithRequestDocumentRoot("/path/to/document/root", false))
+		r, err := frankenphp.NewRequestWithContext(r, frankenphp.WithRequestDocumentRoot("/path/to/document/root", false))
 		if err != nil {
 			panic(err)
 		}
 
-		if err := frankenphp.ServeHTTP(w, fc); err != nil {
+		if err := frankenphp.ServeHTTP(w, r); err != nil {
 			panic(err)
 		}
 	})
