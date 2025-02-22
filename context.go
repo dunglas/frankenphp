@@ -170,7 +170,7 @@ func (fc *FrankenPHPContext) rejectBadRequest(message string) {
 	fc.reject(http.StatusBadRequest, message)
 }
 
-func (fc *FrankenPHPContext) rejectBadGateway() {
+func (fc *FrankenPHPContext) rejectGatewayTimeout() {
 	logger.Debug("Request timed out")
 	fc.reject(http.StatusGatewayTimeout, "")
 }

@@ -123,6 +123,8 @@ func (f *FrankenPHPApp) Stop() error {
 	// reset configuration so it doesn't bleed into later tests
 	f.Workers = nil
 	f.NumThreads = 0
+	f.BusyTimeout = 0
+	f.PhpIni = nil
 
 	return nil
 }

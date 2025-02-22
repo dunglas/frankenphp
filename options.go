@@ -80,7 +80,7 @@ func WithPhpIni(overrides map[string]string) Option {
 	}
 }
 
-// WithLogger configures the global logger to use.
+// WithBusyTimeout determines after which duration stalled requests will be rejected.
 func WithBusyTimeout(stallTime time.Duration) Option {
 	return func(o *opt) error {
 		o.busyTimeout = stallTime

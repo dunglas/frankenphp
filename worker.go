@@ -192,7 +192,7 @@ func (worker *worker) handleRequest(fc *FrankenPHPContext) {
 			return
 		case <-fc.busyTimeout():
 			// the request has benn stalled for longer than the maximum execution time
-			fc.rejectBadGateway()
+			fc.rejectGatewayTimeout()
 
 			return
 		}
