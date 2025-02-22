@@ -8,7 +8,11 @@
 #include <ext/standard/head.h>
 #include <inttypes.h>
 #include <php.h>
-#include <php_config.h>
+#ifdef PHP_WIN32
+  #include <config.w32.h>
+#else
+  #include <php_config.h>
+#endif
 #include <php_ini.h>
 #include <php_main.h>
 #include <php_output.h>
@@ -159,7 +163,16 @@ static void frankenphp_worker_request_shutdown() {
   zend_set_memory_limit(PG(memory_limit));
 }
 
+// TODO: Conditional compilation here is to ensure that it will compile under windows.
+//       I need to see more PHP version to make visibility attributes and linkage 
+//       modifiers clear.
+//       On PHP-8.3.0 windows, `php_import_environment_variables` could be pointed to
+//       `void _php_import_environment_variables(zval *array_ptr);`
+#ifndef PHP_WIN32 
 PHPAPI void get_full_env(zval *track_vars_array) {
+#else
+void get_full_env(zval *track_vars_array) {
+#endif
   struct go_getfullenv_return full_env = go_getfullenv(thread_index);
 
   for (int i = 0; i < full_env.r1; i++) {
@@ -895,6 +908,8 @@ static void set_thread_name(char *thread_name) {
   pthread_setname_np(thread_name);
 #elif defined(__FreeBSD__) || defined(__OpenBSD__)
   pthread_set_name_np(pthread_self(), thread_name);
+#elif defined(__MINGW64__)
+  pthread_setname_np(pthread_self(), thread_name);
 #endif
 }
 
@@ -934,6 +949,7 @@ static void *php_thread(void *arg) {
 }
 
 static void *php_main(void *arg) {
+#ifndef __MINGW64__
   /*
    * SIGPIPE must be masked in non-Go threads:
    * https://pkg.go.dev/os/signal#hdr-Go_programs_that_use_cgo_or_SWIG
@@ -946,6 +962,7 @@ static void *php_main(void *arg) {
     perror("failed to block SIGPIPE");
     exit(EXIT_FAILURE);
   }
+#endif
 
   set_thread_name("php-main");
 
