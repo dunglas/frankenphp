@@ -86,18 +86,14 @@ func newWorker(o workerOpt) (*worker, error) {
 	return w, nil
 }
 
-func drainWorkers() {
-	watcher.DrainWatcher()
+// DrainWorkers finishes all worker scripts before a graceful shutdown
+func DrainWorkers() {
+	_ = drainWorkerThreads()
 }
 
-// RestartWorkers attempts to restart all workers gracefully
-func RestartWorkers() {
-	// disallow scaling threads while restarting workers
-	scalingMu.Lock()
-	defer scalingMu.Unlock()
-
+func drainWorkerThreads() []*phpThread {
 	ready := sync.WaitGroup{}
-	threadsToRestart := make([]*phpThread, 0)
+	drainedThreads := make([]*phpThread, 0)
 	for _, worker := range workers {
 		worker.threadMutex.RLock()
 		ready.Add(len(worker.threads))
@@ -108,7 +104,7 @@ func RestartWorkers() {
 				continue
 			}
 			close(thread.drainChan)
-			threadsToRestart = append(threadsToRestart, thread)
+			drainedThreads = append(drainedThreads, thread)
 			go func(thread *phpThread) {
 				thread.state.waitFor(stateYielding)
 				ready.Done()
@@ -116,8 +112,24 @@ func RestartWorkers() {
 		}
 		worker.threadMutex.RUnlock()
 	}
-
 	ready.Wait()
+
+	return drainedThreads
+}
+
+func drainWatcher() {
+	if watcherIsEnabled {
+		watcher.DrainWatcher()
+	}
+}
+
+// RestartWorkers attempts to restart all workers gracefully
+func RestartWorkers() {
+	// disallow scaling threads while restarting workers
+	scalingMu.Lock()
+	defer scalingMu.Unlock()
+
+	threadsToRestart := drainWorkerThreads()
 
 	for _, thread := range threadsToRestart {
 		thread.drainChan = make(chan struct{})
