@@ -1,5 +1,13 @@
 package frankenphp
 
+// #cgo nocallback frankenphp_register_bulk
+// #cgo nocallback frankenphp_register_variables_from_request_info
+// #cgo nocallback frankenphp_register_variable_safe
+// #cgo nocallback frankenphp_register_single
+// #cgo noescape frankenphp_register_bulk
+// #cgo noescape frankenphp_register_variables_from_request_info
+// #cgo noescape frankenphp_register_variable_safe
+// #cgo noescape frankenphp_register_single
 // #include <php_variables.h>
 // #include "frankenphp.h"
 import "C"

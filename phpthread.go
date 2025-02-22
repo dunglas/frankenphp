@@ -1,5 +1,6 @@
 package frankenphp
 
+// #cgo nocallback frankenphp_new_php_thread
 // #include "frankenphp.h"
 import "C"
 import (
