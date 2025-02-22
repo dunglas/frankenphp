@@ -510,12 +510,14 @@ static void frankenphp_request_shutdown() {
   frankenphp_free_request_context();
 }
 
-int frankenphp_update_server_context(
-    bool is_worker_request,
+int frankenphp_update_server_context(bool is_worker_request,
 
-    const char *request_method, char *query_string, zend_long content_length,
-    char *path_translated, char *request_uri, const char *content_type,
-    char *auth_user, char *auth_password, int proto_num) {
+                                     const char *request_method,
+                                     char *query_string,
+                                     zend_long content_length,
+                                     char *path_translated, char *request_uri,
+                                     const char *content_type, char *auth_user,
+                                     char *auth_password, int proto_num) {
 
   SG(server_context) = (void *)1;
   is_worker_thread = is_worker_request;
