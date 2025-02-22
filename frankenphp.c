@@ -151,7 +151,7 @@ static void frankenphp_worker_request_shutdown() {
   zend_set_memory_limit(PG(memory_limit));
 }
 
-// shutdown the fake requests that starts the worker script
+// shutdown the fake request that starts the worker script
 bool frankenphp_shutdown_dummy_request(void) {
   if (SG(server_context) == NULL) {
     return false;
@@ -407,12 +407,13 @@ PHP_FUNCTION(frankenphp_handle_request) {
   zend_unset_timeout();
 #endif
 
-  bool request = go_frankenphp_worker_handle_request_start(thread_index);
-  if (!request) {
+  if (!go_frankenphp_worker_handle_request_start(thread_index)) {
+    /* Go signals to shut down */
     RETURN_FALSE;
   }
-  if (frankenphp_worker_request_startup() == FAILURE
-      /* Shutting down */) {
+  if (frankenphp_worker_request_startup() == FAILURE) {
+    /* Shutting down due to error.
+    TODO: better handle when something goes wrong here */
     RETURN_FALSE;
   }
 
@@ -551,7 +552,6 @@ static size_t frankenphp_ub_write(const char *str, size_t str_length) {
       go_ub_write(thread_index, (char *)str, str_length);
 
   if (result.r1) {
-    /* TODO: if an error is thrown here, it's not logged */
     php_handle_aborted_connection();
   }
 

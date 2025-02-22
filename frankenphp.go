@@ -415,9 +415,6 @@ func go_ub_write(threadIndex C.uintptr_t, cBuf *C.char, length C.int) (C.size_t,
 func go_apache_request_headers(threadIndex C.uintptr_t) (*C.go_string, C.size_t) {
 	thread := phpThreads[threadIndex]
 	fc := thread.getRequestContext()
-	if fc == nil {
-		return nil, 0
-	}
 
 	if fc.responseWriter == nil {
 		// worker mode, not handling a request
@@ -497,11 +494,11 @@ func go_write_headers(threadIndex C.uintptr_t, status C.int, headers *C.zend_lli
 //export go_sapi_flush
 func go_sapi_flush(threadIndex C.uintptr_t) bool {
 	fc := phpThreads[threadIndex].getRequestContext()
-	if fc == nil {
+	if fc == nil || fc.responseWriter == nil {
 		return false
 	}
 
-	if (fc.responseWriter == nil || fc.clientHasClosed()) && !fc.isDone {
+	if fc.clientHasClosed() && !fc.isDone {
 		return true
 	}
 
@@ -518,7 +515,7 @@ func go_sapi_flush(threadIndex C.uintptr_t) bool {
 func go_read_post(threadIndex C.uintptr_t, cBuf *C.char, countBytes C.size_t) (readBytes C.size_t) {
 	fc := phpThreads[threadIndex].getRequestContext()
 
-	if fc == nil || fc.responseWriter == nil {
+	if fc.responseWriter == nil {
 		return 0
 	}
 
