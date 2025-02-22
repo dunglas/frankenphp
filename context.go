@@ -36,6 +36,12 @@ type FrankenPHPContext struct {
 	startedAt time.Time
 }
 
+// FromContext extracts the FrankenPHPContext from a context.
+func FromContext(ctx context.Context) (fctx *FrankenPHPContext, ok bool) {
+	fctx, ok = ctx.Value(contextKey).(*FrankenPHPContext)
+	return
+}
+
 // NewRequestWithContext creates a new FrankenPHP request context.
 func NewRequestWithContext(r *http.Request, opts ...RequestOption) (*http.Request, error) {
 	fc := &FrankenPHPContext{
@@ -105,7 +111,7 @@ func newFakeContext(requestPath string, opts ...RequestOption) (*FrankenPHPConte
 		return nil, err
 	}
 
-	fc := fr.Context().Value(contextKey).(*FrankenPHPContext)
+	fc, _ := FromContext(fr.Context())
 
 	return fc, nil
 }

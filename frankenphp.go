@@ -357,7 +357,7 @@ func ServeHTTP(responseWriter http.ResponseWriter, request *http.Request) error 
 		return NotRunningError
 	}
 
-	fc, ok := request.Context().Value(contextKey).(*FrankenPHPContext)
+	fc, ok := FromContext(request.Context())
 	if !ok {
 		return InvalidRequestError
 	}
