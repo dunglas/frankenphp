@@ -83,6 +83,8 @@ func (handler *regularThread) waitForRequest() string {
 		return handler.beforeScriptExecution()
 	}
 
+	rejectAfterTimeout(fc, handler.thread)
+
 	// set the scriptFilename that should be executed
 	return fc.scriptFilename
 }

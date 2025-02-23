@@ -197,6 +197,9 @@ func (handler *workerThread) waitForWorkerRequest() bool {
 		return handler.waitForWorkerRequest()
 	}
 
+	fc := r.Context().Value(contextKey).(*FrankenPHPContext)
+	rejectAfterTimeout(fc, handler.thread)
+
 	return true
 }
 

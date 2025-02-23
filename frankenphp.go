@@ -210,10 +210,9 @@ type PHPVersion struct {
 }
 
 type PHPConfig struct {
-	Version                PHPVersion
-	ZTS                    bool
-	ZendSignals            bool
-	ZendMaxExecutionTimers bool
+	Version     PHPVersion
+	ZTS         bool
+	ZendSignals bool
 }
 
 // Version returns infos about the PHP version.
@@ -234,10 +233,9 @@ func Config() PHPConfig {
 	cConfig := C.frankenphp_get_config()
 
 	return PHPConfig{
-		Version:                Version(),
-		ZTS:                    bool(cConfig.zts),
-		ZendSignals:            bool(cConfig.zend_signals),
-		ZendMaxExecutionTimers: bool(cConfig.zend_max_execution_timers),
+		Version:     Version(),
+		ZTS:         bool(cConfig.zts),
+		ZendSignals: bool(cConfig.zend_signals),
 	}
 }
 
@@ -327,11 +325,7 @@ func Init(options ...Option) error {
 		return InvalidPHPVersionError
 	}
 
-	if config.ZTS {
-		if !config.ZendMaxExecutionTimers && runtime.GOOS == "linux" {
-			logger.Warn(`Zend Max Execution Timers are not enabled, timeouts (e.g. "max_execution_time") are disabled, recompile PHP with the "--enable-zend-max-execution-timers" configuration option to fix this issue`)
-		}
-	} else {
+	if !config.ZTS {
 		totalThreadCount = 1
 		logger.Warn(`ZTS is not enabled, only 1 thread will be available, recompile PHP using the "--enable-zts" configuration option or performance will be degraded`)
 	}
@@ -727,4 +721,21 @@ func rejectRequest(rw http.ResponseWriter, message string) {
 	rw.WriteHeader(http.StatusBadRequest)
 	_, _ = rw.Write([]byte(message))
 	rw.(http.Flusher).Flush()
+}
+
+// the timeout here could be read from the php_ini
+var maxExecutionTime = 30 * time.Second
+
+func rejectAfterTimeout(fc *FrankenPHPContext, thread *phpThread) {
+	if maxExecutionTime <= 0 {
+		return
+	}
+	go (func() {
+		select {
+		case <-fc.done:
+			return
+		case <-time.After(maxExecutionTime):
+			thread.kill()
+		}
+	})()
 }

@@ -21,6 +21,7 @@ type phpThread struct {
 	handlerMu   sync.Mutex
 	handler     threadHandler
 	state       *threadState
+	pThread     C.pthread_t
 }
 
 // interface that defines how the callbacks from the C thread should be handled
@@ -54,7 +55,8 @@ func (thread *phpThread) boot() {
 	thread.handlerMu.Unlock()
 
 	// start the actual posix thread - TODO: try this with go threads instead
-	if !C.frankenphp_new_php_thread(C.uintptr_t(thread.threadIndex)) {
+	thread.pThread = C.frankenphp_new_php_thread(C.uintptr_t(thread.threadIndex))
+	if thread.pThread == 0 {
 		logger.Panic("unable to create thread", zap.Int("threadIndex", thread.threadIndex))
 	}
 	thread.state.waitFor(stateInactive)
@@ -74,6 +76,10 @@ func (thread *phpThread) shutdown() {
 	if mainThread.state.is(stateReady) {
 		thread.state.set(stateReserved)
 	}
+}
+
+func (thread *phpThread) kill() {
+	C.pthread_kill(thread.pThread, C.SIG_UNBLOCK)
 }
 
 // change the thread handler safely

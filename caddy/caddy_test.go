@@ -660,7 +660,7 @@ func TestPHPIniConfiguration(t *testing.T) {
 			frankenphp {
 				num_threads 2
 				worker ../testdata/ini.php 1
-				php_ini max_execution_time 100
+				php_ini variables_order EPGCS
 				php_ini memory_limit 10000000
 			}
 		}
@@ -673,7 +673,7 @@ func TestPHPIniConfiguration(t *testing.T) {
 		}
 		`, "caddyfile")
 
-	testSingleIniConfiguration(tester, "max_execution_time", "100")
+	testSingleIniConfiguration(tester, "variables_order", "EPGCS")
 	testSingleIniConfiguration(tester, "memory_limit", "10000000")
 }
 
@@ -688,7 +688,7 @@ func TestPHPIniBlockConfiguration(t *testing.T) {
 			frankenphp {
 				num_threads 1
 				php_ini {
-					max_execution_time 15
+					variables_order EGPCS
 					memory_limit 20000000
 				}
 			}
@@ -702,7 +702,7 @@ func TestPHPIniBlockConfiguration(t *testing.T) {
 		}
 		`, "caddyfile")
 
-	testSingleIniConfiguration(tester, "max_execution_time", "15")
+	testSingleIniConfiguration(tester, "variables_order", "EGPCS")
 	testSingleIniConfiguration(tester, "memory_limit", "20000000")
 }
 

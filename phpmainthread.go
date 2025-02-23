@@ -189,6 +189,10 @@ func go_get_custom_php_ini() *C.char {
 		return nil
 	}
 
+	// Set the FrankenPHP default ini configuration
+	mainThread.phpIni["max_execution_time"] = "-1"
+	mainThread.phpIni["max_input_time"] = "-1"
+
 	// pass the php.ini overrides to PHP before startup
 	// TODO: if needed this would also be possible on a per-thread basis
 	overrides := ""

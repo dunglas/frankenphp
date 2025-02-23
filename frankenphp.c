@@ -33,13 +33,6 @@
 ZEND_TSRMLS_CACHE_DEFINE()
 #endif
 
-/* Timeouts are currently fundamentally broken with ZTS except on Linux and
- * FreeBSD: https://bugs.php.net/bug.php?id=79464 */
-#ifndef ZEND_MAX_EXECUTION_TIMERS
-static const char HARDCODED_INI[] = "max_execution_time=0\n"
-                                    "max_input_time=-1\n\0";
-#endif
-
 static const char *MODULES_TO_RELOAD[] = {"filter", "session", NULL};
 
 frankenphp_version frankenphp_get_version() {
@@ -58,11 +51,6 @@ frankenphp_config frankenphp_get_config() {
       false,
 #endif
 #ifdef ZEND_SIGNALS
-      true,
-#else
-      false,
-#endif
-#ifdef ZEND_MAX_EXECUTION_TIMERS
       true,
 #else
       false,
@@ -174,6 +162,20 @@ PHPAPI void get_full_env(zval *track_vars_array) {
   }
 }
 
+/* Modify PHP's execution globals to signal that we have timed out
+ * See also: zend_execute_API.c -> zend_timeout_handler()
+ */
+static void frankenphp_trigger_timeout(int signo) {
+  if (!tsrm_is_shutdown() && tsrm_is_managed_thread()) {
+    zend_atomic_bool_store_ex(&EG(timed_out), true);
+    zend_atomic_bool_store_ex(&EG(vm_interrupt), true);
+  }
+}
+
+static void frankenphp_init_timeout(void) {
+  signal(SIG_UNBLOCK, frankenphp_trigger_timeout);
+}
+
 /* Adapted from php_request_startup() */
 static int frankenphp_worker_request_startup() {
   int retval = SUCCESS;
@@ -189,14 +191,6 @@ static int frankenphp_worker_request_startup() {
 
     /* Keep the current execution context */
     sapi_activate();
-
-#ifdef ZEND_MAX_EXECUTION_TIMERS
-    if (PG(max_input_time) == -1) {
-      zend_set_timeout(EG(timeout_seconds), 1);
-    } else {
-      zend_set_timeout(PG(max_input_time), 1);
-    }
-#endif
 
     if (PG(expose_php)) {
       sapi_add_header(SAPI_PHP_VERSION_HEADER,
@@ -420,26 +414,12 @@ PHP_FUNCTION(frankenphp_handle_request) {
     ctx->worker_ready = true;
   }
 
-#ifdef ZEND_MAX_EXECUTION_TIMERS
-  /* Disable timeouts while waiting for a request to handle */
-  zend_unset_timeout();
-#endif
-
   bool request = go_frankenphp_worker_handle_request_start(thread_index);
   if (frankenphp_worker_request_startup() == FAILURE
       /* Shutting down */
       || !request) {
     RETURN_FALSE;
   }
-
-#ifdef ZEND_MAX_EXECUTION_TIMERS
-  /*
-   * Reset default timeout
-   */
-  if (PG(max_input_time) != -1) {
-    zend_set_timeout(INI_INT("max_execution_time"), 0);
-  }
-#endif
 
   /* Call the PHP func */
   zval retval = {0};
@@ -907,6 +887,7 @@ static void *php_thread(void *arg) {
 #ifdef ZTS
   /* initial resource fetch */
   (void)ts_resource(0);
+  frankenphp_init_timeout();
 #ifdef PHP_WIN32
   ZEND_TSRMLS_CACHE_UPDATE();
 #endif
@@ -963,25 +944,11 @@ static void *php_main(void *arg) {
 
   sapi_startup(&frankenphp_sapi_module);
 
-#ifndef ZEND_MAX_EXECUTION_TIMERS
-#if (PHP_VERSION_ID >= 80300)
-  frankenphp_sapi_module.ini_entries = HARDCODED_INI;
-#else
-  frankenphp_sapi_module.ini_entries = malloc(sizeof(HARDCODED_INI));
-  if (frankenphp_sapi_module.ini_entries == NULL) {
-    perror("malloc failed");
-    exit(EXIT_FAILURE);
-  }
-  memcpy(frankenphp_sapi_module.ini_entries, HARDCODED_INI,
-         sizeof(HARDCODED_INI));
-#endif
-#else
   /* overwrite php.ini with custom user settings */
   char *php_ini_overrides = go_get_custom_php_ini();
   if (php_ini_overrides != NULL) {
     frankenphp_sapi_module.ini_entries = php_ini_overrides;
   }
-#endif
 
   frankenphp_sapi_module.startup(&frankenphp_sapi_module);
 
@@ -1022,13 +989,13 @@ int frankenphp_new_main_thread(int num_threads) {
   return pthread_detach(thread);
 }
 
-bool frankenphp_new_php_thread(uintptr_t thread_index) {
+pthread_t frankenphp_new_php_thread(uintptr_t thread_index) {
   pthread_t thread;
   if (pthread_create(&thread, NULL, &php_thread, (void *)thread_index) != 0) {
     return false;
   }
   pthread_detach(thread);
-  return true;
+  return thread;
 }
 
 int frankenphp_request_startup() {
