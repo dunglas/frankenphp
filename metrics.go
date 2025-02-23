@@ -380,9 +380,9 @@ func (m *PrometheusMetrics) Shutdown() {
 	}
 
 	if err := m.registry.Register(m.queueDepth); err != nil &&
-		!errors.As(err, &prometheus.AlreadyRegisteredError{}) {
-		panic(err)
-	}
+        !errors.As(err, &prometheus.AlreadyRegisteredError{}) {
+        panic(err)
+    }
 }
 
 func getWorkerNameForMetrics(name string) string {
@@ -432,9 +432,9 @@ func NewPrometheusMetrics(registry prometheus.Registerer) *PrometheusMetrics {
 	}
 
 	if err := m.registry.Register(m.queueDepth); err != nil &&
-		!errors.As(err, &prometheus.AlreadyRegisteredError{}) {
-		panic(err)
-	}
+        !errors.As(err, &prometheus.AlreadyRegisteredError{}) {
+        panic(err)
+    }
 
 	return m
 }
