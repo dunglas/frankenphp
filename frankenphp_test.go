@@ -458,6 +458,9 @@ func TestConnectionAbort_worker(t *testing.T) {
 	testConnectionAbort(t, &testOptions{workerScript: "connectionStatusLog.php"})
 }
 func testConnectionAbort(t *testing.T, opts *testOptions) {
+	// Set parallel requests to 1 so the request will not get stalled and rejected immediately
+	opts.nbParallelRequests = 1
+
 	testFinish := func(finish string) {
 		t.Run(fmt.Sprintf("finish=%s", finish), func(t *testing.T) {
 			logger, logs := observer.New(zapcore.InfoLevel)
