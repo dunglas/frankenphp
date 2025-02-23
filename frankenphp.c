@@ -423,7 +423,7 @@ PHP_FUNCTION(frankenphp_handle_request) {
   }
 #endif
 
-  /* Call the PHP func */
+  /* Call the PHP func passed to frankenphp_handle_request() */
   zval retval = {0};
   fci.size = sizeof fci;
   fci.retval = &retval;
@@ -691,10 +691,6 @@ zend_string *frankenphp_init_persistent_string(const char *string, size_t len) {
   GC_ADD_FLAGS(z_string, IS_STR_INTERNED);
 
   return z_string;
-}
-
-void frankenphp_release_zend_string(zend_string *z_string) {
-  zend_string_release(z_string);
 }
 
 static void
