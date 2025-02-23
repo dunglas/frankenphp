@@ -187,6 +187,10 @@ func (worker *worker) handleRequest(r *http.Request, fc *FrankenPHPContext) {
 			return
 		case scaleChan <- fc:
 			// the request has triggered scaling, continue to wait for a thread
+			continue
+		case <-r.Context().Done():
+			// the request has been canceled by the client
+			return
 		}
 	}
 }
