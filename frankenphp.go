@@ -341,7 +341,7 @@ func Init(options ...Option) error {
 		return err
 	}
 
-	regularRequestChan = make(chan *http.Request, totalThreadCount-workerThreadCount)
+	regularRequestChan = make(chan *http.Request)
 	regularThreads = make([]*phpThread, 0, totalThreadCount-workerThreadCount)
 	for i := 0; i < totalThreadCount-workerThreadCount; i++ {
 		thread := getInactivePHPThread()
