@@ -1,8 +1,6 @@
 package frankenphp
 
 import (
-	"time"
-
 	"go.uber.org/zap"
 )
 
@@ -13,13 +11,12 @@ type Option func(h *opt) error
 //
 // If you change this, also update the Caddy module and the documentation.
 type opt struct {
-	numThreads  int
-	maxThreads  int
-	workers     []workerOpt
-	logger      *zap.Logger
-	metrics     Metrics
-	phpIni      map[string]string
-	busyTimeout time.Duration
+	numThreads int
+	maxThreads int
+	workers    []workerOpt
+	logger     *zap.Logger
+	metrics    Metrics
+	phpIni     map[string]string
 }
 
 type workerOpt struct {
@@ -76,15 +73,6 @@ func WithLogger(l *zap.Logger) Option {
 func WithPhpIni(overrides map[string]string) Option {
 	return func(o *opt) error {
 		o.phpIni = overrides
-		return nil
-	}
-}
-
-// WithBusyTimeout determines after which duration stalled requests will be rejected.
-func WithBusyTimeout(stallTime time.Duration) Option {
-	return func(o *opt) error {
-		o.busyTimeout = stallTime
-
 		return nil
 	}
 }

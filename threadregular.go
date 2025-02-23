@@ -115,15 +115,6 @@ func handleRequestWithRegularPHPThreads(fc *FrankenPHPContext) {
 			return
 		case scaleChan <- fc:
 			// the request has triggered scaling, continue to wait for a thread
-			continue
-		case <-fc.request.Context().Done():
-			// the request has been canceled by the client
-			return
-		case <-fc.busyTimeout():
-			// the request has benn stalled for too long and is rejected (504)
-			fc.rejectGatewayTimeout()
-
-			return
 		}
 	}
 }

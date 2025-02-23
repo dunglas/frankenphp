@@ -11,7 +11,6 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/dunglas/frankenphp/internal/fastabs"
 
@@ -64,8 +63,6 @@ type FrankenPHPApp struct {
 	Workers []workerConfig `json:"workers,omitempty"`
 	// Overwrites the default php ini configuration
 	PhpIni map[string]string `json:"php_ini,omitempty"`
-	// The maximum amount of time a request may be stalled wainting for threads
-	BusyTimeout time.Duration `json:"busy_timeout,omitempty"`
 
 	metrics frankenphp.Metrics
 	logger  *zap.Logger
@@ -96,7 +93,6 @@ func (f *FrankenPHPApp) Start() error {
 		frankenphp.WithLogger(f.logger),
 		frankenphp.WithMetrics(f.metrics),
 		frankenphp.WithPhpIni(f.PhpIni),
-		frankenphp.WithBusyTimeout(f.BusyTimeout),
 	}
 	for _, w := range f.Workers {
 		opts = append(opts, frankenphp.WithWorkers(repl.ReplaceKnown(w.FileName, ""), w.Num, w.Env, w.Watch))
@@ -123,8 +119,6 @@ func (f *FrankenPHPApp) Stop() error {
 	// reset configuration so it doesn't bleed into later tests
 	f.Workers = nil
 	f.NumThreads = 0
-	f.BusyTimeout = 0
-	f.PhpIni = nil
 
 	return nil
 }
@@ -161,17 +155,6 @@ func (f *FrankenPHPApp) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 				}
 
 				f.MaxThreads = int(v)
-			case "busy_timeout":
-				if !d.NextArg() {
-					return d.ArgErr()
-				}
-
-				v, err := time.ParseDuration(d.Val())
-				if err != nil {
-					return errors.New("busy_timeout must be a valid duration (example: 10s)")
-				}
-
-				f.BusyTimeout = v
 			case "php_ini":
 				parseIniLine := func(d *caddyfile.Dispenser) error {
 					key := d.Val()

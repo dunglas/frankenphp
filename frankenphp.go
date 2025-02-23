@@ -219,8 +219,6 @@ func Init(options ...Option) error {
 		metrics = opt.metrics
 	}
 
-	busyTimeout = opt.busyTimeout
-
 	totalThreadCount, workerThreadCount, maxThreadCount, err := calculateMaxThreads(opt)
 	if err != nil {
 		return err
@@ -246,7 +244,7 @@ func Init(options ...Option) error {
 		return err
 	}
 
-	regularRequestChan = make(chan *FrankenPHPContext)
+	regularRequestChan = make(chan *FrankenPHPContext, totalThreadCount-workerThreadCount)
 	regularThreads = make([]*phpThread, 0, totalThreadCount-workerThreadCount)
 	for i := 0; i < totalThreadCount-workerThreadCount; i++ {
 		convertToRegularThread(getInactivePHPThread())

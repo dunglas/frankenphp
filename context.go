@@ -10,8 +10,6 @@ import (
 	"go.uber.org/zap"
 )
 
-var busyTimeout time.Duration
-
 // FrankenPHPContext provides contextual information about the Request to handle.
 type FrankenPHPContext struct {
 	documentRoot    string
@@ -131,14 +129,6 @@ func (fc *FrankenPHPContext) validate() bool {
 	}
 	fc.rejectBadRequest("Invalid request path")
 	return false
-}
-
-// busyTimeout returns a channel that will be closed after busy_timeout
-func (fc *FrankenPHPContext) busyTimeout() <-chan time.Time {
-	if busyTimeout <= 0 {
-		return nil
-	}
-	return time.After(busyTimeout)
 }
 
 func (fc *FrankenPHPContext) clientHasClosed() bool {
