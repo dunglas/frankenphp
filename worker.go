@@ -4,16 +4,18 @@ package frankenphp
 import "C"
 import (
 	"fmt"
-	"github.com/dunglas/frankenphp/internal/fastabs"
 	"net/http"
 	"sync"
 	"time"
+
+	"github.com/dunglas/frankenphp/internal/fastabs"
 
 	"github.com/dunglas/frankenphp/internal/watcher"
 )
 
 // represents a worker script and can have many threads assigned to it
 type worker struct {
+	name        string
 	fileName    string
 	num         int
 	env         PreparedEnv
@@ -76,6 +78,7 @@ func newWorker(o workerOpt) (*worker, error) {
 
 	o.env["FRANKENPHP_WORKER\x00"] = "1"
 	w := &worker{
+		name:        o.name,
 		fileName:    absFileName,
 		num:         o.num,
 		env:         o.env,
@@ -159,7 +162,7 @@ func (worker *worker) countThreads() int {
 }
 
 func (worker *worker) handleRequest(r *http.Request, fc *FrankenPHPContext) {
-	metrics.StartWorkerRequest(fc.scriptFilename)
+	metrics.StartWorkerRequest(worker.name)
 
 	// dispatch requests to all worker threads in order
 	worker.threadMutex.RLock()
@@ -168,7 +171,7 @@ func (worker *worker) handleRequest(r *http.Request, fc *FrankenPHPContext) {
 		case thread.requestChan <- r:
 			worker.threadMutex.RUnlock()
 			<-fc.done
-			metrics.StopWorkerRequest(worker.fileName, time.Since(fc.startedAt))
+			metrics.StopWorkerRequest(worker.name, time.Since(fc.startedAt))
 			return
 		default:
 			// thread is busy, continue
@@ -177,13 +180,13 @@ func (worker *worker) handleRequest(r *http.Request, fc *FrankenPHPContext) {
 	worker.threadMutex.RUnlock()
 
 	// if no thread was available, mark the request as queued and apply the scaling strategy
-	metrics.QueuedWorkerRequest(fc.scriptFilename)
+	metrics.QueuedWorkerRequest(worker.name)
 	for {
 		select {
 		case worker.requestChan <- r:
-			metrics.DequeuedWorkerRequest(fc.scriptFilename)
+			metrics.DequeuedWorkerRequest(worker.name)
 			<-fc.done
-			metrics.StopWorkerRequest(worker.fileName, time.Since(fc.startedAt))
+			metrics.StopWorkerRequest(worker.name, time.Since(fc.startedAt))
 			return
 		case scaleChan <- fc:
 			// the request has triggered scaling, continue to wait for a thread
