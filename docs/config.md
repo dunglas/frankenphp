@@ -246,20 +246,6 @@ You can also change the PHP configuration using the `php_ini` directive in the `
 }
 ```
 
-## Busy Timeout
-
-Caddy will usually accept an unlimited amount of connections. These connections will be stalled until a
-worker is available to handle them. To set a limit on how long a request may be stalled before rejecting it
-with a 504 error, you can use the `busy_timeout` directive:
-
-```caddyfile
-{
-    frankenphp {
-        busy_timeout 10s
-    }
-}
-```
-
 ## Enable the Debug Mode
 
 When using the Docker image, set the `CADDY_GLOBAL_OPTIONS` environment variable to `debug` to enable the debug mode:
