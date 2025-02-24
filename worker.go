@@ -86,7 +86,7 @@ func newWorker(o workerOpt) (*worker, error) {
 	return w, nil
 }
 
-// DrainWorkers finishes all worker scripts before a graceful shutdown
+// EXPERIMENTAL: DrainWorkers finishes all worker scripts before a graceful shutdown
 func DrainWorkers() {
 	_ = drainWorkerThreads()
 }
