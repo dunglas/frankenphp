@@ -6,7 +6,6 @@ import "C"
 import (
 	"crypto/tls"
 	"net"
-	"net/http"
 	"path/filepath"
 	"strings"
 	"unsafe"
@@ -48,7 +47,8 @@ var knownServerKeys = []string{
 //
 // TODO: handle this case https://github.com/caddyserver/caddy/issues/3718
 // Inspired by https://github.com/caddyserver/caddy/blob/master/modules/caddyhttp/reverseproxy/fastcgi/fastcgi.go
-func addKnownVariablesToServer(thread *phpThread, request *http.Request, fc *FrankenPHPContext, trackVarsArray *C.zval) {
+func addKnownVariablesToServer(thread *phpThread, fc *FrankenPHPContext, trackVarsArray *C.zval) {
+	request := fc.request
 	keys := mainThread.knownServerKeys
 	// Separate remote IP and port; more lenient than net.SplitHostPort
 	var ip, port string
@@ -160,8 +160,8 @@ func packCgiVariable(key *C.zend_string, value string) C.ht_key_value_pair {
 	return C.ht_key_value_pair{key, toUnsafeChar(value), C.size_t(len(value))}
 }
 
-func addHeadersToServer(request *http.Request, thread *phpThread, fc *FrankenPHPContext, trackVarsArray *C.zval) {
-	for field, val := range request.Header {
+func addHeadersToServer(thread *phpThread, fc *FrankenPHPContext, trackVarsArray *C.zval) {
+	for field, val := range fc.request.Header {
 		if k := mainThread.commonHeaders[field]; k != nil {
 			v := strings.Join(val, ", ")
 			C.frankenphp_register_single(k, toUnsafeChar(v), C.size_t(len(v)), trackVarsArray)
@@ -186,11 +186,10 @@ func addPreparedEnvToServer(fc *FrankenPHPContext, trackVarsArray *C.zval) {
 //export go_register_variables
 func go_register_variables(threadIndex C.uintptr_t, trackVarsArray *C.zval) {
 	thread := phpThreads[threadIndex]
-	r := thread.getActiveRequest()
-	fc := r.Context().Value(contextKey).(*FrankenPHPContext)
+	fc := thread.getRequestContext()
 
-	addKnownVariablesToServer(thread, r, fc, trackVarsArray)
-	addHeadersToServer(r, thread, fc, trackVarsArray)
+	addKnownVariablesToServer(thread, fc, trackVarsArray)
+	addHeadersToServer(thread, fc, trackVarsArray)
 
 	// The Prepared Environment is registered last and can overwrite any previous values
 	addPreparedEnvToServer(fc, trackVarsArray)

@@ -49,12 +49,15 @@ frankenphp_config frankenphp_get_config();
 int frankenphp_new_main_thread(int num_threads);
 bool frankenphp_new_php_thread(uintptr_t thread_index);
 
-int frankenphp_update_server_context(
-    bool create, bool has_main_request, bool has_active_request,
+bool frankenphp_shutdown_dummy_request(void);
+int frankenphp_update_server_context(bool is_worker_request,
 
-    const char *request_method, char *query_string, zend_long content_length,
-    char *path_translated, char *request_uri, const char *content_type,
-    char *auth_user, char *auth_password, int proto_num);
+                                     const char *request_method,
+                                     char *query_string,
+                                     zend_long content_length,
+                                     char *path_translated, char *request_uri,
+                                     const char *content_type, char *auth_user,
+                                     char *auth_password, int proto_num);
 int frankenphp_request_startup();
 int frankenphp_execute_script(char *file_name);
 
@@ -69,7 +72,6 @@ void frankenphp_register_variables_from_request_info(
 void frankenphp_register_variable_safe(char *key, char *var, size_t val_len,
                                        zval *track_vars_array);
 zend_string *frankenphp_init_persistent_string(const char *string, size_t len);
-void frankenphp_release_zend_string(zend_string *z_string);
 int frankenphp_reset_opcache(void);
 int frankenphp_get_current_memory_limit();
 
