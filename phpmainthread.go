@@ -22,7 +22,7 @@ type phpMainThread struct {
 	phpIni          map[string]string
 	commonHeaders   map[string]*C.zend_string
 	knownServerKeys map[string]*C.zend_string
-	sandboxedEnv    map[string]string
+	sandboxedEnv    map[string]*C.zend_string
 }
 
 var (
@@ -40,7 +40,7 @@ func initPHPThreads(numThreads int, numMaxThreads int, phpIni map[string]string)
 		numThreads:   numThreads,
 		maxThreads:   numMaxThreads,
 		phpIni:       phpIni,
-		sandboxedEnv: getEnvAsMap(),
+		sandboxedEnv: initializeEnv(),
 	}
 
 	// initialize the first thread

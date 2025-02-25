@@ -21,7 +21,7 @@ type phpThread struct {
 	handlerMu    sync.Mutex
 	handler      threadHandler
 	state        *threadState
-	sandboxedEnv map[string]string
+	sandboxedEnv map[string]*C.zend_string
 }
 
 // interface that defines how the callbacks from the C thread should be handled
@@ -105,24 +105,6 @@ func (thread *phpThread) transitionToNewHandler() string {
 
 func (thread *phpThread) getActiveRequest() *http.Request {
 	return thread.handler.getActiveRequest()
-}
-
-func (thread *phpThread) getSandboxedEnv() map[string]string {
-	if thread.sandboxedEnv != nil {
-		return thread.sandboxedEnv
-	}
-
-	return mainThread.sandboxedEnv
-}
-
-func (thread *phpThread) requireSandboxedEnv() {
-	if thread.sandboxedEnv != nil {
-		return
-	}
-	thread.sandboxedEnv = make(map[string]string, len(mainThread.sandboxedEnv))
-	for key, value := range mainThread.sandboxedEnv {
-		thread.sandboxedEnv[key] = value
-	}
 }
 
 // Pin a string that is not null-terminated

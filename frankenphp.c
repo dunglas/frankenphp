@@ -173,20 +173,13 @@ PHPAPI void get_full_env(zval *track_vars_array) {
     return;
   }
 
-  /* in all other cases, fetch the env from go */
-  // TODO: this could be much more efficient
-  struct go_getfullenv_return full_env = go_getfullenv(thread_index);
+  /* in all other cases, get the env from go */
+  go_getfullenv(thread_index, track_vars_array);
+}
 
-  for (int i = 0; i < full_env.r1; i++) {
-    go_string key = full_env.r0[i * 2];
-    go_string val = full_env.r0[i * 2 + 1];
-
-    // create PHP string for the value
-    zend_string *val_str = zend_string_init(val.data, val.len, 0);
-
-    // add to the associative array
-    add_assoc_str_ex(track_vars_array, key.data, key.len, val_str);
-  }
+void frankenphp_add_assoc_str_ex(zval *track_vars_array, char *key,
+                                 size_t keylen, zend_string *val) {
+  add_assoc_str_ex(track_vars_array, key, keylen, val);
 }
 
 /* Adapted from php_request_startup() */
@@ -324,13 +317,11 @@ PHP_FUNCTION(frankenphp_getenv) {
     return;
   }
 
-  go_string gname = {name_len, name};
-
-  struct go_getenv_return result = go_getenv(thread_index, &gname);
+  struct go_getenv_return result = go_getenv(thread_index, name);
 
   if (result.r0) {
     // Return the single environment variable as a string
-    RETVAL_STRINGL(result.r1->data, result.r1->len);
+    RETVAL_STR(result.r1);
   } else {
     // Environment variable does not exist
     RETVAL_FALSE;
@@ -764,6 +755,7 @@ void frankenphp_register_bulk(
 zend_string *frankenphp_init_persistent_string(const char *string, size_t len) {
   /* persistent strings will be ignored by the GC at the end of a request */
   zend_string *z_string = zend_string_init(string, len, 1);
+  zend_string_hash_val(z_string);
 
   /* interned strings will not be ref counted by the GC */
   GC_ADD_FLAGS(z_string, IS_STR_INTERNED);
@@ -860,9 +852,7 @@ static void frankenphp_log_message(const char *message, int syslog_type_int) {
 }
 
 static char *frankenphp_getenv(const char *name, size_t name_len) {
-  go_string gname = {name_len, (char *)name};
-
-  return go_sapi_getenv(thread_index, &gname);
+  return go_sapi_getenv(thread_index, (char *)(name))->val;
 }
 
 sapi_module_struct frankenphp_sapi_module = {
