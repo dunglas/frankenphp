@@ -232,7 +232,7 @@ static int frankenphp_worker_request_startup() {
 
     php_hash_environment();
 
-    // force a re-import of the $_SERVER superglobal in worker mode
+    /* zend_is_auto_global will force a re-import of the $_SERVER global */
     zend_is_auto_global(ZSTR_KNOWN(ZEND_STR_AUTOGLOBAL_SERVER));
 
     /* Unfinish the request */
