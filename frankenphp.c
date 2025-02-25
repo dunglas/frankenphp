@@ -173,6 +173,7 @@ PHPAPI void get_full_env(zval *track_vars_array) {
   }
 
   /* in all other cases, fetch the env from go */
+  // TODO: this could be much more efficient
   struct go_getfullenv_return full_env = go_getfullenv(thread_index);
 
   for (int i = 0; i < full_env.r1; i++) {
