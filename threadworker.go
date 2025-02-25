@@ -61,9 +61,6 @@ func (handler *workerThread) beforeScriptExecution() string {
 
 func (handler *workerThread) afterScriptExecution(exitStatus int) {
 	tearDownWorkerScript(handler, exitStatus)
-
-	// reset all putenv() calls
-	handler.thread.sandboxedEnv = map[string]string{}
 }
 
 func (handler *workerThread) getActiveRequest() *http.Request {
@@ -102,6 +99,7 @@ func setupWorkerScript(handler *workerThread, worker *worker) {
 	}
 
 	handler.fakeRequest = r
+	handler.thread.sandboxedEnv = nil
 	if c := logger.Check(zapcore.DebugLevel, "starting"); c != nil {
 		c.Write(zap.String("worker", worker.fileName), zap.Int("thread", handler.thread.threadIndex))
 	}

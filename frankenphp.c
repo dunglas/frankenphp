@@ -162,10 +162,11 @@ static void frankenphp_worker_request_shutdown() {
 PHPAPI void get_full_env(zval *track_vars_array) {
 
   /* if the array is the $_ENV global and it already exists,
-     we want to keep it'S previous value */
+     load all of the previous entries
+     this ensures $_ENV is not unexpectedly reloaded when
+     compiling a new script in worker mode */
   if (track_vars_array == &PG(http_globals)[TRACK_VARS_ENV] &&
       zend_hash_str_exists(&EG(symbol_table), "_ENV", 4)) {
-    // copy the array from the symbol table into track_vars_array
     zval *env = zend_hash_str_find(&EG(symbol_table), "_ENV", 4);
     zend_hash_copy(Z_ARR_P(track_vars_array), Z_ARR_P(env),
                    (copy_ctor_func_t)zval_add_ref);

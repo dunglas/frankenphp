@@ -8,6 +8,7 @@ import (
 	"unsafe"
 )
 
+// TODO: initialize as zend_string, remove pinning
 func getEnvAsMap() map[string]string {
 	env := os.Environ()
 	envMap := make(map[string]string, len(env))

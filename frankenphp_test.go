@@ -713,6 +713,7 @@ func TestEnvIsResetInNonWorkerMode(t *testing.T) {
 	}, &testOptions{nbParallelRequests: 20})
 }
 
+// TODO: should it actually get reset in worker mode?
 func TestEnvIsNotResetInWorkerMode(t *testing.T) {
 	assert.NoError(t, os.Setenv("index", ""))
 	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
@@ -726,6 +727,7 @@ func TestEnvIsNotResetInWorkerMode(t *testing.T) {
 	}, &testOptions{workerScript: "env/env-index.php", nbParallelRequests: 20})
 }
 
+// reproduction of https://github.com/dunglas/frankenphp/issues/1061
 func TestModificationsToEnvPersistAcrossRequests(t *testing.T) {
 	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
 		for j := 0; j < 3; j++ {
