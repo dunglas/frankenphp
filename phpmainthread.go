@@ -22,6 +22,7 @@ type phpMainThread struct {
 	phpIni          map[string]string
 	commonHeaders   map[string]*C.zend_string
 	knownServerKeys map[string]*C.zend_string
+	sandboxedEnv    map[string]string
 }
 
 var (
@@ -34,11 +35,12 @@ var (
 // and reserves a fixed number of possible PHP threads
 func initPHPThreads(numThreads int, numMaxThreads int, phpIni map[string]string) (*phpMainThread, error) {
 	mainThread = &phpMainThread{
-		state:      newThreadState(),
-		done:       make(chan struct{}),
-		numThreads: numThreads,
-		maxThreads: numMaxThreads,
-		phpIni:     phpIni,
+		state:        newThreadState(),
+		done:         make(chan struct{}),
+		numThreads:   numThreads,
+		maxThreads:   numMaxThreads,
+		phpIni:       phpIni,
+		sandboxedEnv: getEnvAsMap(),
 	}
 
 	// initialize the first thread

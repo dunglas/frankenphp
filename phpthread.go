@@ -15,12 +15,13 @@ import (
 // identified by the index in the phpThreads slice
 type phpThread struct {
 	runtime.Pinner
-	threadIndex int
-	requestChan chan *http.Request
-	drainChan   chan struct{}
-	handlerMu   sync.Mutex
-	handler     threadHandler
-	state       *threadState
+	threadIndex  int
+	requestChan  chan *http.Request
+	drainChan    chan struct{}
+	handlerMu    sync.Mutex
+	handler      threadHandler
+	state        *threadState
+	sandboxedEnv map[string]string
 }
 
 // interface that defines how the callbacks from the C thread should be handled
@@ -33,9 +34,10 @@ type threadHandler interface {
 
 func newPHPThread(threadIndex int) *phpThread {
 	return &phpThread{
-		threadIndex: threadIndex,
-		requestChan: make(chan *http.Request),
-		state:       newThreadState(),
+		threadIndex:  threadIndex,
+		requestChan:  make(chan *http.Request),
+		state:        newThreadState(),
+		sandboxedEnv: nil,
 	}
 }
 
@@ -103,6 +105,24 @@ func (thread *phpThread) transitionToNewHandler() string {
 
 func (thread *phpThread) getActiveRequest() *http.Request {
 	return thread.handler.getActiveRequest()
+}
+
+func (thread *phpThread) getSandboxedEnv() map[string]string {
+	if thread.sandboxedEnv != nil {
+		return thread.sandboxedEnv
+	}
+
+	return mainThread.sandboxedEnv
+}
+
+func (thread *phpThread) requireSandboxedEnv() {
+	if thread.sandboxedEnv != nil {
+		return
+	}
+	thread.sandboxedEnv = make(map[string]string, len(mainThread.sandboxedEnv))
+	for key, value := range mainThread.sandboxedEnv {
+		thread.sandboxedEnv[key] = value
+	}
 }
 
 // Pin a string that is not null-terminated

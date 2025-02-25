@@ -45,6 +45,7 @@ type testOptions struct {
 	realServer         bool
 	logger             *zap.Logger
 	initOpts           []frankenphp.Option
+	phpIni             map[string]string
 }
 
 func runTest(t *testing.T, test func(func(http.ResponseWriter, *http.Request), *httptest.Server, int), opts *testOptions) {
@@ -67,6 +68,9 @@ func runTest(t *testing.T, test func(func(http.ResponseWriter, *http.Request), *
 		initOpts = append(initOpts, frankenphp.WithWorkers(testDataDir+opts.workerScript, opts.nbWorkers, opts.env, opts.watch))
 	}
 	initOpts = append(initOpts, opts.initOpts...)
+	if opts.phpIni != nil {
+		initOpts = append(initOpts, frankenphp.WithPhpIni(opts.phpIni))
+	}
 
 	err := frankenphp.Init(initOpts...)
 	require.Nil(t, err)
@@ -694,6 +698,44 @@ func testEnv(t *testing.T, opts *testOptions) {
 
 		assert.Equal(t, string(stdoutStderr), string(body))
 	}, opts)
+}
+
+func TestEnvIsResetInNonWorkerMode(t *testing.T) {
+	assert.NoError(t, os.Setenv("test", ""))
+	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
+		putResult := fetchBody("GET", fmt.Sprintf("http://example.com/env/putenv.php?key=test&put=%d", i), handler)
+
+		assert.Equal(t, fmt.Sprintf("test=%d", i), putResult, "putenv and then echo getenv")
+
+		getResult := fetchBody("GET", "http://example.com/env/putenv.php?key=test", handler)
+
+		assert.Equal(t, "test=", getResult, "putenv should be reset across requests")
+	}, &testOptions{nbParallelRequests: 20})
+}
+
+func TestEnvIsNotResetInWorkerMode(t *testing.T) {
+	assert.NoError(t, os.Setenv("index", ""))
+	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
+		putResult := fetchBody("GET", fmt.Sprintf("http://example.com/env/env-index.php?index=%d", i), handler)
+
+		assert.Equal(t, "success", putResult, "putenv and then echo getenv")
+
+		getResult := fetchBody("GET", "http://example.com/env/env-index.php", handler)
+
+		assert.Equal(t, "success", getResult, "putenv should not be reset across worker requests")
+	}, &testOptions{workerScript: "env/env-index.php", nbParallelRequests: 20})
+}
+
+func TestModificationsToEnvPersistAcrossRequests(t *testing.T) {
+	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
+		for j := 0; j < 3; j++ {
+			result := fetchBody("GET", "http://example.com/env/env-global.php", handler)
+			assert.Equal(t, "custom_value", result, "a var directly added to $_ENV should persist")
+		}
+	}, &testOptions{
+		workerScript: "env/env-global.php",
+		phpIni:       map[string]string{"variables_order": "EGPCS"},
+	})
 }
 
 func TestFileUpload_module(t *testing.T) { testFileUpload(t, &testOptions{}) }

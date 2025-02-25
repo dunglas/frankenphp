@@ -160,6 +160,17 @@ static void frankenphp_worker_request_shutdown() {
 }
 
 PHPAPI void get_full_env(zval *track_vars_array) {
+
+  /* if the array is the $_ENV global and it already exists,
+     we want to keep it'S previous value */
+  if (track_vars_array == &PG(http_globals)[TRACK_VARS_ENV] && zend_hash_str_exists(&EG(symbol_table), "_ENV", 4)) {
+	  // copy the array from the symbol table into track_vars_array
+	  zval *env = zend_hash_str_find(&EG(symbol_table), "_ENV", 4);
+	  zend_hash_copy(Z_ARR_P(track_vars_array), Z_ARR_P(env),
+                       (copy_ctor_func_t)zval_add_ref);
+	  return;
+  }
+
   struct go_getfullenv_return full_env = go_getfullenv(thread_index);
 
   for (int i = 0; i < full_env.r1; i++) {
@@ -219,6 +230,7 @@ static int frankenphp_worker_request_startup() {
 
     php_hash_environment();
 
+	// force a re-import of the $_SERVER superglobal in worker mode
     zend_is_auto_global(ZSTR_KNOWN(ZEND_STR_AUTOGLOBAL_SERVER));
 
     /* Unfinish the request */
@@ -282,7 +294,7 @@ PHP_FUNCTION(frankenphp_putenv) {
     RETURN_FALSE;
   }
 
-  if (go_putenv(setting, (int)setting_len)) {
+  if (go_putenv(thread_index, setting, (int)setting_len)) {
     RETURN_TRUE;
   } else {
     RETURN_FALSE;

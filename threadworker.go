@@ -61,6 +61,9 @@ func (handler *workerThread) beforeScriptExecution() string {
 
 func (handler *workerThread) afterScriptExecution(exitStatus int) {
 	tearDownWorkerScript(handler, exitStatus)
+
+	// reset all putenv() calls
+	handler.thread.sandboxedEnv = map[string]string{}
 }
 
 func (handler *workerThread) getActiveRequest() *http.Request {
