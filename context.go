@@ -98,7 +98,7 @@ func NewRequestWithContext(r *http.Request, opts ...RequestOption) (*http.Reques
 	return r.WithContext(c), nil
 }
 
-func newFakeContext(requestPath string, opts ...RequestOption) (*frankenPHPContext, error) {
+func newDummyContext(requestPath string, opts ...RequestOption) (*frankenPHPContext, error) {
 	r, err := http.NewRequest(http.MethodGet, requestPath, nil)
 	if err != nil {
 		return nil, err

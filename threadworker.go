@@ -17,7 +17,7 @@ type workerThread struct {
 	state           *threadState
 	thread          *phpThread
 	worker          *worker
-	fakeContext     *frankenPHPContext
+	dummyContext    *frankenPHPContext
 	workerContext   *frankenPHPContext
 	backoff         *exponentialBackoff
 	isBootingScript bool // true if the worker has not reached frankenphp_handle_request yet
@@ -67,7 +67,7 @@ func (handler *workerThread) getRequestContext() *frankenPHPContext {
 		return handler.workerContext
 	}
 
-	return handler.fakeContext
+	return handler.dummyContext
 }
 
 func (handler *workerThread) name() string {
@@ -79,7 +79,7 @@ func setupWorkerScript(handler *workerThread, worker *worker) {
 	metrics.StartWorker(worker.fileName)
 
 	// Create a dummy request to set up the worker
-	fc, err := newFakeContext(
+	fc, err := newDummyContext(
 		filepath.Base(worker.fileName),
 		WithRequestDocumentRoot(filepath.Dir(worker.fileName), false),
 		WithRequestPreparedEnv(worker.env),
@@ -92,7 +92,7 @@ func setupWorkerScript(handler *workerThread, worker *worker) {
 		panic(err)
 	}
 
-	handler.fakeContext = fc
+	handler.dummyContext = fc
 	handler.isBootingScript = true
 	if c := logger.Check(zapcore.DebugLevel, "starting"); c != nil {
 		c.Write(zap.String("worker", worker.fileName), zap.Int("thread", handler.thread.threadIndex))
@@ -107,9 +107,9 @@ func tearDownWorkerScript(handler *workerThread, exitStatus int) {
 		handler.workerContext = nil
 	}
 
-	fc := handler.fakeContext
+	fc := handler.dummyContext
 	fc.exitStatus = exitStatus
-	handler.fakeContext = nil
+	handler.dummyContext = nil
 
 	// on exit status 0 we just run the worker script again
 	worker := handler.worker

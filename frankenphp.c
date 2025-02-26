@@ -151,7 +151,7 @@ static void frankenphp_worker_request_shutdown() {
   zend_set_memory_limit(PG(memory_limit));
 }
 
-// shutdown the fake request that starts the worker script
+// shutdown the dummy request that starts the worker script
 bool frankenphp_shutdown_dummy_request(void) {
   if (SG(server_context) == NULL) {
     return false;
