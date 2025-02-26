@@ -16,24 +16,9 @@ FrankenPHP can also be used as a standalone Go library to embed PHP in any app u
 
 ## Getting Started
 
-### Docker
-
-```console
-docker run -v .:/app/public \
-    -p 80:80 -p 443:443 -p 443:443/udp \
-    dunglas/frankenphp
-```
-
-Go to `https://localhost`, and enjoy!
-
-> [!TIP]
->
-> Do not attempt to use `https://127.0.0.1`. Use `https://localhost` and accept the self-signed certificate.
-> Use the [`SERVER_NAME` environment variable](docs/config.md#environment-variables) to change the domain to use.
-
 ### Standalone Binary
 
-If you prefer not to use Docker, we provide standalone FrankenPHP binaries for Linux and macOS
+We provide static FrankenPHP binaries for Linux and macOS
 containing [PHP 8.4](https://www.php.net/releases/8.4/en.php) and most popular PHP extensions.
 
 On Windows, use [WSL](https://learn.microsoft.com/windows/wsl/) to run FrankenPHP.
@@ -56,6 +41,45 @@ You can also run command-line scripts with:
 
 ```console
 frankenphp php-cli /path/to/your/script.php
+```
+
+> ![WARNING]
+>
+> In production, prefer using [the Docker images](#docker), [the Brew package](#homebrew)
+> or [compiling FrankenPHP from sources](https://frankenphp.dev/docs/compile/).
+> The standalone binary is provided for development and testing purposes.
+
+### Docker
+
+Alternatively, [Docker images](https://frankenphp.dev/docs/docker/) are available:
+
+```console
+docker run -v .:/app/public \
+    -p 80:80 -p 443:443 -p 443:443/udp \
+    dunglas/frankenphp
+```
+
+Go to `https://localhost`, and enjoy!
+
+> [!TIP]
+>
+> Do not attempt to use `https://127.0.0.1`. Use `https://localhost` and accept the self-signed certificate.
+> Use the [`SERVER_NAME` environment variable](docs/config.md#environment-variables) to change the domain to use.
+
+### Homebrew
+
+FrankenPHP is also available as a [Homebrew](https://brew.sh) package for macOS and Linux.
+
+To install it:
+
+```console
+brew install dunglas/frankenphp/frankenphp
+```
+
+To serve the content of the current directory, run:
+
+```console
+frankenphp php-server
 ```
 
 ## Docs
