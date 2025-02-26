@@ -47,7 +47,7 @@ var knownServerKeys = []string{
 //
 // TODO: handle this case https://github.com/caddyserver/caddy/issues/3718
 // Inspired by https://github.com/caddyserver/caddy/blob/master/modules/caddyhttp/reverseproxy/fastcgi/fastcgi.go
-func addKnownVariablesToServer(thread *phpThread, fc *FrankenPHPContext, trackVarsArray *C.zval) {
+func addKnownVariablesToServer(thread *phpThread, fc *frankenPHPContext, trackVarsArray *C.zval) {
 	request := fc.request
 	keys := mainThread.knownServerKeys
 	// Separate remote IP and port; more lenient than net.SplitHostPort
@@ -160,7 +160,7 @@ func packCgiVariable(key *C.zend_string, value string) C.ht_key_value_pair {
 	return C.ht_key_value_pair{key, toUnsafeChar(value), C.size_t(len(value))}
 }
 
-func addHeadersToServer(thread *phpThread, fc *FrankenPHPContext, trackVarsArray *C.zval) {
+func addHeadersToServer(thread *phpThread, fc *frankenPHPContext, trackVarsArray *C.zval) {
 	for field, val := range fc.request.Header {
 		if k := mainThread.commonHeaders[field]; k != nil {
 			v := strings.Join(val, ", ")
@@ -176,7 +176,7 @@ func addHeadersToServer(thread *phpThread, fc *FrankenPHPContext, trackVarsArray
 	}
 }
 
-func addPreparedEnvToServer(fc *FrankenPHPContext, trackVarsArray *C.zval) {
+func addPreparedEnvToServer(fc *frankenPHPContext, trackVarsArray *C.zval) {
 	for k, v := range fc.env {
 		C.frankenphp_register_variable_safe(toUnsafeChar(k), toUnsafeChar(v), C.size_t(len(v)), trackVarsArray)
 	}
@@ -200,7 +200,7 @@ func go_register_variables(threadIndex C.uintptr_t, trackVarsArray *C.zval) {
 //
 // Adapted from https://github.com/caddyserver/caddy/blob/master/modules/caddyhttp/reverseproxy/fastcgi/fastcgi.go
 // Copyright 2015 Matthew Holt and The Caddy Authors
-func splitPos(fc *FrankenPHPContext, path string) int {
+func splitPos(fc *frankenPHPContext, path string) int {
 	if len(fc.splitPath) == 0 {
 		return 0
 	}

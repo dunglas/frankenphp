@@ -15,7 +15,7 @@ import (
 type phpThread struct {
 	runtime.Pinner
 	threadIndex int
-	requestChan chan *FrankenPHPContext
+	requestChan chan *frankenPHPContext
 	drainChan   chan struct{}
 	handlerMu   sync.Mutex
 	handler     threadHandler
@@ -27,13 +27,13 @@ type threadHandler interface {
 	name() string
 	beforeScriptExecution() string
 	afterScriptExecution(exitStatus int)
-	getRequestContext() *FrankenPHPContext
+	getRequestContext() *frankenPHPContext
 }
 
 func newPHPThread(threadIndex int) *phpThread {
 	return &phpThread{
 		threadIndex: threadIndex,
-		requestChan: make(chan *FrankenPHPContext),
+		requestChan: make(chan *frankenPHPContext),
 		state:       newThreadState(),
 	}
 }
@@ -101,7 +101,7 @@ func (thread *phpThread) transitionToNewHandler() string {
 	return thread.handler.beforeScriptExecution()
 }
 
-func (thread *phpThread) getRequestContext() *FrankenPHPContext {
+func (thread *phpThread) getRequestContext() *frankenPHPContext {
 	return thread.handler.getRequestContext()
 }
 

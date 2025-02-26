@@ -10,8 +10,8 @@ import (
 	"go.uber.org/zap"
 )
 
-// FrankenPHPContext provides contextual information about the Request to handle.
-type FrankenPHPContext struct {
+// frankenPHPContext provides contextual information about the Request to handle.
+type frankenPHPContext struct {
 	documentRoot    string
 	splitPath       []string
 	env             PreparedEnv
@@ -34,15 +34,15 @@ type FrankenPHPContext struct {
 	startedAt time.Time
 }
 
-// FromContext extracts the FrankenPHPContext from a context.
-func FromContext(ctx context.Context) (fctx *FrankenPHPContext, ok bool) {
-	fctx, ok = ctx.Value(contextKey).(*FrankenPHPContext)
+// fromContext extracts the frankenPHPContext from a context.
+func fromContext(ctx context.Context) (fctx *frankenPHPContext, ok bool) {
+	fctx, ok = ctx.Value(contextKey).(*frankenPHPContext)
 	return
 }
 
 // NewRequestWithContext creates a new FrankenPHP request context.
 func NewRequestWithContext(r *http.Request, opts ...RequestOption) (*http.Request, error) {
-	fc := &FrankenPHPContext{
+	fc := &frankenPHPContext{
 		done:      make(chan interface{}),
 		startedAt: time.Now(),
 		request:   r,
@@ -98,7 +98,7 @@ func NewRequestWithContext(r *http.Request, opts ...RequestOption) (*http.Reques
 	return r.WithContext(c), nil
 }
 
-func newFakeContext(requestPath string, opts ...RequestOption) (*FrankenPHPContext, error) {
+func newFakeContext(requestPath string, opts ...RequestOption) (*frankenPHPContext, error) {
 	r, err := http.NewRequest(http.MethodGet, requestPath, nil)
 	if err != nil {
 		return nil, err
@@ -109,29 +109,33 @@ func newFakeContext(requestPath string, opts ...RequestOption) (*FrankenPHPConte
 		return nil, err
 	}
 
-	fc, _ := FromContext(fr.Context())
+	fc, _ := fromContext(fr.Context())
 
 	return fc, nil
 }
 
 // closeContext sends the response to the client
-func (fc *FrankenPHPContext) closeContext() {
-	if !fc.isDone {
-		close(fc.done)
-		fc.isDone = true
+func (fc *frankenPHPContext) closeContext() {
+	if fc.isDone {
+		return
 	}
+
+	close(fc.done)
+	fc.isDone = true
 }
 
 // validate checks if the request should be outright rejected
-func (fc *FrankenPHPContext) validate() bool {
+func (fc *frankenPHPContext) validate() bool {
 	if !strings.Contains(fc.request.URL.Path, "\x00") {
 		return true
 	}
+
 	fc.rejectBadRequest("Invalid request path")
+
 	return false
 }
 
-func (fc *FrankenPHPContext) clientHasClosed() bool {
+func (fc *frankenPHPContext) clientHasClosed() bool {
 	select {
 	case <-fc.request.Context().Done():
 		return true
@@ -141,7 +145,7 @@ func (fc *FrankenPHPContext) clientHasClosed() bool {
 }
 
 // reject sends a response with the given status code and message
-func (fc *FrankenPHPContext) reject(statusCode int, message string) {
+func (fc *frankenPHPContext) reject(statusCode int, message string) {
 	if fc.isDone {
 		return
 	}
@@ -156,6 +160,6 @@ func (fc *FrankenPHPContext) reject(statusCode int, message string) {
 	fc.closeContext()
 }
 
-func (fc *FrankenPHPContext) rejectBadRequest(message string) {
+func (fc *frankenPHPContext) rejectBadRequest(message string) {
 	fc.reject(http.StatusBadRequest, message)
 }

@@ -16,7 +16,7 @@ type worker struct {
 	fileName    string
 	num         int
 	env         PreparedEnv
-	requestChan chan *FrankenPHPContext
+	requestChan chan *frankenPHPContext
 	threads     []*phpThread
 	threadMutex sync.RWMutex
 }
@@ -78,7 +78,7 @@ func newWorker(o workerOpt) (*worker, error) {
 		fileName:    absFileName,
 		num:         o.num,
 		env:         o.env,
-		requestChan: make(chan *FrankenPHPContext),
+		requestChan: make(chan *frankenPHPContext),
 	}
 	workers[absFileName] = w
 
@@ -157,7 +157,7 @@ func (worker *worker) countThreads() int {
 	return l
 }
 
-func (worker *worker) handleRequest(fc *FrankenPHPContext) {
+func (worker *worker) handleRequest(fc *frankenPHPContext) {
 	metrics.StartWorkerRequest(fc.scriptFilename)
 
 	// dispatch requests to all worker threads in order

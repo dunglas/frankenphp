@@ -156,6 +156,7 @@ bool frankenphp_shutdown_dummy_request(void) {
   if (SG(server_context) == NULL) {
     return false;
   }
+
   frankenphp_worker_request_shutdown();
 
   return true;
