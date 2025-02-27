@@ -710,32 +710,32 @@ func TestEnvIsResetInNonWorkerMode(t *testing.T) {
 		getResult := fetchBody("GET", "http://example.com/env/putenv.php?key=test", handler)
 
 		assert.Equal(t, "test=", getResult, "putenv should be reset across requests")
-	}, &testOptions{nbParallelRequests: 20})
+	}, &testOptions{})
 }
 
 // TODO: should it actually get reset in worker mode?
 func TestEnvIsNotResetInWorkerMode(t *testing.T) {
 	assert.NoError(t, os.Setenv("index", ""))
 	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
-		putResult := fetchBody("GET", fmt.Sprintf("http://example.com/env/env-index.php?index=%d", i), handler)
+		putResult := fetchBody("GET", fmt.Sprintf("http://example.com/env/remember-env.php?index=%d", i), handler)
 
 		assert.Equal(t, "success", putResult, "putenv and then echo getenv")
 
-		getResult := fetchBody("GET", "http://example.com/env/env-index.php", handler)
+		getResult := fetchBody("GET", "http://example.com/env/remember-env.php", handler)
 
 		assert.Equal(t, "success", getResult, "putenv should not be reset across worker requests")
-	}, &testOptions{workerScript: "env/env-index.php", nbParallelRequests: 20})
+	}, &testOptions{workerScript: "env/remember-env.php"})
 }
 
 // reproduction of https://github.com/dunglas/frankenphp/issues/1061
 func TestModificationsToEnvPersistAcrossRequests(t *testing.T) {
 	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
 		for j := 0; j < 3; j++ {
-			result := fetchBody("GET", "http://example.com/env/env-global.php", handler)
+			result := fetchBody("GET", "http://example.com/env/overwrite-env.php", handler)
 			assert.Equal(t, "custom_value", result, "a var directly added to $_ENV should persist")
 		}
 	}, &testOptions{
-		workerScript: "env/env-global.php",
+		workerScript: "env/overwrite-env.php",
 		phpIni:       map[string]string{"variables_order": "EGPCS"},
 	})
 }

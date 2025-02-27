@@ -852,7 +852,13 @@ static void frankenphp_log_message(const char *message, int syslog_type_int) {
 }
 
 static char *frankenphp_getenv(const char *name, size_t name_len) {
-  return go_sapi_getenv(thread_index, (char *)(name))->val;
+  struct go_getenv_return result = go_getenv(thread_index, (char *)name);
+
+  if (result.r0) {
+	return result.r1->val;
+  }
+
+  return NULL;
 }
 
 sapi_module_struct frankenphp_sapi_module = {

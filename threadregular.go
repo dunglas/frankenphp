@@ -62,7 +62,7 @@ func (handler *regularThread) name() string {
 
 func (handler *regularThread) waitForRequest() string {
 	// clear any previously sandboxed env
-	handler.thread.sandboxedEnv = nil
+	clearSandboxedEnv(handler.thread)
 
 	handler.state.markAsWaiting(true)
 

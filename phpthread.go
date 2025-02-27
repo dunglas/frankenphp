@@ -34,10 +34,9 @@ type threadHandler interface {
 
 func newPHPThread(threadIndex int) *phpThread {
 	return &phpThread{
-		threadIndex:  threadIndex,
-		requestChan:  make(chan *http.Request),
-		state:        newThreadState(),
-		sandboxedEnv: nil,
+		threadIndex: threadIndex,
+		requestChan: make(chan *http.Request),
+		state:       newThreadState(),
 	}
 }
 

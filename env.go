@@ -32,8 +32,35 @@ func getSandboxedEnv(thread *phpThread) map[string]*C.zend_string {
 	return mainThread.sandboxedEnv
 }
 
+func clearSandboxedEnv(thread *phpThread) {
+	if thread.sandboxedEnv == nil {
+		return
+	}
+
+	for _, val := range thread.sandboxedEnv {
+		C.frankenphp_release_zend_string(val)
+	}
+
+	thread.sandboxedEnv = nil
+}
+
+// if an env var already exists, it needs to be freed
+func removeEnvFromThread(thread *phpThread, key string) {
+	valueInThread, existsInThread := thread.sandboxedEnv[key]
+	if !existsInThread {
+		return
+	}
+
+	valueInMainThread, ok := mainThread.sandboxedEnv[key]
+	if !ok || valueInThread != valueInMainThread {
+		C.frankenphp_release_zend_string(valueInThread)
+	}
+
+	delete(thread.sandboxedEnv, key)
+}
+
 // copy the main thread env to the thread specific env
-func requireSandboxedEnv(thread *phpThread) {
+func cloneSandboxedEnv(thread *phpThread) {
 	if thread.sandboxedEnv != nil {
 		return
 	}
@@ -47,17 +74,17 @@ func requireSandboxedEnv(thread *phpThread) {
 func go_putenv(threadIndex C.uintptr_t, str *C.char, length C.int) C.bool {
 	thread := phpThreads[threadIndex]
 	envString := C.GoStringN(str, length)
-	requireSandboxedEnv(thread)
+	cloneSandboxedEnv(thread)
 
 	// Check if '=' is present in the string
 	if key, val, found := strings.Cut(envString, "="); found {
-		// TODO: free this zend_string (if it exists and after requests)
+		removeEnvFromThread(thread, key)
 		thread.sandboxedEnv[key] = C.frankenphp_init_persistent_string(toUnsafeChar(val), C.size_t(len(val)))
 		return os.Setenv(key, val) == nil
 	}
 
 	// No '=', unset the environment variable
-	delete(thread.sandboxedEnv, envString)
+	removeEnvFromThread(thread, envString)
 	return os.Unsetenv(envString) == nil
 }
 
@@ -83,16 +110,4 @@ func go_getenv(threadIndex C.uintptr_t, name *C.char) (C.bool, *C.zend_string) {
 	}
 
 	return true, envValue // Return 1 to indicate success
-}
-
-//export go_sapi_getenv
-func go_sapi_getenv(threadIndex C.uintptr_t, name *C.char) *C.zend_string {
-	thread := phpThreads[threadIndex]
-
-	envValue, exists := getSandboxedEnv(thread)[C.GoString(name)]
-	if !exists {
-		return nil
-	}
-
-	return envValue
 }

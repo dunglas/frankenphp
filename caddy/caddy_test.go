@@ -716,3 +716,35 @@ func testSingleIniConfiguration(tester *caddytest.Tester, key string, value stri
 		)
 	}
 }
+
+func TestOsEnv(t *testing.T) {
+	os.Setenv("ENV1", "value1")
+	os.Setenv("ENV2", "value2")
+	tester := caddytest.NewTester(t)
+	tester.InitServer(`
+		{
+			skip_install_trust
+			admin localhost:2999
+			http_port `+testPort+`
+
+			frankenphp {
+				num_threads 2
+				php_ini variables_order "EGPCS"
+				worker ../testdata/env/env.php 1
+			}
+		}
+
+		localhost:`+testPort+` {
+			route {
+				root ../testdata
+				php
+			}
+		}
+		`, "caddyfile")
+
+	tester.AssertGetResponse(
+		"http://localhost:"+testPort+"/env/env.php?keys[]=ENV1&keys[]=ENV2",
+		http.StatusOK,
+		"ENV1=value1,ENV2=value2",
+	)
+}
