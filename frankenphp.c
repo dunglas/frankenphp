@@ -855,7 +855,7 @@ static char *frankenphp_getenv(const char *name, size_t name_len) {
   struct go_getenv_return result = go_getenv(thread_index, (char *)name);
 
   if (result.r0) {
-	return result.r1->val;
+    return result.r1->val;
   }
 
   return NULL;
