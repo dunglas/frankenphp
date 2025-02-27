@@ -675,13 +675,13 @@ func TestEnv(t *testing.T) {
 	testEnv(t, &testOptions{})
 }
 func TestEnvWorker(t *testing.T) {
-	testEnv(t, &testOptions{workerScript: "test-env.php"})
+	testEnv(t, &testOptions{workerScript: "env/test-env.php"})
 }
 func testEnv(t *testing.T, opts *testOptions) {
 	assert.NoError(t, os.Setenv("EMPTY", ""))
 
 	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
-		req := httptest.NewRequest("GET", fmt.Sprintf("http://example.com/test-env.php?var=%d", i), nil)
+		req := httptest.NewRequest("GET", fmt.Sprintf("http://example.com/env/test-env.php?var=%d", i), nil)
 		w := httptest.NewRecorder()
 		handler(w, req)
 
@@ -689,7 +689,7 @@ func testEnv(t *testing.T, opts *testOptions) {
 		body, _ := io.ReadAll(resp.Body)
 
 		// execute the script as regular php script
-		cmd := exec.Command("php", "testdata/test-env.php", strconv.Itoa(i))
+		cmd := exec.Command("php", "testdata/env/test-env.php", strconv.Itoa(i))
 		stdoutStderr, err := cmd.CombinedOutput()
 		if err != nil {
 			// php is not installed or other issue, use the hardcoded output below:
