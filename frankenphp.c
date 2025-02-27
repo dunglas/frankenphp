@@ -160,20 +160,6 @@ static void frankenphp_worker_request_shutdown() {
 }
 
 PHPAPI void get_full_env(zval *track_vars_array) {
-
-  /* if the array is the $_ENV global and it already exists,
-     load all of the previous entries
-     this ensures $_ENV is not unexpectedly reloaded when
-     compiling a new script in worker mode */
-  if (track_vars_array == &PG(http_globals)[TRACK_VARS_ENV] &&
-      zend_hash_str_exists(&EG(symbol_table), "_ENV", 4)) {
-    zval *env = zend_hash_str_find(&EG(symbol_table), "_ENV", 4);
-    zend_hash_copy(Z_ARR_P(track_vars_array), Z_ARR_P(env),
-                   (copy_ctor_func_t)zval_add_ref);
-    return;
-  }
-
-  /* in all other cases, get the env from go */
   go_getfullenv(thread_index, track_vars_array);
 }
 
@@ -229,6 +215,17 @@ static int frankenphp_worker_request_startup() {
 
     /* zend_is_auto_global will force a re-import of the $_SERVER global */
     zend_is_auto_global(ZSTR_KNOWN(ZEND_STR_AUTOGLOBAL_SERVER));
+
+    /* disarm the $_ENV auto_global to prevent it from being reloaded in worker
+     * mode */
+    if (zend_hash_str_exists(&EG(symbol_table), "_ENV", 4)) {
+      zend_auto_global *env_global;
+      if ((env_global = zend_hash_find_ptr(
+               CG(auto_globals), ZSTR_KNOWN(ZEND_STR_AUTOGLOBAL_ENV))) !=
+          NULL) {
+        env_global->armed = 0;
+      }
+    }
 
     /* Unfinish the request */
     frankenphp_server_context *ctx = SG(server_context);
