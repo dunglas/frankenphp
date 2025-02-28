@@ -374,7 +374,7 @@ func Shutdown() {
 		return
 	}
 
-	drainWorkers()
+	drainWatcher()
 	drainAutoScaling()
 	drainPHPThreads()
 
