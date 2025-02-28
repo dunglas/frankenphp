@@ -760,10 +760,6 @@ zend_string *frankenphp_init_persistent_string(const char *string, size_t len) {
   return z_string;
 }
 
-void frankenphp_release_zend_string(zend_string *z_string) {
-  zend_string_release(z_string);
-}
-
 static void
 frankenphp_register_variable_from_request_info(zend_string *zKey, char *value,
                                                bool must_be_present,

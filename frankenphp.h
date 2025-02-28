@@ -69,7 +69,6 @@ void frankenphp_register_variables_from_request_info(
 void frankenphp_register_variable_safe(char *key, char *var, size_t val_len,
                                        zval *track_vars_array);
 zend_string *frankenphp_init_persistent_string(const char *string, size_t len);
-void frankenphp_release_zend_string(zend_string *z_string);
 int frankenphp_reset_opcache(void);
 int frankenphp_get_current_memory_limit();
 void frankenphp_add_assoc_str_ex(zval *track_vars_array, char *key,

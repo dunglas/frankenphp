@@ -9,6 +9,7 @@ import "C"
 import (
 	"os"
 	"strings"
+	"unsafe"
 )
 
 func initializeEnv() map[string]*C.zend_string {
@@ -37,8 +38,11 @@ func clearSandboxedEnv(thread *phpThread) {
 		return
 	}
 
-	for _, val := range thread.sandboxedEnv {
-		C.frankenphp_release_zend_string(val)
+	for key, val := range thread.sandboxedEnv {
+		valInMainThread, ok := mainThread.sandboxedEnv[key]
+		if !ok || val != valInMainThread {
+			C.free(unsafe.Pointer(val))
+		}
 	}
 
 	thread.sandboxedEnv = nil
@@ -53,7 +57,7 @@ func removeEnvFromThread(thread *phpThread, key string) {
 
 	valueInMainThread, ok := mainThread.sandboxedEnv[key]
 	if !ok || valueInThread != valueInMainThread {
-		C.frankenphp_release_zend_string(valueInThread)
+		C.free(unsafe.Pointer(valueInThread))
 	}
 
 	delete(thread.sandboxedEnv, key)
