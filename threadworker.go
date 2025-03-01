@@ -143,15 +143,17 @@ func (handler *workerThread) waitForWorkerRequest() bool {
 		c.Write(zap.String("worker", handler.worker.fileName))
 	}
 
+	// Clear the first dummy request created to initialize the worker
 	if handler.isBootingScript {
-		// Clean the first dummy request created to initialize the worker
 		handler.isBootingScript = false
 		if !C.frankenphp_shutdown_dummy_request() {
 			panic("Not in CGI context")
 		}
 	}
 
-	// worker threads are 'ready' only after they first reach frankenphp_handle_request()
+	// worker threads are 'ready' after they first reach frankenphp_handle_request()
+	// 'stateTransitionComplete' is only true on the first boot of the worker script
+	// while 'isBootingScript' is true on every boot of the worker script
 	if handler.state.is(stateTransitionComplete) {
 		metrics.ReadyWorker(handler.worker.fileName)
 		handler.state.set(stateReady)

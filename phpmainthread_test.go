@@ -152,6 +152,27 @@ func TestAllCommonHeadersAreCorrect(t *testing.T) {
 		assert.True(t, ok, "header is not correctly capitalized: "+header)
 	}
 }
+func TestFinishBootingAWorkerScript(t *testing.T) {
+	logger = zap.NewNop()
+	_, err := initPHPThreads(1, 1, nil)
+	assert.NoError(t, err)
+
+	// boot the worker
+	worker := getDummyWorker("transition-worker-1.php")
+	convertToWorkerThread(phpThreads[0], worker)
+	phpThreads[0].state.waitFor(stateReady)
+
+	assert.NotNil(t, phpThreads[0].handler.(*workerThread).dummyContext)
+	assert.Nil(t, phpThreads[0].handler.(*workerThread).workerContext)
+	assert.False(
+		t,
+		phpThreads[0].handler.(*workerThread).isBootingScript,
+		"isBootingScript should be false after the worker thread is ready",
+	)
+
+	drainPHPThreads()
+	assert.Nil(t, phpThreads)
+}
 
 func getDummyWorker(fileName string) *worker {
 	if workers == nil {
