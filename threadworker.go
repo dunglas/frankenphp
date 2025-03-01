@@ -94,6 +94,7 @@ func setupWorkerScript(handler *workerThread, worker *worker) {
 
 	handler.dummyContext = fc
 	handler.isBootingScript = true
+	clearSandboxedEnv(handler.thread)
 	if c := logger.Check(zapcore.DebugLevel, "starting"); c != nil {
 		c.Write(zap.String("worker", worker.fileName), zap.Int("thread", handler.thread.threadIndex))
 	}

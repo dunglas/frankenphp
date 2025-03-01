@@ -16,21 +16,6 @@ Découvrez plus de détails sur ce serveur d’application dans le replay de cet
 
 ## Pour Commencer
 
-### Docker
-
-```console
-docker run -v $PWD:/app/public \
-    -p 80:80 -p 443:443 -p 443:443/udp \
-    dunglas/frankenphp
-```
-
-Rendez-vous sur `https://localhost`, c'est parti !
-
-> [!TIP]
->
-> Ne tentez pas d'utiliser `https://127.0.0.1`. Utilisez `https://localhost` et acceptez le certificat auto-signé.
-> Utilisez [la variable d'environnement `SERVER_NAME`](config.md#variables-denvironnement) pour changer le domaine à utiliser.
-
 ### Binaire autonome
 
 Si vous préférez ne pas utiliser Docker, nous fournissons des binaires autonomes de FrankenPHP pour Linux et macOS
@@ -55,6 +40,45 @@ Vous pouvez également exécuter des scripts en ligne de commande avec :
 
 ```console
 frankenphp php-cli /path/to/your/script.php
+```
+
+> [!WARNING]
+>
+> En production, préférez utiliser [les images Docker](#docker), [le paquet Brew](#homebrew)
+> ou [compiler FrankenPHP à partir des sources](https://frankenphp.dev/docs/fr/compile/).
+> Le binaire autonome est fourni à des fins de développement et de test.
+
+### Docker
+
+Des [images Docker](https://frankenphp.dev/docs/fr/docker/) sont également disponibles :
+
+```console
+docker run -v $PWD:/app/public \
+    -p 80:80 -p 443:443 -p 443:443/udp \
+    dunglas/frankenphp
+```
+
+Rendez-vous sur `https://localhost`, c'est parti !
+
+> [!TIP]
+>
+> Ne tentez pas d'utiliser `https://127.0.0.1`. Utilisez `https://localhost` et acceptez le certificat auto-signé.
+> Utilisez [la variable d'environnement `SERVER_NAME`](config.md#variables-denvironnement) pour changer le domaine à utiliser.
+
+### Homebrew
+
+FrankenPHP est également disponible sous forme de paquet [Homebrew](https://brew.sh) pour macOS et Linux.
+
+Pour l'installer :
+
+```console
+brew install dunglas/frankenphp/frankenphp
+```
+
+Pour servir le contenu du répertoire courant, exécutez :
+
+```console
+frankenphp php-server
 ```
 
 ## Documentation

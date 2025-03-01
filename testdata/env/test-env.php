@@ -1,6 +1,6 @@
 <?php
 
-require_once __DIR__.'/_executor.php';
+require_once __DIR__.'/../_executor.php';
 
 return function() {
     $var = 'MY_VAR_' . ($_GET['var'] ?? '');
