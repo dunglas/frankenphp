@@ -46,6 +46,12 @@ typedef struct frankenphp_config {
 } frankenphp_config;
 frankenphp_config frankenphp_get_config();
 
+typedef struct {
+  const char **names;
+  size_t length;
+  size_t capacity;
+} frankenphp_modules_to_reload;
+
 int frankenphp_new_main_thread(int num_threads);
 bool frankenphp_new_php_thread(uintptr_t thread_index);
 
@@ -90,5 +96,7 @@ void frankenphp_register_bulk(
     ht_key_value_pair server_software, ht_key_value_pair http_host,
     ht_key_value_pair auth_type, ht_key_value_pair remote_ident,
     ht_key_value_pair request_uri);
+
+bool frankenphp_register_module_to_reload(const char *module_name);
 
 #endif
