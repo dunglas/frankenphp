@@ -40,7 +40,10 @@ static const char HARDCODED_INI[] = "max_execution_time=0\n"
                                     "max_input_time=-1\n\0";
 #endif
 
+#define INITIAL_MODULES_CAPACITY 8
+
 static const char *MODULES_TO_RELOAD[] = {"filter", "session", NULL};
+frankenphp_modules_to_reload modules_to_reload = {NULL, 0, 0};
 
 frankenphp_version frankenphp_get_version() {
   return (frankenphp_version){
@@ -130,18 +133,45 @@ static void frankenphp_release_temporary_streams() {
   ZEND_HASH_FOREACH_END();
 }
 
+static void init_modules_to_reload(void) {
+  if (modules_to_reload.names != NULL) {
+    return;
+  }
+
+  size_t count = 0;
+  for (const char **ptr = MODULES_TO_RELOAD; *ptr != NULL; ptr++) {
+    count++;
+  }
+
+  size_t capacity = count > 0 ? count * 2 : INITIAL_MODULES_CAPACITY;
+  modules_to_reload.names = malloc(capacity * sizeof(char *));
+  if (!modules_to_reload.names) {
+    return; // TODO: handle this as an error
+  }
+
+  for (size_t i = 0; i < count; i++) {
+    modules_to_reload.names[i] = strdup(MODULES_TO_RELOAD[i]);
+  }
+
+  modules_to_reload.count = count;
+  modules_to_reload.capacity = capacity;
+}
+
 /* Adapted from php_request_shutdown */
 static void frankenphp_worker_request_shutdown() {
   /* Flush all output buffers */
   zend_try { php_output_end_all(); }
   zend_end_try();
 
-  /* TODO: store the list of modules to reload in a global module variable */
-  const char **module_name;
+  if (modules_to_reload.names == NULL) {
+    init_modules_to_reload();
+  }
+
   zend_module_entry *module;
-  for (module_name = MODULES_TO_RELOAD; *module_name; module_name++) {
-    if ((module = zend_hash_str_find_ptr(&module_registry, *module_name,
-                                         strlen(*module_name)))) {
+  for (size_t i = 0; i < modules_to_reload.count; i++) {
+    if ((module = zend_hash_str_find_ptr(&module_registry,
+                                         modules_to_reload.names[i],
+                                         strlen(modules_to_reload.names[i])))) {
       module->request_shutdown_func(module->type, module->module_number);
     }
   }
@@ -157,6 +187,39 @@ static void frankenphp_worker_request_shutdown() {
   zend_end_try();
 
   zend_set_memory_limit(PG(memory_limit));
+}
+
+/* API for extensions to register their modules to reload */
+bool frankenphp_register_module_to_reload(const char *module_name) {
+  if (module_name == NULL) {
+    return false;
+  }
+
+  if (modules_to_reload.names == NULL) {
+    init_modules_to_reload();
+  }
+
+  for (size_t i = 0; i < modules_to_reload.count; i++) {
+    if (strcmp(modules_to_reload.names[i], module_name) == 0) {
+      return true;
+    }
+  }
+
+  if (modules_to_reload.count >= modules_to_reload.capacity) {
+    size_t new_capacity = modules_to_reload.capacity * 2;
+    const char **new_names =
+        realloc(modules_to_reload.names, new_capacity * sizeof(char *));
+    if (!new_names) {
+      return false; // Out of memory
+    }
+    modules_to_reload.names = new_names;
+    modules_to_reload.capacity = new_capacity;
+  }
+
+  modules_to_reload.names[modules_to_reload.count] = strdup(module_name);
+  modules_to_reload.count++;
+
+  return true;
 }
 
 PHPAPI void get_full_env(zval *track_vars_array) {
@@ -225,12 +288,17 @@ static int frankenphp_worker_request_startup() {
     frankenphp_server_context *ctx = SG(server_context);
     ctx->finished = false;
 
-    /* TODO: store the list of modules to reload in a global module variable */
-    const char **module_name;
+    /* Initialize modules to reload if needed */
+    if (modules_to_reload.names == NULL) {
+      init_modules_to_reload();
+    }
+
+    /* Reload modules */
     zend_module_entry *module;
-    for (module_name = MODULES_TO_RELOAD; *module_name; module_name++) {
-      if ((module = zend_hash_str_find_ptr(&module_registry, *module_name,
-                                           sizeof(*module_name) - 1)) &&
+    for (size_t i = 0; i < modules_to_reload.count; i++) {
+      if ((module = zend_hash_str_find_ptr(
+               &module_registry, modules_to_reload.names[i],
+               strlen(modules_to_reload.names[i]))) &&
           module->request_startup_func) {
         module->request_startup_func(module->type, module->module_number);
       }
