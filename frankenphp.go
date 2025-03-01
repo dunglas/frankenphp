@@ -30,7 +30,6 @@ package frankenphp
 import "C"
 import (
 	"bytes"
-	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -42,7 +41,6 @@ import (
 	"strings"
 	"sync"
 	"syscall"
-	"time"
 	"unsafe"
 
 	"go.uber.org/zap"
@@ -105,101 +103,6 @@ func (l syslogLevel) String() string {
 	default:
 		return "info"
 	}
-}
-
-// FrankenPHPContext provides contextual information about the Request to handle.
-type FrankenPHPContext struct {
-	documentRoot    string
-	splitPath       []string
-	env             PreparedEnv
-	logger          *zap.Logger
-	originalRequest *http.Request
-
-	docURI         string
-	pathInfo       string
-	scriptName     string
-	scriptFilename string
-
-	// Whether the request is already closed by us
-	closed sync.Once
-
-	responseWriter http.ResponseWriter
-	exitStatus     int
-
-	done      chan interface{}
-	startedAt time.Time
-}
-
-func clientHasClosed(r *http.Request) bool {
-	select {
-	case <-r.Context().Done():
-		return true
-	default:
-		return false
-	}
-}
-
-// NewRequestWithContext creates a new FrankenPHP request context.
-func NewRequestWithContext(r *http.Request, opts ...RequestOption) (*http.Request, error) {
-	fc := &FrankenPHPContext{
-		done:      make(chan interface{}),
-		startedAt: time.Now(),
-	}
-	for _, o := range opts {
-		if err := o(fc); err != nil {
-			return nil, err
-		}
-	}
-
-	if fc.documentRoot == "" {
-		if EmbeddedAppPath != "" {
-			fc.documentRoot = EmbeddedAppPath
-		} else {
-			var err error
-			if fc.documentRoot, err = os.Getwd(); err != nil {
-				return nil, err
-			}
-		}
-	}
-
-	if fc.splitPath == nil {
-		fc.splitPath = []string{".php"}
-	}
-
-	if fc.env == nil {
-		fc.env = make(map[string]string)
-	}
-
-	if fc.logger == nil {
-		fc.logger = getLogger()
-	}
-
-	if splitPos := splitPos(fc, r.URL.Path); splitPos > -1 {
-		fc.docURI = r.URL.Path[:splitPos]
-		fc.pathInfo = r.URL.Path[splitPos:]
-
-		// Strip PATH_INFO from SCRIPT_NAME
-		fc.scriptName = strings.TrimSuffix(r.URL.Path, fc.pathInfo)
-
-		// Ensure the SCRIPT_NAME has a leading slash for compliance with RFC3875
-		// Info: https://tools.ietf.org/html/rfc3875#section-4.1.13
-		if fc.scriptName != "" && !strings.HasPrefix(fc.scriptName, "/") {
-			fc.scriptName = "/" + fc.scriptName
-		}
-	}
-
-	// SCRIPT_FILENAME is the absolute path of SCRIPT_NAME
-	fc.scriptFilename = sanitizedPathJoin(fc.documentRoot, fc.scriptName)
-
-	c := context.WithValue(r.Context(), contextKey, fc)
-
-	return r.WithContext(c), nil
-}
-
-// FromContext extracts the FrankenPHPContext from a context.
-func FromContext(ctx context.Context) (fctx *FrankenPHPContext, ok bool) {
-	fctx, ok = ctx.Value(contextKey).(*FrankenPHPContext)
-	return
 }
 
 type PHPVersion struct {
@@ -343,11 +246,10 @@ func Init(options ...Option) error {
 		return err
 	}
 
-	regularRequestChan = make(chan *http.Request, totalThreadCount-workerThreadCount)
+	regularRequestChan = make(chan *frankenPHPContext, totalThreadCount-workerThreadCount)
 	regularThreads = make([]*phpThread, 0, totalThreadCount-workerThreadCount)
 	for i := 0; i < totalThreadCount-workerThreadCount; i++ {
-		thread := getInactivePHPThread()
-		convertToRegularThread(thread)
+		convertToRegularThread(getInactivePHPThread())
 	}
 
 	if err := initWorkers(opt.workers); err != nil {
@@ -389,19 +291,8 @@ func Shutdown() {
 	logger.Debug("FrankenPHP shut down")
 }
 
-func getLogger() *zap.Logger {
-	loggerMu.RLock()
-	defer loggerMu.RUnlock()
-
-	return logger
-}
-
-func updateServerContext(thread *phpThread, request *http.Request, create bool, isWorkerRequest bool) error {
-	fc, ok := FromContext(request.Context())
-	if !ok {
-		return InvalidRequestError
-	}
-
+func updateServerContext(thread *phpThread, fc *frankenPHPContext, isWorkerRequest bool) error {
+	request := fc.request
 	authUser, authPassword, ok := request.BasicAuth()
 	var cAuthUser, cAuthPassword *C.char
 	if ok && authPassword != "" {
@@ -438,12 +329,9 @@ func updateServerContext(thread *phpThread, request *http.Request, create bool, 
 	}
 
 	cRequestUri := thread.pinCString(request.URL.RequestURI())
-	isBootingAWorkerScript := fc.responseWriter == nil
 
 	ret := C.frankenphp_update_server_context(
-		C.bool(create),
-		C.bool(isWorkerRequest || isBootingAWorkerScript),
-		C.bool(!isBootingAWorkerScript),
+		C.bool(isWorkerRequest || fc.responseWriter == nil),
 
 		cMethod,
 		cQueryString,
@@ -469,39 +357,36 @@ func ServeHTTP(responseWriter http.ResponseWriter, request *http.Request) error 
 		return NotRunningError
 	}
 
-	if !requestIsValid(request, responseWriter) {
-		return nil
-	}
-
-	fc, ok := FromContext(request.Context())
+	fc, ok := fromContext(request.Context())
 	if !ok {
 		return InvalidRequestError
 	}
 
 	fc.responseWriter = responseWriter
 
+	if !fc.validate() {
+		return nil
+	}
+
 	// Detect if a worker is available to handle this request
 	if worker, ok := workers[fc.scriptFilename]; ok {
-		worker.handleRequest(request, fc)
+		worker.handleRequest(fc)
 		return nil
 	}
 
 	// If no worker was availabe send the request to non-worker threads
-	handleRequestWithRegularPHPThreads(request, fc)
+	handleRequestWithRegularPHPThreads(fc)
 
 	return nil
 }
 
-func maybeCloseContext(fc *FrankenPHPContext) {
-	fc.closed.Do(func() {
-		close(fc.done)
-	})
-}
-
 //export go_ub_write
 func go_ub_write(threadIndex C.uintptr_t, cBuf *C.char, length C.int) (C.size_t, C.bool) {
-	r := phpThreads[threadIndex].getActiveRequest()
-	fc, _ := FromContext(r.Context())
+	fc := phpThreads[threadIndex].getRequestContext()
+
+	if fc.isDone {
+		return 0, C.bool(true)
+	}
 
 	var writer io.Writer
 	if fc.responseWriter == nil {
@@ -523,28 +408,27 @@ func go_ub_write(threadIndex C.uintptr_t, cBuf *C.char, length C.int) (C.size_t,
 		fc.logger.Info(writer.(*bytes.Buffer).String())
 	}
 
-	return C.size_t(i), C.bool(clientHasClosed(r))
+	return C.size_t(i), C.bool(fc.clientHasClosed())
 }
 
 //export go_apache_request_headers
-func go_apache_request_headers(threadIndex C.uintptr_t, hasActiveRequest bool) (*C.go_string, C.size_t) {
+func go_apache_request_headers(threadIndex C.uintptr_t) (*C.go_string, C.size_t) {
 	thread := phpThreads[threadIndex]
+	fc := thread.getRequestContext()
 
-	if !hasActiveRequest {
+	if fc.responseWriter == nil {
 		// worker mode, not handling a request
-		mfc := thread.getActiveRequest().Context().Value(contextKey).(*FrankenPHPContext)
 
-		if c := mfc.logger.Check(zapcore.DebugLevel, "apache_request_headers() called in non-HTTP context"); c != nil {
-			c.Write(zap.String("worker", mfc.scriptFilename))
+		if c := logger.Check(zapcore.DebugLevel, "apache_request_headers() called in non-HTTP context"); c != nil {
+			c.Write(zap.String("worker", fc.scriptFilename))
 		}
 
 		return nil, 0
 	}
-	r := thread.getActiveRequest()
 
-	headers := make([]C.go_string, 0, len(r.Header)*2)
+	headers := make([]C.go_string, 0, len(fc.request.Header)*2)
 
-	for field, val := range r.Header {
+	for field, val := range fc.request.Header {
 		fd := unsafe.StringData(field)
 		thread.Pin(fd)
 
@@ -562,10 +446,10 @@ func go_apache_request_headers(threadIndex C.uintptr_t, hasActiveRequest bool) (
 	sd := unsafe.SliceData(headers)
 	thread.Pin(sd)
 
-	return sd, C.size_t(len(r.Header))
+	return sd, C.size_t(len(fc.request.Header))
 }
 
-func addHeader(fc *FrankenPHPContext, cString *C.char, length C.int) {
+func addHeader(fc *frankenPHPContext, cString *C.char, length C.int) {
 	parts := strings.SplitN(C.GoStringN(cString, length), ": ", 2)
 	if len(parts) != 2 {
 		if c := fc.logger.Check(zapcore.DebugLevel, "invalid header"); c != nil {
@@ -579,12 +463,11 @@ func addHeader(fc *FrankenPHPContext, cString *C.char, length C.int) {
 }
 
 //export go_write_headers
-func go_write_headers(threadIndex C.uintptr_t, status C.int, headers *C.zend_llist) {
-	r := phpThreads[threadIndex].getActiveRequest()
-	fc := r.Context().Value(contextKey).(*FrankenPHPContext)
+func go_write_headers(threadIndex C.uintptr_t, status C.int, headers *C.zend_llist) C.bool {
+	fc := phpThreads[threadIndex].getRequestContext()
 
-	if fc.responseWriter == nil {
-		return
+	if fc.isDone || fc.responseWriter == nil {
+		return C.bool(false)
 	}
 
 	current := headers.head
@@ -604,14 +487,18 @@ func go_write_headers(threadIndex C.uintptr_t, status C.int, headers *C.zend_lli
 			delete(h, k)
 		}
 	}
+
+	return C.bool(true)
 }
 
 //export go_sapi_flush
 func go_sapi_flush(threadIndex C.uintptr_t) bool {
-	r := phpThreads[threadIndex].getActiveRequest()
-	fc := r.Context().Value(contextKey).(*FrankenPHPContext)
+	fc := phpThreads[threadIndex].getRequestContext()
+	if fc == nil || fc.responseWriter == nil {
+		return false
+	}
 
-	if fc.responseWriter == nil || clientHasClosed(r) {
+	if fc.clientHasClosed() && !fc.isDone {
 		return true
 	}
 
@@ -626,13 +513,17 @@ func go_sapi_flush(threadIndex C.uintptr_t) bool {
 
 //export go_read_post
 func go_read_post(threadIndex C.uintptr_t, cBuf *C.char, countBytes C.size_t) (readBytes C.size_t) {
-	r := phpThreads[threadIndex].getActiveRequest()
+	fc := phpThreads[threadIndex].getRequestContext()
+
+	if fc.responseWriter == nil {
+		return 0
+	}
 
 	p := unsafe.Slice((*byte)(unsafe.Pointer(cBuf)), countBytes)
 	var err error
 	for readBytes < countBytes && err == nil {
 		var n int
-		n, err = r.Body.Read(p[readBytes:])
+		n, err = fc.request.Body.Read(p[readBytes:])
 		readBytes += C.size_t(n)
 	}
 
@@ -641,7 +532,7 @@ func go_read_post(threadIndex C.uintptr_t, cBuf *C.char, countBytes C.size_t) (r
 
 //export go_read_cookies
 func go_read_cookies(threadIndex C.uintptr_t) *C.char {
-	cookies := phpThreads[threadIndex].getActiveRequest().Header.Values("Cookie")
+	cookies := phpThreads[threadIndex].getRequestContext().request.Header.Values("Cookie")
 	cookie := strings.Join(cookies, "; ")
 	if cookie == "" {
 		return nil
@@ -656,7 +547,6 @@ func go_read_cookies(threadIndex C.uintptr_t) *C.char {
 
 //export go_log
 func go_log(message *C.char, level C.int) {
-	l := getLogger()
 	m := C.GoString(message)
 
 	var le syslogLevel
@@ -668,25 +558,30 @@ func go_log(message *C.char, level C.int) {
 
 	switch le {
 	case emerg, alert, crit, err:
-		if c := l.Check(zapcore.ErrorLevel, m); c != nil {
+		if c := logger.Check(zapcore.ErrorLevel, m); c != nil {
 			c.Write(zap.Stringer("syslog_level", syslogLevel(level)))
 		}
 
 	case warning:
-		if c := l.Check(zapcore.WarnLevel, m); c != nil {
+		if c := logger.Check(zapcore.WarnLevel, m); c != nil {
 			c.Write(zap.Stringer("syslog_level", syslogLevel(level)))
 		}
 
 	case debug:
-		if c := l.Check(zapcore.DebugLevel, m); c != nil {
+		if c := logger.Check(zapcore.DebugLevel, m); c != nil {
 			c.Write(zap.Stringer("syslog_level", syslogLevel(level)))
 		}
 
 	default:
-		if c := l.Check(zapcore.InfoLevel, m); c != nil {
+		if c := logger.Check(zapcore.InfoLevel, m); c != nil {
 			c.Write(zap.Stringer("syslog_level", syslogLevel(level)))
 		}
 	}
+}
+
+//export go_is_context_done
+func go_is_context_done(threadIndex C.uintptr_t) C.bool {
+	return C.bool(phpThreads[threadIndex].getRequestContext().isDone)
 }
 
 // ExecuteScriptCLI executes the PHP script passed as parameter.
@@ -716,17 +611,9 @@ func freeArgs(argv []*C.char) {
 	}
 }
 
-// Ensure that the request path does not contain null bytes
-func requestIsValid(r *http.Request, rw http.ResponseWriter) bool {
-	if !strings.Contains(r.URL.Path, "\x00") {
-		return true
-	}
-	rejectRequest(rw, "Invalid request path")
-	return false
-}
+func executePHPFunction(functionName string) bool {
+	cFunctionName := C.CString(functionName)
+	defer C.free(unsafe.Pointer(cFunctionName))
 
-func rejectRequest(rw http.ResponseWriter, message string) {
-	rw.WriteHeader(http.StatusBadRequest)
-	_, _ = rw.Write([]byte(message))
-	rw.(http.Flusher).Flush()
+	return C.frankenphp_execute_php_function(cFunctionName) == 1
 }
