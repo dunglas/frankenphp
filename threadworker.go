@@ -99,6 +99,7 @@ func setupWorkerScript(handler *workerThread, worker *worker) {
 	}
 
 	handler.fakeRequest = r
+	clearSandboxedEnv(handler.thread)
 	if c := logger.Check(zapcore.DebugLevel, "starting"); c != nil {
 		c.Write(zap.String("worker", worker.fileName), zap.Int("thread", handler.thread.threadIndex))
 	}
