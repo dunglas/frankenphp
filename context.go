@@ -28,7 +28,6 @@ type frankenPHPContext struct {
 	isDone bool
 
 	responseWriter http.ResponseWriter
-	exitStatus     int
 
 	done      chan interface{}
 	startedAt time.Time

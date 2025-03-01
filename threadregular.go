@@ -48,7 +48,7 @@ func (handler *regularThread) beforeScriptExecution() string {
 
 // return true if the worker should continue to run
 func (handler *regularThread) afterScriptExecution(exitStatus int) {
-	handler.afterRequest(exitStatus)
+	handler.afterRequest()
 }
 
 func (handler *regularThread) getRequestContext() *frankenPHPContext {
@@ -78,7 +78,7 @@ func (handler *regularThread) waitForRequest() string {
 
 	if err := updateServerContext(handler.thread, fc, false); err != nil {
 		fc.rejectBadRequest(err.Error())
-		handler.afterRequest(0)
+		handler.afterRequest()
 		handler.thread.Unpin()
 		// go back to beforeScriptExecution
 		return handler.beforeScriptExecution()
@@ -88,10 +88,8 @@ func (handler *regularThread) waitForRequest() string {
 	return fc.scriptFilename
 }
 
-func (handler *regularThread) afterRequest(exitStatus int) {
-	fc := handler.requestContext
-	fc.exitStatus = exitStatus
-	fc.closeContext()
+func (handler *regularThread) afterRequest() {
+	handler.requestContext.closeContext()
 	handler.requestContext = nil
 }
 

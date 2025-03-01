@@ -101,6 +101,9 @@ func setupWorkerScript(handler *workerThread, worker *worker) {
 }
 
 func tearDownWorkerScript(handler *workerThread, exitStatus int) {
+	worker := handler.worker
+	handler.dummyContext = nil
+
 	// if the worker request is not nil, the script might have crashed
 	// make sure to close the worker request context
 	if handler.workerContext != nil {
@@ -108,13 +111,8 @@ func tearDownWorkerScript(handler *workerThread, exitStatus int) {
 		handler.workerContext = nil
 	}
 
-	fc := handler.dummyContext
-	fc.exitStatus = exitStatus
-	handler.dummyContext = nil
-
 	// on exit status 0 we just run the worker script again
-	worker := handler.worker
-	if fc.exitStatus == 0 {
+	if exitStatus == 0 {
 		// TODO: make the max restart configurable
 		metrics.StopWorker(worker.fileName, StopReasonRestart)
 		handler.backoff.recordSuccess()
@@ -152,7 +150,7 @@ func (handler *workerThread) waitForWorkerRequest() bool {
 	}
 
 	// worker threads are 'ready' after they first reach frankenphp_handle_request()
-	// 'stateTransitionComplete' is only true on the first boot of the worker script
+	// 'stateTransitionComplete' is only true on the first boot of the worker script,
 	// while 'isBootingScript' is true on every boot of the worker script
 	if handler.state.is(stateTransitionComplete) {
 		metrics.ReadyWorker(handler.worker.fileName)
