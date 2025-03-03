@@ -46,6 +46,7 @@ type testOptions struct {
 	realServer         bool
 	logger             *zap.Logger
 	initOpts           []frankenphp.Option
+	phpIni             map[string]string
 }
 
 func runTest(t *testing.T, test func(func(http.ResponseWriter, *http.Request), *httptest.Server, int), opts *testOptions) {
@@ -68,6 +69,9 @@ func runTest(t *testing.T, test func(func(http.ResponseWriter, *http.Request), *
 		initOpts = append(initOpts, frankenphp.WithWorkers("workerName", testDataDir+opts.workerScript, opts.nbWorkers, opts.env, opts.watch))
 	}
 	initOpts = append(initOpts, opts.initOpts...)
+	if opts.phpIni != nil {
+		initOpts = append(initOpts, frankenphp.WithPhpIni(opts.phpIni))
+	}
 
 	err := frankenphp.Init(initOpts...)
 	require.Nil(t, err)
@@ -672,13 +676,13 @@ func TestEnv(t *testing.T) {
 	testEnv(t, &testOptions{})
 }
 func TestEnvWorker(t *testing.T) {
-	testEnv(t, &testOptions{workerScript: "test-env.php"})
+	testEnv(t, &testOptions{workerScript: "env/test-env.php"})
 }
 func testEnv(t *testing.T, opts *testOptions) {
 	assert.NoError(t, os.Setenv("EMPTY", ""))
 
 	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
-		req := httptest.NewRequest("GET", fmt.Sprintf("http://example.com/test-env.php?var=%d", i), nil)
+		req := httptest.NewRequest("GET", fmt.Sprintf("http://example.com/env/test-env.php?var=%d", i), nil)
 		w := httptest.NewRecorder()
 		handler(w, req)
 
@@ -686,7 +690,7 @@ func testEnv(t *testing.T, opts *testOptions) {
 		body, _ := io.ReadAll(resp.Body)
 
 		// execute the script as regular php script
-		cmd := exec.Command("php", "testdata/test-env.php", strconv.Itoa(i))
+		cmd := exec.Command("php", "testdata/env/test-env.php", strconv.Itoa(i))
 		stdoutStderr, err := cmd.CombinedOutput()
 		if err != nil {
 			// php is not installed or other issue, use the hardcoded output below:
@@ -695,6 +699,46 @@ func testEnv(t *testing.T, opts *testOptions) {
 
 		assert.Equal(t, string(stdoutStderr), string(body))
 	}, opts)
+}
+
+func TestEnvIsResetInNonWorkerMode(t *testing.T) {
+	assert.NoError(t, os.Setenv("test", ""))
+	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
+		putResult := fetchBody("GET", fmt.Sprintf("http://example.com/env/putenv.php?key=test&put=%d", i), handler)
+
+		assert.Equal(t, fmt.Sprintf("test=%d", i), putResult, "putenv and then echo getenv")
+
+		getResult := fetchBody("GET", "http://example.com/env/putenv.php?key=test", handler)
+
+		assert.Equal(t, "test=", getResult, "putenv should be reset across requests")
+	}, &testOptions{})
+}
+
+// TODO: should it actually get reset in worker mode?
+func TestEnvIsNotResetInWorkerMode(t *testing.T) {
+	assert.NoError(t, os.Setenv("index", ""))
+	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
+		putResult := fetchBody("GET", fmt.Sprintf("http://example.com/env/remember-env.php?index=%d", i), handler)
+
+		assert.Equal(t, "success", putResult, "putenv and then echo getenv")
+
+		getResult := fetchBody("GET", "http://example.com/env/remember-env.php", handler)
+
+		assert.Equal(t, "success", getResult, "putenv should not be reset across worker requests")
+	}, &testOptions{workerScript: "env/remember-env.php"})
+}
+
+// reproduction of https://github.com/dunglas/frankenphp/issues/1061
+func TestModificationsToEnvPersistAcrossRequests(t *testing.T) {
+	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
+		for j := 0; j < 3; j++ {
+			result := fetchBody("GET", "http://example.com/env/overwrite-env.php", handler)
+			assert.Equal(t, "custom_value", result, "a var directly added to $_ENV should persist")
+		}
+	}, &testOptions{
+		workerScript: "env/overwrite-env.php",
+		phpIni:       map[string]string{"variables_order": "EGPCS"},
+	})
 }
 
 func TestFileUpload_module(t *testing.T) { testFileUpload(t, &testOptions{}) }
