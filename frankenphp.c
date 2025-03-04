@@ -1076,7 +1076,6 @@ int frankenphp_execute_script(char *file_name) {
 
   zend_destroy_file_handle(&file_handle);
 
-  frankenphp_free_request_context();
   frankenphp_request_shutdown();
 
   return status;
