@@ -100,7 +100,7 @@ COPY --link caddy/go.mod caddy/go.sum ./
 RUN go mod graph | awk '{if ($1 !~ "@") print $2}' | xargs go get
 
 WORKDIR /go/src/app
-COPY --link . .
+ADD --link . ./
 
 # See https://github.com/docker-library/php/blob/master/8.3/bookworm/zts/Dockerfile#L57-L59 for PHP values
 ENV CGO_CFLAGS="-DFRANKENPHP_VERSION=$FRANKENPHP_VERSION $PHP_CFLAGS"
@@ -110,7 +110,7 @@ ENV CGO_LDFLAGS="-L/usr/local/lib -lssl -lcrypto -lreadline -largon2 -lcurl -lon
 RUN echo $CGO_LDFLAGS
 
 WORKDIR /go/src/app/caddy/frankenphp
-RUN git status && GOBIN=/usr/local/bin go install -tags 'nobadger,nomysql,nopgx' -ldflags "-w -s -X 'github.com/caddyserver/caddy/v2.CustomVersion=FrankenPHP $FRANKENPHP_VERSION PHP $PHP_VERSION Caddy'" -buildvcs=true && \
+RUN GOBIN=/usr/local/bin go install -tags 'nobadger,nomysql,nopgx' -ldflags "-w -s -X 'github.com/caddyserver/caddy/v2.CustomVersion=FrankenPHP $FRANKENPHP_VERSION PHP $PHP_VERSION Caddy'" -buildvcs=true && \
 	setcap cap_net_bind_service=+ep /usr/local/bin/frankenphp && \
 	cp Caddyfile /etc/caddy/Caddyfile && \
 	frankenphp version
