@@ -105,7 +105,7 @@ COPY caddy/go.mod caddy/go.sum ./
 RUN go mod graph | awk '{if ($1 !~ "@") print $2}' | xargs go get
 
 WORKDIR /go/src/app
-COPY --link . .
+ADD --link . ./
 
 # See https://github.com/docker-library/php/blob/master/8.3/alpine3.20/zts/Dockerfile#L53-L55
 ENV CGO_CFLAGS="-DFRANKENPHP_VERSION=$FRANKENPHP_VERSION $PHP_CFLAGS"
