@@ -88,9 +88,7 @@ COPY caddy/go.mod caddy/go.sum ./
 RUN go mod graph | awk '{if ($1 !~ "@") print $2}' | xargs go get
 
 WORKDIR /go/src/app
-COPY --link *.* ./
-COPY --link caddy caddy
-COPY --link internal internal
+ADD --link . ./
 
-RUN --mount=type=secret,id=github-token GITHUB_TOKEN=$(cat /run/secrets/github-token) ./build-static.sh && \
+RUN --mount=type=secret,id=github-token GITHUB_TOKEN=$(cat /run/secrets/github-token) ./build-static.sh && git status \
 	rm -Rf dist/static-php-cli/source/*

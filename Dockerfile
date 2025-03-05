@@ -62,6 +62,7 @@ ENV PATH=/usr/local/go/bin:$PATH
 RUN apt-get update && \
 	apt-get -y --no-install-recommends install \
     cmake \
+    git \
 	libargon2-dev \
 	libbrotli-dev \
 	libcurl4-openssl-dev \
@@ -74,21 +75,6 @@ RUN apt-get update && \
 	zlib1g-dev \
 	&& \
 	apt-get clean
-
-WORKDIR /go/src/app
-
-COPY --link go.mod go.sum ./
-RUN go mod graph | awk '{if ($1 !~ "@") print $2}' | xargs go get
-
-WORKDIR /go/src/app/caddy
-COPY --link caddy/go.mod caddy/go.sum ./
-RUN go mod graph | awk '{if ($1 !~ "@") print $2}' | xargs go get
-
-WORKDIR /go/src/app
-COPY --link *.* ./
-COPY --link caddy caddy
-COPY --link internal internal
-COPY --link testdata testdata
 
 # Install e-dant/watcher (necessary for file watching)
 WORKDIR /usr/local/src/watcher
@@ -104,6 +90,18 @@ RUN curl -s https://api.github.com/repos/e-dant/watcher/releases/latest | \
 	cmake --install build && \
     ldconfig
 
+WORKDIR /go/src/app
+
+COPY --link go.mod go.sum ./
+RUN go mod graph | awk '{if ($1 !~ "@") print $2}' | xargs go get
+
+WORKDIR /go/src/app/caddy
+COPY --link caddy/go.mod caddy/go.sum ./
+RUN go mod graph | awk '{if ($1 !~ "@") print $2}' | xargs go get
+
+WORKDIR /go/src/app
+ADD --link . ./
+
 # See https://github.com/docker-library/php/blob/master/8.3/bookworm/zts/Dockerfile#L57-L59 for PHP values
 ENV CGO_CFLAGS="-DFRANKENPHP_VERSION=$FRANKENPHP_VERSION $PHP_CFLAGS"
 ENV CGO_CPPFLAGS=$PHP_CPPFLAGS
@@ -112,7 +110,7 @@ ENV CGO_LDFLAGS="-L/usr/local/lib -lssl -lcrypto -lreadline -largon2 -lcurl -lon
 RUN echo $CGO_LDFLAGS
 
 WORKDIR /go/src/app/caddy/frankenphp
-RUN GOBIN=/usr/local/bin go install -tags 'nobadger,nomysql,nopgx' -ldflags "-w -s -X 'github.com/caddyserver/caddy/v2.CustomVersion=FrankenPHP $FRANKENPHP_VERSION PHP $PHP_VERSION Caddy'" && \
+RUN git status && GOBIN=/usr/local/bin go install -tags 'nobadger,nomysql,nopgx' -ldflags "-w -s -X 'github.com/caddyserver/caddy/v2.CustomVersion=FrankenPHP $FRANKENPHP_VERSION PHP $PHP_VERSION Caddy'" -buildvcs=true && \
 	setcap cap_net_bind_service=+ep /usr/local/bin/frankenphp && \
 	cp Caddyfile /etc/caddy/Caddyfile && \
 	frankenphp version
