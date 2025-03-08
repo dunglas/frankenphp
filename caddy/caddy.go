@@ -198,12 +198,21 @@ func (f *FrankenPHPApp) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 				}
 
 				if d.NextArg() {
-					v, err := strconv.Atoi(d.Val())
-					if err != nil {
-						return err
-					}
+					if d.Val() == "watch" {
+						wc.Watch = append(wc.Watch, "./**/*.{php,yaml,yml,twig,env}")
+					} else {
+						v, err := strconv.Atoi(d.Val())
+						if err != nil {
+							return err
+						}
 
-					wc.Num = v
+						wc.Num = v
+					}
+				}
+
+				if d.NextArg() {
+					// TODO: this should error in a V2
+					caddy.Log().Warn("Unknown worker argument: " + d.Val())
 				}
 
 				for d.NextBlock(1) {
@@ -241,6 +250,9 @@ func (f *FrankenPHPApp) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 						} else {
 							wc.Watch = append(wc.Watch, d.Val())
 						}
+					default:
+						// TODO: this should error in a V2
+						caddy.Log().Warn("FrankenPHP: Unknown worker configuration: " + d.Val())
 					}
 
 					if wc.FileName == "" {
@@ -253,6 +265,9 @@ func (f *FrankenPHPApp) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 				}
 
 				f.Workers = append(f.Workers, wc)
+			default:
+				// TODO: this should error in a V2
+				caddy.Log().Warn("FrankenPHP: Unknown 'frankenphp' configuration: " + d.Val())
 			}
 		}
 	}
@@ -448,6 +463,9 @@ func (f *FrankenPHPModule) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 				}
 
 				f.ResolveRootSymlink = &v
+			default:
+				// TODO: this should error in a V2
+				caddy.Log().Warn("FrankenPHP: Unknown 'php_server' or 'php' configuration: " + d.Val())
 			}
 		}
 	}
