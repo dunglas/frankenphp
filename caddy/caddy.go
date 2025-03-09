@@ -127,6 +127,7 @@ func (f *FrankenPHPApp) Stop() error {
 func (f *FrankenPHPApp) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 	for d.Next() {
 		for d.NextBlock(0) {
+			// when adding a new directive, also update the allowedDirectives error message
 			switch d.Val() {
 			case "num_threads":
 				if !d.NextArg() {
@@ -198,12 +199,20 @@ func (f *FrankenPHPApp) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 				}
 
 				if d.NextArg() {
-					v, err := strconv.Atoi(d.Val())
-					if err != nil {
-						return err
-					}
+					if d.Val() == "watch" {
+						wc.Watch = append(wc.Watch, "./**/*.{php,yaml,yml,twig,env}")
+					} else {
+						v, err := strconv.Atoi(d.Val())
+						if err != nil {
+							return err
+						}
 
-					wc.Num = v
+						wc.Num = v
+					}
+				}
+
+				if d.NextArg() {
+					return errors.New("FrankenPHP: too many 'worker' arguments: " + d.Val())
 				}
 
 				for d.NextBlock(1) {
@@ -241,6 +250,9 @@ func (f *FrankenPHPApp) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 						} else {
 							wc.Watch = append(wc.Watch, d.Val())
 						}
+					default:
+						allowedDirectives := "file, num, env, watch"
+						return wrongSubDirectiveError("worker", allowedDirectives, v)
 					}
 
 					if wc.FileName == "" {
@@ -253,6 +265,9 @@ func (f *FrankenPHPApp) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 				}
 
 				f.Workers = append(f.Workers, wc)
+			default:
+				allowedDirectives := "num_threads, max_threads, php_ini, worker"
+				return wrongSubDirectiveError("frankenphp", allowedDirectives, d.Val())
 			}
 		}
 	}
@@ -407,6 +422,7 @@ func (f FrankenPHPModule) ServeHTTP(w http.ResponseWriter, r *http.Request, _ ca
 
 // UnmarshalCaddyfile implements caddyfile.Unmarshaler.
 func (f *FrankenPHPModule) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
+	// when adding a new directive, also update the allowedDirectives error message
 	for d.Next() {
 		for d.NextBlock(0) {
 			switch d.Val() {
@@ -448,6 +464,9 @@ func (f *FrankenPHPModule) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 				}
 
 				f.ResolveRootSymlink = &v
+			default:
+				allowedDirectives := "root, split, env, resolve_root_symlink"
+				return wrongSubDirectiveError("php or php_server", allowedDirectives, d.Val())
 			}
 		}
 	}
@@ -743,6 +762,11 @@ func parsePhpServer(h httpcaddyfile.Helper) ([]httpcaddyfile.ConfigValue, error)
 			Value: subroute,
 		},
 	}, nil
+}
+
+// return a nice error message
+func wrongSubDirectiveError(module string, allowedDriectives string, wrongValue string) error {
+	return fmt.Errorf("unknown '%s' subdirective: '%s' (allowed directives are: %s)", module, wrongValue, allowedDriectives)
 }
 
 // Interface guards
