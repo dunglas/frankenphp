@@ -39,7 +39,7 @@ if [ -z "${PHP_EXTENSIONS}" ]; then
 	if [ -n "${EMBED}" ] && [ -f "${EMBED}/composer.json" ]; then
 		cd "${EMBED}"
 		# read the composer.json file and extract the required PHP extensions
-		# remove internal extensions from the list: https://github.com/crazywhalecc/static-php-cli/blob/4b16631d45a57370b4747df15c8f105130e96d03/src/globals/defines.php#L26-L34
+		# remove internal extensions from the list: https://github.com/crazywhale/static-php-cli/blob/4b16631d45a57370b4747df15c8f105130e96d03/src/globals/defines.php#L26-L34
 		PHP_EXTENSIONS="$(composer check-platform-reqs --no-dev 2>/dev/null | grep ^ext | sed -e 's/^ext-core//' -e 's/^ext-hash//' -e 's/^ext-json//' -e 's/^ext-pcre//' -e 's/^ext-reflection//' -e 's/^ext-spl//' -e 's/^ext-standard//' -e 's/^ext-//' -e 's/ .*//' | xargs | tr ' ' ',')"
 		export PHP_EXTENSIONS
 		cd -
@@ -167,7 +167,7 @@ curl -f --retry 5 "${curlGitHubHeaders[@]}" https://api.github.com/repos/e-dant/
 	xargs curl -fL --retry 5 "${curlGitHubHeaders[@]}" |
 	tar xz --strip-components 1
 cd watcher-c
-cc -c -o libwatcher-c.o ./src/watcher-c.cpp -I ./include -I ../include -std=c++17 -Wall -Wextra "${fpic}"
+$CC -c -o libwatcher-c.o ./src/watcher-c.cpp -I ./include -I ../include -std=c++17 -Wall -Wextra "${fpic}"
 ar rcs libwatcher-c.a libwatcher-c.o
 cp libwatcher-c.a ../../buildroot/lib/libwatcher-c.a
 mkdir -p ../../buildroot/include/wtr
