@@ -100,7 +100,7 @@ else
 
 	if [ -d "static-php-cli/" ]; then
 		cd static-php-cli/
-		git pull
+		# git pull
 	else
 		ln -s /app static-php-cli
   		# git clone --depth 1 https://github.com/crazywhalecc/static-php-cli
