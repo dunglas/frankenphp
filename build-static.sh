@@ -11,7 +11,7 @@ fi
 arch="$(uname -m)"
 os="$(uname -s | tr '[:upper:]' '[:lower:]')"
 # FIXME: re-enable PHP errors when SPC will be compatible with PHP 8.4
-spcCommand="php -ddisplay_errors=Off ./bin/spc"
+spcCommand="./bin/spc"
 md5binary="md5sum"
 if [ "${os}" = "darwin" ]; then
 	os="mac"
@@ -102,7 +102,8 @@ else
 		cd static-php-cli/
 		git pull
 	else
-		git clone --depth 1 https://github.com/crazywhalecc/static-php-cli
+		ln -s /app static-php-cli
+  		# git clone --depth 1 https://github.com/crazywhalecc/static-php-cli
 		cd static-php-cli/
 	fi
 
@@ -123,7 +124,7 @@ else
 		fi
 	fi
 
-	composer install --no-dev -a
+	# composer install --no-dev -a
 
 	if [ "${os}" = "linux" ]; then
 		extraOpts="--disable-opcache-jit"
@@ -133,8 +134,8 @@ else
 		extraOpts="${extraOpts} --no-strip"
 	fi
 
-	${spcCommand} doctor --auto-fix
-	${spcCommand} download --with-php="${PHP_VERSION}" --for-extensions="${PHP_EXTENSIONS}" --for-libs="${PHP_EXTENSION_LIBS}" --ignore-cache-sources=php-src --prefer-pre-built
+	# ${spcCommand} doctor --auto-fix
+	${spcCommand} download --debug --with-php="${PHP_VERSION}" --for-extensions="${PHP_EXTENSIONS}" --for-libs="${PHP_EXTENSION_LIBS}" --ignore-cache-sources=php-src
 	# shellcheck disable=SC2086
 	${spcCommand} build --debug --enable-zts --build-embed ${extraOpts} "${PHP_EXTENSIONS}" --with-libs="${PHP_EXTENSION_LIBS}"
 fi
