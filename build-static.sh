@@ -215,11 +215,11 @@ if [ "${os}" = "linux" ]; then
 		if [ ! -f "mimalloc/out/libmimalloc.a" ]; then
 			if [ -d "mimalloc" ]; then
 				cd mimalloc/
-				git reset --hard
+				git reset --hard v3.0.1
 				git clean -xdf
 				git fetch --tags
 			else
-				git clone https://github.com/microsoft/mimalloc.git
+				git clone -b v3.0.1 https://github.com/microsoft/mimalloc.git
 				cd mimalloc/
 			fi
 
