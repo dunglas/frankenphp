@@ -223,7 +223,8 @@ if [ "${os}" = "linux" ]; then
 				cd mimalloc/
 			fi
 
-			git checkout "$(git describe --tags "$(git rev-list --tags --max-count=1 || true)" || true)"
+			# mimalloc version must be compatible with version used in tweag/rust-alpine-mimalloc
+			git checkout v3.0.1
 
 			curl -fL --retry 5 https://raw.githubusercontent.com/tweag/rust-alpine-mimalloc/1a756444a5c1484d26af9cd39187752728416ba8/mimalloc.diff -o mimalloc.diff
 			patch -p1 <mimalloc.diff
