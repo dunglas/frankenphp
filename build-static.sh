@@ -304,7 +304,7 @@ go env
 cd caddy/
 # shellcheck disable=SC2086
 CGO_ENABLED=1 \
-	XCADDY_GO_BUILD_FLAGS="-buildmode=pie -tags cgo,netgo,osusergo,static_build,nobadger,nomysql,nopgx -ldflags \"-linkmode=external -extldflags '-static-pie ${extraExtldflags}' ${extraLdflags} -X 'github.com/caddyserver/caddy/v2.CustomVersion=FrankenPHP ${FRANKENPHP_VERSION} PHP ${LIBPHP_VERSION} Caddy'\"" \
+	XCADDY_GO_BUILD_FLAGS="-buildmode=pie -tags cgo,netgo,osusergo,nobadger,nomysql,nopgx -ldflags \"-linkmode=external -extldflags '-pie ${extraExtldflags}' ${extraLdflags} -X 'github.com/caddyserver/caddy/v2.CustomVersion=FrankenPHP ${FRANKENPHP_VERSION} PHP ${LIBPHP_VERSION} Caddy'\"" \
 	XCADDY_DEBUG="${XCADDY_DEBUG}" \
 	${XCADDY_COMMAND} build \
 	--output "../dist/${bin}" \
