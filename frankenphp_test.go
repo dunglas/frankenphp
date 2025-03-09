@@ -680,6 +680,14 @@ func TestEnvWorker(t *testing.T) {
 func testEnv(t *testing.T, opts *testOptions) {
 	assert.NoError(t, os.Setenv("EMPTY", ""))
 
+	// execute the script as regular php script and get the expected output
+	cmd := exec.Command("php", "testdata/env/test-env.php")
+	stdoutStderr, err := cmd.CombinedOutput()
+	if err != nil {
+		// php is not installed or other issue, use the hardcoded output below:
+		stdoutStderr = []byte("Set MY_VAR successfully.\nMY_VAR = HelloWorld\nUnset MY_VAR successfully.\nMY_VAR is unset.\nMY_VAR set to empty successfully.\nMY_VAR = \nUnset NON_EXISTING_VAR successfully.\n")
+	}
+
 	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
 		req := httptest.NewRequest("GET", fmt.Sprintf("http://example.com/env/test-env.php?var=%d", i), nil)
 		w := httptest.NewRecorder()
@@ -687,14 +695,6 @@ func testEnv(t *testing.T, opts *testOptions) {
 
 		resp := w.Result()
 		body, _ := io.ReadAll(resp.Body)
-
-		// execute the script as regular php script
-		cmd := exec.Command("php", "testdata/env/test-env.php", strconv.Itoa(i))
-		stdoutStderr, err := cmd.CombinedOutput()
-		if err != nil {
-			// php is not installed or other issue, use the hardcoded output below:
-			stdoutStderr = []byte("Set MY_VAR successfully.\nMY_VAR = HelloWorld\nUnset MY_VAR successfully.\nMY_VAR is unset.\nMY_VAR set to empty successfully.\nMY_VAR = \nUnset NON_EXISTING_VAR successfully.\n")
-		}
 
 		assert.Equal(t, string(stdoutStderr), string(body))
 	}, opts)
