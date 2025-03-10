@@ -70,26 +70,18 @@ frankenphp_config frankenphp_get_config() {
   };
 }
 
-typedef struct frankenphp_server_context {
-  bool has_main_request;
-  bool has_active_request;
-  bool worker_ready;
-  char *cookie_data;
-  bool finished;
-} frankenphp_server_context;
-
 bool should_filter_var = 0;
-__thread frankenphp_server_context *local_ctx = NULL;
 __thread uintptr_t thread_index;
+__thread bool is_worker_thread = false;
 __thread zval *os_environment = NULL;
 
 static void frankenphp_free_request_context() {
-  frankenphp_server_context *ctx = SG(server_context);
+  if (SG(request_info).cookie_data != NULL) {
+    free(SG(request_info).cookie_data);
+    SG(request_info).cookie_data = NULL;
+  }
 
-  free(ctx->cookie_data);
-  ctx->cookie_data = NULL;
-
-  /* Is freed via thread.Unpin() */
+  /* freed via thread.Unpin() */
   SG(request_info).auth_password = NULL;
   SG(request_info).auth_user = NULL;
   SG(request_info).request_method = NULL;
@@ -157,6 +149,17 @@ static void frankenphp_worker_request_shutdown() {
   zend_end_try();
 
   zend_set_memory_limit(PG(memory_limit));
+}
+
+// shutdown the dummy request that starts the worker script
+bool frankenphp_shutdown_dummy_request(void) {
+  if (SG(server_context) == NULL) {
+    return false;
+  }
+
+  frankenphp_worker_request_shutdown();
+
+  return true;
 }
 
 PHPAPI void get_full_env(zval *track_vars_array) {
@@ -227,10 +230,6 @@ static int frankenphp_worker_request_startup() {
       }
     }
 
-    /* Unfinish the request */
-    frankenphp_server_context *ctx = SG(server_context);
-    ctx->finished = false;
-
     /* TODO: store the list of modules to reload in a global module variable */
     const char **module_name;
     zend_module_entry *module;
@@ -255,20 +254,14 @@ PHP_FUNCTION(frankenphp_finish_request) { /* {{{ */
     RETURN_THROWS();
   }
 
-  frankenphp_server_context *ctx = SG(server_context);
-
-  if (ctx->finished) {
+  if (go_is_context_done(thread_index)) {
     RETURN_FALSE;
   }
 
   php_output_end_all();
   php_header();
 
-  if (ctx->has_active_request) {
-    go_frankenphp_finish_php_request(thread_index);
-  }
-
-  ctx->finished = true;
+  go_frankenphp_finish_php_request(thread_index);
 
   RETURN_TRUE;
 } /* }}} */
@@ -331,9 +324,8 @@ PHP_FUNCTION(frankenphp_request_headers) {
     RETURN_THROWS();
   }
 
-  frankenphp_server_context *ctx = SG(server_context);
   struct go_apache_request_headers_return headers =
-      go_apache_request_headers(thread_index, ctx->has_active_request);
+      go_apache_request_headers(thread_index);
 
   array_init_size(return_value, headers.r1);
 
@@ -407,9 +399,7 @@ PHP_FUNCTION(frankenphp_handle_request) {
   Z_PARAM_FUNC(fci, fcc)
   ZEND_PARSE_PARAMETERS_END();
 
-  frankenphp_server_context *ctx = SG(server_context);
-
-  if (!ctx->has_main_request) {
+  if (!is_worker_thread) {
     /* not a worker, throw an error */
     zend_throw_exception(
         spl_ce_RuntimeException,
@@ -417,22 +407,15 @@ PHP_FUNCTION(frankenphp_handle_request) {
     RETURN_THROWS();
   }
 
-  if (!ctx->worker_ready) {
-    /* Clean the first dummy request created to initialize the worker */
-    frankenphp_worker_request_shutdown();
-
-    ctx->worker_ready = true;
-  }
-
 #ifdef ZEND_MAX_EXECUTION_TIMERS
   /* Disable timeouts while waiting for a request to handle */
   zend_unset_timeout();
 #endif
 
-  bool request = go_frankenphp_worker_handle_request_start(thread_index);
+  bool has_request = go_frankenphp_worker_handle_request_start(thread_index);
   if (frankenphp_worker_request_startup() == FAILURE
       /* Shutting down */
-      || !request) {
+      || !has_request) {
     RETURN_FALSE;
   }
 
@@ -445,7 +428,7 @@ PHP_FUNCTION(frankenphp_handle_request) {
   }
 #endif
 
-  /* Call the PHP func */
+  /* Call the PHP func passed to frankenphp_handle_request() */
   zval retval = {0};
   fci.size = sizeof fci;
   fci.retval = &retval;
@@ -462,7 +445,6 @@ PHP_FUNCTION(frankenphp_handle_request) {
   }
 
   frankenphp_worker_request_shutdown();
-  ctx->has_active_request = false;
   go_frankenphp_finish_worker_request(thread_index);
 
   RETURN_TRUE;
@@ -526,43 +508,24 @@ static zend_module_entry frankenphp_module = {
     STANDARD_MODULE_PROPERTIES};
 
 static void frankenphp_request_shutdown() {
-  frankenphp_server_context *ctx = SG(server_context);
-
-  if (ctx->has_main_request && ctx->has_active_request) {
-    frankenphp_destroy_super_globals();
-  }
-
   php_request_shutdown((void *)0);
   frankenphp_free_request_context();
-
-  memset(local_ctx, 0, sizeof(frankenphp_server_context));
 }
 
-int frankenphp_update_server_context(
-    bool create, bool has_main_request, bool has_active_request,
+int frankenphp_update_server_context(bool is_worker_request,
 
-    const char *request_method, char *query_string, zend_long content_length,
-    char *path_translated, char *request_uri, const char *content_type,
-    char *auth_user, char *auth_password, int proto_num) {
-  frankenphp_server_context *ctx;
+                                     const char *request_method,
+                                     char *query_string,
+                                     zend_long content_length,
+                                     char *path_translated, char *request_uri,
+                                     const char *content_type, char *auth_user,
+                                     char *auth_password, int proto_num) {
 
-  if (create) {
-    ctx = local_ctx;
-
-    ctx->worker_ready = false;
-    ctx->cookie_data = NULL;
-    ctx->finished = false;
-
-    SG(server_context) = ctx;
-  } else {
-    ctx = (frankenphp_server_context *)SG(server_context);
-  }
+  SG(server_context) = (void *)1;
+  is_worker_thread = is_worker_request;
 
   // It is not reset by zend engine, set it to 200.
   SG(sapi_headers).http_response_code = 200;
-
-  ctx->has_main_request = has_main_request;
-  ctx->has_active_request = has_active_request;
 
   SG(request_info).auth_password = auth_password;
   SG(request_info).auth_user = auth_user;
@@ -589,14 +552,6 @@ static int frankenphp_deactivate(void) {
 }
 
 static size_t frankenphp_ub_write(const char *str, size_t str_length) {
-  frankenphp_server_context *ctx = SG(server_context);
-
-  if (ctx->finished) {
-    /* TODO: maybe log a warning that we tried to write to a finished request?
-     */
-    return 0;
-  }
-
   struct go_ub_write_return result =
       go_ub_write(thread_index, (char *)str, str_length);
 
@@ -613,11 +568,6 @@ static int frankenphp_send_headers(sapi_headers_struct *sapi_headers) {
   }
 
   int status;
-  frankenphp_server_context *ctx = SG(server_context);
-
-  if (!ctx->has_active_request) {
-    return SAPI_HEADER_SEND_FAILED;
-  }
 
   if (SG(sapi_headers).http_status_line) {
     status = atoi((SG(sapi_headers).http_status_line) + 9);
@@ -629,37 +579,26 @@ static int frankenphp_send_headers(sapi_headers_struct *sapi_headers) {
     }
   }
 
-  go_write_headers(thread_index, status, &sapi_headers->headers);
+  bool success = go_write_headers(thread_index, status, &sapi_headers->headers);
+  if (success) {
+    return SAPI_HEADER_SENT_SUCCESSFULLY;
+  }
 
-  return SAPI_HEADER_SENT_SUCCESSFULLY;
+  return SAPI_HEADER_SEND_FAILED;
 }
 
 static void frankenphp_sapi_flush(void *server_context) {
-  frankenphp_server_context *ctx = (frankenphp_server_context *)server_context;
-
-  if (ctx && ctx->has_active_request && go_sapi_flush(thread_index)) {
+  if (go_sapi_flush(thread_index)) {
     php_handle_aborted_connection();
   }
 }
 
 static size_t frankenphp_read_post(char *buffer, size_t count_bytes) {
-  frankenphp_server_context *ctx = SG(server_context);
-
-  return ctx->has_active_request
-             ? go_read_post(thread_index, buffer, count_bytes)
-             : 0;
+  return go_read_post(thread_index, buffer, count_bytes);
 }
 
 static char *frankenphp_read_cookies(void) {
-  frankenphp_server_context *ctx = SG(server_context);
-
-  if (!ctx->has_active_request) {
-    return "";
-  }
-
-  ctx->cookie_data = go_read_cookies(thread_index);
-
-  return ctx->cookie_data;
+  return go_read_cookies(thread_index);
 }
 
 /* all variables with well defined keys can safely be registered like this */
@@ -817,10 +756,8 @@ static void frankenphp_register_variables(zval *track_vars_array) {
    * variables.
    */
 
-  frankenphp_server_context *ctx = SG(server_context);
-
   /* in non-worker mode we import the os environment regularly */
-  if (!ctx->has_main_request) {
+  if (!is_worker_thread) {
     get_full_env(track_vars_array);
     // php_import_environment_variables(track_vars_array);
     go_register_variables(thread_index, track_vars_array);
@@ -917,8 +854,6 @@ static void *php_thread(void *arg) {
 #endif
 #endif
 
-  local_ctx = malloc(sizeof(frankenphp_server_context));
-
   // loop until Go signals to stop
   char *scriptName = NULL;
   while ((scriptName = go_frankenphp_before_script_execution(thread_index))) {
@@ -931,9 +866,6 @@ static void *php_thread(void *arg) {
 #endif
 
   go_frankenphp_on_thread_shutdown(thread_index);
-
-  free(local_ctx);
-  local_ctx = NULL;
 
   return NULL;
 }

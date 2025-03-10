@@ -1,9 +1,5 @@
 package frankenphp
 
-import (
-	"net/http"
-)
-
 // representation of a thread with no work assigned to it
 // implements the threadHandler interface
 // each inactive thread weighs around ~350KB
@@ -41,7 +37,7 @@ func (handler *inactiveThread) afterScriptExecution(exitStatus int) {
 	panic("inactive threads should not execute scripts")
 }
 
-func (handler *inactiveThread) getActiveRequest() *http.Request {
+func (handler *inactiveThread) getRequestContext() *frankenPHPContext {
 	return nil
 }
 

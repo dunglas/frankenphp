@@ -4,7 +4,7 @@ package frankenphp
 import "C"
 import (
 	"fmt"
-	"net/http"
+	"github.com/dunglas/frankenphp/internal/fastabs"
 	"sync"
 	"time"
 
@@ -19,7 +19,7 @@ type worker struct {
 	fileName    string
 	num         int
 	env         PreparedEnv
-	requestChan chan *http.Request
+	requestChan chan *frankenPHPContext
 	threads     []*phpThread
 	threadMutex sync.RWMutex
 }
@@ -59,7 +59,7 @@ func initWorkers(opt []workerOpt) error {
 	}
 
 	watcherIsEnabled = true
-	if err := watcher.InitWatcher(directoriesToWatch, RestartWorkers, getLogger()); err != nil {
+	if err := watcher.InitWatcher(directoriesToWatch, RestartWorkers, logger); err != nil {
 		return err
 	}
 
@@ -82,7 +82,7 @@ func newWorker(o workerOpt) (*worker, error) {
 		fileName:    absFileName,
 		num:         o.num,
 		env:         o.env,
-		requestChan: make(chan *http.Request),
+		requestChan: make(chan *frankenPHPContext),
 	}
 	workers[absFileName] = w
 
@@ -173,14 +173,14 @@ func (worker *worker) countThreads() int {
 	return l
 }
 
-func (worker *worker) handleRequest(r *http.Request, fc *FrankenPHPContext) {
+func (worker *worker) handleRequest(fc *frankenPHPContext) {
 	metrics.StartWorkerRequest(worker.name)
 
 	// dispatch requests to all worker threads in order
 	worker.threadMutex.RLock()
 	for _, thread := range worker.threads {
 		select {
-		case thread.requestChan <- r:
+		case thread.requestChan <- fc:
 			worker.threadMutex.RUnlock()
 			<-fc.done
 			metrics.StopWorkerRequest(worker.name, time.Since(fc.startedAt))
@@ -195,7 +195,7 @@ func (worker *worker) handleRequest(r *http.Request, fc *FrankenPHPContext) {
 	metrics.QueuedWorkerRequest(worker.name)
 	for {
 		select {
-		case worker.requestChan <- r:
+		case worker.requestChan <- fc:
 			metrics.DequeuedWorkerRequest(worker.name)
 			<-fc.done
 			metrics.StopWorkerRequest(worker.name, time.Since(fc.startedAt))
