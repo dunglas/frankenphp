@@ -405,6 +405,7 @@ func go_ub_write(threadIndex C.uintptr_t, cBuf *C.char, length C.int) (C.size_t,
 	}
 
 	if fc.responseWriter == nil {
+		// probably starting a worker script, log the output
 		fc.logger.Info(writer.(*bytes.Buffer).String())
 	}
 
@@ -471,6 +472,7 @@ func go_write_headers(threadIndex C.uintptr_t, status C.int, headers *C.zend_lli
 	}
 
 	if fc.responseWriter == nil {
+		// probably starting a worker script, pretend we wrote headers so PHP still calls ub_write
 		return C.bool(true)
 	}
 
