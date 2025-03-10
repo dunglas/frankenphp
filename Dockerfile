@@ -113,7 +113,8 @@ WORKDIR /go/src/app/caddy/frankenphp
 RUN GOBIN=/usr/local/bin go install -tags 'nobadger,nomysql,nopgx' -ldflags "-w -s -X 'github.com/caddyserver/caddy/v2.CustomVersion=FrankenPHP $FRANKENPHP_VERSION PHP $PHP_VERSION Caddy'" -buildvcs=true && \
 	setcap cap_net_bind_service=+ep /usr/local/bin/frankenphp && \
 	cp Caddyfile /etc/caddy/Caddyfile && \
-	frankenphp version
+	frankenphp version && \
+ 	frankenphp build-info
 
 WORKDIR /go/src/app
 
@@ -131,4 +132,5 @@ RUN apt-get install -y --no-install-recommends libstdc++6 && \
 
 COPY --from=builder /usr/local/bin/frankenphp /usr/local/bin/frankenphp
 RUN setcap cap_net_bind_service=+ep /usr/local/bin/frankenphp && \
-	frankenphp version
+	frankenphp version && \
+	frankenphp build-info
