@@ -8,8 +8,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/dunglas/frankenphp/internal/fastabs"
-
 	"github.com/dunglas/frankenphp/internal/watcher"
 )
 
