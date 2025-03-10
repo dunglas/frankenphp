@@ -6,3 +6,4 @@
 .vscode/
 __debug_bin
 frankenphp.test
+caddy/frankenphp/Build
