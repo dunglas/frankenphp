@@ -15,7 +15,7 @@ require (
 	github.com/dunglas/frankenphp v1.4.4
 	github.com/dunglas/mercure/caddy v0.18.4
 	github.com/dunglas/vulcain/caddy v1.1.1
-	github.com/prometheus/client_golang v1.21.0
+	github.com/prometheus/client_golang v1.21.1
 	github.com/spf13/cobra v1.9.1
 	github.com/stretchr/testify v1.10.0
 	go.uber.org/zap v1.27.0
