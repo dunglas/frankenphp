@@ -92,12 +92,10 @@ jobs:
         env:
           phpts: ts
           debug: true
+      - run: ls /usr/include/php
       - name: Set Set CGO flags
-        run: echo "CGO_CFLAGS=$(php-config --includes)" >> "${GITHUB_ENV}"
+        run: echo "CGO_CFLAGS=-I/usr/include/php $(php-config --includes)" >> "${GITHUB_ENV}"
       - name: Build
-        run: go build -tags nowatcher
-      - name: Build testcli binary
-        working-directory: internal/testcli/
         run: go build -tags nowatcher
       - name: Run library tests
         run: go test -tags nowatcher -race -v ./...
