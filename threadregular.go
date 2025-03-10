@@ -1,7 +1,6 @@
 package frankenphp
 
 import (
-	"net/http"
 	"sync"
 )
 
@@ -9,15 +8,15 @@ import (
 // executes PHP scripts in a web context
 // implements the threadHandler interface
 type regularThread struct {
-	state         *threadState
-	thread        *phpThread
-	activeRequest *http.Request
+	state          *threadState
+	thread         *phpThread
+	requestContext *frankenPHPContext
 }
 
 var (
 	regularThreads     []*phpThread
 	regularThreadMu    = &sync.RWMutex{}
-	regularRequestChan chan *http.Request
+	regularRequestChan chan *frankenPHPContext
 )
 
 func convertToRegularThread(thread *phpThread) {
@@ -49,11 +48,11 @@ func (handler *regularThread) beforeScriptExecution() string {
 
 // return true if the worker should continue to run
 func (handler *regularThread) afterScriptExecution(exitStatus int) {
-	handler.afterRequest(exitStatus)
+	handler.afterRequest()
 }
 
-func (handler *regularThread) getActiveRequest() *http.Request {
-	return handler.activeRequest
+func (handler *regularThread) getRequestContext() *frankenPHPContext {
+	return handler.requestContext
 }
 
 func (handler *regularThread) name() string {
@@ -66,21 +65,20 @@ func (handler *regularThread) waitForRequest() string {
 
 	handler.state.markAsWaiting(true)
 
-	var r *http.Request
+	var fc *frankenPHPContext
 	select {
 	case <-handler.thread.drainChan:
 		// go back to beforeScriptExecution
 		return handler.beforeScriptExecution()
-	case r = <-regularRequestChan:
+	case fc = <-regularRequestChan:
 	}
 
-	handler.activeRequest = r
+	handler.requestContext = fc
 	handler.state.markAsWaiting(false)
-	fc := r.Context().Value(contextKey).(*FrankenPHPContext)
 
-	if err := updateServerContext(handler.thread, r, true, false); err != nil {
-		rejectRequest(fc.responseWriter, err.Error())
-		handler.afterRequest(0)
+	if err := updateServerContext(handler.thread, fc, false); err != nil {
+		fc.rejectBadRequest(err.Error())
+		handler.afterRequest()
 		handler.thread.Unpin()
 		// go back to beforeScriptExecution
 		return handler.beforeScriptExecution()
@@ -90,17 +88,15 @@ func (handler *regularThread) waitForRequest() string {
 	return fc.scriptFilename
 }
 
-func (handler *regularThread) afterRequest(exitStatus int) {
-	fc := handler.activeRequest.Context().Value(contextKey).(*FrankenPHPContext)
-	fc.exitStatus = exitStatus
-	maybeCloseContext(fc)
-	handler.activeRequest = nil
+func (handler *regularThread) afterRequest() {
+	handler.requestContext.closeContext()
+	handler.requestContext = nil
 }
 
-func handleRequestWithRegularPHPThreads(r *http.Request, fc *FrankenPHPContext) {
+func handleRequestWithRegularPHPThreads(fc *frankenPHPContext) {
 	metrics.StartRequest()
 	select {
-	case regularRequestChan <- r:
+	case regularRequestChan <- fc:
 		// a thread was available to handle the request immediately
 		<-fc.done
 		metrics.StopRequest()
@@ -113,7 +109,7 @@ func handleRequestWithRegularPHPThreads(r *http.Request, fc *FrankenPHPContext) 
 	metrics.QueuedRequest()
 	for {
 		select {
-		case regularRequestChan <- r:
+		case regularRequestChan <- fc:
 			metrics.DequeuedRequest()
 			<-fc.done
 			metrics.StopRequest()
