@@ -61,8 +61,8 @@ ENV PATH=/usr/local/go/bin:$PATH
 # This is required to link the FrankenPHP binary to the PHP binary
 RUN apt-get update && \
 	apt-get -y --no-install-recommends install \
-    cmake \
-    git \
+	cmake \
+	git \
 	libargon2-dev \
 	libbrotli-dev \
 	libcurl4-openssl-dev \
@@ -100,7 +100,7 @@ COPY --link caddy/go.mod caddy/go.sum ./
 RUN go mod graph | awk '{if ($1 !~ "@") print $2}' | xargs go get
 
 WORKDIR /go/src/app
-ADD --link . ./
+COPY --link . ./
 
 # See https://github.com/docker-library/php/blob/master/8.3/bookworm/zts/Dockerfile#L57-L59 for PHP values
 ENV CGO_CFLAGS="-DFRANKENPHP_VERSION=$FRANKENPHP_VERSION $PHP_CFLAGS"
