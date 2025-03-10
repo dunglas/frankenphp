@@ -405,6 +405,7 @@ func go_ub_write(threadIndex C.uintptr_t, cBuf *C.char, length C.int) (C.size_t,
 	}
 
 	if fc.responseWriter == nil {
+		// probably starting a worker script, log the output
 		fc.logger.Info(writer.(*bytes.Buffer).String())
 	}
 
@@ -466,8 +467,13 @@ func addHeader(fc *frankenPHPContext, cString *C.char, length C.int) {
 func go_write_headers(threadIndex C.uintptr_t, status C.int, headers *C.zend_llist) C.bool {
 	fc := phpThreads[threadIndex].getRequestContext()
 
-	if fc.isDone || fc.responseWriter == nil {
+	if fc.isDone {
 		return C.bool(false)
+	}
+
+	if fc.responseWriter == nil {
+		// probably starting a worker script, pretend we wrote headers so PHP still calls ub_write
+		return C.bool(true)
 	}
 
 	current := headers.head
