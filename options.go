@@ -19,7 +19,7 @@ type opt struct {
 	logger      *zap.Logger
 	metrics     Metrics
 	phpIni      map[string]string
-	busyTimeout time.Duration
+	maxWaitTime time.Duration
 }
 
 type workerOpt struct {
@@ -81,9 +81,9 @@ func WithPhpIni(overrides map[string]string) Option {
 }
 
 // WithLogger configures the global logger to use.
-func WithBusyTimeout(stallTime time.Duration) Option {
+func WithMaxWaitTime(stallTime time.Duration) Option {
 	return func(o *opt) error {
-		o.busyTimeout = stallTime
+		o.maxWaitTime = stallTime
 
 		return nil
 	}

@@ -71,7 +71,7 @@ var (
 
 	metrics Metrics = nullMetrics{}
 
-	busyTimeout time.Duration
+	maxWaitTime time.Duration
 )
 
 type syslogLevel int
@@ -224,7 +224,7 @@ func Init(options ...Option) error {
 		metrics = opt.metrics
 	}
 
-	busyTimeout = opt.busyTimeout
+	maxWaitTime = opt.maxWaitTime
 
 	totalThreadCount, workerThreadCount, maxThreadCount, err := calculateMaxThreads(opt)
 	if err != nil {
@@ -624,9 +624,9 @@ func executePHPFunction(functionName string) bool {
 }
 
 func timeOutIfBusy() <-chan time.Time {
-	if busyTimeout == 0 {
+	if maxWaitTime == 0 {
 		return nil
 	}
 
-	return time.After(busyTimeout)
+	return time.After(maxWaitTime)
 }

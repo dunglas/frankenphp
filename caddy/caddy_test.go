@@ -760,7 +760,7 @@ func TestGatewayTimeout(t *testing.T) {
 
 			frankenphp {
 				num_threads 1
-				busy_timeout 1ns
+				max_wait_time 1ns
 			}
 		}
 

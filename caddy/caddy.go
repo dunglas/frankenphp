@@ -65,7 +65,7 @@ type FrankenPHPApp struct {
 	// Overwrites the default php ini configuration
 	PhpIni map[string]string `json:"php_ini,omitempty"`
 	// The maximum amount of time a request may be stalled wainting for threads
-	BusyTimeout time.Duration `json:"busy_timeout,omitempty"`
+	MaxWaitTime time.Duration `json:"max_wait_time,omitempty"`
 
 	metrics frankenphp.Metrics
 	logger  *zap.Logger
@@ -96,7 +96,7 @@ func (f *FrankenPHPApp) Start() error {
 		frankenphp.WithLogger(f.logger),
 		frankenphp.WithMetrics(f.metrics),
 		frankenphp.WithPhpIni(f.PhpIni),
-		frankenphp.WithBusyTimeout(f.BusyTimeout),
+		frankenphp.WithMaxWaitTime(f.MaxWaitTime),
 	}
 	for _, w := range f.Workers {
 		opts = append(opts, frankenphp.WithWorkers(repl.ReplaceKnown(w.FileName, ""), w.Num, w.Env, w.Watch))
@@ -123,6 +123,7 @@ func (f *FrankenPHPApp) Stop() error {
 	// reset configuration so it doesn't bleed into later tests
 	f.Workers = nil
 	f.NumThreads = 0
+	f.MaxWaitTime = 0
 
 	return nil
 }
@@ -160,17 +161,17 @@ func (f *FrankenPHPApp) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 				}
 
 				f.MaxThreads = int(v)
-			case "busy_timeout":
+			case "max_wait_time":
 				if !d.NextArg() {
 					return d.ArgErr()
 				}
 
 				v, err := time.ParseDuration(d.Val())
 				if err != nil {
-					return errors.New("busy_timeout must be a valid duration (example: 10s)")
+					return errors.New("max_wait_time must be a valid duration (example: 10s)")
 				}
 
-				f.BusyTimeout = v
+				f.MaxWaitTime = v
 			case "php_ini":
 				parseIniLine := func(d *caddyfile.Dispenser) error {
 					key := d.Val()
@@ -281,7 +282,7 @@ func (f *FrankenPHPApp) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 
 				f.Workers = append(f.Workers, wc)
 			default:
-				allowedDirectives := "num_threads, max_threads, php_ini, worker, busy_timeout"
+				allowedDirectives := "num_threads, max_threads, php_ini, worker, max_wait_time"
 				return wrongSubDirectiveError("frankenphp", allowedDirectives, d.Val())
 			}
 		}
