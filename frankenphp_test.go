@@ -672,10 +672,10 @@ func TestFailingWorker(t *testing.T) {
 }
 
 func TestEnv(t *testing.T) {
-	testEnv(t, &testOptions{})
+	testEnv(t, &testOptions{nbParallelRequests:1})
 }
 func TestEnvWorker(t *testing.T) {
-	testEnv(t, &testOptions{workerScript: "env/test-env.php"})
+	testEnv(t, &testOptions{nbParallelRequests:1, workerScript: "env/test-env.php"})
 }
 func testEnv(t *testing.T, opts *testOptions) {
 	assert.NoError(t, os.Setenv("EMPTY", ""))
