@@ -893,13 +893,13 @@ static void *php_main(void *arg) {
 
   sapi_startup(&frankenphp_sapi_module);
 
-#ifndef ZEND_MAX_EXECUTION_TIMERS
+#ifdef ZEND_MAX_EXECUTION_TIMERS
+  /* overwrite php.ini with custom user settings */
+  char *php_ini_overrides = go_get_custom_php_ini(false);
+#else
   /* overwrite php.ini with custom user settings and disable
    * max_execution_timers */
   char *php_ini_overrides = go_get_custom_php_ini(true);
-#else
-  /* overwrite php.ini with custom user settings */
-  char *php_ini_overrides = go_get_custom_php_ini(false);
 #endif
 
   if (php_ini_overrides != NULL) {

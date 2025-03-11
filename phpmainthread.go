@@ -196,13 +196,15 @@ func go_get_custom_php_ini(disableExecutionTimers C.bool) *C.char {
 		mainThread.phpIni = make(map[string]string)
 	}
 
-	// hardcoded ini settings if ZEND_MAX_EXECUTION_TIMERS is disabled
+	// Timeouts are currently fundamentally broken
+	// with ZTS except on Linux and FreeBSD: https://bugs.php.net/bug.php?id=79464
+	// Disable timeouts if ZEND_MAX_EXECUTION_TIMERS is not supported
 	if disableExecutionTimers {
 		mainThread.phpIni["max_execution_time"] = "0"
 		mainThread.phpIni["max_input_time"] = "-1"
 	}
 
-	// pass the php.ini overrides to PHP before startup
+	// Pass the php.ini overrides to PHP before startup
 	// TODO: if needed this would also be possible on a per-thread basis
 	overrides := ""
 	for k, v := range mainThread.phpIni {
