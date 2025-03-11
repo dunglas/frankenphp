@@ -95,12 +95,10 @@ jobs:
         env:
           phpts: ts
           debug: true
-      - name: Install Brotli
-        run: brew install brotli
       - name: Set Set CGO flags
         run: |
           {
-           echo "CGO_CFLAGS=$(php-config --includes)"
+           echo "CGO_CFLAGS=-I/opt/homebrew/include/brotli/d $(php-config --includes)"
            echo "CGO_LDFLAGS=-L/opt/homebrew/lib/ $(php-config --ldflags) $(php-config --libs)"
           } >> "${GITHUB_ENV}"
       - name: Build
