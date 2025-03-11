@@ -33,13 +33,6 @@
 ZEND_TSRMLS_CACHE_DEFINE()
 #endif
 
-/* Timeouts are currently fundamentally broken with ZTS except on Linux and
- * FreeBSD: https://bugs.php.net/bug.php?id=79464 */
-#ifndef ZEND_MAX_EXECUTION_TIMERS
-static const char HARDCODED_INI[] = "max_execution_time=0\n"
-                                    "max_input_time=-1\n\0";
-#endif
-
 static const char *MODULES_TO_RELOAD[] = {"filter", "session", NULL};
 
 frankenphp_version frankenphp_get_version() {
@@ -901,24 +894,17 @@ static void *php_main(void *arg) {
   sapi_startup(&frankenphp_sapi_module);
 
 #ifndef ZEND_MAX_EXECUTION_TIMERS
-#if (PHP_VERSION_ID >= 80300)
-  frankenphp_sapi_module.ini_entries = HARDCODED_INI;
-#else
-  frankenphp_sapi_module.ini_entries = malloc(sizeof(HARDCODED_INI));
-  if (frankenphp_sapi_module.ini_entries == NULL) {
-    perror("malloc failed");
-    exit(EXIT_FAILURE);
-  }
-  memcpy(frankenphp_sapi_module.ini_entries, HARDCODED_INI,
-         sizeof(HARDCODED_INI));
-#endif
+  /* overwrite php.ini with custom user settings and disable
+   * max_execution_timers */
+  char *php_ini_overrides = go_get_custom_php_ini(true);
 #else
   /* overwrite php.ini with custom user settings */
-  char *php_ini_overrides = go_get_custom_php_ini();
+  char *php_ini_overrides = go_get_custom_php_ini(false);
+#endif
+
   if (php_ini_overrides != NULL) {
     frankenphp_sapi_module.ini_entries = php_ini_overrides;
   }
-#endif
 
   frankenphp_sapi_module.startup(&frankenphp_sapi_module);
 

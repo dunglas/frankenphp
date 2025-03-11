@@ -191,9 +191,15 @@ func go_frankenphp_shutdown_main_thread() {
 }
 
 //export go_get_custom_php_ini
-func go_get_custom_php_ini() *C.char {
+func go_get_custom_php_ini(disableExecutionTimers C.bool) *C.char {
 	if mainThread.phpIni == nil {
-		return nil
+		mainThread.phpIni = make(map[string]string)
+	}
+
+	// hardcoded ini settings if ZEND_MAX_EXECUTION_TIMERS is disabled
+	if disableExecutionTimers {
+		mainThread.phpIni["max_execution_time"] = "0"
+		mainThread.phpIni["max_input_time"] = "-1"
 	}
 
 	// pass the php.ini overrides to PHP before startup
