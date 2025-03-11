@@ -92,9 +92,9 @@ jobs:
         env:
           phpts: ts
           debug: true
-      - run: ls /usr/include/php
       - name: Set Set CGO flags
         run: echo "CGO_CFLAGS=-I/usr/include/php $(php-config --includes)" >> "${GITHUB_ENV}"
+      - uses: mxschmitt/action-tmate@v3
       - name: Build
         run: go build -tags nowatcher
       - name: Run library tests
