@@ -925,7 +925,7 @@ static void *php_main(void *arg) {
 #endif
 
   if (frankenphp_sapi_module.ini_entries) {
-    free((char *) frankenphp_sapi_module.ini_entries);
+    free((char *)frankenphp_sapi_module.ini_entries);
     frankenphp_sapi_module.ini_entries = NULL;
   }
 
