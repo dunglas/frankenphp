@@ -14,7 +14,8 @@ on:
 permissions:
   contents: read
 jobs:
-  tests:
+  tests-linux:
+    name: Tests (Linux, PHP ${{ matrix.php-versions }})
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -71,3 +72,39 @@ jobs:
         if: matrix.php-versions == '8.4'
         with:
           version: latest
+  tests-mac:
+    name: Tests (macOS, PHP 8.4)
+    runs-on: macos-latest
+    env:
+      GOEXPERIMENT: cgocheck2
+      HOMEBREW_NO_AUTO_UPDATE: 1
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+          cache-dependency-path: |
+            go.sum 
+            caddy/go.sum
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: 8.4
+          ini-file: development
+          coverage: none
+          tools: none
+        env:
+          phpts: ts
+          debug: true
+      - name: Set Set CGO flags
+        run: |
+          {
+           echo "CGO_CFLAGS=-I/opt/homebrew/include/ $(php-config --includes)"
+           echo "CGO_LDFLAGS=-L/opt/homebrew/lib/ $(php-config --ldflags) $(php-config --libs)"
+          } >> "${GITHUB_ENV}"
+      - name: Build
+        run: go build -tags nowatcher
+      - name: Run library tests
+        run: go test -tags nowatcher -race -v ./...
+      - name: Run Caddy module tests
+        working-directory: caddy/
+        run: go test -tags nowatcher,nobadger,nomysql,nopgx -race -v ./...
