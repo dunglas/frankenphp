@@ -77,6 +77,7 @@ jobs:
     runs-on: macos-latest
     env:
       GOEXPERIMENT: cgocheck2
+      HOMEBREW_NO_AUTO_UPDATE: 1
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -94,6 +95,8 @@ jobs:
         env:
           phpts: ts
           debug: true
+      - name: Install Brotli
+        run: brew install brotli
       - name: Set Set CGO flags
         run: |
           {
@@ -106,4 +109,4 @@ jobs:
         run: go test -tags nowatcher -race -v ./...
       - name: Run Caddy module tests
         working-directory: caddy/
-        run: go test -tags nowatcher,nobrotli,nobadger,nomysql,nopgx -race -v ./...
+        run: go test -tags nowatcher,nobadger,nomysql,nopgx -race -v ./...
