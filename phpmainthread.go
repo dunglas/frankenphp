@@ -8,7 +8,7 @@ package frankenphp
 // #include "frankenphp.h"
 import "C"
 import (
-	"fmt"
+	"strings"
 	"sync"
 
 	"github.com/dunglas/frankenphp/internal/memory"
@@ -191,7 +191,7 @@ func go_frankenphp_shutdown_main_thread() {
 }
 
 //export go_get_custom_php_ini
-func go_get_custom_php_ini(disableExecutionTimers C.bool) *C.char {
+func go_get_custom_php_ini(disableTimeouts C.bool) *C.char {
 	if mainThread.phpIni == nil {
 		mainThread.phpIni = make(map[string]string)
 	}
@@ -199,16 +199,20 @@ func go_get_custom_php_ini(disableExecutionTimers C.bool) *C.char {
 	// Timeouts are currently fundamentally broken
 	// with ZTS except on Linux and FreeBSD: https://bugs.php.net/bug.php?id=79464
 	// Disable timeouts if ZEND_MAX_EXECUTION_TIMERS is not supported
-	if disableExecutionTimers {
+	if disableTimeouts {
 		mainThread.phpIni["max_execution_time"] = "0"
 		mainThread.phpIni["max_input_time"] = "-1"
 	}
 
 	// Pass the php.ini overrides to PHP before startup
 	// TODO: if needed this would also be possible on a per-thread basis
-	overrides := ""
+	var overrides strings.Builder
 	for k, v := range mainThread.phpIni {
-		overrides += fmt.Sprintf("%s=%s\n", k, v)
+		overrides.WriteString(k)
+		overrides.WriteByte('=')
+		overrides.WriteString(v)
+		overrides.WriteByte('\n')
 	}
-	return C.CString(overrides)
+
+	return C.CString(overrides.String())
 }

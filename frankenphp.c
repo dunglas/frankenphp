@@ -924,13 +924,13 @@ static void *php_main(void *arg) {
   tsrm_shutdown();
 #endif
 
-#if (PHP_VERSION_ID < 80300)
   if (frankenphp_sapi_module.ini_entries) {
-    free(frankenphp_sapi_module.ini_entries);
+    free((char *) frankenphp_sapi_module.ini_entries);
     frankenphp_sapi_module.ini_entries = NULL;
   }
-#endif
+
   go_frankenphp_shutdown_main_thread();
+
   return NULL;
 }
 
