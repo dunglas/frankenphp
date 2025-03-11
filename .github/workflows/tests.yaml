@@ -93,8 +93,11 @@ jobs:
           phpts: ts
           debug: true
       - name: Set Set CGO flags
-        run: echo "CGO_CFLAGS=-I/usr/include/php $(php-config --includes)" >> "${GITHUB_ENV}"
-      - uses: mxschmitt/action-tmate@v3
+        run: |
+          {
+           echo "CGO_CFLAGS=$(php-config --includes)"
+           echo "CGO_LDFLAGS=-L/opt/homebrew/lib/ $(php-config --ldflags) $(php-config --libs)"
+          } >> "${GITHUB_ENV}"
       - name: Build
         run: go build -tags nowatcher
       - name: Run library tests
