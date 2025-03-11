@@ -10,8 +10,51 @@ fi
 
 arch="$(uname -m)"
 os="$(uname -s | tr '[:upper:]' '[:lower:]')"
-# FIXME: re-enable PHP errors when SPC will be compatible with PHP 8.4
-spcCommand="php -ddisplay_errors=Off ./bin/spc"
+
+# Supported variables:
+# - PHP_VERSION: PHP version to build (default: "8.4")
+# - PHP_EXTENSIONS: PHP extensions to build (default: ${defaultExtensions} set below)
+# - PHP_EXTENSION_LIBS: PHP extension libraries to build (default: ${defaultExtensionLibs} set below)
+# - FRANKENPHP_VERSION: FrankenPHP version (default: current Git commit)
+# - EMBED: Path to the PHP app to embed (default: none)
+# - DEBUG_SYMBOLS: Enable debug symbols if set to 1 (default: none)
+# - MIMALLOC: Use mimalloc as the allocator if set to 1 (default: none)
+# - XCADDY_ARGS: Additional arguments to pass to xcaddy
+# - RELEASE: [maintainer only] Create a GitHub release if set to 1 (default: none)
+
+# - SPC_REL_TYPE: Release type to download (accept "source" and "binary", default: "source")
+# - SPC_OPT_BUILD_ARGS: Additional arguments to pass to spc build
+# - SPC_OPT_DOWNLOAD_ARGS: Additional arguments to pass to spc download
+# - SPC_BUILD_GNU: Set to 1 to build with GNU toolchain (default: musl toolchain)
+
+# init spc command, if we use spc binary, just use it instead of fetching source
+if [ -z "${SPC_REL_TYPE}" ]; then
+    SPC_REL_TYPE="source"
+fi
+# init spc build additional args
+if [ -z "${SPC_OPT_BUILD_ARGS}" ]; then
+    SPC_OPT_BUILD_ARGS="--debug"
+fi
+# init spc download additional args
+if [ -z "${SPC_OPT_DOWNLOAD_ARGS}" ]; then
+    SPC_OPT_DOWNLOAD_ARGS="--prefer-pre-built --debug --ignore-cache-sources=php-src"
+fi
+# linux build need to disable opcache jit
+if [ "${os}" = "linux" ]; then
+    SPC_OPT_BUILD_ARGS="${SPC_OPT_BUILD_ARGS} --disable-opcache-jit"
+fi
+# if we need debug symbols, disable strip
+if [ -n "${DEBUG_SYMBOLS}" ]; then
+    SPC_OPT_BUILD_ARGS="${SPC_OPT_BUILD_ARGS} --no-strip"
+fi
+# php version to build
+if [ -z "${PHP_VERSION}" ]; then
+	export PHP_VERSION="8.4"
+fi
+# default extension set
+defaultExtensions="apcu,bcmath,bz2,calendar,ctype,curl,dba,dom,exif,fileinfo,filter,ftp,gd,gmp,gettext,iconv,igbinary,imagick,intl,ldap,mbregex,mbstring,mysqli,mysqlnd,opcache,openssl,parallel,pcntl,pdo,pdo_mysql,pdo_pgsql,pdo_sqlite,pgsql,phar,posix,protobuf,readline,redis,session,shmop,simplexml,soap,sockets,sodium,sqlite3,ssh2,sysvmsg,sysvsem,sysvshm,tidy,tokenizer,xlswriter,xml,xmlreader,xmlwriter,zip,zlib,yaml,zstd"
+defaultExtensionLibs="bzip2,freetype,libavif,libjpeg,liblz4,libwebp,libzip,nghttp2"
+
 md5binary="md5sum"
 if [ "${os}" = "darwin" ]; then
 	os="mac"
@@ -33,32 +76,6 @@ if [ "${os}" = "linux" ] && { [[ "${arch}" =~ "aarch" ]] || [[ "${arch}" =~ "arm
 else
 	fpic="-fpic"
 	fpie="-fpie"
-fi
-
-if [ -z "${PHP_EXTENSIONS}" ]; then
-	if [ -n "${EMBED}" ] && [ -f "${EMBED}/composer.json" ]; then
-		cd "${EMBED}"
-		# read the composer.json file and extract the required PHP extensions
-		# remove internal extensions from the list: https://github.com/crazywhalecc/static-php-cli/blob/4b16631d45a57370b4747df15c8f105130e96d03/src/globals/defines.php#L26-L34
-		PHP_EXTENSIONS="$(composer check-platform-reqs --no-dev 2>/dev/null | grep ^ext | sed -e 's/^ext-core//' -e 's/^ext-hash//' -e 's/^ext-json//' -e 's/^ext-pcre//' -e 's/^ext-reflection//' -e 's/^ext-spl//' -e 's/^ext-standard//' -e 's/^ext-//' -e 's/ .*//' | xargs | tr ' ' ',')"
-		export PHP_EXTENSIONS
-		cd -
-	else
-		export PHP_EXTENSIONS="apcu,bcmath,bz2,calendar,ctype,curl,dba,dom,exif,fileinfo,filter,ftp,gd,gmp,gettext,iconv,igbinary,imagick,intl,ldap,mbregex,mbstring,mysqli,mysqlnd,opcache,openssl,parallel,pcntl,pdo,pdo_mysql,pdo_pgsql,pdo_sqlite,pgsql,phar,posix,protobuf,readline,redis,session,shmop,simplexml,soap,sockets,sodium,sqlite3,ssh2,sysvmsg,sysvsem,sysvshm,tidy,tokenizer,xlswriter,xml,xmlreader,xmlwriter,zip,zlib,yaml,zstd"
-	fi
-fi
-
-if [ -z "${PHP_EXTENSION_LIBS}" ]; then
-	export PHP_EXTENSION_LIBS="bzip2,freetype,libavif,libjpeg,liblz4,libwebp,libzip,nghttp2"
-fi
-
-# The Brotli library must always be built as it is required by http://github.com/dunglas/caddy-cbrotli
-if ! echo "${PHP_EXTENSION_LIBS}" | grep -q "\bbrotli\b"; then
-	export PHP_EXTENSION_LIBS="${PHP_EXTENSION_LIBS},brotli"
-fi
-
-if [ -z "${PHP_VERSION}" ]; then
-	export PHP_VERSION="8.4"
 fi
 
 if [ -z "${FRANKENPHP_VERSION}" ]; then
@@ -98,14 +115,6 @@ else
 	cd dist/
 	echo -n "${cache_key}" >cache_key
 
-	if [ -d "static-php-cli/" ]; then
-		cd static-php-cli/
-		git pull
-	else
-		git clone --depth 1 https://github.com/crazywhalecc/static-php-cli
-		cd static-php-cli/
-	fi
-
 	if type "brew" >/dev/null 2>&1; then
 		if ! type "composer" >/dev/null; then
 			packages="composer"
@@ -123,20 +132,48 @@ else
 		fi
 	fi
 
-	composer install --no-dev -a
+	if [ "${SPC_REL_TYPE}" = "binary" ]; then
+	    mkdir static-php-cli/
+	    cd static-php-cli/
+	    curl -o spc -fsSL https://dl.static-php.dev/static-php-cli/spc-bin/nightly/spc-linux-$(uname -m)
+        chmod +x spc
+        spcCommand="./spc"
+    elif [ -d "static-php-cli/src" ]; then
+        cd static-php-cli/
+        git pull
+        composer install --no-dev -a
+        spcCommand="./bin/spc"
+    else
+        git clone --depth 1 https://github.com/crazywhalecc/static-php-cli --branch main
+        cd static-php-cli/
+        composer install --no-dev -a
+        spcCommand="./bin/spc"
+    fi
 
-	if [ "${os}" = "linux" ]; then
-		extraOpts="--disable-opcache-jit"
-	fi
-
-	if [ -n "${DEBUG_SYMBOLS}" ]; then
-		extraOpts="${extraOpts} --no-strip"
-	fi
+    # extensions to build
+    if [ -z "${PHP_EXTENSIONS}" ]; then
+        # enable EMBED mode, first check if project has dumped extensions
+        if [ -n "${EMBED}" ] && [ -f "${EMBED}/composer.json" ] && [ -f "${EMBED}/composer.lock" ] && [ -f "${EMBED}/vendor/installed.json" ]; then
+            cd "${EMBED}"
+            # read the extensions using spc dump-extensions
+            PHP_EXTENSIONS=$(${spcCommand} dump-extensions "${EMBED}" --format=text --no-dev --no-ext-output="${defaultExtensions}")
+        else
+            PHP_EXTENSIONS="${defaultExtensions}"
+        fi
+    fi
+    # additional libs to build
+    if [ -z "${PHP_EXTENSION_LIBS}" ]; then
+        PHP_EXTENSION_LIBS="${defaultExtensionLibs}"
+    fi
+    # The Brotli library must always be built as it is required by http://github.com/dunglas/caddy-cbrotli
+    if ! echo "${PHP_EXTENSION_LIBS}" | grep -q "\bbrotli\b"; then
+        PHP_EXTENSION_LIBS="${PHP_EXTENSION_LIBS},brotli"
+    fi
 
 	${spcCommand} doctor --auto-fix
-	${spcCommand} download --with-php="${PHP_VERSION}" --for-extensions="${PHP_EXTENSIONS}" --for-libs="${PHP_EXTENSION_LIBS}" --ignore-cache-sources=php-src --prefer-pre-built
+	${spcCommand} download --with-php="${PHP_VERSION}" --for-extensions="${PHP_EXTENSIONS}" --for-libs="${PHP_EXTENSION_LIBS}" ${SPC_OPT_DOWNLOAD_ARGS}
 	# shellcheck disable=SC2086
-	${spcCommand} build --debug --enable-zts --build-embed ${extraOpts} "${PHP_EXTENSIONS}" --with-libs="${PHP_EXTENSION_LIBS}"
+	${spcCommand} build --enable-zts --build-embed ${SPC_OPT_BUILD_ARGS} "${PHP_EXTENSIONS}" --with-libs="${PHP_EXTENSION_LIBS}"
 fi
 
 if ! type "go" >/dev/null 2>&1; then
@@ -166,7 +203,12 @@ curl -f --retry 5 "${curlGitHubHeaders[@]}" https://api.github.com/repos/e-dant/
 	xargs curl -fL --retry 5 "${curlGitHubHeaders[@]}" |
 	tar xz --strip-components 1
 cd watcher-c
-cc -c -o libwatcher-c.o ./src/watcher-c.cpp -I ./include -I ../include -std=c++17 -Wall -Wextra "${fpic}"
+if [ -z "${CC}" ]; then
+    watcherCC=cc
+else
+    watcherCC="${CC}"
+fi
+${watcherCC} -c -o libwatcher-c.o ./src/watcher-c.cpp -I ./include -I ../include -std=c++17 -Wall -Wextra "${fpic}"
 ar rcs libwatcher-c.a libwatcher-c.o
 cp libwatcher-c.a ../../buildroot/lib/libwatcher-c.a
 mkdir -p ../../buildroot/include/wtr
@@ -302,9 +344,15 @@ fi
 
 go env
 cd caddy/
+if [ -z "${SPC_BUILD_GNU}" ]; then
+    xcaddyGoBuildFlags="-buildmode=pie -tags cgo,netgo,osusergo,static_build,nobadger,nomysql,nopgx -ldflags \"-linkmode=external -extldflags '-static-pie ${extraExtldflags}' ${extraLdflags} -X 'github.com/caddyserver/caddy/v2.CustomVersion=FrankenPHP ${FRANKENPHP_VERSION} PHP ${LIBPHP_VERSION} Caddy'\""
+else
+    xcaddyGoBuildFlags="-buildmode=pie -tags cgo,netgo,osusergo,nobadger,nomysql,nopgx -ldflags \"-linkmode=external -extldflags '-pie ${extraExtldflags}' ${extraLdflags} -X 'github.com/caddyserver/caddy/v2.CustomVersion=FrankenPHP ${FRANKENPHP_VERSION} PHP ${LIBPHP_VERSION} Caddy'\""
+fi
+
 # shellcheck disable=SC2086
 CGO_ENABLED=1 \
-	XCADDY_GO_BUILD_FLAGS="-buildmode=pie -tags cgo,netgo,osusergo,static_build,nobadger,nomysql,nopgx -ldflags \"-linkmode=external -extldflags '-static-pie ${extraExtldflags}' ${extraLdflags} -X 'github.com/caddyserver/caddy/v2.CustomVersion=FrankenPHP ${FRANKENPHP_VERSION} PHP ${LIBPHP_VERSION} Caddy'\"" \
+	XCADDY_GO_BUILD_FLAGS=${xcaddyGoBuildFlags} \
 	XCADDY_DEBUG="${XCADDY_DEBUG}" \
 	${XCADDY_COMMAND} build \
 	--output "../dist/${bin}" \
