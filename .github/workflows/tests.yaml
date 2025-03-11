@@ -14,7 +14,8 @@ on:
 permissions:
   contents: read
 jobs:
-  tests:
+  tests-linux:
+    name: Tests (Linux, PHP ${{ matrix.php-versions }})
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -71,7 +72,8 @@ jobs:
         if: matrix.php-versions == '8.4'
         with:
           version: latest
-  mac-tests:
+  tests-mac:
+    name: Tests (macOS, PHP 8.4)
     runs-on: macos-latest
     env:
       GOEXPERIMENT: cgocheck2
@@ -104,4 +106,4 @@ jobs:
         run: go test -tags nowatcher -race -v ./...
       - name: Run Caddy module tests
         working-directory: caddy/
-        run: go test -tags nowatcher,nobadger,nomysql,nopgx -race -v ./...
+        run: go test -tags nowatcher,nobrotli,nobadger,nomysql,nopgx -race -v ./...
