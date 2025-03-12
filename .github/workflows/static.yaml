@@ -168,6 +168,7 @@ jobs:
       - name: Run sanity checks
         run: |
           "${BINARY}" version
+          "${BINARY}" build-info
           "${BINARY}" list-modules | grep frankenphp
           "${BINARY}" list-modules | grep http.encoders.br
           "${BINARY}" list-modules | grep http.handlers.mercure
@@ -262,6 +263,7 @@ jobs:
       - name: Run sanity checks
         run: |
           "${BINARY}" version
+          "${BINARY}" build-info
           "${BINARY}" list-modules | grep frankenphp
           "${BINARY}" list-modules | grep http.encoders.br
           "${BINARY}" list-modules | grep http.handlers.mercure
