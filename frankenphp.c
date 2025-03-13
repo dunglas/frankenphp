@@ -405,10 +405,11 @@ PHP_FUNCTION(frankenphp_handle_request) {
   zend_unset_timeout();
 #endif
 
-  bool has_request = go_frankenphp_worker_handle_request_start(thread_index);
-  if (frankenphp_worker_request_startup() == FAILURE
-      /* Shutting down */
-      || !has_request) {
+  bool continue_handling_requests =
+      go_frankenphp_worker_handle_request_start(thread_index);
+  if (!continue_handling_requests ||
+      frankenphp_worker_request_startup() == FAILURE) {
+    /* Shutting down */
     RETURN_FALSE;
   }
 
@@ -501,6 +502,11 @@ static zend_module_entry frankenphp_module = {
     STANDARD_MODULE_PROPERTIES};
 
 static void frankenphp_request_shutdown() {
+  if (is_worker_thread) {
+    /* ensure $_ENV is not in an invalid state before shutdown */
+    zval_ptr_dtor_nogc(&PG(http_globals)[TRACK_VARS_ENV]);
+    array_init(&PG(http_globals)[TRACK_VARS_ENV]);
+  }
   php_request_shutdown((void *)0);
   frankenphp_free_request_context();
 }
