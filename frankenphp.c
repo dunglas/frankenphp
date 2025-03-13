@@ -405,11 +405,10 @@ PHP_FUNCTION(frankenphp_handle_request) {
   zend_unset_timeout();
 #endif
 
-  bool continue_handling_requests =
-      go_frankenphp_worker_handle_request_start(thread_index);
-  if (!continue_handling_requests ||
-      frankenphp_worker_request_startup() == FAILURE) {
-    /* Shutting down */
+  bool has_request = go_frankenphp_worker_handle_request_start(thread_index);
+  if (frankenphp_worker_request_startup() == FAILURE
+      /* Shutting down */
+      || !has_request) {
     RETURN_FALSE;
   }
 
