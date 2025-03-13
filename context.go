@@ -5,10 +5,14 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"go.uber.org/zap"
 )
+
+// hard coded for testing purposes
+var maxExecutionTime = 5 * time.Second
 
 // frankenPHPContext provides contextual information about the Request to handle.
 type frankenPHPContext struct {
@@ -25,7 +29,8 @@ type frankenPHPContext struct {
 	scriptFilename string
 
 	// Whether the request is already closed by us
-	isDone bool
+	isDone     bool
+	isFinished atomic.Bool
 
 	responseWriter http.ResponseWriter
 
@@ -141,6 +146,19 @@ func (fc *frankenPHPContext) clientHasClosed() bool {
 	default:
 		return false
 	}
+}
+
+func (fc *frankenPHPContext) killAfterTimeout(killTimeout time.Duration, thread *phpThread) {
+	if killTimeout <= 0 {
+		return
+	}
+
+	go (func() {
+		time.Sleep(killTimeout)
+		if !fc.isFinished.Load() && thread.state.is(stateReady) {
+			thread.sendSigprof()
+		}
+	})()
 }
 
 // reject sends a response with the given status code and message

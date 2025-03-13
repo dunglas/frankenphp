@@ -55,11 +55,6 @@ frankenphp_config frankenphp_get_config() {
 #else
       false,
 #endif
-#ifdef ZEND_MAX_EXECUTION_TIMERS
-      true,
-#else
-      false,
-#endif
   };
 }
 
@@ -164,6 +159,20 @@ void frankenphp_add_assoc_str_ex(zval *track_vars_array, char *key,
   add_assoc_str_ex(track_vars_array, key, keylen, val);
 }
 
+/* Modify PHP's execution globals to signal that we have timed out
+ * See also: zend_execute_API.c -> zend_timeout_handler()
+ */
+static void frankenphp_trigger_timeout(int signo) {
+  if (!tsrm_is_shutdown() && tsrm_is_managed_thread()) {
+    zend_atomic_bool_store_ex(&EG(timed_out), true);
+    zend_atomic_bool_store_ex(&EG(vm_interrupt), true);
+  }
+}
+
+static void frankenphp_init_timeout(void) {
+  signal(SIG_UNBLOCK, frankenphp_trigger_timeout);
+}
+
 /* Adapted from php_request_startup() */
 static int frankenphp_worker_request_startup() {
   int retval = SUCCESS;
@@ -179,14 +188,6 @@ static int frankenphp_worker_request_startup() {
 
     /* Keep the current execution context */
     sapi_activate();
-
-#ifdef ZEND_MAX_EXECUTION_TIMERS
-    if (PG(max_input_time) == -1) {
-      zend_set_timeout(EG(timeout_seconds), 1);
-    } else {
-      zend_set_timeout(PG(max_input_time), 1);
-    }
-#endif
 
     if (PG(expose_php)) {
       sapi_add_header(SAPI_PHP_VERSION_HEADER,
@@ -400,11 +401,6 @@ PHP_FUNCTION(frankenphp_handle_request) {
     RETURN_THROWS();
   }
 
-#ifdef ZEND_MAX_EXECUTION_TIMERS
-  /* Disable timeouts while waiting for a request to handle */
-  zend_unset_timeout();
-#endif
-
   bool has_request = go_frankenphp_worker_handle_request_start(thread_index);
   if (frankenphp_worker_request_startup() == FAILURE
       /* Shutting down */
@@ -412,16 +408,7 @@ PHP_FUNCTION(frankenphp_handle_request) {
     RETURN_FALSE;
   }
 
-#ifdef ZEND_MAX_EXECUTION_TIMERS
-  /*
-   * Reset default timeout
-   */
-  if (PG(max_input_time) != -1) {
-    zend_set_timeout(INI_INT("max_execution_time"), 0);
-  }
-#endif
-
-  /* Call the PHP func passed to frankenphp_handle_request() */
+  /* Call the PHP func */
   zval retval = {0};
   fci.size = sizeof fci;
   fci.retval = &retval;
@@ -847,6 +834,8 @@ static void *php_thread(void *arg) {
 #endif
 #endif
 
+  frankenphp_init_timeout();
+
   // loop until Go signals to stop
   char *scriptName = NULL;
   while ((scriptName = go_frankenphp_before_script_execution(thread_index))) {
@@ -893,14 +882,8 @@ static void *php_main(void *arg) {
 
   sapi_startup(&frankenphp_sapi_module);
 
-#ifdef ZEND_MAX_EXECUTION_TIMERS
   /* overwrite php.ini with custom user settings */
-  char *php_ini_overrides = go_get_custom_php_ini(false);
-#else
-  /* overwrite php.ini with custom user settings and disable
-   * max_execution_timers */
-  char *php_ini_overrides = go_get_custom_php_ini(true);
-#endif
+  char *php_ini_overrides = go_get_custom_php_ini();
 
   if (php_ini_overrides != NULL) {
     frankenphp_sapi_module.ini_entries = php_ini_overrides;
@@ -945,13 +928,13 @@ int frankenphp_new_main_thread(int num_threads) {
   return pthread_detach(thread);
 }
 
-bool frankenphp_new_php_thread(uintptr_t thread_index) {
+pthread_t frankenphp_new_php_thread(uintptr_t thread_index) {
   pthread_t thread;
   if (pthread_create(&thread, NULL, &php_thread, (void *)thread_index) != 0) {
-    return false;
+    return 0;
   }
   pthread_detach(thread);
-  return true;
+  return thread;
 }
 
 int frankenphp_request_startup() {

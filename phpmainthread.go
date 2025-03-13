@@ -191,18 +191,14 @@ func go_frankenphp_shutdown_main_thread() {
 }
 
 //export go_get_custom_php_ini
-func go_get_custom_php_ini(disableTimeouts C.bool) *C.char {
+func go_get_custom_php_ini() *C.char {
 	if mainThread.phpIni == nil {
 		mainThread.phpIni = make(map[string]string)
 	}
 
-	// Timeouts are currently fundamentally broken
-	// with ZTS except on Linux and FreeBSD: https://bugs.php.net/bug.php?id=79464
-	// Disable timeouts if ZEND_MAX_EXECUTION_TIMERS is not supported
-	if disableTimeouts {
-		mainThread.phpIni["max_execution_time"] = "0"
-		mainThread.phpIni["max_input_time"] = "-1"
-	}
+	// TODO: how to get the original php.ini values?
+	mainThread.phpIni["max_execution_time"] = "0"
+	mainThread.phpIni["max_input_time"] = "-1"
 
 	// Pass the php.ini overrides to PHP before startup
 	// TODO: if needed this would also be possible on a per-thread basis

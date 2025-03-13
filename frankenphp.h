@@ -47,7 +47,7 @@ typedef struct frankenphp_config {
 frankenphp_config frankenphp_get_config();
 
 int frankenphp_new_main_thread(int num_threads);
-bool frankenphp_new_php_thread(uintptr_t thread_index);
+pthread_t frankenphp_new_php_thread(uintptr_t thread_index);
 
 bool frankenphp_shutdown_dummy_request(void);
 int frankenphp_update_server_context(bool is_worker_request,

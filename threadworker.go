@@ -204,6 +204,8 @@ func (handler *workerThread) waitForWorkerRequest() bool {
 		return handler.waitForWorkerRequest()
 	}
 
+	fc.killAfterTimeout(maxExecutionTime, handler.thread)
+
 	return true
 }
 
@@ -223,6 +225,7 @@ func go_frankenphp_finish_worker_request(threadIndex C.uintptr_t) {
 	fc := thread.getRequestContext()
 
 	fc.closeContext()
+	fc.isFinished.Store(true)
 	thread.handler.(*workerThread).workerContext = nil
 
 	if c := fc.logger.Check(zapcore.DebugLevel, "request handling finished"); c != nil {
