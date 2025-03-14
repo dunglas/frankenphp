@@ -25,7 +25,7 @@ os="$(uname -s | tr '[:upper:]' '[:lower:]')"
 # - SPC_REL_TYPE: Release type to download (accept "source" and "binary", default: "source")
 # - SPC_OPT_BUILD_ARGS: Additional arguments to pass to spc build
 # - SPC_OPT_DOWNLOAD_ARGS: Additional arguments to pass to spc download
-# - SPC_BUILD_GNU: Set to 1 to build with GNU toolchain (default: musl toolchain)
+# - SPC_LIBC: Set to glibc to build with GNU toolchain (default: musl)
 
 # init spc command, if we use spc binary, just use it instead of fetching source
 if [ -z "${SPC_REL_TYPE}" ]; then
@@ -38,10 +38,6 @@ fi
 # init spc download additional args
 if [ -z "${SPC_OPT_DOWNLOAD_ARGS}" ]; then
     SPC_OPT_DOWNLOAD_ARGS="--prefer-pre-built --debug --ignore-cache-sources=php-src"
-fi
-# linux build need to disable opcache jit
-if [ "${os}" = "linux" ]; then
-    SPC_OPT_BUILD_ARGS="${SPC_OPT_BUILD_ARGS} --disable-opcache-jit"
 fi
 # if we need debug symbols, disable strip
 if [ -n "${DEBUG_SYMBOLS}" ]; then
@@ -344,9 +340,9 @@ fi
 
 go env
 cd caddy/
-if [ -z "${SPC_BUILD_GNU}" ]; then
+if [ -z "${SPC_LIBC}" ] || [ "${SPC_LIBC}" = "musl" ]; then
     xcaddyGoBuildFlags="-buildmode=pie -tags cgo,netgo,osusergo,static_build,nobadger,nomysql,nopgx -ldflags \"-linkmode=external -extldflags '-static-pie ${extraExtldflags}' ${extraLdflags} -X 'github.com/caddyserver/caddy/v2.CustomVersion=FrankenPHP ${FRANKENPHP_VERSION} PHP ${LIBPHP_VERSION} Caddy'\""
-else
+elif [ "${SPC_LIBC}" = "glibc" ]; then
     xcaddyGoBuildFlags="-buildmode=pie -tags cgo,netgo,osusergo,nobadger,nomysql,nopgx -ldflags \"-linkmode=external -extldflags '-pie ${extraExtldflags}' ${extraLdflags} -X 'github.com/caddyserver/caddy/v2.CustomVersion=FrankenPHP ${FRANKENPHP_VERSION} PHP ${LIBPHP_VERSION} Caddy'\""
 fi
 

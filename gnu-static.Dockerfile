@@ -100,19 +100,17 @@ RUN yum install -y \
 ENV PATH="/cmake/bin:/usr/local/go/bin:$PATH"
 
 # Apply gnu mode
-ENV SPC_SKIP_DOCTOR_CHECK_ITEMS='if musl-wrapper is installed,if musl-cross-make is installed'
 ENV CC='/opt/rh/devtoolset-10/root/usr/bin/gcc'
 ENV CXX='/opt/rh/devtoolset-10/root/usr/bin/g++'
 ENV AR='/opt/rh/devtoolset-10/root/usr/bin/ar'
 ENV LD='/opt/rh/devtoolset-10/root/usr/bin/ld'
 ENV SPC_DEFAULT_C_FLAGS='-fPIE -fPIC'
-ENV SPC_NO_MUSL_PATH='yes'
+ENV SPC_LIBC='glibc'
 ENV SPC_CMD_VAR_PHP_MAKE_EXTRA_LDFLAGS_PROGRAM='-Wl,-O1 -pie'
 ENV SPC_CMD_VAR_PHP_MAKE_EXTRA_LIBS='-ldl -lpthread -lm -lresolv -lutil -lrt'
 ENV SPC_OPT_DOWNLOAD_ARGS='--debug --ignore-cache-sources=php-src'
-ENV SPC_OPT_BUILD_ARGS='--debug --libc=glibc'
+ENV SPC_OPT_BUILD_ARGS='--debug'
 ENV SPC_REL_TYPE='binary'
-ENV SPC_BUILD_GNU='yes'
 
 # not sure if this is needed
 ENV COMPOSER_ALLOW_SUPERUSER=1
