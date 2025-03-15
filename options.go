@@ -81,9 +81,9 @@ func WithPhpIni(overrides map[string]string) Option {
 }
 
 // WithLogger configures the global logger to use.
-func WithMaxWaitTime(stallTime time.Duration) Option {
+func WithMaxWaitTime(maxWaitTime time.Duration) Option {
 	return func(o *opt) error {
-		o.maxWaitTime = stallTime
+		o.maxWaitTime = maxWaitTime
 
 		return nil
 	}
