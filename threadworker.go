@@ -190,21 +190,13 @@ func (handler *workerThread) waitForWorkerRequest() bool {
 	handler.state.markAsWaiting(false)
 
 	if c := logger.Check(zapcore.DebugLevel, "request handling started"); c != nil {
-<<<<<<< HEAD
-		c.Write(zap.String("worker", handler.worker.fileName), zap.String("url", fc.request.RequestURI))
-=======
-		c.Write(zap.String("worker", handler.worker.name), zap.String("url", r.RequestURI))
->>>>>>> b2c7235 (add worker name option and use it in logs and metrics, update tests)
+		c.Write(zap.String("worker", handler.worker.name), zap.String("url", fc.request.RequestURI))
 	}
 
 	if err := updateServerContext(handler.thread, fc, true); err != nil {
 		// Unexpected error or invalid request
 		if c := logger.Check(zapcore.DebugLevel, "unexpected error"); c != nil {
-<<<<<<< HEAD
-			c.Write(zap.String("worker", handler.worker.fileName), zap.String("url", fc.request.RequestURI), zap.Error(err))
-=======
-			c.Write(zap.String("worker", handler.worker.name), zap.String("url", r.RequestURI), zap.Error(err))
->>>>>>> b2c7235 (add worker name option and use it in logs and metrics, update tests)
+			c.Write(zap.String("worker", handler.worker.name), zap.String("url", fc.request.RequestURI), zap.Error(err))
 		}
 		fc.rejectBadRequest(err.Error())
 		handler.workerContext = nil

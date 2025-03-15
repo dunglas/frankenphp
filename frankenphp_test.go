@@ -26,9 +26,8 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/dunglas/frankenphp/internal/fastabs"
-
 	"github.com/dunglas/frankenphp"
+	"github.com/dunglas/frankenphp/internal/fastabs"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
