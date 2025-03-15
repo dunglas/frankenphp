@@ -101,7 +101,7 @@ func scaleWorkerThread(worker *worker) {
 	thread, err := addWorkerThread(worker)
 	if err != nil {
 		if c := logger.Check(zapcore.WarnLevel, "could not increase max_threads, consider raising this limit"); c != nil {
-			c.Write(zap.String("worker", worker.fileName), zap.Error(err))
+			c.Write(zap.String("worker", worker.name), zap.Error(err))
 		}
 		return
 	}
