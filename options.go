@@ -80,7 +80,7 @@ func WithPhpIni(overrides map[string]string) Option {
 	}
 }
 
-// WithLogger configures the global logger to use.
+// WithMaxWaitTime configures the max time a request may be stalled waiting for a thread.
 func WithMaxWaitTime(maxWaitTime time.Duration) Option {
 	return func(o *opt) error {
 		o.maxWaitTime = maxWaitTime

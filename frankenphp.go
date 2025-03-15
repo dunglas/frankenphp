@@ -629,10 +629,10 @@ func executePHPFunction(functionName string) bool {
 	return C.frankenphp_execute_php_function(cFunctionName) == 1
 }
 
-func timeoutIfBusy() <-chan time.Time {
-	if maxWaitTime == 0 {
+func timeoutChan(timeout time.Duration) <-chan time.Time {
+	if timeout == 0 {
 		return nil
 	}
 
-	return time.After(maxWaitTime)
+	return time.After(timeout)
 }

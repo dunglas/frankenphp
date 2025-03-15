@@ -64,7 +64,7 @@ type FrankenPHPApp struct {
 	Workers []workerConfig `json:"workers,omitempty"`
 	// Overwrites the default php ini configuration
 	PhpIni map[string]string `json:"php_ini,omitempty"`
-	// The maximum amount of time a request may be stalled wainting for threads
+	// The maximum amount of time a request may be stalled waiting for a thread
 	MaxWaitTime time.Duration `json:"max_wait_time,omitempty"`
 
 	metrics frankenphp.Metrics
