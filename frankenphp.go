@@ -41,6 +41,7 @@ import (
 	"strings"
 	"sync"
 	"syscall"
+	"time"
 	"unsafe"
 
 	"go.uber.org/zap"
@@ -69,6 +70,8 @@ var (
 	logger   *zap.Logger
 
 	metrics Metrics = nullMetrics{}
+
+	maxWaitTime time.Duration
 )
 
 type syslogLevel int
@@ -220,6 +223,8 @@ func Init(options ...Option) error {
 	if opt.metrics != nil {
 		metrics = opt.metrics
 	}
+
+	maxWaitTime = opt.maxWaitTime
 
 	totalThreadCount, workerThreadCount, maxThreadCount, err := calculateMaxThreads(opt)
 	if err != nil {
@@ -622,4 +627,12 @@ func executePHPFunction(functionName string) bool {
 	defer C.free(unsafe.Pointer(cFunctionName))
 
 	return C.frankenphp_execute_php_function(cFunctionName) == 1
+}
+
+func timeoutIfBusy() <-chan time.Time {
+	if maxWaitTime == 0 {
+		return nil
+	}
+
+	return time.After(maxWaitTime)
 }

@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 
 	"github.com/dunglas/frankenphp"
@@ -747,4 +748,54 @@ func TestOsEnv(t *testing.T) {
 		http.StatusOK,
 		"ENV1=value1,ENV2=value2",
 	)
+}
+
+func TestMaxWaitTime(t *testing.T) {
+	tester := caddytest.NewTester(t)
+	tester.InitServer(`
+		{
+			skip_install_trust
+			admin localhost:2999
+			http_port `+testPort+`
+
+			frankenphp {
+				num_threads 1
+				max_wait_time 1ns
+			}
+		}
+
+		localhost:`+testPort+` {
+			route {
+				root ../testdata
+				php
+			}
+		}
+		`, "caddyfile")
+
+	// send 10 requests simultaneously, at least one request should be stalled longer than 1ns
+	// since we only have 1 thread, this will cause a 504 Gateway Timeout
+	wg := sync.WaitGroup{}
+	success := atomic.Bool{}
+	wg.Add(10)
+	for i := 0; i < 10; i++ {
+		go func() {
+			statusCode := getStatusCode("http://localhost:"+testPort+"/sleep.php?sleep=10", t)
+			if statusCode == http.StatusGatewayTimeout {
+				success.Store(true)
+			}
+			wg.Done()
+		}()
+	}
+	wg.Wait()
+
+	require.True(t, success.Load(), "At least one request should have failed with a 504 Gateway Timeout status")
+}
+
+func getStatusCode(url string, t *testing.T) int {
+	req, err := http.NewRequest("GET", url, nil)
+	require.NoError(t, err)
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	return resp.StatusCode
 }
