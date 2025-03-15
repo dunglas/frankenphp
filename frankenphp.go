@@ -57,7 +57,6 @@ var (
 	InvalidRequestError         = errors.New("not a FrankenPHP request")
 	AlreadyStartedError         = errors.New("FrankenPHP is already started")
 	InvalidPHPVersionError      = errors.New("FrankenPHP is only compatible with PHP 8.2+")
-	NotEnoughThreads            = errors.New("the number of threads must be superior to the number of workers")
 	MainThreadCreationError     = errors.New("error creating the main thread")
 	RequestContextCreationError = errors.New("error during request context creation")
 	ScriptExecutionError        = errors.New("error during PHP script execution")
@@ -163,6 +162,33 @@ func calculateMaxThreads(opt *opt) (int, int, int, error) {
 		numWorkers += opt.workers[i].num
 	}
 
+	// max_threads is set, num_threads is not set
+	if opt.maxThreads != 0 && opt.numThreads <= 0 {
+		opt.numThreads = numWorkers + 1
+		if opt.maxThreads > 0 && opt.numThreads > opt.maxThreads {
+			err := fmt.Errorf("max_threads (%d) must be greater than the number of worker threads (%d)", opt.maxThreads, numWorkers)
+			return 0, 0, 0, err
+		}
+
+		return opt.numThreads, numWorkers, opt.maxThreads, nil
+	}
+
+	// num_threads is set, max_threads is not set
+	if opt.numThreads > 0 && opt.maxThreads <= 0 {
+		if opt.numThreads <= numWorkers {
+			err := fmt.Errorf("num_threads (%d) must be greater than the number of worker threads (%d)", opt.numThreads, numWorkers)
+			return 0, 0, 0, err
+		}
+
+		// -1 means signifies automatic max_threads calculation
+		if opt.maxThreads == 0 {
+			opt.maxThreads = opt.numThreads
+		}
+
+		return opt.numThreads, numWorkers, opt.maxThreads, nil
+	}
+
+	// neither num_threads nor max_threads are set
 	if opt.numThreads <= 0 {
 		if numWorkers >= maxProcs {
 			// Start at least as many threads as workers, and keep a free thread to handle requests in non-worker mode
@@ -170,16 +196,25 @@ func calculateMaxThreads(opt *opt) (int, int, int, error) {
 		} else {
 			opt.numThreads = maxProcs
 		}
-	} else if opt.numThreads <= numWorkers {
-		return opt.numThreads, numWorkers, opt.maxThreads, NotEnoughThreads
+
+		// -1 means signifies automatic max_threads calculation
+		if opt.maxThreads == 0 {
+			opt.maxThreads = opt.numThreads
+		}
+
+		return opt.numThreads, numWorkers, opt.maxThreads, nil
 	}
 
-	if opt.maxThreads < opt.numThreads && opt.maxThreads > 0 {
-		opt.maxThreads = opt.numThreads
+	// both num_threads and max_threads are set
+	if opt.numThreads <= numWorkers {
+		err := fmt.Errorf("num_threads (%d) must be greater than the number of worker threads (%d)", opt.numThreads, numWorkers)
+		return 0, 0, 0, err
 	}
 
-	metrics.TotalThreads(opt.numThreads)
-	MaxThreads = opt.numThreads
+	if opt.maxThreads < opt.numThreads {
+		err := fmt.Errorf("max_threads (%d) must be greater than or equal to num_threads (%d)", opt.maxThreads, opt.numThreads)
+		return 0, 0, 0, err
+	}
 
 	return opt.numThreads, numWorkers, opt.maxThreads, nil
 }
@@ -225,6 +260,9 @@ func Init(options ...Option) error {
 	if err != nil {
 		return err
 	}
+
+	metrics.TotalThreads(totalThreadCount)
+	MaxThreads = totalThreadCount
 
 	config := Config()
 
