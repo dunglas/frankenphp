@@ -661,7 +661,7 @@ func TestPHPIniConfiguration(t *testing.T) {
 			frankenphp {
 				num_threads 2
 				worker ../testdata/ini.php 1
-				php_ini max_execution_time 100
+				php_ini upload_max_filesize 100M
 				php_ini memory_limit 10000000
 			}
 		}
@@ -674,7 +674,7 @@ func TestPHPIniConfiguration(t *testing.T) {
 		}
 		`, "caddyfile")
 
-	testSingleIniConfiguration(tester, "max_execution_time", "100")
+	testSingleIniConfiguration(tester, "upload_max_filesize", "100M")
 	testSingleIniConfiguration(tester, "memory_limit", "10000000")
 }
 
@@ -689,7 +689,7 @@ func TestPHPIniBlockConfiguration(t *testing.T) {
 			frankenphp {
 				num_threads 1
 				php_ini {
-					max_execution_time 15
+					upload_max_filesize 100M
 					memory_limit 20000000
 				}
 			}
@@ -703,7 +703,7 @@ func TestPHPIniBlockConfiguration(t *testing.T) {
 		}
 		`, "caddyfile")
 
-	testSingleIniConfiguration(tester, "max_execution_time", "15")
+	testSingleIniConfiguration(tester, "upload_max_filesize", "100M")
 	testSingleIniConfiguration(tester, "memory_limit", "20000000")
 }
 

@@ -112,7 +112,7 @@ func tearDownWorkerScript(handler *workerThread, exitStatus int) {
 	}
 
 	// on exit status 0 we just run the worker script again
-	if exitStatus == 0 {
+	if exitStatus == 0 && !handler.isBootingScript {
 		// TODO: make the max restart configurable
 		metrics.StopWorker(worker.fileName, StopReasonRestart)
 		handler.backoff.recordSuccess()
@@ -122,10 +122,19 @@ func tearDownWorkerScript(handler *workerThread, exitStatus int) {
 		return
 	}
 
-	// on exit status 1 we apply an exponential backoff when restarting
+	// worker has thrown a fatal error or has not reached frankenphp_handle_request
 	metrics.StopWorker(worker.fileName, StopReasonCrash)
-	if handler.isBootingScript && handler.backoff.recordFailure() {
-		if !watcherIsEnabled {
+
+	if !handler.isBootingScript {
+		// fatal error (could be due to timeouts, etc.)
+		return
+	}
+
+	logger.Error("worker script has not reached frankenphp_handle_request", zap.String("worker", worker.fileName))
+
+	// panic after exponential backoff if the worker has never reached frankenphp_handle_request
+	if handler.backoff.recordFailure() {
+		if !watcherIsEnabled && !handler.state.is(stateReady) {
 			logger.Panic("too many consecutive worker failures", zap.String("worker", worker.fileName), zap.Int("failures", handler.backoff.failureCount))
 		}
 		logger.Warn("many consecutive worker failures", zap.String("worker", worker.fileName), zap.Int("failures", handler.backoff.failureCount))

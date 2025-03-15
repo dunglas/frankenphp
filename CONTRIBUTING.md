@@ -149,16 +149,13 @@ docker buildx bake -f docker-bake.hcl --pull --no-cache --push
 3. Enable `tmate` to connect to the container
 
     ```patch
-        -
-          name: Set CGO flags
+        - name: Set CGO flags
           run: echo "CGO_CFLAGS=$(php-config --includes)" >> "$GITHUB_ENV"
-    +   -
-    +     run: |
+    +   - run: |
     +       sudo apt install gdb
     +       mkdir -p /home/runner/.config/gdb/
     +       printf "set auto-load safe-path /\nhandle SIG34 nostop noprint pass" > /home/runner/.config/gdb/gdbinit
-    +   -
-    +     uses: mxschmitt/action-tmate@v3
+    +   - uses: mxschmitt/action-tmate@v3
     ```
 
 4. Connect to the container
