@@ -26,9 +26,8 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/dunglas/frankenphp/internal/fastabs"
-
 	"github.com/dunglas/frankenphp"
+	"github.com/dunglas/frankenphp/internal/fastabs"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
@@ -673,11 +672,12 @@ func TestFailingWorker(t *testing.T) {
 }
 
 func TestEnv(t *testing.T) {
-	testEnv(t, &testOptions{nbParallelRequests:1})
+	testEnv(t, &testOptions{nbParallelRequests: 1})
 }
 func TestEnvWorker(t *testing.T) {
-	testEnv(t, &testOptions{nbParallelRequests:1, workerScript: "env/test-env.php"})
+	testEnv(t, &testOptions{nbParallelRequests: 1, workerScript: "env/test-env.php"})
 }
+
 // testEnv cannot be run in parallel due to https://github.com/golang/go/issues/63567
 func testEnv(t *testing.T, opts *testOptions) {
 	assert.NoError(t, os.Setenv("EMPTY", ""))
