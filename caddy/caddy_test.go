@@ -750,7 +750,7 @@ func TestOsEnv(t *testing.T) {
 	)
 }
 
-func TestGatewayTimeout(t *testing.T) {
+func TestMaxWaitTime(t *testing.T) {
 	tester := caddytest.NewTester(t)
 	tester.InitServer(`
 		{
