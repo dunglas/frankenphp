@@ -166,16 +166,6 @@ func calculateMaxThreads(opt *opt) (int, int, int, error) {
 	maxThreadsIsSet := opt.maxThreads != 0
 	maxThreadsIsAuto := opt.maxThreads < 0 // maxthreads < 0 signifies auto mode (see phpmaintread.go)
 
-	if maxThreadsIsSet && !numThreadsIsSet {
-		opt.numThreads = numWorkers + 1
-		if opt.maxThreads > 0 && opt.numThreads > opt.maxThreads {
-			err := fmt.Errorf("max_threads (%d) must be greater than the number of worker threads (%d)", opt.maxThreads, numWorkers)
-			return 0, 0, 0, err
-		}
-
-		return opt.numThreads, numWorkers, opt.maxThreads, nil
-	}
-
 	if numThreadsIsSet && !maxThreadsIsSet {
 		opt.maxThreads = opt.numThreads
 		if opt.numThreads <= numWorkers {
@@ -186,8 +176,17 @@ func calculateMaxThreads(opt *opt) (int, int, int, error) {
 		return opt.numThreads, numWorkers, opt.maxThreads, nil
 	}
 
-	// both num_thread and max_threads are not set
-	if !numThreadsIsSet {
+	if maxThreadsIsSet && !numThreadsIsSet {
+		opt.numThreads = numWorkers + 1
+		if !maxThreadsIsAuto && opt.numThreads > opt.maxThreads {
+			err := fmt.Errorf("max_threads (%d) must be greater than the number of worker threads (%d)", opt.maxThreads, numWorkers)
+			return 0, 0, 0, err
+		}
+
+		return opt.numThreads, numWorkers, opt.maxThreads, nil
+	}
+
+	if !numThreadsIsSet && !maxThreadsIsSet {
 		if numWorkers >= maxProcs {
 			// Start at least as many threads as workers, and keep a free thread to handle requests in non-worker mode
 			opt.numThreads = numWorkers + 1
