@@ -162,8 +162,11 @@ func calculateMaxThreads(opt *opt) (int, int, int, error) {
 		numWorkers += opt.workers[i].num
 	}
 
-	// max_threads is set, num_threads is not set
-	if opt.maxThreads != 0 && opt.numThreads <= 0 {
+	numThreadsIsSet := opt.numThreads > 0
+	maxThreadsIsSet := opt.maxThreads != 0
+	maxThreadsIsAuto := opt.maxThreads < 0 // maxthreads < 0 signifies auto mode (see phpmaintread.go)
+
+	if maxThreadsIsSet && !numThreadsIsSet {
 		opt.numThreads = numWorkers + 1
 		if opt.maxThreads > 0 && opt.numThreads > opt.maxThreads {
 			err := fmt.Errorf("max_threads (%d) must be greater than the number of worker threads (%d)", opt.maxThreads, numWorkers)
@@ -173,34 +176,25 @@ func calculateMaxThreads(opt *opt) (int, int, int, error) {
 		return opt.numThreads, numWorkers, opt.maxThreads, nil
 	}
 
-	// num_threads is set, max_threads is not set
-	if opt.numThreads > 0 && opt.maxThreads <= 0 {
+	if numThreadsIsSet && !maxThreadsIsSet {
+		opt.maxThreads = opt.numThreads
 		if opt.numThreads <= numWorkers {
 			err := fmt.Errorf("num_threads (%d) must be greater than the number of worker threads (%d)", opt.numThreads, numWorkers)
 			return 0, 0, 0, err
 		}
 
-		// -1 means signifies automatic max_threads calculation
-		if opt.maxThreads == 0 {
-			opt.maxThreads = opt.numThreads
-		}
-
 		return opt.numThreads, numWorkers, opt.maxThreads, nil
 	}
 
-	// neither num_threads nor max_threads are set
-	if opt.numThreads <= 0 {
+	// both num_thread and max_threads are not set
+	if !numThreadsIsSet {
 		if numWorkers >= maxProcs {
 			// Start at least as many threads as workers, and keep a free thread to handle requests in non-worker mode
 			opt.numThreads = numWorkers + 1
 		} else {
 			opt.numThreads = maxProcs
 		}
-
-		// -1 means signifies automatic max_threads calculation
-		if opt.maxThreads == 0 {
-			opt.maxThreads = opt.numThreads
-		}
+		opt.maxThreads = opt.numThreads
 
 		return opt.numThreads, numWorkers, opt.maxThreads, nil
 	}
@@ -211,7 +205,7 @@ func calculateMaxThreads(opt *opt) (int, int, int, error) {
 		return 0, 0, 0, err
 	}
 
-	if opt.maxThreads < opt.numThreads {
+	if !maxThreadsIsAuto && opt.maxThreads < opt.numThreads {
 		err := fmt.Errorf("max_threads (%d) must be greater than or equal to num_threads (%d)", opt.maxThreads, opt.numThreads)
 		return 0, 0, 0, err
 	}
