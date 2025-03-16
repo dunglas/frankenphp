@@ -149,12 +149,14 @@ func TestInValidExtendedPatterns(t *testing.T) {
 func TestAnAssociatedEventTriggersTheWatcher(t *testing.T) {
 	watchPattern, err := parseFilePattern("/**/*.php")
 	assert.NoError(t, err)
-	watchPattern.trigger = make(chan struct{})
+	watchPattern.trigger = make(chan string)
 
 	go handleWatcherEvent(watchPattern, "/path/temorary_file", "/path/file.php", 0, 0)
 
+	var path string
 	select {
-	case <-watchPattern.trigger:
+	case path = <-watchPattern.trigger:
+		assert.Equal(t, "/path/file.php", path, "should be associated file path")
 	case <-time.After(2 * time.Second):
 		assert.Fail(t, "associated watchPattern did not trigger after 2s")
 	}

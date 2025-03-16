@@ -22,7 +22,7 @@ import (
 type watcher struct {
 	sessions []C.uintptr_t
 	callback func()
-	trigger  chan struct{}
+	trigger  chan string
 	stop     chan struct{}
 }
 
@@ -105,7 +105,7 @@ func retryWatching(watchPattern *watchPattern) {
 }
 
 func (w *watcher) startWatching(filePatterns []string) error {
-	w.trigger = make(chan struct{})
+	w.trigger = make(chan string)
 	w.stop = make(chan struct{})
 	w.sessions = make([]C.uintptr_t, len(filePatterns))
 	watchPatterns, err := parseFilePatterns(filePatterns)
@@ -166,7 +166,7 @@ func handleWatcherEvent(watchPattern *watchPattern, path string, associatedPath 
 	}
 
 	if watchPattern.allowReload(path, eventType, pathType) {
-		watchPattern.trigger <- struct{}{}
+		watchPattern.trigger <- path
 		return
 	}
 
@@ -174,29 +174,30 @@ func handleWatcherEvent(watchPattern *watchPattern, path string, associatedPath 
 	// so we need to also check the associated path of an event
 	// see https://github.com/dunglas/frankenphp/issues/1375
 	if associatedPath != "" && watchPattern.allowReload(associatedPath, eventType, pathType) {
-		watchPattern.trigger <- struct{}{}
+		watchPattern.trigger <- associatedPath
 	}
 }
 
-func listenForFileEvents(triggerWatcher chan struct{}, stopWatcher chan struct{}) {
+func listenForFileEvents(triggerWatcher chan string, stopWatcher chan struct{}) {
 	timer := time.NewTimer(debounceDuration)
 	timer.Stop()
+	lastChangedFile := ""
 	defer timer.Stop()
 	for {
 		select {
 		case <-stopWatcher:
 			break
-		case <-triggerWatcher:
+		case lastChangedFile = <-triggerWatcher:
 			timer.Reset(debounceDuration)
 		case <-timer.C:
 			timer.Stop()
+			logger.Info("filesystem change detected", zap.String("file", lastChangedFile))
 			scheduleReload()
 		}
 	}
 }
 
 func scheduleReload() {
-	logger.Info("filesystem change detected")
 	reloadWaitGroup.Add(1)
 	activeWatcher.callback()
 	reloadWaitGroup.Done()

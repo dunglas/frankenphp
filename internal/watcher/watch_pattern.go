@@ -13,7 +13,7 @@ import (
 type watchPattern struct {
 	dir          string
 	patterns     []string
-	trigger      chan struct{}
+	trigger      chan string
 	failureCount int
 }
 
