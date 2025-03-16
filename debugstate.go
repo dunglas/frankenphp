@@ -37,7 +37,7 @@ func DebugState() FrankenPHPDebugState {
 func threadDebugState(thread *phpThread) ThreadDebugState {
 	return ThreadDebugState{
 		Index:                    thread.threadIndex,
-		Name:                     thread.handler.name(),
+		Name:                     thread.name(),
 		State:                    thread.state.name(),
 		IsWaiting:                thread.state.isInWaitingState(),
 		IsBusy:                   !thread.state.isInWaitingState(),
