@@ -274,7 +274,7 @@ func (f *FrankenPHPApp) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 							wc.Watch = append(wc.Watch, d.Val())
 						}
 					default:
-						allowedDirectives := "file, num, env, watch"
+						allowedDirectives := "name, file, num, env, watch"
 						return wrongSubDirectiveError("worker", allowedDirectives, v)
 					}
 				}
