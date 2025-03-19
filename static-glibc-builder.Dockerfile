@@ -23,7 +23,7 @@ RUN BASE_ARCH=$(uname -m); \
         TARGETARCH=aarch64; \
         GOARCH=arm64; \
     else \
-        TARGETARCH=amd64; \
+        TARGETARCH=x86_64; \
         GOARCH=amd64; \
     fi
 
@@ -52,7 +52,7 @@ RUN echo "source scl_source enable devtoolset-10" >> /etc/bashrc
 RUN source /etc/bashrc
 
 # Install CMake
-RUN curl -o cmake.tgz -fsSL https://github.com/Kitware/CMake/releases/download/v3.31.4/cmake-3.31.4-linux-amd64.tar.gz && \
+RUN curl -o cmake.tgz -fsSL https://github.com/Kitware/CMake/releases/download/v3.31.4/cmake-3.31.4-linux-$TARGETARCH.tar.gz && \
     mkdir /cmake && \
     tar -xzf cmake.tgz -C /cmake --strip-components 1
 
