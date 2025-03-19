@@ -1,14 +1,11 @@
-# ignored
-**/*
-
-# authorized
-!**/Caddyfile
-!**/*.go
-!**/go.*
-!**/*.c
-!**/*.h
-!testdata/*.php
-!testdata/*.txt
-!build-static.sh
-!app.tar
-!app_checksum.txt
+/caddy/frankenphp/frankenphp
+/internal/testserver/testserver
+/internal/testcli/testcli
+/dist
+.DS_Store
+.idea/
+.vscode/
+__debug_bin
+frankenphp.test
+caddy/frankenphp/Build
+*.log

@@ -323,6 +323,7 @@ if type "upx" >/dev/null 2>&1 && [ -z "${DEBUG_SYMBOLS}" ] && [ -z "${NO_COMPRES
 fi
 
 "dist/${bin}" version
+"dist/${bin}" build-info
 
 if [ -n "${RELEASE}" ]; then
 	gh release upload "v${FRANKENPHP_VERSION}" "dist/${bin}" --repo dunglas/frankenphp --clobber
