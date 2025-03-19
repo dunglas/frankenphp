@@ -25,7 +25,7 @@ RUN BASE_ARCH=$(uname -m); \
     else \
         TARGETARCH=amd64; \
         GOARCH = amd64; \
-    fi \
+    fi
 
 RUN sed -i 's/mirror.centos.org/vault.centos.org/g' /etc/yum.repos.d/*.repo && \
     sed -i 's/^#.*baseurl=http/baseurl=http/g' /etc/yum.repos.d/*.repo && \
