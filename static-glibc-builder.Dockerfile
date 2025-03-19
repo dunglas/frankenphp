@@ -1,6 +1,7 @@
 ﻿FROM centos:7
 
 ARG TARGETARCH
+ARG GOARCH
 
 ARG FRANKENPHP_VERSION=''
 ENV FRANKENPHP_VERSION=${FRANKENPHP_VERSION}
@@ -17,14 +18,14 @@ ARG DEBUG_SYMBOLS=''
 ARG MIMALLOC=''
 ARG NO_COMPRESS=''
 
-RUN if [ -z "$TARGETARCH" ]; then \
-        BASE_ARCH=$(uname -m); \
-        if [ "$BASE_ARCH" = "arm64" ]; then \
-            TARGETARCH=aarch64; \
-        else \
-            TARGETARCH=amd64; \
-        fi \
-    fi
+RUN BASE_ARCH=$(uname -m); \
+    if [ "$BASE_ARCH" = "arm64" ]; then \
+        TARGETARCH=aarch64; \
+        GOARCH = arm64; \
+    else \
+        TARGETARCH=amd64; \
+        GOARCH = amd64; \
+    fi \
 
 RUN sed -i 's/mirror.centos.org/vault.centos.org/g' /etc/yum.repos.d/*.repo && \
     sed -i 's/^#.*baseurl=http/baseurl=http/g' /etc/yum.repos.d/*.repo && \
@@ -51,7 +52,7 @@ RUN echo "source scl_source enable devtoolset-10" >> /etc/bashrc
 RUN source /etc/bashrc
 
 # Install CMake
-RUN curl -o cmake.tgz -fsSL https://github.com/Kitware/CMake/releases/download/v3.31.4/cmake-3.31.4-linux-$TARGETARCH.tar.gz && \
+RUN curl -o cmake.tgz -fsSL https://github.com/Kitware/CMake/releases/download/v3.31.4/cmake-3.31.4-linux-amd64.tar.gz && \
     mkdir /cmake && \
     tar -xzf cmake.tgz -C /cmake --strip-components 1
 
@@ -72,7 +73,7 @@ RUN curl -o automake.tgz -fsSL https://ftp.gnu.org/gnu/automake/automake-1.17.ta
     ln -sf /usr/local/bin/automake /usr/bin/automake
 
 # Install Go
-RUN curl -o go.tgz -fsSL https://go.dev/dl/go1.24.1.linux-$TARGETARCH.tar.gz && \
+RUN curl -o go.tgz -fsSL https://go.dev/dl/go1.24.1.linux-$GOARCH && \
     rm -rf /usr/local/go && tar -C /usr/local -xzf go.tgz \
 
 ENV PATH="/cmake/bin:/usr/local/go/bin:$PATH"
