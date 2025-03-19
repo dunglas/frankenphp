@@ -501,6 +501,11 @@ static zend_module_entry frankenphp_module = {
     STANDARD_MODULE_PROPERTIES};
 
 static void frankenphp_request_shutdown() {
+  if (is_worker_thread) {
+    /* ensure $_ENV is not in an invalid state before shutdown */
+    zval_ptr_dtor_nogc(&PG(http_globals)[TRACK_VARS_ENV]);
+    array_init(&PG(http_globals)[TRACK_VARS_ENV]);
+  }
   php_request_shutdown((void *)0);
   frankenphp_free_request_context();
 }
