@@ -5,6 +5,7 @@ import (
 	"math/rand/v2"
 	"net/http/httptest"
 	"path/filepath"
+	"runtime"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -213,4 +214,47 @@ func allPossibleTransitions(worker1Path string, worker2Path string) []func(*phpT
 		func(thread *phpThread) { convertToWorkerThread(thread, workers[worker2Path]) },
 		convertToInactiveThread,
 	}
+}
+
+func TestCorrectThreadCalculation(t *testing.T) {
+	maxProcs := runtime.GOMAXPROCS(0) * 2
+	oneWorkerThread := []workerOpt{workerOpt{num: 1}}
+
+	// default values
+	testThreadCalculation(t, maxProcs, maxProcs, &opt{})
+	testThreadCalculation(t, maxProcs, maxProcs, &opt{workers: oneWorkerThread})
+
+	// num_threads is set
+	testThreadCalculation(t, 1, 1, &opt{numThreads: 1})
+	testThreadCalculation(t, 2, 2, &opt{numThreads: 2, workers: oneWorkerThread})
+
+	// max_threads is set
+	testThreadCalculation(t, 1, 10, &opt{maxThreads: 10})
+	testThreadCalculation(t, 2, 10, &opt{maxThreads: 10, workers: oneWorkerThread})
+	testThreadCalculation(t, 5, 10, &opt{numThreads: 5, maxThreads: 10, workers: oneWorkerThread})
+
+	// automatic max_threads
+	testThreadCalculation(t, 1, -1, &opt{maxThreads: -1})
+	testThreadCalculation(t, 2, -1, &opt{maxThreads: -1, workers: oneWorkerThread})
+	testThreadCalculation(t, 2, -1, &opt{numThreads: 2, maxThreads: -1})
+
+	// not enough num threads
+	testThreadCalculationError(t, &opt{numThreads: 1, workers: oneWorkerThread})
+	testThreadCalculationError(t, &opt{numThreads: 1, maxThreads: 1, workers: oneWorkerThread})
+
+	// not enough max_threads
+	testThreadCalculationError(t, &opt{numThreads: 2, maxThreads: 1})
+	testThreadCalculationError(t, &opt{maxThreads: 1, workers: oneWorkerThread})
+}
+
+func testThreadCalculation(t *testing.T, expectedNumThreads int, expectedMaxThreads int, o *opt) {
+	totalThreadCount, _, maxThreadCount, err := calculateMaxThreads(o)
+	assert.NoError(t, err, "no error should be returned")
+	assert.Equal(t, expectedNumThreads, totalThreadCount, "num_threads must be correct")
+	assert.Equal(t, expectedMaxThreads, maxThreadCount, "max_threads must be correct")
+}
+
+func testThreadCalculationError(t *testing.T, o *opt) {
+	_, _, _, err := calculateMaxThreads(o)
+	assert.Error(t, err, "configuration must error")
 }
