@@ -21,10 +21,10 @@ ARG NO_COMPRESS=''
 RUN BASE_ARCH=$(uname -m); \
     if [ "$BASE_ARCH" = "arm64" ]; then \
         TARGETARCH=aarch64; \
-        GOARCH = arm64; \
+        GOARCH=arm64; \
     else \
         TARGETARCH=amd64; \
-        GOARCH = amd64; \
+        GOARCH=amd64; \
     fi
 
 RUN sed -i 's/mirror.centos.org/vault.centos.org/g' /etc/yum.repos.d/*.repo && \
