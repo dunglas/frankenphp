@@ -1,8 +1,4 @@
-﻿# syntax=docker/dockerfile:1
-#checkov:skip=CKV_DOCKER_2
-#checkov:skip=CKV_DOCKER_3
-#checkov:skip=CKV_DOCKER_7
-FROM centos:7
+﻿FROM centos:7
 
 ARG TARGETARCH
 
@@ -34,10 +30,20 @@ RUN sed -i 's/mirror.centos.org/vault.centos.org/g' /etc/yum.repos.d/*.repo && \
     sed -i 's/^#.*baseurl=http/baseurl=http/g' /etc/yum.repos.d/*.repo && \
     sed -i 's/^mirrorlist=http/#mirrorlist=http/g' /etc/yum.repos.d/*.repo
 
+RUN yum install -y centos-release-scl
+
+RUN if [ "$TARGETARCH" = "aarch64" ]; then \
+        sed -i 's|mirror.centos.org/centos|vault.centos.org/altarch|g' /etc/yum.repos.d/CentOS-SCLo-scl-rh.repo ; \
+        sed -i 's|mirror.centos.org/centos|vault.centos.org/altarch|g' /etc/yum.repos.d/CentOS-SCLo-scl.repo ; \
+    else \
+        sed -i 's/mirror.centos.org/vault.centos.org/g' /etc/yum.repos.d/*.repo ; \
+    fi
+RUN sed -i 's/^#.*baseurl=http/baseurl=http/g' /etc/yum.repos.d/*.repo && \
+    sed -i 's/^mirrorlist=http/#mirrorlist=http/g' /etc/yum.repos.d/*.repo
+
 RUN yum clean all && \
     yum makecache && \
     yum update -y && \
-    yum install -y centos-release-scl && \
     yum install -y devtoolset-10-gcc-* && \
     echo "source scl_source enable devtoolset-10" >> /etc/bashrc
 
