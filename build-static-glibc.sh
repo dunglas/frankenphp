@@ -96,21 +96,20 @@ else
 
 	if [ -d "static-php-cli/" ]; then
 		cd static-php-cli/
-		# git pull
+		git pull
 	else
-		ln -s /app static-php-cli
-  		# git clone --depth 1 https://github.com/crazywhalecc/static-php-cli
+		git clone --depth 1 https://github.com/crazywhalecc/static-php-cli
 		cd static-php-cli/
 	fi
 
-	# composer install --no-dev -a
+	composer install --no-dev -a
 
 	if [ -n "${DEBUG_SYMBOLS}" ]; then
 		extraOpts="${extraOpts} --no-strip"
 	fi
 
 	# ${spcCommand} doctor --auto-fix
-	${spcCommand} download --debug --with-php="${PHP_VERSION}" --for-extensions="${PHP_EXTENSIONS}" --for-libs="${PHP_EXTENSION_LIBS}" --ignore-cache-sources=php-src
+	${spcCommand} download --with-php="${PHP_VERSION}" --for-extensions="${PHP_EXTENSIONS}" --for-libs="${PHP_EXTENSION_LIBS}" --ignore-cache-sources=php-src
 	# shellcheck disable=SC2086
 	${spcCommand} build --debug --enable-zts --build-embed ${extraOpts} "${PHP_EXTENSIONS}" --with-libs="${PHP_EXTENSION_LIBS}"
 fi
