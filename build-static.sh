@@ -48,7 +48,7 @@ if [ -z "${PHP_VERSION}" ]; then
 	export PHP_VERSION="8.4"
 fi
 # default extension set
-defaultExtensions="apcu,bcmath,bz2,calendar,ctype,curl,dba,dom,exif,fileinfo,filter,ftp,gd,gmp,gettext,iconv,igbinary,imagick,intl,ldap,mbregex,mbstring,mysqli,mysqlnd,opcache,openssl,parallel,pcntl,pdo,pdo_mysql,pdo_pgsql,pdo_sqlite,pgsql,phar,posix,protobuf,readline,redis,session,shmop,simplexml,soap,sockets,sodium,sqlite3,ssh2,sysvmsg,sysvsem,sysvshm,tidy,tokenizer,xlswriter,xml,xmlreader,xmlwriter,zip,zlib,yaml,zstd"
+defaultExtensions="apcu,bcmath,bz2,calendar,ctype,curl,dba,dom,exif,ffi,fileinfo,filter,ftp,gd,gmp,gettext,iconv,igbinary,imagick,intl,ldap,mbregex,mbstring,mysqli,mysqlnd,opcache,openssl,parallel,pcntl,pdo,pdo_mysql,pdo_pgsql,pdo_sqlite,pgsql,phar,posix,protobuf,readline,redis,session,shmop,simplexml,soap,sockets,sodium,sqlite3,ssh2,sysvmsg,sysvsem,sysvshm,tidy,tokenizer,xlswriter,xml,xmlreader,xmlwriter,zip,zlib,yaml,zstd"
 defaultExtensionLibs="bzip2,freetype,libavif,libjpeg,liblz4,libwebp,libzip,nghttp2"
 
 md5binary="md5sum"
@@ -226,12 +226,19 @@ if [ "${os}" = "mac" ]; then
 elif [ "${os}" = "linux" ] && [ -z "${DEBUG_SYMBOLS}" ]; then
 	CGO_LDFLAGS="-Wl,-O1 -pie"
 fi
+if [ "${os}" = "linux" ] && [ "${SPC_LIBC}" = "glibc" ]; then
+    CGO_LDFLAGS="${CGO_LDFLAGS} -Wl,--allow-multiple-definition -Wl,--export-dynamic"
+fi
 
 CGO_LDFLAGS="${CGO_LDFLAGS} ${PWD}/buildroot/lib/libbrotlicommon.a ${PWD}/buildroot/lib/libbrotlienc.a ${PWD}/buildroot/lib/libbrotlidec.a ${PWD}/buildroot/lib/libwatcher-c.a $(${spcCommand} spc-config "${PHP_EXTENSIONS}" --with-libs="${PHP_EXTENSION_LIBS}" --libs)"
 if [ "${os}" = "linux" ]; then
 	if echo "${PHP_EXTENSIONS}" | grep -qE "\b(intl|imagick|grpc|v8js|protobuf|mongodb|tbb)\b"; then
 		CGO_LDFLAGS="${CGO_LDFLAGS} -lstdc++"
 	fi
+	if [ "${SPC_LIBC}" = "glibc" ]; then
+    CGO_LDFLAGS=$(echo "$CGO_LDFLAGS" | sed 's|-lphp|-Wl,--whole-archive -lphp -Wl,--no-whole-archive|g')
+	  ar d ${PWD}/buildroot/lib/libphp.a $(ar t ${PWD}/buildroot/lib/libphp.a | grep '\.a$')
+  fi
 fi
 
 export CGO_LDFLAGS
