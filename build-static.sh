@@ -29,15 +29,19 @@ os="$(uname -s | tr '[:upper:]' '[:lower:]')"
 
 # init spc command, if we use spc binary, just use it instead of fetching source
 if [ -z "${SPC_REL_TYPE}" ]; then
-		SPC_REL_TYPE="source"
+	SPC_REL_TYPE="source"
 fi
 # init spc build additional args
 if [ -z "${SPC_OPT_BUILD_ARGS}" ]; then
-		SPC_OPT_BUILD_ARGS="--debug"
+	SPC_OPT_BUILD_ARGS="--debug"
 fi
 # init spc download additional args
 if [ -z "${SPC_OPT_DOWNLOAD_ARGS}" ]; then
+	if [ "${os}" = "linux" ] && [ "${SPC_LIBC}" = "glibc" ]; then
+		SPC_OPT_DOWNLOAD_ARGS="--debug --ignore-cache-sources=php-src"
+	else
 		SPC_OPT_DOWNLOAD_ARGS="--prefer-pre-built --debug --ignore-cache-sources=php-src"
+	fi
 fi
 # if we need debug symbols, disable strip
 if [ -n "${DEBUG_SYMBOLS}" ]; then
