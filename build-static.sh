@@ -90,11 +90,11 @@ elif [ -d ".git/" ]; then
 
 	if echo "${FRANKENPHP_VERSION}" | grep -F -q "."; then
 		# Tag
-	
+
 		# Trim "v" prefix if any
 		FRANKENPHP_VERSION=${FRANKENPHP_VERSION#v}
 		export FRANKENPHP_VERSION
-	
+
 		git checkout "v${FRANKENPHP_VERSION}"
 	else
 		git checkout "${FRANKENPHP_VERSION}"
