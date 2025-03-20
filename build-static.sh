@@ -248,14 +248,10 @@ if [ "${os}" = "linux" ] && [ "${SPC_LIBC}" = "glibc" ]; then
 fi
 
 CGO_LDFLAGS="${CGO_LDFLAGS} ${PWD}/buildroot/lib/libbrotlicommon.a ${PWD}/buildroot/lib/libbrotlienc.a ${PWD}/buildroot/lib/libbrotlidec.a ${PWD}/buildroot/lib/libwatcher-c.a $(${spcCommand} spc-config "${PHP_EXTENSIONS}" --with-libs="${PHP_EXTENSION_LIBS}" --libs)"
-if [ "${os}" = "linux" ]; then
-	if echo "${PHP_EXTENSIONS}" | grep -qE "\b(intl|imagick|grpc|v8js|protobuf|mongodb|tbb)\b"; then
-		CGO_LDFLAGS="${CGO_LDFLAGS} -lstdc++"
-	fi
-	if [ "${SPC_LIBC}" = "glibc" ]; then
-		CGO_LDFLAGS="${CGO_LDFLAGS//-lphp/-Wl,--whole-archive -lphp -Wl,--no-whole-archive}"
-		ar d "${PWD}/buildroot/lib/libphp.a" "$(ar t "${PWD}/buildroot/lib/libphp.a" | grep '\.a$')"
-	fi
+if [ "${os}" = "linux" ] && [ "${SPC_LIBC}" = "glibc" ]; then
+	CGO_LDFLAGS="${CGO_LDFLAGS//-lphp/-Wl,--whole-archive -lphp -Wl,--no-whole-archive}"
+	# shellcheck disable=SC2046
+	ar d "${PWD}/buildroot/lib/libphp.a" $(ar t "${PWD}/buildroot/lib/libphp.a" | grep '\.a$')
 fi
 
 export CGO_LDFLAGS
