@@ -147,7 +147,7 @@ else
 	if [ "${SPC_REL_TYPE}" = "binary" ]; then
 		mkdir static-php-cli/
 		cd static-php-cli/
-		curl -o spc -fsSL https://dl.static-php.dev/static-php-cli/spc-bin/nightly/spc-linux-$(uname -m)
+		curl -o spc -fsSL "https://dl.static-php.dev/static-php-cli/spc-bin/nightly/spc-linux-$(uname -m)"
 		chmod +x spc
 		spcCommand="./spc"
 	elif [ -d "static-php-cli/src" ]; then
@@ -183,9 +183,9 @@ else
 	fi
 
 	${spcCommand} doctor --auto-fix
-	${spcCommand} download --with-php="${PHP_VERSION}" --for-extensions="${PHP_EXTENSIONS}" --for-libs="${PHP_EXTENSION_LIBS}" ${SPC_OPT_DOWNLOAD_ARGS}
+	${spcCommand} download --with-php="${PHP_VERSION}" --for-extensions="${PHP_EXTENSIONS}" --for-libs="${PHP_EXTENSION_LIBS}" "${SPC_OPT_DOWNLOAD_ARGS}"
 	# shellcheck disable=SC2086
-	${spcCommand} build --enable-zts --build-embed ${SPC_OPT_BUILD_ARGS} "${PHP_EXTENSIONS}" --with-libs="${PHP_EXTENSION_LIBS}"
+	${spcCommand} build --enable-zts --build-embed "${SPC_OPT_BUILD_ARGS}" "${PHP_EXTENSIONS}" --with-libs="${PHP_EXTENSION_LIBS}"
 fi
 
 if ! type "go" >/dev/null 2>&1; then
@@ -252,8 +252,8 @@ if [ "${os}" = "linux" ]; then
 		CGO_LDFLAGS="${CGO_LDFLAGS} -lstdc++"
 	fi
 	if [ "${SPC_LIBC}" = "glibc" ]; then
-		CGO_LDFLAGS=$(echo "$CGO_LDFLAGS" | sed 's|-lphp|-Wl,--whole-archive -lphp -Wl,--no-whole-archive|g')
-		ar d ${PWD}/buildroot/lib/libphp.a $(ar t ${PWD}/buildroot/lib/libphp.a | grep '\.a$')
+		CGO_LDFLAGS="${CGO_LDFLAGS//-lphp/-Wl,--whole-archive -lphp -Wl,--no-whole-archive}"
+		ar d "${PWD}/buildroot/lib/libphp.a" "$(ar t "${PWD}/buildroot/lib/libphp.a" | grep '\.a$')"
 	fi
 fi
 
