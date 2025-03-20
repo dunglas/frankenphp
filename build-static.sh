@@ -54,7 +54,7 @@ if [ -z "${SPC_OPT_DOWNLOAD_ARGS}" ]; then
 fi
 # if we need debug symbols, disable strip
 if [ -n "${DEBUG_SYMBOLS}" ]; then
-		SPC_OPT_BUILD_ARGS="${SPC_OPT_BUILD_ARGS} --no-strip"
+	SPC_OPT_BUILD_ARGS="${SPC_OPT_BUILD_ARGS} --no-strip"
 fi
 # php version to build
 if [ -z "${PHP_VERSION}" ]; then
@@ -184,7 +184,7 @@ else
 
 	${spcCommand} doctor --auto-fix
 	# shellcheck disable=SC2086
-  ${spcCommand} download --with-php="${PHP_VERSION}" --for-extensions="${PHP_EXTENSIONS}" --for-libs="${PHP_EXTENSION_LIBS}" ${SPC_OPT_DOWNLOAD_ARGS}
+	${spcCommand} download --with-php="${PHP_VERSION}" --for-extensions="${PHP_EXTENSIONS}" --for-libs="${PHP_EXTENSION_LIBS}" ${SPC_OPT_DOWNLOAD_ARGS}
 	# shellcheck disable=SC2086
 	${spcCommand} build --enable-zts --build-embed ${SPC_OPT_BUILD_ARGS} "${PHP_EXTENSIONS}" --with-libs="${PHP_EXTENSION_LIBS}"
 fi
@@ -209,17 +209,17 @@ fi
 mkdir -p watcher
 cd watcher
 curl -f --retry 5 "${curlGitHubHeaders[@]}" https://api.github.com/repos/e-dant/watcher/releases/latest |
-grep tarball_url |
-awk '{ print $2 }' |
-sed 's/,$//' |
-sed 's/"//g' |
-xargs curl -fL --retry 5 "${curlGitHubHeaders[@]}" |
-tar xz --strip-components 1
+	grep tarball_url |
+	awk '{ print $2 }' |
+	sed 's/,$//' |
+	sed 's/"//g' |
+	xargs curl -fL --retry 5 "${curlGitHubHeaders[@]}" |
+	tar xz --strip-components 1
 cd watcher-c
 if [ -z "${CC}" ]; then
-		watcherCC=cc
+	watcherCC=cc
 else
-		watcherCC="${CC}"
+	watcherCC="${CC}"
 fi
 ${watcherCC} -c -o libwatcher-c.o ./src/watcher-c.cpp -I ./include -I ../include -std=c++17 -Wall -Wextra "${fpic}"
 ar rcs libwatcher-c.a libwatcher-c.o
