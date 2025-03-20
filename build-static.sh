@@ -42,6 +42,9 @@ if [ -z "${SPC_OPT_DOWNLOAD_ARGS}" ]; then
 	else
 		SPC_OPT_DOWNLOAD_ARGS="--prefer-pre-built --debug --ignore-cache-sources=php-src"
 	fi
+	if [ "${SPC_LIBC}" = "musl" ]; then
+		SPC_OPT_DOWNLOAD_ARGS="${SPC_OPT_DOWNLOAD_ARGS} --disable-opcache-jit"
+  fi
 fi
 # if we need debug symbols, disable strip
 if [ -n "${DEBUG_SYMBOLS}" ]; then
