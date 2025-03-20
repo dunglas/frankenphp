@@ -39,17 +39,17 @@ if [ -z "${SPC_LIBC}" ]; then
 fi
 # init spc build additional args
 if [ -z "${SPC_OPT_BUILD_ARGS}" ]; then
-	SPC_OPT_BUILD_ARGS="--debug"
+	SPC_OPT_BUILD_ARGS=""
 	if [ "${SPC_LIBC}" = "musl" ]; then
 		SPC_OPT_BUILD_ARGS="${SPC_OPT_BUILD_ARGS} --disable-opcache-jit"
 	fi
 fi
 # init spc download additional args
 if [ -z "${SPC_OPT_DOWNLOAD_ARGS}" ]; then
-	if [ "${SPC_LIBC}" = "glibc" ]; then
-		SPC_OPT_DOWNLOAD_ARGS="--debug --ignore-cache-sources=php-src"
+	if [ "${SPC_LIBC}" = "musl" ]; then
+		SPC_OPT_DOWNLOAD_ARGS="--prefer-pre-built --ignore-cache-sources=php-src"
 	else
-		SPC_OPT_DOWNLOAD_ARGS="--prefer-pre-built --debug --ignore-cache-sources=php-src"
+		SPC_OPT_DOWNLOAD_ARGS="--ignore-cache-sources=php-src"
 	fi
 fi
 # if we need debug symbols, disable strip
@@ -62,9 +62,9 @@ if [ -z "${PHP_VERSION}" ]; then
 fi
 # default extension set
 defaultExtensions="apcu,bcmath,bz2,calendar,ctype,curl,dba,dom,exif,fileinfo,filter,ftp,gd,gmp,gettext,iconv,igbinary,imagick,intl,ldap,mbregex,mbstring,mysqli,mysqlnd,opcache,openssl,parallel,pcntl,pdo,pdo_mysql,pdo_pgsql,pdo_sqlite,pgsql,phar,posix,protobuf,readline,redis,session,shmop,simplexml,soap,sockets,sodium,sqlite3,ssh2,sysvmsg,sysvsem,sysvshm,tidy,tokenizer,xlswriter,xml,xmlreader,xmlwriter,zip,zlib,yaml,zstd"
-if [ "${os}" != "linux" ] || [ "${SPC_LIBC}" = "glibc" ]; then
-	defaultExtensions="${defaultExtensions},ffi"
-fi
+# if [ "${os}" != "linux" ] || [ "${SPC_LIBC}" = "glibc" ]; then
+# 	defaultExtensions="${defaultExtensions},ffi"
+# fi
 defaultExtensionLibs="bzip2,freetype,libavif,libjpeg,liblz4,libwebp,libzip,nghttp2"
 
 md5binary="md5sum"

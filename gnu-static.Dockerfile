@@ -108,8 +108,8 @@ ENV SPC_DEFAULT_C_FLAGS='-fPIE -fPIC'
 ENV SPC_LIBC='glibc'
 ENV SPC_CMD_VAR_PHP_MAKE_EXTRA_LDFLAGS_PROGRAM='-Wl,-O1 -pie'
 ENV SPC_CMD_VAR_PHP_MAKE_EXTRA_LIBS='-ldl -lpthread -lm -lresolv -lutil -lrt'
-ENV SPC_OPT_DOWNLOAD_ARGS='--debug --ignore-cache-sources=php-src'
-ENV SPC_OPT_BUILD_ARGS='--debug'
+ENV SPC_OPT_DOWNLOAD_ARGS='--ignore-cache-sources=php-src'
+ENV SPC_OPT_BUILD_ARGS=''
 ENV SPC_REL_TYPE='binary'
 
 # not sure if this is needed
