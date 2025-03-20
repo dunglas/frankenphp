@@ -370,17 +370,13 @@ func TestMetrics(t *testing.T) {
 
 	// Fetch metrics
 	resp, err := http.Get("http://localhost:2999/metrics")
-	if err != nil {
-		t.Fatalf("failed to fetch metrics: %v", err)
-	}
+	require.NoError(t, err, "failed to fetch metrics")
 	defer resp.Body.Close()
 
 	// Read and parse metrics
 	metrics := new(bytes.Buffer)
 	_, err = metrics.ReadFrom(resp.Body)
-	if err != nil {
-		t.Fatalf("failed to read metrics: %v", err)
-	}
+	require.NoError(t, err, "failed to read metrics")
 
 	cpus := fmt.Sprintf("%d", frankenphp.MaxThreads)
 
@@ -446,17 +442,13 @@ func TestWorkerMetrics(t *testing.T) {
 
 	// Fetch metrics
 	resp, err := http.Get("http://localhost:2999/metrics")
-	if err != nil {
-		t.Fatalf("failed to fetch metrics: %v", err)
-	}
+	require.NoError(t, err, "failed to fetch metrics")
 	defer resp.Body.Close()
 
 	// Read and parse metrics
 	metrics := new(bytes.Buffer)
 	_, err = metrics.ReadFrom(resp.Body)
-	if err != nil {
-		t.Fatalf("failed to read metrics: %v", err)
-	}
+	require.NoError(t, err, "failed to read metrics")
 
 	cpus := fmt.Sprintf("%d", frankenphp.MaxThreads)
 
@@ -541,17 +533,13 @@ func TestNamedWorkerMetrics(t *testing.T) {
 
 	// Fetch metrics
 	resp, err := http.Get("http://localhost:2999/metrics")
-	if err != nil {
-		t.Fatalf("failed to fetch metrics: %v", err)
-	}
+	require.NoError(t, err, "failed to fetch metrics")
 	defer resp.Body.Close()
 
 	// Read and parse metrics
 	metrics := new(bytes.Buffer)
 	_, err = metrics.ReadFrom(resp.Body)
-	if err != nil {
-		t.Fatalf("failed to read metrics: %v", err)
-	}
+	require.NoError(t, err, "failed to read metrics")
 
 	cpus := fmt.Sprintf("%d", frankenphp.MaxThreads)
 
@@ -635,17 +623,13 @@ func TestAutoWorkerConfig(t *testing.T) {
 
 	// Fetch metrics
 	resp, err := http.Get("http://localhost:2999/metrics")
-	if err != nil {
-		t.Fatalf("failed to fetch metrics: %v", err)
-	}
+	require.NoError(t, err, "failed to fetch metrics")
 	defer resp.Body.Close()
 
 	// Read and parse metrics
 	metrics := new(bytes.Buffer)
 	_, err = metrics.ReadFrom(resp.Body)
-	if err != nil {
-		t.Fatalf("failed to read metrics: %v", err)
-	}
+	require.NoError(t, err, "failed to read metrics")
 
 	cpus := fmt.Sprintf("%d", frankenphp.MaxThreads)
 	workers := fmt.Sprintf("%d", frankenphp.MaxThreads-1)
@@ -933,17 +917,13 @@ func TestMultiWorkersMetrics(t *testing.T) {
 
 	// Fetch metrics
 	resp, err := http.Get("http://localhost:2999/metrics")
-	if err != nil {
-		t.Fatalf("failed to fetch metrics: %v", err)
-	}
+	require.NoError(t, err, "failed to fetch metrics")
 	defer resp.Body.Close()
 
 	// Read and parse metrics
 	metrics := new(bytes.Buffer)
 	_, err = metrics.ReadFrom(resp.Body)
-	if err != nil {
-		t.Fatalf("failed to read metrics: %v", err)
-	}
+	require.NoError(t, err, "failed to read metrics")
 
 	cpus := fmt.Sprintf("%d", frankenphp.MaxThreads)
 
@@ -1043,17 +1023,13 @@ func TestMultiWorkersMetricsWithDuplicateName(t *testing.T) {
 
 	// Fetch metrics
 	resp, err := http.Get("http://localhost:2999/metrics")
-	if err != nil {
-		t.Fatalf("failed to fetch metrics: %v", err)
-	}
+	require.NoError(t, err, "failed to fetch metrics")
 	defer resp.Body.Close()
 
 	// Read and parse metrics
 	metrics := new(bytes.Buffer)
 	_, err = metrics.ReadFrom(resp.Body)
-	if err != nil {
-		t.Fatalf("failed to read metrics: %v", err)
-	}
+	require.NoError(t, err, "failed to read metrics")
 
 	cpus := fmt.Sprintf("%d", frankenphp.MaxThreads)
 

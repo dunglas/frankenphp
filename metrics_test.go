@@ -91,9 +91,7 @@ func TestPrometheusMetrics_StopWorkerRequest(t *testing.T) {
 
 	for _, input := range inputs {
 		t.Run(input.name, func(t *testing.T) {
-			if err := testutil.CollectAndCompare(input.c, strings.NewReader(input.metadata+input.expect)); err != nil {
-				t.Errorf("unexpected collecting result:\n%s", err)
-			}
+			require.NoError(t, testutil.CollectAndCompare(input.c, strings.NewReader(input.metadata+input.expect)))
 		})
 
 	}
@@ -125,9 +123,7 @@ func TestPrometheusMetrics_StartWorkerRequest(t *testing.T) {
 
 	for _, input := range inputs {
 		t.Run(input.name, func(t *testing.T) {
-			if err := testutil.CollectAndCompare(input.c, strings.NewReader(input.metadata+input.expect)); err != nil {
-				t.Errorf("unexpected collecting result:\n%s", err)
-			}
+			require.NoError(t, testutil.CollectAndCompare(input.c, strings.NewReader(input.metadata+input.expect)))
 		})
 
 	}
@@ -192,9 +188,7 @@ func TestPrometheusMetrics_TestStopReasonCrash(t *testing.T) {
 
 	for _, input := range inputs {
 		t.Run(input.name, func(t *testing.T) {
-			if err := testutil.CollectAndCompare(input.c, strings.NewReader(input.metadata+input.expect)); err != nil {
-				t.Errorf("unexpected collecting result:\n%s", err)
-			}
+			require.NoError(t, testutil.CollectAndCompare(input.c, strings.NewReader(input.metadata+input.expect)))
 		})
 
 	}
