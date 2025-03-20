@@ -29,19 +29,19 @@ os="$(uname -s | tr '[:upper:]' '[:lower:]')"
 
 # init spc command, if we use spc binary, just use it instead of fetching source
 if [ -z "${SPC_REL_TYPE}" ]; then
-    SPC_REL_TYPE="source"
+		SPC_REL_TYPE="source"
 fi
 # init spc build additional args
 if [ -z "${SPC_OPT_BUILD_ARGS}" ]; then
-    SPC_OPT_BUILD_ARGS="--debug"
+		SPC_OPT_BUILD_ARGS="--debug"
 fi
 # init spc download additional args
 if [ -z "${SPC_OPT_DOWNLOAD_ARGS}" ]; then
-    SPC_OPT_DOWNLOAD_ARGS="--prefer-pre-built --debug --ignore-cache-sources=php-src"
+		SPC_OPT_DOWNLOAD_ARGS="--prefer-pre-built --debug --ignore-cache-sources=php-src"
 fi
 # if we need debug symbols, disable strip
 if [ -n "${DEBUG_SYMBOLS}" ]; then
-    SPC_OPT_BUILD_ARGS="${SPC_OPT_BUILD_ARGS} --no-strip"
+		SPC_OPT_BUILD_ARGS="${SPC_OPT_BUILD_ARGS} --no-strip"
 fi
 # php version to build
 if [ -z "${PHP_VERSION}" ]; then
@@ -83,11 +83,11 @@ elif [ -d ".git/" ]; then
 
 	if echo "${FRANKENPHP_VERSION}" | grep -F -q "."; then
 		# Tag
-
+	
 		# Trim "v" prefix if any
 		FRANKENPHP_VERSION=${FRANKENPHP_VERSION#v}
 		export FRANKENPHP_VERSION
-
+	
 		git checkout "v${FRANKENPHP_VERSION}"
 	else
 		git checkout "${FRANKENPHP_VERSION}"
@@ -129,42 +129,42 @@ else
 	fi
 
 	if [ "${SPC_REL_TYPE}" = "binary" ]; then
-	    mkdir static-php-cli/
-	    cd static-php-cli/
-	    curl -o spc -fsSL https://dl.static-php.dev/static-php-cli/spc-bin/nightly/spc-linux-$(uname -m)
-        chmod +x spc
-        spcCommand="./spc"
-    elif [ -d "static-php-cli/src" ]; then
-        cd static-php-cli/
-        git pull
-        composer install --no-dev -a
-        spcCommand="./bin/spc"
-    else
-        git clone --depth 1 https://github.com/crazywhalecc/static-php-cli --branch main
-        cd static-php-cli/
-        composer install --no-dev -a
-        spcCommand="./bin/spc"
-    fi
+		mkdir static-php-cli/
+		cd static-php-cli/
+		curl -o spc -fsSL https://dl.static-php.dev/static-php-cli/spc-bin/nightly/spc-linux-$(uname -m)
+		chmod +x spc
+		spcCommand="./spc"
+	elif [ -d "static-php-cli/src" ]; then
+		cd static-php-cli/
+		git pull
+		composer install --no-dev -a
+		spcCommand="./bin/spc"
+	else
+		git clone --depth 1 https://github.com/crazywhalecc/static-php-cli --branch main
+		cd static-php-cli/
+		composer install --no-dev -a
+		spcCommand="./bin/spc"
+	fi
 
-    # extensions to build
-    if [ -z "${PHP_EXTENSIONS}" ]; then
-        # enable EMBED mode, first check if project has dumped extensions
-        if [ -n "${EMBED}" ] && [ -f "${EMBED}/composer.json" ] && [ -f "${EMBED}/composer.lock" ] && [ -f "${EMBED}/vendor/installed.json" ]; then
-            cd "${EMBED}"
-            # read the extensions using spc dump-extensions
-            PHP_EXTENSIONS=$(${spcCommand} dump-extensions "${EMBED}" --format=text --no-dev --no-ext-output="${defaultExtensions}")
-        else
-            PHP_EXTENSIONS="${defaultExtensions}"
-        fi
-    fi
-    # additional libs to build
-    if [ -z "${PHP_EXTENSION_LIBS}" ]; then
-        PHP_EXTENSION_LIBS="${defaultExtensionLibs}"
-    fi
-    # The Brotli library must always be built as it is required by http://github.com/dunglas/caddy-cbrotli
-    if ! echo "${PHP_EXTENSION_LIBS}" | grep -q "\bbrotli\b"; then
-        PHP_EXTENSION_LIBS="${PHP_EXTENSION_LIBS},brotli"
-    fi
+	# extensions to build
+	if [ -z "${PHP_EXTENSIONS}" ]; then
+		# enable EMBED mode, first check if project has dumped extensions
+		if [ -n "${EMBED}" ] && [ -f "${EMBED}/composer.json" ] && [ -f "${EMBED}/composer.lock" ] && [ -f "${EMBED}/vendor/installed.json" ]; then
+			cd "${EMBED}"
+			# read the extensions using spc dump-extensions
+			PHP_EXTENSIONS=$(${spcCommand} dump-extensions "${EMBED}" --format=text --no-dev --no-ext-output="${defaultExtensions}")
+		else
+			PHP_EXTENSIONS="${defaultExtensions}"
+		fi
+	fi
+	# additional libs to build
+	if [ -z "${PHP_EXTENSION_LIBS}" ]; then
+		PHP_EXTENSION_LIBS="${defaultExtensionLibs}"
+	fi
+	# The Brotli library must always be built as it is required by http://github.com/dunglas/caddy-cbrotli
+	if ! echo "${PHP_EXTENSION_LIBS}" | grep -q "\bbrotli\b"; then
+		PHP_EXTENSION_LIBS="${PHP_EXTENSION_LIBS},brotli"
+	fi
 
 	${spcCommand} doctor --auto-fix
 	${spcCommand} download --with-php="${PHP_VERSION}" --for-extensions="${PHP_EXTENSIONS}" --for-libs="${PHP_EXTENSION_LIBS}" ${SPC_OPT_DOWNLOAD_ARGS}
@@ -192,17 +192,17 @@ fi
 mkdir -p watcher
 cd watcher
 curl -f --retry 5 "${curlGitHubHeaders[@]}" https://api.github.com/repos/e-dant/watcher/releases/latest |
-	grep tarball_url |
-	awk '{ print $2 }' |
-	sed 's/,$//' |
-	sed 's/"//g' |
-	xargs curl -fL --retry 5 "${curlGitHubHeaders[@]}" |
-	tar xz --strip-components 1
+grep tarball_url |
+awk '{ print $2 }' |
+sed 's/,$//' |
+sed 's/"//g' |
+xargs curl -fL --retry 5 "${curlGitHubHeaders[@]}" |
+tar xz --strip-components 1
 cd watcher-c
 if [ -z "${CC}" ]; then
-    watcherCC=cc
+		watcherCC=cc
 else
-    watcherCC="${CC}"
+		watcherCC="${CC}"
 fi
 ${watcherCC} -c -o libwatcher-c.o ./src/watcher-c.cpp -I ./include -I ../include -std=c++17 -Wall -Wextra "${fpic}"
 ar rcs libwatcher-c.a libwatcher-c.o
@@ -227,7 +227,7 @@ elif [ "${os}" = "linux" ] && [ -z "${DEBUG_SYMBOLS}" ]; then
 	CGO_LDFLAGS="-Wl,-O1 -pie"
 fi
 if [ "${os}" = "linux" ] && [ "${SPC_LIBC}" = "glibc" ]; then
-    CGO_LDFLAGS="${CGO_LDFLAGS} -Wl,--allow-multiple-definition -Wl,--export-dynamic"
+	CGO_LDFLAGS="${CGO_LDFLAGS} -Wl,--allow-multiple-definition -Wl,--export-dynamic"
 fi
 
 CGO_LDFLAGS="${CGO_LDFLAGS} ${PWD}/buildroot/lib/libbrotlicommon.a ${PWD}/buildroot/lib/libbrotlienc.a ${PWD}/buildroot/lib/libbrotlidec.a ${PWD}/buildroot/lib/libwatcher-c.a $(${spcCommand} spc-config "${PHP_EXTENSIONS}" --with-libs="${PHP_EXTENSION_LIBS}" --libs)"
@@ -236,9 +236,9 @@ if [ "${os}" = "linux" ]; then
 		CGO_LDFLAGS="${CGO_LDFLAGS} -lstdc++"
 	fi
 	if [ "${SPC_LIBC}" = "glibc" ]; then
-    CGO_LDFLAGS=$(echo "$CGO_LDFLAGS" | sed 's|-lphp|-Wl,--whole-archive -lphp -Wl,--no-whole-archive|g')
-	  ar d ${PWD}/buildroot/lib/libphp.a $(ar t ${PWD}/buildroot/lib/libphp.a | grep '\.a$')
-  fi
+		CGO_LDFLAGS=$(echo "$CGO_LDFLAGS" | sed 's|-lphp|-Wl,--whole-archive -lphp -Wl,--no-whole-archive|g')
+		ar d ${PWD}/buildroot/lib/libphp.a $(ar t ${PWD}/buildroot/lib/libphp.a | grep '\.a$')
+	fi
 fi
 
 export CGO_LDFLAGS
@@ -348,9 +348,9 @@ fi
 go env
 cd caddy/
 if [ -z "${SPC_LIBC}" ] || [ "${SPC_LIBC}" = "musl" ]; then
-    xcaddyGoBuildFlags="-buildmode=pie -tags cgo,netgo,osusergo,static_build,nobadger,nomysql,nopgx -ldflags \"-linkmode=external -extldflags '-static-pie ${extraExtldflags}' ${extraLdflags} -X 'github.com/caddyserver/caddy/v2.CustomVersion=FrankenPHP ${FRANKENPHP_VERSION} PHP ${LIBPHP_VERSION} Caddy'\""
+	xcaddyGoBuildFlags="-buildmode=pie -tags cgo,netgo,osusergo,static_build,nobadger,nomysql,nopgx -ldflags \"-linkmode=external -extldflags '-static-pie ${extraExtldflags}' ${extraLdflags} -X 'github.com/caddyserver/caddy/v2.CustomVersion=FrankenPHP ${FRANKENPHP_VERSION} PHP ${LIBPHP_VERSION} Caddy'\""
 elif [ "${SPC_LIBC}" = "glibc" ]; then
-    xcaddyGoBuildFlags="-buildmode=pie -tags cgo,netgo,osusergo,nobadger,nomysql,nopgx -ldflags \"-linkmode=external -extldflags '-pie ${extraExtldflags}' ${extraLdflags} -X 'github.com/caddyserver/caddy/v2.CustomVersion=FrankenPHP ${FRANKENPHP_VERSION} PHP ${LIBPHP_VERSION} Caddy'\""
+	xcaddyGoBuildFlags="-buildmode=pie -tags cgo,netgo,osusergo,nobadger,nomysql,nopgx -ldflags \"-linkmode=external -extldflags '-pie ${extraExtldflags}' ${extraLdflags} -X 'github.com/caddyserver/caddy/v2.CustomVersion=FrankenPHP ${FRANKENPHP_VERSION} PHP ${LIBPHP_VERSION} Caddy'\""
 fi
 
 # shellcheck disable=SC2086
