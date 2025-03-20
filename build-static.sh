@@ -183,9 +183,10 @@ else
 	fi
 
 	${spcCommand} doctor --auto-fix
-	${spcCommand} download --with-php="${PHP_VERSION}" --for-extensions="${PHP_EXTENSIONS}" --for-libs="${PHP_EXTENSION_LIBS}" "${SPC_OPT_DOWNLOAD_ARGS}"
 	# shellcheck disable=SC2086
-	${spcCommand} build --enable-zts --build-embed "${SPC_OPT_BUILD_ARGS}" "${PHP_EXTENSIONS}" --with-libs="${PHP_EXTENSION_LIBS}"
+  ${spcCommand} download --with-php="${PHP_VERSION}" --for-extensions="${PHP_EXTENSIONS}" --for-libs="${PHP_EXTENSION_LIBS}" ${SPC_OPT_DOWNLOAD_ARGS}
+	# shellcheck disable=SC2086
+	${spcCommand} build --enable-zts --build-embed ${SPC_OPT_BUILD_ARGS} "${PHP_EXTENSIONS}" --with-libs="${PHP_EXTENSION_LIBS}"
 fi
 
 if ! type "go" >/dev/null 2>&1; then
