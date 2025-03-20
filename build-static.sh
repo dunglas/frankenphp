@@ -126,18 +126,14 @@ else
 
 	# composer install --no-dev -a
 
-	if [ "${os}" = "linux" ]; then
-		extraOpts="--disable-opcache-jit"
-	fi
-
 	if [ -n "${DEBUG_SYMBOLS}" ]; then
 		extraOpts="${extraOpts} --no-strip"
 	fi
 
 	# ${spcCommand} doctor --auto-fix
-	${spcCommand} download --debug --with-php="${PHP_VERSION}" --for-extensions="${PHP_EXTENSIONS}" --for-libs="${PHP_EXTENSION_LIBS}" --ignore-cache-sources=php-src
+	${spcCommand} download --debug --with-php="${PHP_VERSION}" --for-extensions="${PHP_EXTENSIONS}" --for-libs="${PHP_EXTENSION_LIBS}"
 	# shellcheck disable=SC2086
-	${spcCommand} build --libc=glibc --debug --enable-zts --build-embed ${extraOpts} "${PHP_EXTENSIONS}" --with-libs="${PHP_EXTENSION_LIBS}"
+	${spcCommand} build --debug --enable-zts --build-embed ${extraOpts} "${PHP_EXTENSIONS}" --with-libs="${PHP_EXTENSION_LIBS}"
 fi
 
 if ! type "go" >/dev/null 2>&1; then
