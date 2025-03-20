@@ -35,16 +35,22 @@ fi
 if [ -z "${SPC_OPT_BUILD_ARGS}" ]; then
 	SPC_OPT_BUILD_ARGS="--debug"
 fi
+# init spc libc
+if [ -z "${SPC_LIBC}" ]; then
+	if [ "${os}" = "linux" ]; then
+		SPC_LIBC="musl"
+	fi
+fi
 # init spc download additional args
 if [ -z "${SPC_OPT_DOWNLOAD_ARGS}" ]; then
-	if [ "${os}" = "linux" ] && [ "${SPC_LIBC}" = "glibc" ]; then
+	if [ "${SPC_LIBC}" = "glibc" ]; then
 		SPC_OPT_DOWNLOAD_ARGS="--debug --ignore-cache-sources=php-src"
 	else
 		SPC_OPT_DOWNLOAD_ARGS="--prefer-pre-built --debug --ignore-cache-sources=php-src"
 	fi
 	if [ "${SPC_LIBC}" = "musl" ]; then
 		SPC_OPT_DOWNLOAD_ARGS="${SPC_OPT_DOWNLOAD_ARGS} --disable-opcache-jit"
-  fi
+	fi
 fi
 # if we need debug symbols, disable strip
 if [ -n "${DEBUG_SYMBOLS}" ]; then
