@@ -69,7 +69,7 @@ jobs:
         env:
           SHA: ${{ github.sha }}
           VERSION: ${{ steps.check.outputs.ref || 'dev' }}
-  build-linux:
+  build-linux-musl:
     strategy:
       fail-fast: false
       matrix:
@@ -285,7 +285,7 @@ jobs:
     runs-on: ubuntu-24.04
     needs:
       - prepare
-      - build-linux
+      - build-linux-musl
       - build-linux-gnu
     if: fromJson(needs.prepare.outputs.push)
     steps:
