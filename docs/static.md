@@ -13,7 +13,7 @@ We provide a Docker image to build a Linux static binary:
 
 ```console
 docker buildx bake --load static-builder
-docker cp $(docker create --name static-builder dunglas/frankenphp:static-builder):/go/src/app/dist/frankenphp-linux-$(uname -m) frankenphp ; docker rm static-builder
+docker cp $(docker create --name static-builder-musl dunglas/frankenphp:static-builder-musl):/go/src/app/dist/frankenphp-linux-$(uname -m) frankenphp ; docker rm static-builder
 ```
 
 The resulting static binary is named `frankenphp` and is available in the current directory.

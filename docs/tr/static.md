@@ -13,7 +13,7 @@ Linux statik binary dosyası oluşturmak için bir Docker imajı sağlıyoruz:
 
 ```console
 docker buildx bake --load static-builder
-docker cp $(docker create --name static-builder dunglas/frankenphp:static-builder):/go/src/app/dist/frankenphp-linux-$(uname -m) frankenphp ; docker rm static-builder
+docker cp $(docker create --name static-builder-musl dunglas/frankenphp:static-builder-musl):/go/src/app/dist/frankenphp-linux-$(uname -m) frankenphp ; docker rm static-builder
 ```
 
 Elde edilen statik binary `frankenphp` olarak adlandırılır ve geçerli dizinde kullanılabilir.

@@ -118,20 +118,20 @@ target "default" {
     }
 }
 
-target "static-builder" {
+target "static-builder-musl" {
     contexts = {
         golang-base = "docker-image://golang:${GO_VERSION}-alpine"
     }
-    dockerfile = "static-builder.Dockerfile"
+    dockerfile = "static-builder-musl.Dockerfile"
     context = "./"
     platforms = [
         "linux/amd64",
         "linux/arm64",
     ]
     tags = distinct(flatten([
-        LATEST ? "${IMAGE_NAME}:static-builder" : "",
-        SHA == "" || VERSION != "dev" ? "" : "${IMAGE_NAME}:static-builder-sha-${substr(SHA, 0, 7)}",
-        VERSION == "dev" ? [] : [for v in semver(VERSION) : "${IMAGE_NAME}:static-builder-${v}"]
+        LATEST ? "${IMAGE_NAME}:static-builder-musl" : "",
+        SHA == "" || VERSION != "dev" ? "" : "${IMAGE_NAME}:static-builder-musl-sha-${substr(SHA, 0, 7)}",
+        VERSION == "dev" ? [] : [for v in semver(VERSION) : "${IMAGE_NAME}:static-builder-musl-${v}"]
     ]))
     labels = {
         "org.opencontainers.image.created" = "${timestamp()}"
@@ -144,17 +144,17 @@ target "static-builder" {
     secret = ["id=github-token,env=GITHUB_TOKEN"]
 }
 
-target "gnu-static" {
-    dockerfile = "gnu-static.Dockerfile"
+target "static-builder-gnu" {
+    dockerfile = "static-builder-gnu.Dockerfile"
     context = "./"
     platforms = [
         "linux/amd64",
         "linux/arm64"
     ]
     tags = distinct(flatten([
-        LATEST ? "${IMAGE_NAME}:gnu-static" : "",
-        SHA == "" || VERSION != "dev" ? "" : "${IMAGE_NAME}:gnu-static-sha-${substr(SHA, 0, 7)}",
-        VERSION == "dev" ? [] : [for v in semver(VERSION) : "${IMAGE_NAME}:gnu-static-${v}"]
+        LATEST ? "${IMAGE_NAME}:static-builder-gnu" : "",
+        SHA == "" || VERSION != "dev" ? "" : "${IMAGE_NAME}:static-builder-gnu-sha-${substr(SHA, 0, 7)}",
+        VERSION == "dev" ? [] : [for v in semver(VERSION) : "${IMAGE_NAME}:static-builder-gnu-${v}"]
     ]))
     labels = {
         "org.opencontainers.image.created" = "${timestamp()}"

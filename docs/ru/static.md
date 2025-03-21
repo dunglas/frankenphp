@@ -12,7 +12,7 @@ FrankenPHP также поддерживает [встраивание PHP-пр�
 
 ```console
 docker buildx bake --load static-builder
-docker cp $(docker create --name static-builder dunglas/frankenphp:static-builder):/go/src/app/dist/frankenphp-linux-$(uname -m) frankenphp ; docker rm static-builder
+docker cp $(docker create --name static-builder-musl dunglas/frankenphp:static-builder-musl):/go/src/app/dist/frankenphp-linux-$(uname -m) frankenphp ; docker rm static-builder
 ```
 
 Созданный статический бинарный файл называется `frankenphp` и будет доступен в текущей директории.
