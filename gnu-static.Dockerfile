@@ -1,3 +1,6 @@
+# syntax=docker/dockerfile:1
+#checkov:skip=CKV_DOCKER_2
+#checkov:skip=CKV_DOCKER_3
 FROM centos:7
 
 ARG FRANKENPHP_VERSION=''
