@@ -143,3 +143,26 @@ target "static-builder" {
     }
     secret = ["id=github-token,env=GITHUB_TOKEN"]
 }
+
+target "gnu-static" {
+    dockerfile = "gnu-static.Dockerfile"
+    context = "./"
+    platforms = [
+        "linux/amd64",
+        "linux/arm64"
+    ]
+    tags = distinct(flatten([
+        LATEST ? "${IMAGE_NAME}:gnu-static" : "",
+        SHA == "" || VERSION != "dev" ? "" : "${IMAGE_NAME}:gnu-static-sha-${substr(SHA, 0, 7)}",
+        VERSION == "dev" ? [] : [for v in semver(VERSION) : "${IMAGE_NAME}:gnu-static-${v}"]
+    ]))
+    labels = {
+        "org.opencontainers.image.created" = "${timestamp()}"
+        "org.opencontainers.image.version" = VERSION
+        "org.opencontainers.image.revision" = SHA
+    }
+    args = {
+        FRANKENPHP_VERSION = VERSION
+    }
+    secret = ["id=github-token,env=GITHUB_TOKEN"]
+}
