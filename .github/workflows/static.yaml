@@ -82,7 +82,7 @@ jobs:
             debug: true
           - platform: linux/amd64
             mimalloc: true
-    name: Build ${{ matrix.platform }} static binary${{ matrix.debug && ' (debug)' || '' }}${{ matrix.mimalloc && ' (mimalloc)' || '' }}
+    name: Build ${{ matrix.platform }} static musl binary${{ matrix.debug && ' (debug)' || '' }}${{ matrix.mimalloc && ' (mimalloc)' || '' }}
     runs-on: ${{ startsWith(matrix.platform, 'linux/arm') && 'ubuntu-24.04-arm' || 'ubuntu-24.04' }}
     needs: [prepare]
     steps:
@@ -185,7 +185,7 @@ jobs:
       fail-fast: false
       matrix:
         platform: ${{ fromJson(needs.prepare.outputs.platforms) }}
-    name: Build ${{ matrix.platform }} GNU static binary
+    name: Build ${{ matrix.platform }} static GNU binary
     runs-on: ${{ startsWith(matrix.platform, 'linux/arm') && 'ubuntu-24.04-arm' || 'ubuntu-24.04' }}
     needs: [prepare]
     steps:
