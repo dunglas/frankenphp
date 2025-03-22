@@ -11,12 +11,12 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"github.com/dunglas/frankenphp"
-	"github.com/prometheus/client_golang/prometheus/testutil"
-	"github.com/stretchr/testify/require"
-
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddytest"
+	"github.com/dunglas/frankenphp"
+	"github.com/dunglas/frankenphp/internal/fastabs"
+	"github.com/prometheus/client_golang/prometheus/testutil"
+	"github.com/stretchr/testify/require"
 )
 
 var testPort = "9080"
@@ -370,17 +370,13 @@ func TestMetrics(t *testing.T) {
 
 	// Fetch metrics
 	resp, err := http.Get("http://localhost:2999/metrics")
-	if err != nil {
-		t.Fatalf("failed to fetch metrics: %v", err)
-	}
+	require.NoError(t, err, "failed to fetch metrics")
 	defer resp.Body.Close()
 
 	// Read and parse metrics
 	metrics := new(bytes.Buffer)
 	_, err = metrics.ReadFrom(resp.Body)
-	if err != nil {
-		t.Fatalf("failed to read metrics: %v", err)
-	}
+	require.NoError(t, err, "failed to read metrics")
 
 	cpus := fmt.Sprintf("%d", frankenphp.MaxThreads)
 
@@ -432,6 +428,8 @@ func TestWorkerMetrics(t *testing.T) {
 	}
 	`, "caddyfile")
 
+	workerName, _ := fastabs.FastAbs("../testdata/index.php")
+
 	// Make some requests
 	for i := 0; i < 10; i++ {
 		wg.Add(1)
@@ -444,17 +442,13 @@ func TestWorkerMetrics(t *testing.T) {
 
 	// Fetch metrics
 	resp, err := http.Get("http://localhost:2999/metrics")
-	if err != nil {
-		t.Fatalf("failed to fetch metrics: %v", err)
-	}
+	require.NoError(t, err, "failed to fetch metrics")
 	defer resp.Body.Close()
 
 	// Read and parse metrics
 	metrics := new(bytes.Buffer)
 	_, err = metrics.ReadFrom(resp.Body)
-	if err != nil {
-		t.Fatalf("failed to read metrics: %v", err)
-	}
+	require.NoError(t, err, "failed to read metrics")
 
 	cpus := fmt.Sprintf("%d", frankenphp.MaxThreads)
 
@@ -468,29 +462,21 @@ func TestWorkerMetrics(t *testing.T) {
 	# TYPE frankenphp_busy_threads gauge
 	frankenphp_busy_threads 2
 
-	# HELP frankenphp_testdata_index_php_busy_workers Number of busy PHP workers for this worker
-	# TYPE frankenphp_testdata_index_php_busy_workers gauge
-	frankenphp_testdata_index_php_busy_workers 0
+	# HELP frankenphp_busy_workers Number of busy PHP workers for this worker
+	# TYPE frankenphp_busy_workers gauge
+	frankenphp_busy_workers{worker="` + workerName + `"} 0
 
-	# HELP frankenphp_testdata_index_php_total_workers Total number of PHP workers for this worker
-	# TYPE frankenphp_testdata_index_php_total_workers gauge
-	frankenphp_testdata_index_php_total_workers 2
+	# HELP frankenphp_total_workers Total number of PHP workers for this worker
+	# TYPE frankenphp_total_workers gauge
+	frankenphp_total_workers{worker="` + workerName + `"} 2
 
-	# HELP frankenphp_testdata_index_php_worker_request_count
-	# TYPE frankenphp_testdata_index_php_worker_request_count counter
-	frankenphp_testdata_index_php_worker_request_count 10
+	# HELP frankenphp_worker_request_count
+	# TYPE frankenphp_worker_request_count counter
+	frankenphp_worker_request_count{worker="` + workerName + `"} 10
 
-	# HELP frankenphp_testdata_index_php_ready_workers Running workers that have successfully called frankenphp_handle_request at least once
-	# TYPE frankenphp_testdata_index_php_ready_workers gauge
-	frankenphp_testdata_index_php_ready_workers 2
-
-	# HELP frankenphp_testdata_index_php_worker_crashes Number of PHP worker crashes for this worker
-	# TYPE frankenphp_testdata_index_php_worker_crashes counter
-	frankenphp_testdata_index_php_worker_crashes 0
-
-	# HELP frankenphp_testdata_index_php_worker_restarts Number of PHP worker restarts for this worker
-	# TYPE frankenphp_testdata_index_php_worker_restarts counter
-	frankenphp_testdata_index_php_worker_restarts 0
+	# HELP frankenphp_ready_workers Running workers that have successfully called frankenphp_handle_request at least once
+	# TYPE frankenphp_ready_workers gauge
+	frankenphp_ready_workers{worker="` + workerName + `"} 2
 	`
 
 	ctx := caddy.ActiveContext()
@@ -500,13 +486,103 @@ func TestWorkerMetrics(t *testing.T) {
 			strings.NewReader(expectedMetrics),
 			"frankenphp_total_threads",
 			"frankenphp_busy_threads",
-			"frankenphp_testdata_index_php_busy_workers",
-			"frankenphp_testdata_index_php_total_workers",
-			"frankenphp_testdata_index_php_worker_request_count",
-			"frankenphp_testdata_index_php_worker_crashes",
-			"frankenphp_testdata_index_php_worker_restarts",
-			"frankenphp_testdata_index_php_ready_workers",
+			"frankenphp_busy_workers",
+			"frankenphp_total_workers",
+			"frankenphp_worker_request_count",
+			"frankenphp_ready_workers",
 		))
+}
+
+func TestNamedWorkerMetrics(t *testing.T) {
+	var wg sync.WaitGroup
+	tester := caddytest.NewTester(t)
+	tester.InitServer(`
+	{
+		skip_install_trust
+		admin localhost:2999
+		http_port `+testPort+`
+		https_port 9443
+
+		frankenphp {
+			worker {
+				name my_app
+				file ../testdata/index.php
+				num 2
+			}
+		}
+	}
+
+	localhost:`+testPort+` {
+		route {
+			php {
+				root ../testdata
+			}
+		}
+	}
+	`, "caddyfile")
+
+	// Make some requests
+	for i := 0; i < 10; i++ {
+		wg.Add(1)
+		go func(i int) {
+			tester.AssertGetResponse(fmt.Sprintf("http://localhost:"+testPort+"/index.php?i=%d", i), http.StatusOK, fmt.Sprintf("I am by birth a Genevese (%d)", i))
+			wg.Done()
+		}(i)
+	}
+	wg.Wait()
+
+	// Fetch metrics
+	resp, err := http.Get("http://localhost:2999/metrics")
+	require.NoError(t, err, "failed to fetch metrics")
+	defer resp.Body.Close()
+
+	// Read and parse metrics
+	metrics := new(bytes.Buffer)
+	_, err = metrics.ReadFrom(resp.Body)
+	require.NoError(t, err, "failed to read metrics")
+
+	cpus := fmt.Sprintf("%d", frankenphp.MaxThreads)
+
+	// Check metrics
+	expectedMetrics := `
+	# HELP frankenphp_total_threads Total number of PHP threads
+	# TYPE frankenphp_total_threads counter
+	frankenphp_total_threads ` + cpus + `
+
+	# HELP frankenphp_busy_threads Number of busy PHP threads
+	# TYPE frankenphp_busy_threads gauge
+	frankenphp_busy_threads 2
+
+	# HELP frankenphp_busy_workers Number of busy PHP workers for this worker
+        # TYPE frankenphp_busy_workers gauge
+        frankenphp_busy_workers{worker="my_app"} 0
+
+	# HELP frankenphp_total_workers Total number of PHP workers for this worker
+	# TYPE frankenphp_total_workers gauge
+	frankenphp_total_workers{worker="my_app"} 2
+
+	# HELP frankenphp_worker_request_count
+	# TYPE frankenphp_worker_request_count counter
+	frankenphp_worker_request_count{worker="my_app"} 10
+
+	# HELP frankenphp_ready_workers Running workers that have successfully called frankenphp_handle_request at least once
+	# TYPE frankenphp_ready_workers gauge
+	frankenphp_ready_workers{worker="my_app"} 2
+	`
+
+	ctx := caddy.ActiveContext()
+	require.NoError(t,
+		testutil.GatherAndCompare(
+			ctx.GetMetricsRegistry(),
+			strings.NewReader(expectedMetrics),
+			"frankenphp_total_threads",
+			"frankenphp_busy_threads",
+			"frankenphp_busy_workers",
+			"frankenphp_total_workers",
+			"frankenphp_worker_request_count",
+			"frankenphp_ready_workers",
+		),
+	)
 }
 
 func TestAutoWorkerConfig(t *testing.T) {
@@ -533,6 +609,8 @@ func TestAutoWorkerConfig(t *testing.T) {
 	}
 	`, "caddyfile")
 
+	workerName, _ := fastabs.FastAbs("../testdata/index.php")
+
 	// Make some requests
 	for i := 0; i < 10; i++ {
 		wg.Add(1)
@@ -545,17 +623,13 @@ func TestAutoWorkerConfig(t *testing.T) {
 
 	// Fetch metrics
 	resp, err := http.Get("http://localhost:2999/metrics")
-	if err != nil {
-		t.Fatalf("failed to fetch metrics: %v", err)
-	}
+	require.NoError(t, err, "failed to fetch metrics")
 	defer resp.Body.Close()
 
 	// Read and parse metrics
 	metrics := new(bytes.Buffer)
 	_, err = metrics.ReadFrom(resp.Body)
-	if err != nil {
-		t.Fatalf("failed to read metrics: %v", err)
-	}
+	require.NoError(t, err, "failed to read metrics")
 
 	cpus := fmt.Sprintf("%d", frankenphp.MaxThreads)
 	workers := fmt.Sprintf("%d", frankenphp.MaxThreads-1)
@@ -570,29 +644,21 @@ func TestAutoWorkerConfig(t *testing.T) {
 	# TYPE frankenphp_busy_threads gauge
 	frankenphp_busy_threads ` + workers + `
 
-	# HELP frankenphp_testdata_index_php_busy_workers Number of busy PHP workers for this worker
-	# TYPE frankenphp_testdata_index_php_busy_workers gauge
-	frankenphp_testdata_index_php_busy_workers 0
+	# HELP frankenphp_busy_workers Number of busy PHP workers for this worker
+	# TYPE frankenphp_busy_workers gauge
+	frankenphp_busy_workers{worker="` + workerName + `"} 0
 
-	# HELP frankenphp_testdata_index_php_total_workers Total number of PHP workers for this worker
-	# TYPE frankenphp_testdata_index_php_total_workers gauge
-	frankenphp_testdata_index_php_total_workers ` + workers + `
+	# HELP frankenphp_total_workers Total number of PHP workers for this worker
+	# TYPE frankenphp_total_workers gauge
+	frankenphp_total_workers{worker="` + workerName + `"} ` + workers + `
 
-	# HELP frankenphp_testdata_index_php_worker_request_count
-	# TYPE frankenphp_testdata_index_php_worker_request_count counter
-	frankenphp_testdata_index_php_worker_request_count 10
+	# HELP frankenphp_worker_request_count
+	# TYPE frankenphp_worker_request_count counter
+	frankenphp_worker_request_count{worker="` + workerName + `"} 10
 
-	# HELP frankenphp_testdata_index_php_ready_workers Running workers that have successfully called frankenphp_handle_request at least once
-	# TYPE frankenphp_testdata_index_php_ready_workers gauge
-	frankenphp_testdata_index_php_ready_workers ` + workers + `
-
-	# HELP frankenphp_testdata_index_php_worker_crashes Number of PHP worker crashes for this worker
-	# TYPE frankenphp_testdata_index_php_worker_crashes counter
-	frankenphp_testdata_index_php_worker_crashes 0
-
-	# HELP frankenphp_testdata_index_php_worker_restarts Number of PHP worker restarts for this worker
-	# TYPE frankenphp_testdata_index_php_worker_restarts counter
-	frankenphp_testdata_index_php_worker_restarts 0
+	# HELP frankenphp_ready_workers Running workers that have successfully called frankenphp_handle_request at least once
+	# TYPE frankenphp_ready_workers gauge
+	frankenphp_ready_workers{worker="` + workerName + `"} ` + workers + `
 	`
 
 	ctx := caddy.ActiveContext()
@@ -602,12 +668,10 @@ func TestAutoWorkerConfig(t *testing.T) {
 			strings.NewReader(expectedMetrics),
 			"frankenphp_total_threads",
 			"frankenphp_busy_threads",
-			"frankenphp_testdata_index_php_busy_workers",
-			"frankenphp_testdata_index_php_total_workers",
-			"frankenphp_testdata_index_php_worker_request_count",
-			"frankenphp_testdata_index_php_worker_crashes",
-			"frankenphp_testdata_index_php_worker_restarts",
-			"frankenphp_testdata_index_php_ready_workers",
+			"frankenphp_busy_workers",
+			"frankenphp_total_workers",
+			"frankenphp_worker_request_count",
+			"frankenphp_ready_workers",
 		))
 }
 
@@ -798,4 +862,214 @@ func getStatusCode(url string, t *testing.T) int {
 	require.NoError(t, err)
 	defer resp.Body.Close()
 	return resp.StatusCode
+}
+
+func TestMultiWorkersMetrics(t *testing.T) {
+	var wg sync.WaitGroup
+	tester := caddytest.NewTester(t)
+	tester.InitServer(`
+	{
+		skip_install_trust
+		admin localhost:2999
+		http_port `+testPort+`
+		https_port 9443
+
+		frankenphp {
+			worker {
+				name service1
+				file ../testdata/index.php
+				num 2
+			}
+			worker {
+				name service2
+				file ../testdata/ini.php
+				num 3
+			}
+		}
+	}
+
+	localhost:`+testPort+` {
+		route {
+			php {
+				root ../testdata
+			}
+		}
+	}
+
+	example.com:`+testPort+` {
+		route {
+			php {
+				root ../testdata
+			}
+		}
+	}
+	`, "caddyfile")
+
+	// Make some requests
+	for i := 0; i < 10; i++ {
+		wg.Add(1)
+		go func(i int) {
+			tester.AssertGetResponse(fmt.Sprintf("http://localhost:"+testPort+"/index.php?i=%d", i), http.StatusOK, fmt.Sprintf("I am by birth a Genevese (%d)", i))
+			wg.Done()
+		}(i)
+	}
+	wg.Wait()
+
+	// Fetch metrics
+	resp, err := http.Get("http://localhost:2999/metrics")
+	require.NoError(t, err, "failed to fetch metrics")
+	defer resp.Body.Close()
+
+	// Read and parse metrics
+	metrics := new(bytes.Buffer)
+	_, err = metrics.ReadFrom(resp.Body)
+	require.NoError(t, err, "failed to read metrics")
+
+	cpus := fmt.Sprintf("%d", frankenphp.MaxThreads)
+
+	// Check metrics
+	expectedMetrics := `
+	# HELP frankenphp_total_threads Total number of PHP threads
+	# TYPE frankenphp_total_threads counter
+	frankenphp_total_threads ` + cpus + `
+
+	# HELP frankenphp_busy_threads Number of busy PHP threads
+	# TYPE frankenphp_busy_threads gauge
+	frankenphp_busy_threads 5
+
+	# HELP frankenphp_busy_workers Number of busy PHP workers for this worker
+	# TYPE frankenphp_busy_workers gauge
+	frankenphp_busy_workers{worker="service1"} 0
+
+	# HELP frankenphp_total_workers Total number of PHP workers for this worker
+	# TYPE frankenphp_total_workers gauge
+	frankenphp_total_workers{worker="service1"} 2
+	frankenphp_total_workers{worker="service2"} 3
+
+	# HELP frankenphp_worker_request_count
+	# TYPE frankenphp_worker_request_count counter
+	frankenphp_worker_request_count{worker="service1"} 10
+
+	# HELP frankenphp_ready_workers Running workers that have successfully called frankenphp_handle_request at least once
+	# TYPE frankenphp_ready_workers gauge
+	frankenphp_ready_workers{worker="service1"} 2
+	frankenphp_ready_workers{worker="service2"} 3
+	`
+
+	ctx := caddy.ActiveContext()
+	require.NoError(t,
+		testutil.GatherAndCompare(
+			ctx.GetMetricsRegistry(),
+			strings.NewReader(expectedMetrics),
+			"frankenphp_total_threads",
+			"frankenphp_busy_threads",
+			"frankenphp_busy_workers",
+			"frankenphp_total_workers",
+			"frankenphp_worker_request_count",
+			"frankenphp_ready_workers",
+		))
+}
+
+func TestMultiWorkersMetricsWithDuplicateName(t *testing.T) {
+	var wg sync.WaitGroup
+	tester := caddytest.NewTester(t)
+	tester.InitServer(`
+	{
+		skip_install_trust
+		admin localhost:2999
+		http_port `+testPort+`
+		https_port 9443
+
+		frankenphp {
+			worker {
+				name service1
+				file ../testdata/index.php
+				num 2
+			}
+			worker {
+				name service1
+				file ../testdata/ini.php
+				num 3
+			}
+		}
+	}
+
+	localhost:`+testPort+` {
+		route {
+			php {
+				root ../testdata
+			}
+		}
+	}
+
+	example.com:`+testPort+` {
+		route {
+			php {
+				root ../testdata
+			}
+		}
+	}
+	`, "caddyfile")
+
+	// Make some requests
+	for i := 0; i < 10; i++ {
+		wg.Add(1)
+		go func(i int) {
+			tester.AssertGetResponse(fmt.Sprintf("http://localhost:"+testPort+"/index.php?i=%d", i), http.StatusOK, fmt.Sprintf("I am by birth a Genevese (%d)", i))
+			wg.Done()
+		}(i)
+	}
+	wg.Wait()
+
+	// Fetch metrics
+	resp, err := http.Get("http://localhost:2999/metrics")
+	require.NoError(t, err, "failed to fetch metrics")
+	defer resp.Body.Close()
+
+	// Read and parse metrics
+	metrics := new(bytes.Buffer)
+	_, err = metrics.ReadFrom(resp.Body)
+	require.NoError(t, err, "failed to read metrics")
+
+	cpus := fmt.Sprintf("%d", frankenphp.MaxThreads)
+
+	// Check metrics
+	expectedMetrics := `
+	# HELP frankenphp_total_threads Total number of PHP threads
+	# TYPE frankenphp_total_threads counter
+	frankenphp_total_threads ` + cpus + `
+
+	# HELP frankenphp_busy_threads Number of busy PHP threads
+	# TYPE frankenphp_busy_threads gauge
+	frankenphp_busy_threads 5
+
+	# HELP frankenphp_busy_workers Number of busy PHP workers for this worker
+	# TYPE frankenphp_busy_workers gauge
+	frankenphp_busy_workers{worker="service1"} 0
+
+	# HELP frankenphp_total_workers Total number of PHP workers for this worker
+	# TYPE frankenphp_total_workers gauge
+	frankenphp_total_workers{worker="service1"} 5
+
+	# HELP frankenphp_worker_request_count
+	# TYPE frankenphp_worker_request_count counter
+	frankenphp_worker_request_count{worker="service1"} 10
+
+	# HELP frankenphp_ready_workers Running workers that have successfully called frankenphp_handle_request at least once
+	# TYPE frankenphp_ready_workers gauge
+	frankenphp_ready_workers{worker="service1"} 5
+	`
+
+	ctx := caddy.ActiveContext()
+	require.NoError(t,
+		testutil.GatherAndCompare(
+			ctx.GetMetricsRegistry(),
+			strings.NewReader(expectedMetrics),
+			"frankenphp_total_threads",
+			"frankenphp_busy_threads",
+			"frankenphp_busy_workers",
+			"frankenphp_total_workers",
+			"frankenphp_worker_request_count",
+			"frankenphp_ready_workers",
+		))
 }

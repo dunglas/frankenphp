@@ -88,12 +88,14 @@ func TestTransitionThreadsWhileDoingRequests(t *testing.T) {
 	isDone := atomic.Bool{}
 	wg := sync.WaitGroup{}
 	worker1Path := testDataPath + "/transition-worker-1.php"
+	worker1Name := "worker-1"
 	worker2Path := testDataPath + "/transition-worker-2.php"
+	worker2Name := "worker-2"
 
 	assert.NoError(t, Init(
 		WithNumThreads(numThreads),
-		WithWorkers(worker1Path, 1, map[string]string{}, []string{}),
-		WithWorkers(worker2Path, 1, map[string]string{}, []string{}),
+		WithWorkers(worker1Name, worker1Path, 1, map[string]string{"ENV1": "foo"}, []string{}),
+		WithWorkers(worker2Name, worker2Path, 1, map[string]string{"ENV1": "foo"}, []string{}),
 		WithLogger(zap.NewNop()),
 	))
 
