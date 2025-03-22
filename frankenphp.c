@@ -1180,11 +1180,13 @@ int frankenphp_execute_php_function(const char *php_function) {
   return success;
 }
 
-void frankenphp_reset_opcache(void) {
+int frankenphp_reset_opcache(void) {
   zend_function *opcache_reset = zend_hash_str_find_ptr(CG(function_table), ZEND_STRL("opcache_reset"));
   if (opcache_reset) {
     zend_call_known_function(opcache_reset, NULL, NULL, NULL, 0, NULL, NULL);
   }
+
+  return 0;
 }
 
 int frankenphp_get_current_memory_limit() { return PG(memory_limit); }
