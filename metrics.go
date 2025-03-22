@@ -97,10 +97,6 @@ type PrometheusMetrics struct {
 	mu                 sync.Mutex
 }
 
-func (m *PrometheusMetrics) getLabels(name string) prometheus.Labels {
-	return prometheus.Labels{"worker": name}
-}
-
 func (m *PrometheusMetrics) StartWorker(name string) {
 	m.busyThreads.Inc()
 
@@ -109,7 +105,7 @@ func (m *PrometheusMetrics) StartWorker(name string) {
 		return
 	}
 
-	m.totalWorkers.With(m.getLabels(name)).Inc()
+	m.totalWorkers.WithLabelValues(name).Inc()
 }
 
 func (m *PrometheusMetrics) ReadyWorker(name string) {
@@ -117,7 +113,7 @@ func (m *PrometheusMetrics) ReadyWorker(name string) {
 		return
 	}
 
-	m.readyWorkers.With(m.getLabels(name)).Inc()
+	m.readyWorkers.WithLabelValues(name).Inc()
 }
 
 func (m *PrometheusMetrics) StopWorker(name string, reason StopReason) {
@@ -128,14 +124,13 @@ func (m *PrometheusMetrics) StopWorker(name string, reason StopReason) {
 		return
 	}
 
-	metricLabels := m.getLabels(name)
-	m.totalWorkers.With(metricLabels).Dec()
-	m.readyWorkers.With(metricLabels).Dec()
+	m.totalWorkers.WithLabelValues(name).Dec()
+	m.readyWorkers.WithLabelValues(name).Dec()
 
 	if reason == StopReasonCrash {
-		m.workerCrashes.With(metricLabels).Inc()
+		m.workerCrashes.WithLabelValues(name).Inc()
 	} else if reason == StopReasonRestart {
-		m.workerRestarts.With(metricLabels).Inc()
+		m.workerRestarts.WithLabelValues(name).Inc()
 	}
 }
 
@@ -262,31 +257,30 @@ func (m *PrometheusMetrics) StopWorkerRequest(name string, duration time.Duratio
 		return
 	}
 
-	metricLabels := m.getLabels(name)
-	m.workerRequestCount.With(metricLabels).Inc()
-	m.busyWorkers.With(metricLabels).Dec()
-	m.workerRequestTime.With(metricLabels).Add(duration.Seconds())
+	m.workerRequestCount.WithLabelValues(name).Inc()
+	m.busyWorkers.WithLabelValues(name).Dec()
+	m.workerRequestTime.WithLabelValues(name).Add(duration.Seconds())
 }
 
 func (m *PrometheusMetrics) StartWorkerRequest(name string) {
 	if m.busyWorkers == nil {
 		return
 	}
-	m.busyWorkers.With(m.getLabels(name)).Inc()
+	m.busyWorkers.WithLabelValues(name).Inc()
 }
 
 func (m *PrometheusMetrics) QueuedWorkerRequest(name string) {
 	if m.workerQueueDepth == nil {
 		return
 	}
-	m.workerQueueDepth.With(m.getLabels(name)).Inc()
+	m.workerQueueDepth.WithLabelValues(name).Inc()
 }
 
 func (m *PrometheusMetrics) DequeuedWorkerRequest(name string) {
 	if m.workerQueueDepth == nil {
 		return
 	}
-	m.workerQueueDepth.With(m.getLabels(name)).Dec()
+	m.workerQueueDepth.WithLabelValues(name).Dec()
 }
 
 func (m *PrometheusMetrics) QueuedRequest() {
