@@ -63,8 +63,6 @@ int frankenphp_execute_script(char *file_name);
 
 int frankenphp_execute_script_cli(char *script, int argc, char **argv);
 
-int frankenphp_execute_php_function(const char *php_function);
-
 void frankenphp_register_variables_from_request_info(
     zval *track_vars_array, zend_string *content_type,
     zend_string *path_translated, zend_string *query_string,
