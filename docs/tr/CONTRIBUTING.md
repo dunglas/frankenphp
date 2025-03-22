@@ -114,7 +114,7 @@ docker buildx bake -f docker-bake.hcl --pull --no-cache --push
         --set static-builder.args.DEBUG_SYMBOLS=1 \
         --set "static-builder.platform=linux/amd64" \
         static-builder
-    docker cp $(docker create --name static-builder dunglas/frankenphp:static-builder):/go/src/app/dist/frankenphp-linux-$(uname -m) frankenphp
+    docker cp $(docker create --name static-builder-musl dunglas/frankenphp:static-builder-musl):/go/src/app/dist/frankenphp-linux-$(uname -m) frankenphp
     ```
 
 2. Mevcut `frankenphp` sürümünüzü hata ayıklama FrankenPHP çalıştırılabilir dosyasıyla değiştirin

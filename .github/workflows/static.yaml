@@ -36,6 +36,7 @@ jobs:
       push: ${{ toJson((steps.check.outputs.ref || (github.event_name == 'workflow_dispatch' && inputs.version) || startsWith(github.ref, 'refs/tags/') || (github.ref == 'refs/heads/main' && github.event_name != 'pull_request')) && true || false) }}
       platforms: ${{ steps.matrix.outputs.platforms }}
       metadata: ${{ steps.matrix.outputs.metadata }}
+      gnu_metadata: ${{ steps.matrix.outputs.gnu_metadata }}
       ref: ${{ steps.check.outputs.ref }}
     steps:
       - name: Get version
@@ -58,15 +59,17 @@ jobs:
       - name: Create platforms matrix
         id: matrix
         run: |
-          METADATA="$(docker buildx bake --print static-builder | jq -c)"
+          METADATA="$(docker buildx bake --print static-builder-musl | jq -c)"
+          GNU_METADATA="$(docker buildx bake --print static-builder-gnu | jq -c)"
           {
             echo metadata="${METADATA}"
             echo platforms="$(jq -c 'first(.target[]) | .platforms' <<< "${METADATA}")"
+            echo gnu_metadata="${GNU_METADATA}"
           } >> "${GITHUB_OUTPUT}"
         env:
           SHA: ${{ github.sha }}
           VERSION: ${{ steps.check.outputs.ref || 'dev' }}
-  build-linux:
+  build-linux-musl:
     strategy:
       fail-fast: false
       matrix:
@@ -79,7 +82,7 @@ jobs:
             debug: true
           - platform: linux/amd64
             mimalloc: true
-    name: Build ${{ matrix.platform }} static binary${{ matrix.debug && ' (debug)' || '' }}${{ matrix.mimalloc && ' (mimalloc)' || '' }}
+    name: Build ${{ matrix.platform }} static musl binary${{ matrix.debug && ' (debug)' || '' }}${{ matrix.mimalloc && ' (mimalloc)' || '' }}
     runs-on: ${{ startsWith(matrix.platform, 'linux/arm') && 'ubuntu-24.04-arm' || 'ubuntu-24.04' }}
     needs: [prepare]
     steps:
@@ -107,16 +110,16 @@ jobs:
         with:
           pull: true
           load: ${{ !fromJson(needs.prepare.outputs.push) || matrix.debug || matrix.mimalloc }}
-          targets: static-builder
+          targets: static-builder-musl
           set: |
-            ${{ matrix.debug && 'static-builder.args.DEBUG_SYMBOLS=1' || '' }}
-            ${{ matrix.mimalloc && 'static-builder.args.MIMALLOC=1' || '' }}
-            ${{ (github.event_name == 'pull_request' || matrix.platform == 'linux/arm64') && 'static-builder.args.NO_COMPRESS=1' || '' }}
+            ${{ matrix.debug && 'static-builder-musl.args.DEBUG_SYMBOLS=1' || '' }}
+            ${{ matrix.mimalloc && 'static-builder-musl.args.MIMALLOC=1' || '' }}
+            ${{ (github.event_name == 'pull_request' || matrix.platform == 'linux/arm64') && 'static-builder-musl.args.NO_COMPRESS=1' || '' }}
             *.tags=
             *.platform=${{ matrix.platform }}
-            *.cache-from=type=gha,scope=${{ needs.prepare.outputs.ref || github.ref }}-static-builder${{ matrix.debug && '-debug' || '' }}${{ matrix.mimalloc && '-mimalloc' || '' }}
-            *.cache-from=type=gha,scope=refs/heads/main-static-builder${{ matrix.debug && '-debug' || '' }}${{ matrix.mimalloc && '-mimalloc' || '' }}
-            *.cache-to=type=gha,scope=${{ needs.prepare.outputs.ref || github.ref }}-static-builder${{ matrix.debug && '-debug' || '' }}${{ matrix.mimalloc && '-mimalloc' || '' }},ignore-error=true
+            *.cache-from=type=gha,scope=${{ needs.prepare.outputs.ref || github.ref }}-static-builder-musl${{ matrix.debug && '-debug' || '' }}${{ matrix.mimalloc && '-mimalloc' || '' }}
+            *.cache-from=type=gha,scope=refs/heads/main-static-builder-musl${{ matrix.debug && '-debug' || '' }}${{ matrix.mimalloc && '-mimalloc' || '' }}
+            *.cache-to=type=gha,scope=${{ needs.prepare.outputs.ref || github.ref }}-static-builder-musl${{ matrix.debug && '-debug' || '' }}${{ matrix.mimalloc && '-mimalloc' || '' }},ignore-error=true
             ${{ (fromJson(needs.prepare.outputs.push) && !matrix.debug && !matrix.mimalloc) && format('*.output=type=image,name={0},push-by-digest=true,name-canonical=true,push=true', env.IMAGE_NAME) || '' }}
         env:
           SHA: ${{ github.sha }}
@@ -129,7 +132,7 @@ jobs:
           mkdir -p /tmp/metadata
 
           # shellcheck disable=SC2086
-          digest=$(jq -r '."static-builder"."containerimage.digest"' <<< ${METADATA})
+          digest=$(jq -r '."static-builder-musl"."containerimage.digest"' <<< ${METADATA})
           touch "/tmp/metadata/${digest#sha256:}"
         env:
           METADATA: ${{ steps.build.outputs.metadata }}
@@ -137,16 +140,16 @@ jobs:
         if: fromJson(needs.prepare.outputs.push) && !matrix.debug && !matrix.mimalloc
         uses: actions/upload-artifact@v4
         with:
-          name: metadata-static-builder-${{ steps.prepare.outputs.sanitized_platform }}
+          name: metadata-static-builder-musl-${{ steps.prepare.outputs.sanitized_platform }}
           path: /tmp/metadata/*
           if-no-files-found: error
           retention-days: 1
       - name: Copy binary
         run: |
           # shellcheck disable=SC2034
-          digest=$(jq -r '."static-builder"."${{ (fromJson(needs.prepare.outputs.push) && !matrix.debug && !matrix.mimalloc) && 'containerimage.digest' || 'containerimage.config.digest' }}"' <<< "${METADATA}")
-          docker create --platform=${{ matrix.platform }} --name static-builder "${{ (fromJson(needs.prepare.outputs.push) && !matrix.debug && !matrix.mimalloc) && '${IMAGE_NAME}@${digest}' || '${digest}' }}"
-          docker cp "static-builder:/go/src/app/dist/${BINARY}" "${BINARY}${{ matrix.debug && '-debug' || '' }}${{ matrix.mimalloc && '-mimalloc' || '' }}"
+          digest=$(jq -r '."static-builder-musl"."${{ (fromJson(needs.prepare.outputs.push) && !matrix.debug && !matrix.mimalloc) && 'containerimage.digest' || 'containerimage.config.digest' }}"' <<< "${METADATA}")
+          docker create --platform=${{ matrix.platform }} --name static-builder-musl "${{ (fromJson(needs.prepare.outputs.push) && !matrix.debug && !matrix.mimalloc) && '${IMAGE_NAME}@${digest}' || '${digest}' }}"
+          docker cp "static-builder-musl:/go/src/app/dist/${BINARY}" "${BINARY}${{ matrix.debug && '-debug' || '' }}${{ matrix.mimalloc && '-mimalloc' || '' }}"
         env:
           METADATA: ${{ steps.build.outputs.metadata }}
           BINARY: frankenphp-linux-${{ matrix.platform == 'linux/amd64' && 'x86_64' || 'aarch64' }}
@@ -177,19 +180,126 @@ jobs:
         env:
           BINARY: ./frankenphp-linux-${{ matrix.platform == 'linux/amd64' && 'x86_64' || 'aarch64' }}${{ matrix.debug && '-debug' || '' }}${{ matrix.mimalloc && '-mimalloc' || '' }}
 
+  build-linux-gnu:
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: ${{ fromJson(needs.prepare.outputs.platforms) }}
+    name: Build ${{ matrix.platform }} static GNU binary
+    runs-on: ${{ startsWith(matrix.platform, 'linux/arm') && 'ubuntu-24.04-arm' || 'ubuntu-24.04' }}
+    needs: [prepare]
+    steps:
+      - name: Prepare
+        id: prepare
+        run: |
+          platform=${{ matrix.platform }}
+          echo "sanitized_platform=${platform//\//-}" >> "${GITHUB_OUTPUT}"
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.ref }}
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          platforms: ${{ matrix.platform }}
+      - name: Login to DockerHub
+        if: ${{ fromJson(needs.prepare.outputs.push) }}
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.REGISTRY_USERNAME }}
+          password: ${{ secrets.REGISTRY_PASSWORD }}
+      - name: Build
+        id: build
+        uses: docker/bake-action@v6
+        with:
+          pull: true
+          load: ${{ !fromJson(needs.prepare.outputs.push) }}
+          targets: static-builder-gnu
+          set: |
+            ${{ (github.event_name == 'pull_request' || matrix.platform == 'linux/arm64') && 'static-builder-gnu.args.NO_COMPRESS=1' || '' }}
+            *.tags=
+            *.platform=${{ matrix.platform }}
+            *.cache-from=type=gha,scope=${{ needs.prepare.outputs.ref || github.ref }}-static-builder-gnu
+            *.cache-from=type=gha,scope=refs/heads/main-static-builder-gnu
+            *.cache-to=type=gha,scope=${{ needs.prepare.outputs.ref || github.ref }}-static-builder-gnu,ignore-error=true
+            ${{ fromJson(needs.prepare.outputs.push) && format('*.output=type=image,name={0}-gnu,push-by-digest=true,name-canonical=true,push=true', env.IMAGE_NAME) || '' }}
+        env:
+          SHA: ${{ github.sha }}
+          VERSION: ${{ (github.ref_type == 'tag' && github.ref_name) || needs.prepare.outputs.ref || 'dev' }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - # Workaround for https://github.com/actions/runner/pull/2477#issuecomment-1501003600
+        name: Export metadata
+        if: fromJson(needs.prepare.outputs.push)
+        run: |
+          mkdir -p /tmp/metadata-gnu
+
+          # shellcheck disable=SC2086
+          digest=$(jq -r '."static-builder-gnu"."containerimage.digest"' <<< ${METADATA})
+          touch "/tmp/metadata-gnu/${digest#sha256:}"
+        env:
+          METADATA: ${{ steps.build.outputs.metadata }}
+      - name: Upload metadata
+        if: fromJson(needs.prepare.outputs.push)
+        uses: actions/upload-artifact@v4
+        with:
+          name: metadata-static-builder-gnu-${{ steps.prepare.outputs.sanitized_platform }}
+          path: /tmp/metadata-gnu/*
+          if-no-files-found: error
+          retention-days: 1
+      - name: Copy binary
+        run: |
+          # shellcheck disable=SC2034
+          digest=$(jq -r '."static-builder-gnu"."${{ fromJson(needs.prepare.outputs.push) && 'containerimage.digest' || 'containerimage.config.digest' }}"' <<< "${METADATA}")
+          docker create --platform=${{ matrix.platform }} --name static-builder-gnu "${{ fromJson(needs.prepare.outputs.push) && format('{0}-gnu@{1}', env.IMAGE_NAME, '${digest}') || '${digest}' }}"
+          docker cp "static-builder-gnu:/go/src/app/dist/${BINARY}" "${BINARY}-gnu"
+        env:
+          METADATA: ${{ steps.build.outputs.metadata }}
+          BINARY: frankenphp-linux-${{ matrix.platform == 'linux/amd64' && 'x86_64' || 'aarch64' }}
+      - name: Upload artifact
+        if: ${{ !fromJson(needs.prepare.outputs.push) }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: frankenphp-linux-${{ matrix.platform == 'linux/amd64' && 'x86_64' || 'aarch64' }}-gnu
+          path: frankenphp-linux-${{ matrix.platform == 'linux/amd64' && 'x86_64' || 'aarch64' }}-gnu
+      - name: Upload assets
+        if: fromJson(needs.prepare.outputs.push) && (needs.prepare.outputs.ref || github.ref_type == 'tag')
+        run: gh release upload "${{ (github.ref_type == 'tag' && github.ref_name) || needs.prepare.outputs.ref }}" frankenphp-linux-${{ matrix.platform == 'linux/amd64' && 'x86_64' || 'aarch64' }}-gnu --repo dunglas/frankenphp --clobber
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - if: fromJson(needs.prepare.outputs.push) && (needs.prepare.outputs.ref || github.ref_type == 'tag')
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: ${{ github.workspace }}/frankenphp-linux-*-gnu
+      - name: Run sanity checks
+        run: |
+          "${BINARY}" version
+          "${BINARY}" list-modules | grep frankenphp
+          "${BINARY}" list-modules | grep http.encoders.br
+          "${BINARY}" list-modules | grep http.handlers.mercure
+          "${BINARY}" list-modules | grep http.handlers.mercure
+          "${BINARY}" list-modules | grep http.handlers.vulcain
+        env:
+          BINARY: ./frankenphp-linux-${{ matrix.platform == 'linux/amd64' && 'x86_64' || 'aarch64' }}-gnu
+
   # Adapted from https://docs.docker.com/build/ci/github-actions/multi-platform/
   push:
     runs-on: ubuntu-24.04
     needs:
       - prepare
-      - build-linux
+      - build-linux-musl
+      - build-linux-gnu
     if: fromJson(needs.prepare.outputs.push)
     steps:
       - name: Download metadata
         uses: actions/download-artifact@v4
         with:
-          pattern: metadata-static-builder-*
+          pattern: metadata-static-builder-musl-*
           path: /tmp/metadata
+          merge-multiple: true
+      - name: Download GNU metadata
+        uses: actions/download-artifact@v4
+        with:
+          pattern: metadata-static-builder-gnu-*
+          path: /tmp/metadata-gnu
           merge-multiple: true
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -202,16 +312,30 @@ jobs:
         working-directory: /tmp/metadata
         run: |
           # shellcheck disable=SC2046,SC2086
-          docker buildx imagetools create $(jq -cr '.target."static-builder".tags | map("-t " + .) | join(" ")' <<< "${METADATA}") \
+          docker buildx imagetools create $(jq -cr '.target."static-builder-musl".tags | map("-t " + .) | join(" ")' <<< "${METADATA}") \
             $(printf "${IMAGE_NAME}@sha256:%s " *)
         env:
           METADATA: ${{ needs.prepare.outputs.metadata }}
+      - name: Create GNU manifest list and push
+        working-directory: /tmp/metadata-gnu
+        run: |
+          # shellcheck disable=SC2046,SC2086
+          docker buildx imagetools create $(jq -cr '.target."static-builder-gnu".tags | map("-t " + . + "-gnu") | join(" ")' <<< "${GNU_METADATA}") \
+            $(printf "${IMAGE_NAME}-gnu@sha256:%s " *)
+        env:
+          GNU_METADATA: ${{ needs.prepare.outputs.gnu_metadata }}
       - name: Inspect image
         run: |
           # shellcheck disable=SC2046,SC2086
-          docker buildx imagetools inspect "$(jq -cr '.target."static-builder".tags | first' <<< "${METADATA}")"
+          docker buildx imagetools inspect "$(jq -cr '.target."static-builder-musl".tags | first' <<< "${METADATA}")"
         env:
           METADATA: ${{ needs.prepare.outputs.metadata }}
+      - name: Inspect GNU image
+        run: |
+          # shellcheck disable=SC2046,SC2086
+          docker buildx imagetools inspect "$(jq -cr '.target."static-builder-gnu".tags | first' <<< "${GNU_METADATA}")-gnu"
+        env:
+          GNU_METADATA: ${{ needs.prepare.outputs.gnu_metadata }}
 
   build-mac:
     strategy:

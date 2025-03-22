@@ -90,5 +90,9 @@ RUN go mod graph | awk '{if ($1 !~ "@") print $2}' | xargs go get
 WORKDIR /go/src/app
 COPY --link . ./
 
+ENV SPC_DEFAULT_C_FLAGS='-fPIE -fPIC -O3 -march=native'
+ENV SPC_LIBC='musl'
+ENV SPC_CMD_VAR_PHP_MAKE_EXTRA_LDFLAGS_PROGRAM='-Wl,-O3 -pie'
+
 RUN --mount=type=secret,id=github-token GITHUB_TOKEN=$(cat /run/secrets/github-token) ./build-static.sh && \
 	rm -Rf dist/static-php-cli/source/*

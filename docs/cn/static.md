@@ -13,7 +13,7 @@ FrankenPHP 还支持 [将 PHP 应用程序嵌入到静态二进制文件中](emb
 
 ```console
 docker buildx bake --load static-builder
-docker cp $(docker create --name static-builder dunglas/frankenphp:static-builder):/go/src/app/dist/frankenphp-linux-$(uname -m) frankenphp ; docker rm static-builder
+docker cp $(docker create --name static-builder-musl dunglas/frankenphp:static-builder-musl):/go/src/app/dist/frankenphp-linux-$(uname -m) frankenphp ; docker rm static-builder
 ```
 
 生成的静态二进制文件名为 `frankenphp`，可在当前目录中找到。
