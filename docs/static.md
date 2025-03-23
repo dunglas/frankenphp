@@ -130,21 +130,23 @@ Since most package managers do not currently offer ZTS versions of their extensi
 For this, you can create a the static-builder-gnu Docker container, remote into it and compile the extensions with `./configure --with-php-config=/go/src/app/dist/static-php-cli/buildroot/bin/php-config`.
 
 Example steps:
-- `docker build -t gnu-ext -f static-builder-gnu.Dockerfile --build-arg FRANKENPHP_VERSION=1.0 .`
-- `docker create --name static-builder-gnu -it gnu-ext /bin/sh`
-- `docker start static-builder-gnu`
-- `docker exec -it static-builder-gnu /bin/sh`
-- `cd /go/src/app/dist/static-php-cli/buildroot/bin`
-- `git clone https://github.com/xdebug/xdebug.git && cd xdebug`
-- `source scl_source enable devtoolset-10`
-- `../phpize`
-- `./configure --with-php-config=/go/src/app/dist/static-php-cli/buildroot/bin/php-config`
-- `make`
-- `exit`
-- `docker cp static-builder-gnu:/go/src/app/dist/static-php-cli/buildroot/bin/xdebug/modules/xdebug.so xdebug-zts.so`
-- `docker cp static-builder-gnu:/go/src/app/dist/frankenphp-linux-$(uname -m) ./frankenphp`
-- `docker stop static-builder-gnu`
-- `docker rm static-builder-gnu`
-- `docker rmi gnu-ext`
 
-This will have created `frankenphp` and `xdebug-zts.so` in the current directory. If you move the `xdebug-zts.so` into your extension directory, add `zend_extension=xdebug-zts.so` to your php.ini and run FrankenPHP, it will load xdebug.
+* `docker build -t gnu-ext -f static-builder-gnu.Dockerfile --build-arg FRANKENPHP_VERSION=1.0 .`
+* `docker create --name static-builder-gnu -it gnu-ext /bin/sh`
+* `docker start static-builder-gnu`
+* `docker exec -it static-builder-gnu /bin/sh`
+* `cd /go/src/app/dist/static-php-cli/buildroot/bin`
+* `git clone https://github.com/xdebug/xdebug.git && cd xdebug`
+* `source scl_source enable devtoolset-10`
+* `../phpize`
+* `./configure --with-php-config=/go/src/app/dist/static-php-cli/buildroot/bin/php-config`
+* `make`
+* `exit`
+* `docker cp static-builder-gnu:/go/src/app/dist/static-php-cli/buildroot/bin/xdebug/modules/xdebug.so xdebug-zts.so`
+* `docker cp static-builder-gnu:/go/src/app/dist/frankenphp-linux-$(uname -m) ./frankenphp`
+* `docker stop static-builder-gnu`
+* `docker rm static-builder-gnu`
+* `docker rmi gnu-ext`
+
+This will have created `frankenphp` and `xdebug-zts.so` in the current directory.
+If you move the `xdebug-zts.so` into your extension directory, add `zend_extension=xdebug-zts.so` to your php.ini and run FrankenPHP, it will load xdebug.
