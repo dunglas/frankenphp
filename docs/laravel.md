@@ -16,7 +16,7 @@ And enjoy!
 
 Alternatively, you can run your Laravel projects with FrankenPHP from your local machine:
 
-1. [Download the binary corresponding to your system](../README.md#standalone-binary)
+1. [Download the binary corresponding to your system](../#standalone-binary)
 2. Add the following configuration to a file named `Caddyfile` in the root directory of your Laravel project:
 
     ```caddyfile
