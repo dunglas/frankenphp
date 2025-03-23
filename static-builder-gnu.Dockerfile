@@ -131,5 +131,4 @@ COPY --link *.* ./
 COPY --link caddy caddy
 COPY --link internal internal
 
-RUN --mount=type=secret,id=github-token ./build-static.sh && \
-	rm -Rf dist/static-php-cli/source/*
+RUN --mount=type=secret,id=github-token ./build-static.sh

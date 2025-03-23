@@ -32,21 +32,20 @@ Enabling [the worker mode](worker.md) dramatically improves performance,
 but your app must be adapted to be compatible with this mode:
 you need to create a worker script and to be sure that the app is not leaking memory.
 
-## Don't Use musl
+## Don't use musl with the default allocator
 
-The static binaries we provide and the Alpine Linux variant of the official Docker images
-are using [the musl libc](https://musl.libc.org).
+The Alpine Linux variant of the official Docker images and the default frankenphp-arch binaries on our Releases page are using [the musl libc](https://musl.libc.org).
 
-PHP is known to be [significantly slower](https://gitlab.alpinelinux.org/alpine/aports/-/issues/14381) when using this alternative C library instead of the traditional GNU library,
-especially when compiled in ZTS mode (thread-safe), which is required for FrankenPHP.
+PHP is known to be [slower](https://gitlab.alpinelinux.org/alpine/aports/-/issues/14381) when using this alternative C library instead of the traditional GNU library,
+especially when compiled in ZTS mode (thread-safe), which is required for FrankenPHP. The difference can be significant in a heavily threaded environment.
 
 Also, [some bugs only happen when using musl](https://github.com/php/php-src/issues?q=sort%3Aupdated-desc+is%3Aissue+is%3Aopen+label%3ABug+musl).
 
-In production environments, we strongly recommend to use the glibc.
+In production environments, we recommend using FrankenPHP linked against glibc.
 
-This can be achieved by using the Debian Docker images (the default) and [by compiling FrankenPHP from sources](compile.md).
+This can be achieved by using the Debian Docker images (the default), downloading the -gnu suffix binary from our [Releases](https://github.com/dunglas/frankenphp/releases), or by [compiling FrankenPHP from sources](compile.md).
 
-Alternatively, we provide static binaries compiled with [the mimalloc allocator](https://github.com/microsoft/mimalloc), which makes FrankenPHP+musl faster (but still slower than FrankenPHP+glibc).
+Alternatively, we provide static musl binaries compiled with [the mimalloc allocator](https://github.com/microsoft/mimalloc), which alleviates the problems in threaded scenarios.
 
 ## Go Runtime Configuration
 

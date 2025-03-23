@@ -121,3 +121,30 @@ script to customize the static build:
 * `DEBUG_SYMBOLS`: when set, debug-symbols will not be stripped and will be added within the binary
 * `MIMALLOC`: (experimental, Linux-only) replace musl's mallocng by [mimalloc](https://github.com/microsoft/mimalloc) for improved performance. We only recommend using this for musl targeting builds, for glibc prefer disabling this option and using LD_PRELOAD when you run your binary instead.
 * `RELEASE`: (maintainers only) when set, the resulting binary will be uploaded on GitHub
+
+## Extensions
+
+With the glibc or mac based binaries, you can load PHP extensions dynamically. However, these extensions will have to be compiled with ZTS support.
+Since most package managers do not currently offer ZTS versions of their extensions, you will have to compile them yourself.
+
+For this, you can create a the static-builder-gnu Docker container, remote into it and compile the extensions with `./configure --with-php-config=/go/src/app/dist/static-php-cli/buildroot/bin/php-config`.
+
+Example steps:
+- `docker build -t gnu-ext -f static-builder-gnu.Dockerfile --build-arg FRANKENPHP_VERSION=1.0 .`
+- `docker create --name static-builder-gnu -it gnu-ext /bin/sh`
+- `docker start static-builder-gnu`
+- `docker exec -it static-builder-gnu /bin/sh`
+- `cd /go/src/app/dist/static-php-cli/buildroot/bin`
+- `git clone https://github.com/xdebug/xdebug.git && cd xdebug`
+- `source scl_source enable devtoolset-10`
+- `../phpize`
+- `./configure --with-php-config=/go/src/app/dist/static-php-cli/buildroot/bin/php-config`
+- `make`
+- `exit`
+- `docker cp static-builder-gnu:/go/src/app/dist/static-php-cli/buildroot/bin/xdebug/modules/xdebug.so xdebug-zts.so`
+- `docker cp static-builder-gnu:/go/src/app/dist/frankenphp-linux-$(uname -m) ./frankenphp`
+- `docker stop static-builder-gnu`
+- `docker rm static-builder-gnu`
+- `docker rmi gnu-ext`
+
+This will have created `frankenphp` and `xdebug-zts.so` in the current directory. If you move the `xdebug-zts.so` into your extension directory, add `zend_extension=xdebug-zts.so` to your php.ini and run FrankenPHP, it will load xdebug.
