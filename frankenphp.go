@@ -282,7 +282,7 @@ func Init(options ...Option) error {
 		return err
 	}
 
-	regularRequestChan = make(chan *frankenPHPContext, totalThreadCount-workerThreadCount)
+	regularRequestChan = make(chan *FrankenPHPContext, totalThreadCount-workerThreadCount)
 	regularThreads = make([]*phpThread, 0, totalThreadCount-workerThreadCount)
 	for i := 0; i < totalThreadCount-workerThreadCount; i++ {
 		convertToRegularThread(getInactivePHPThread())
@@ -327,7 +327,7 @@ func Shutdown() {
 	logger.Debug("FrankenPHP shut down")
 }
 
-func updateServerContext(thread *phpThread, fc *frankenPHPContext, isWorkerRequest bool) error {
+func updateServerContext(thread *phpThread, fc *FrankenPHPContext, isWorkerRequest bool) error {
 	request := fc.request
 	authUser, authPassword, ok := request.BasicAuth()
 	var cAuthUser, cAuthPassword *C.char
@@ -388,14 +388,9 @@ func updateServerContext(thread *phpThread, fc *frankenPHPContext, isWorkerReque
 }
 
 // ServeHTTP executes a PHP script according to the given context.
-func ServeHTTP(responseWriter http.ResponseWriter, request *http.Request) error {
+func ServeHTTP(responseWriter http.ResponseWriter, fc *FrankenPHPContext) error {
 	if !isRunning {
 		return NotRunningError
-	}
-
-	fc, ok := fromContext(request.Context())
-	if !ok {
-		return InvalidRequestError
 	}
 
 	fc.responseWriter = responseWriter
@@ -486,7 +481,7 @@ func go_apache_request_headers(threadIndex C.uintptr_t) (*C.go_string, C.size_t)
 	return sd, C.size_t(len(fc.request.Header))
 }
 
-func addHeader(fc *frankenPHPContext, cString *C.char, length C.int) {
+func addHeader(fc *FrankenPHPContext, cString *C.char, length C.int) {
 	parts := strings.SplitN(C.GoStringN(cString, length), ": ", 2)
 	if len(parts) != 2 {
 		if c := fc.logger.Check(zapcore.DebugLevel, "invalid header"); c != nil {

@@ -10,13 +10,13 @@ import (
 type regularThread struct {
 	state          *threadState
 	thread         *phpThread
-	requestContext *frankenPHPContext
+	requestContext *FrankenPHPContext
 }
 
 var (
 	regularThreads     []*phpThread
 	regularThreadMu    = &sync.RWMutex{}
-	regularRequestChan chan *frankenPHPContext
+	regularRequestChan chan *FrankenPHPContext
 )
 
 func convertToRegularThread(thread *phpThread) {
@@ -51,7 +51,7 @@ func (handler *regularThread) afterScriptExecution(exitStatus int) {
 	handler.afterRequest()
 }
 
-func (handler *regularThread) getRequestContext() *frankenPHPContext {
+func (handler *regularThread) getRequestContext() *FrankenPHPContext {
 	return handler.requestContext
 }
 
@@ -65,7 +65,7 @@ func (handler *regularThread) waitForRequest() string {
 
 	handler.state.markAsWaiting(true)
 
-	var fc *frankenPHPContext
+	var fc *FrankenPHPContext
 	select {
 	case <-handler.thread.drainChan:
 		// go back to beforeScriptExecution
@@ -93,7 +93,7 @@ func (handler *regularThread) afterRequest() {
 	handler.requestContext = nil
 }
 
-func handleRequestWithRegularPHPThreads(fc *frankenPHPContext) {
+func handleRequestWithRegularPHPThreads(fc *FrankenPHPContext) {
 	metrics.StartRequest()
 	select {
 	case regularRequestChan <- fc:

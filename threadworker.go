@@ -17,8 +17,8 @@ type workerThread struct {
 	state           *threadState
 	thread          *phpThread
 	worker          *worker
-	dummyContext    *frankenPHPContext
-	workerContext   *frankenPHPContext
+	dummyContext    *FrankenPHPContext
+	workerContext   *FrankenPHPContext
 	backoff         *exponentialBackoff
 	isBootingScript bool // true if the worker has not reached frankenphp_handle_request yet
 }
@@ -62,7 +62,7 @@ func (handler *workerThread) afterScriptExecution(exitStatus int) {
 	tearDownWorkerScript(handler, exitStatus)
 }
 
-func (handler *workerThread) getRequestContext() *frankenPHPContext {
+func (handler *workerThread) getRequestContext() *FrankenPHPContext {
 	if handler.workerContext != nil {
 		return handler.workerContext
 	}
@@ -168,7 +168,7 @@ func (handler *workerThread) waitForWorkerRequest() bool {
 
 	handler.state.markAsWaiting(true)
 
-	var fc *frankenPHPContext
+	var fc *FrankenPHPContext
 	select {
 	case <-handler.thread.drainChan:
 		if c := logger.Check(zapcore.DebugLevel, "shutting down"); c != nil {

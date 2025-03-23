@@ -11,7 +11,7 @@ import (
 )
 
 // RequestOption instances allow to configure a FrankenPHP Request.
-type RequestOption func(h *frankenPHPContext) error
+type RequestOption func(h *FrankenPHPContext) error
 
 var (
 	documentRootCache    sync.Map
@@ -26,7 +26,7 @@ var (
 // symlink is changed without PHP being restarted; enabling this
 // directive will set $_SERVER['DOCUMENT_ROOT'] to the real directory path.
 func WithRequestDocumentRoot(documentRoot string, resolveSymlink bool) RequestOption {
-	return func(o *frankenPHPContext) (err error) {
+	return func(o *FrankenPHPContext) (err error) {
 		v, ok := documentRootCache.Load(documentRoot)
 		if !ok {
 			// make sure file root is absolute
@@ -57,7 +57,7 @@ func WithRequestDocumentRoot(documentRoot string, resolveSymlink bool) RequestOp
 // WithRequestResolvedDocumentRoot is similar to WithRequestDocumentRoot
 // but doesn't do any checks or resolving on the path to improve performance.
 func WithRequestResolvedDocumentRoot(documentRoot string) RequestOption {
-	return func(o *frankenPHPContext) error {
+	return func(o *FrankenPHPContext) error {
 		o.documentRoot = documentRoot
 
 		return nil
@@ -75,7 +75,7 @@ func WithRequestResolvedDocumentRoot(documentRoot string) RequestOption {
 // which can be mitigated with use of a try_files-like behavior
 // that 404s if the FastCGI path info is not found.
 func WithRequestSplitPath(splitPath []string) RequestOption {
-	return func(o *frankenPHPContext) error {
+	return func(o *FrankenPHPContext) error {
 		o.splitPath = splitPath
 
 		return nil
@@ -100,7 +100,7 @@ func WithRequestEnv(env map[string]string) RequestOption {
 }
 
 func WithRequestPreparedEnv(env PreparedEnv) RequestOption {
-	return func(o *frankenPHPContext) error {
+	return func(o *FrankenPHPContext) error {
 		o.env = env
 
 		return nil
@@ -108,7 +108,7 @@ func WithRequestPreparedEnv(env PreparedEnv) RequestOption {
 }
 
 func WithOriginalRequest(r *http.Request) RequestOption {
-	return func(o *frankenPHPContext) error {
+	return func(o *FrankenPHPContext) error {
 		o.originalRequest = r
 
 		return nil
@@ -117,7 +117,7 @@ func WithOriginalRequest(r *http.Request) RequestOption {
 
 // WithRequestLogger sets the logger associated with the current request
 func WithRequestLogger(logger *zap.Logger) RequestOption {
-	return func(o *frankenPHPContext) error {
+	return func(o *FrankenPHPContext) error {
 		o.logger = logger
 
 		return nil

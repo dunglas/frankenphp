@@ -433,7 +433,7 @@ func (f FrankenPHPModule) ServeHTTP(w http.ResponseWriter, r *http.Request, _ ca
 		}
 	}
 
-	fr, err := frankenphp.NewRequestWithContext(
+	fc, err := frankenphp.NewRequestWithContext(
 		r,
 		documentRootOption,
 		frankenphp.WithRequestSplitPath(f.SplitPath),
@@ -445,7 +445,7 @@ func (f FrankenPHPModule) ServeHTTP(w http.ResponseWriter, r *http.Request, _ ca
 		return caddyhttp.Error(http.StatusInternalServerError, err)
 	}
 
-	if err = frankenphp.ServeHTTP(w, fr); err != nil {
+	if err = frankenphp.ServeHTTP(w, fc); err != nil {
 		return caddyhttp.Error(http.StatusInternalServerError, err)
 	}
 

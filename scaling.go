@@ -31,7 +31,7 @@ const (
 )
 
 var (
-	scaleChan         chan *frankenPHPContext
+	scaleChan         chan *FrankenPHPContext
 	autoScaledThreads = []*phpThread{}
 	scalingMu         = new(sync.RWMutex)
 
@@ -47,7 +47,7 @@ func initAutoScaling(mainThread *phpMainThread) {
 	}
 
 	scalingMu.Lock()
-	scaleChan = make(chan *frankenPHPContext)
+	scaleChan = make(chan *FrankenPHPContext)
 	maxScaledThreads := mainThread.maxThreads - mainThread.numThreads
 	autoScaledThreads = make([]*phpThread, 0, maxScaledThreads)
 	scalingMu.Unlock()
@@ -134,7 +134,7 @@ func scaleRegularThread() {
 	autoScaledThreads = append(autoScaledThreads, thread)
 }
 
-func startUpscalingThreads(maxScaledThreads int, scale chan *frankenPHPContext, done chan struct{}) {
+func startUpscalingThreads(maxScaledThreads int, scale chan *FrankenPHPContext, done chan struct{}) {
 	for {
 		scalingMu.Lock()
 		scaledThreadCount := len(autoScaledThreads)
