@@ -9,16 +9,37 @@ FrankenPHP also supports [embedding the PHP app in the static binary](embed.md).
 
 ## Linux
 
-We provide a Docker image to build a Linux static binary:
+We provide Docker images to build static Linux binaries:
+
+### musl-based static build (fully static)
+
+For a fully static binary that runs on any Linux distribution without dependencies but doesn't support dynamic loading of extensions:
 
 ```console
-docker buildx bake --load static-builder
-docker cp $(docker create --name static-builder-musl dunglas/frankenphp:static-builder-musl):/go/src/app/dist/frankenphp-linux-$(uname -m) frankenphp ; docker rm static-builder
+docker buildx bake --load static-builder-musl
+docker cp $(docker create --name static-builder-musl dunglas/frankenphp:static-builder-musl):/go/src/app/dist/frankenphp-linux-$(uname -m) frankenphp ; docker rm static-builder-musl
 ```
+
+For better performance in heavily concurrent scenarios, consider using the [mimalloc](https://github.com/microsoft/mimalloc) allocator.
+
+```console
+docker buildx bake --load --set static-builder-musl.args.MIMALLOC=1 static-builder-musl
+```
+
+### glibc-based static build (with dynamic extension support)
+
+For a binary that supports loading PHP extensions dynamically while still having the selected extensions compiled statically:
+
+```console
+docker buildx bake --load static-builder-gnu
+docker cp $(docker create --name static-builder-gnu dunglas/frankenphp:static-builder-gnu):/go/src/app/dist/frankenphp-linux-$(uname -m) frankenphp ; docker rm static-builder-gnu
+```
+
+This binary supports all glibc versions >= 2.17 but does not run on musl-based systems (like Alpine Linux).
 
 The resulting static binary is named `frankenphp` and is available in the current directory.
 
-If you want to build the static binary without Docker, take a look at the macOS instructions, which also works for Linux.
+If you want to build the static binary without Docker, take a look at the macOS instructions, which also work for Linux.
 
 ### Custom Extensions
 
@@ -29,7 +50,7 @@ To reduce the size of the binary and to reduce the attack surface, you can choos
 For instance, run the following command to only build the `opcache` extension:
 
 ```console
-docker buildx bake --load --set static-builder.args.PHP_EXTENSIONS=opcache,pdo_sqlite static-builder
+docker buildx bake --load --set static-builder-musl.args.PHP_EXTENSIONS=opcache,pdo_sqlite static-builder-musl
 # ...
 ```
 
@@ -38,9 +59,9 @@ To add libraries enabling additional functionality to the extensions you've enab
 ```console
 docker buildx bake \
   --load \
-  --set static-builder.args.PHP_EXTENSIONS=gd \
-  --set static-builder.args.PHP_EXTENSION_LIBS=libjpeg,libwebp \
-  static-builder
+  --set static-builder-musl.args.PHP_EXTENSIONS=gd \
+  --set static-builder-musl.args.PHP_EXTENSION_LIBS=libjpeg,libwebp \
+  static-builder-musl
 ```
 
 ### Extra Caddy Modules
@@ -50,8 +71,8 @@ To add extra Caddy modules or pass other arguments to [xcaddy](https://github.co
 ```console
 docker buildx bake \
   --load \
-  --set static-builder.args.XCADDY_ARGS="--with github.com/darkweak/souin/plugins/caddy --with github.com/dunglas/caddy-cbrotli --with github.com/dunglas/mercure/caddy --with github.com/dunglas/vulcain/caddy" \
-  static-builder
+  --set static-builder-musl.args.XCADDY_ARGS="--with github.com/darkweak/souin/plugins/caddy --with github.com/dunglas/caddy-cbrotli --with github.com/dunglas/mercure/caddy --with github.com/dunglas/vulcain/caddy" \
+  static-builder-musl
 ```
 
 In this example, we add the [Souin](https://souin.io) HTTP cache module for Caddy as well as the [cbrotli](https://github.com/dunglas/caddy-cbrotli), [Mercure](https://mercure.rocks) and [Vulcain](https://vulcain.rocks) modules.
@@ -68,7 +89,7 @@ See also how to [customize the build](#customizing-the-build)
 If you hit the GitHub API rate limit, set a GitHub Personal Access Token in an environment variable named `GITHUB_TOKEN`:
 
 ```console
-GITHUB_TOKEN="xxx" docker --load buildx bake static-builder
+GITHUB_TOKEN="xxx" docker --load buildx bake static-builder-musl
 # ...
 ```
 
@@ -82,7 +103,7 @@ cd frankenphp
 ./build-static.sh
 ```
 
-Note: this script also works on Linux (and probably on other Unixes), and is used internally by the Docker based static builder we provide.
+Note: this script also works on Linux, and is used internally by the Docker images we provide.
 
 ## Customizing The Build
 
@@ -98,5 +119,5 @@ script to customize the static build:
 * `CLEAN`: when set, libphp and all its dependencies are built from scratch (no cache)
 * `NO_COMPRESS`: don't compress the resulting binary using UPX
 * `DEBUG_SYMBOLS`: when set, debug-symbols will not be stripped and will be added within the binary
-* `MIMALLOC`: (experimental, Linux-only) replace musl's mallocng by [mimalloc](https://github.com/microsoft/mimalloc) for improved performance
+* `MIMALLOC`: (experimental, Linux-only) replace musl's mallocng by [mimalloc](https://github.com/microsoft/mimalloc) for improved performance. We only recommend using this for musl targeting builds, for glibc prefer disabling this option and using LD_PRELOAD when you run your binary instead.
 * `RELEASE`: (maintainers only) when set, the resulting binary will be uploaded on GitHub
