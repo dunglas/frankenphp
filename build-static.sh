@@ -256,7 +256,7 @@ fi
 CGO_LDFLAGS="${CGO_LDFLAGS} ${PWD}/buildroot/lib/libbrotlicommon.a ${PWD}/buildroot/lib/libbrotlienc.a ${PWD}/buildroot/lib/libbrotlidec.a ${PWD}/buildroot/lib/libwatcher-c.a $(${spcCommand} spc-config "${PHP_EXTENSIONS}" --with-libs="${PHP_EXTENSION_LIBS}" --libs)"
 if [[ "$CGO_LDFLAGS" == *"${PWD}/buildroot/lib/mimalloc.o"* ]]; then
 	CGO_LDFLAGS=${CGO_LDFLAGS//${PWD}\/buildroot\/lib\/mimalloc.o/}
-	CGO_LDFLAGS="${PWD}/buildroot/lib/mimalloc.o $CGO_LDFLAGS"
+	CGO_LDFLAGS="${PWD}/buildroot/lib/libmimalloc.a $CGO_LDFLAGS"
 fi
 if [ "${os}" = "linux" ] && [ "${SPC_LIBC}" = "glibc" ]; then
 	CGO_LDFLAGS="${CGO_LDFLAGS//-lphp/-Wl,--whole-archive -lphp -Wl,--no-whole-archive}"
