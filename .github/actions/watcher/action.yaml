@@ -19,7 +19,7 @@ runs:
       name: Compile e-dant/watcher
       run: |
         mkdir watcher
-        gh release download 0.13.2 --repo e-dant/watcher -A tar.gz -O - | tar -xz -C watcher --strip-components 1
+        gh release download --repo e-dant/watcher -A tar.gz -O - | tar -xz -C watcher --strip-components 1
         cd watcher
         cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
         cmake --build build
