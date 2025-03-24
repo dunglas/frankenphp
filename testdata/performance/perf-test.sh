@@ -27,7 +27,7 @@ select filename in ./testdata/performance/*.js; do
 
 	sleep 10
 
-	docker run --entrypoint "" -it -v .:/app -w /app \
+	docker run --entrypoint "" -it --rm -v .:/app -w /app \
 		--add-host "host.docker.internal:host-gateway" \
 		grafana/k6:latest \
 		k6 run -e "CADDY_HOSTNAME=$CADDY_HOSTNAME:8125" "./$filename"

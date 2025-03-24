@@ -14,7 +14,6 @@
 		root /go/src/app/testdata
 		php {
 			root /go/src/app/testdata
-			enable_root_symlink false
 		}
 	}
 }
