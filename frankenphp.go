@@ -653,13 +653,6 @@ func freeArgs(argv []*C.char) {
 	}
 }
 
-func executePHPFunction(functionName string) bool {
-	cFunctionName := C.CString(functionName)
-	defer C.free(unsafe.Pointer(cFunctionName))
-
-	return C.frankenphp_execute_php_function(cFunctionName) == 1
-}
-
 func timeoutChan(timeout time.Duration) <-chan time.Time {
 	if timeout == 0 {
 		return nil
