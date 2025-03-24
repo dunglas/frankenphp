@@ -1162,7 +1162,8 @@ int frankenphp_execute_script_cli(char *script, int argc, char **argv) {
 }
 
 int frankenphp_reset_opcache(void) {
-  zend_function *opcache_reset = zend_hash_str_find_ptr(CG(function_table), ZEND_STRL("opcache_reset"));
+  zend_function *opcache_reset =
+      zend_hash_str_find_ptr(CG(function_table), ZEND_STRL("opcache_reset"));
   if (opcache_reset) {
     zend_call_known_function(opcache_reset, NULL, NULL, NULL, 0, NULL, NULL);
   }
