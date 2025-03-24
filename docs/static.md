@@ -1,9 +1,16 @@
 # Create a Static Build
 
 Instead of using a local installation of the PHP library,
-it's possible to create a static build of FrankenPHP thanks to the great [static-php-cli project](https://github.com/crazywhalecc/static-php-cli) (despite its name, this project supports all SAPIs, not only CLI).
+it's possible to create a static or mostly static build of FrankenPHP thanks to the great [static-php-cli project](https://github.com/crazywhalecc/static-php-cli) (despite its name, this project supports all SAPIs, not only CLI).
 
 With this method, a single, portable, binary will contain the PHP interpreter, the Caddy web server, and FrankenPHP!
+
+Fully static native executables require no dependencies at all and can even be run on [`scratch` Docker image](https://docs.docker.com/build/building/base-images/#create-a-minimal-base-image-using-scratch).
+However, they can't load dynamic PHP extensions (such as Xdebug) and have some limitations because they are using the musl libc.
+
+Mostly static binaries only require `glibc` and can load dynamic extensions.
+
+When possible, we recommend using glibc-based, mostly static builds.
 
 FrankenPHP also supports [embedding the PHP app in the static binary](embed.md).
 
