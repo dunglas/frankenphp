@@ -26,7 +26,7 @@ For better performance in heavily concurrent scenarios, consider using the [mima
 docker buildx bake --load --set static-builder-musl.args.MIMALLOC=1 static-builder-musl
 ```
 
-### glibc-based static build (with dynamic extension support)
+### glibc-Based Static Build (With Dynamic Extension Support)
 
 For a binary that supports loading PHP extensions dynamically while still having the selected extensions compiled statically:
 
@@ -35,7 +35,7 @@ docker buildx bake --load static-builder-gnu
 docker cp $(docker create --name static-builder-gnu dunglas/frankenphp:static-builder-gnu):/go/src/app/dist/frankenphp-linux-$(uname -m) frankenphp ; docker rm static-builder-gnu
 ```
 
-This binary supports all glibc versions >= 2.17 but does not run on musl-based systems (like Alpine Linux).
+This binary supports all glibc versions 2.17 and superior but does not run on musl-based systems (like Alpine Linux).
 
 The resulting static binary is named `frankenphp` and is available in the current directory.
 
@@ -103,7 +103,7 @@ cd frankenphp
 ./build-static.sh
 ```
 
-Note: this script also works on Linux, and is used internally by the Docker images we provide.
+Note: this script also works on Linux (and probably on other Unixes), and is used internally by the Docker images we provide.
 
 ## Customizing The Build
 
@@ -124,13 +124,14 @@ script to customize the static build:
 
 ## Extensions
 
-With the glibc or mac based binaries, you can load PHP extensions dynamically. However, these extensions will have to be compiled with ZTS support.
+With the glibc or macOS-based binaries, you can load PHP extensions dynamically. However, these extensions will have to be compiled with ZTS support.
 Since most package managers do not currently offer ZTS versions of their extensions, you will have to compile them yourself.
 
-For this, you can create a the static-builder-gnu Docker container, remote into it and compile the extensions with `./configure --with-php-config=/go/src/app/dist/static-php-cli/buildroot/bin/php-config`.
+For this, you can build and run the `static-builder-gnu` Docker container, remote into it, and compile the extensions with `./configure --with-php-config=/go/src/app/dist/static-php-cli/buildroot/bin/php-config`.
 
-Example steps:
+Example steps for [the Xdebug extension](https://xdebug.org):
 
+```console
 * `docker build -t gnu-ext -f static-builder-gnu.Dockerfile --build-arg FRANKENPHP_VERSION=1.0 .`
 * `docker create --name static-builder-gnu -it gnu-ext /bin/sh`
 * `docker start static-builder-gnu`
@@ -147,6 +148,7 @@ Example steps:
 * `docker stop static-builder-gnu`
 * `docker rm static-builder-gnu`
 * `docker rmi gnu-ext`
+```
 
 This will have created `frankenphp` and `xdebug-zts.so` in the current directory.
 If you move the `xdebug-zts.so` into your extension directory, add `zend_extension=xdebug-zts.so` to your php.ini and run FrankenPHP, it will load xdebug.

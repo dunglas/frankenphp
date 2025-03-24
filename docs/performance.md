@@ -32,9 +32,9 @@ Enabling [the worker mode](worker.md) dramatically improves performance,
 but your app must be adapted to be compatible with this mode:
 you need to create a worker script and to be sure that the app is not leaking memory.
 
-## Don't use musl with the default allocator
+## Don't use musl
 
-The Alpine Linux variant of the official Docker images and the default frankenphp-arch binaries on our Releases page are using [the musl libc](https://musl.libc.org).
+The Alpine Linux variant of the official Docker images and the default binaries we provide are using [the musl libc](https://musl.libc.org).
 
 PHP is known to be [slower](https://gitlab.alpinelinux.org/alpine/aports/-/issues/14381) when using this alternative C library instead of the traditional GNU library,
 especially when compiled in ZTS mode (thread-safe), which is required for FrankenPHP. The difference can be significant in a heavily threaded environment.
