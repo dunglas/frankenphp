@@ -132,22 +132,22 @@ For this, you can build and run the `static-builder-gnu` Docker container, remot
 Example steps for [the Xdebug extension](https://xdebug.org):
 
 ```console
-* `docker build -t gnu-ext -f static-builder-gnu.Dockerfile --build-arg FRANKENPHP_VERSION=1.0 .`
-* `docker create --name static-builder-gnu -it gnu-ext /bin/sh`
-* `docker start static-builder-gnu`
-* `docker exec -it static-builder-gnu /bin/sh`
-* `cd /go/src/app/dist/static-php-cli/buildroot/bin`
-* `git clone https://github.com/xdebug/xdebug.git && cd xdebug`
-* `source scl_source enable devtoolset-10`
-* `../phpize`
-* `./configure --with-php-config=/go/src/app/dist/static-php-cli/buildroot/bin/php-config`
-* `make`
-* `exit`
-* `docker cp static-builder-gnu:/go/src/app/dist/static-php-cli/buildroot/bin/xdebug/modules/xdebug.so xdebug-zts.so`
-* `docker cp static-builder-gnu:/go/src/app/dist/frankenphp-linux-$(uname -m) ./frankenphp`
-* `docker stop static-builder-gnu`
-* `docker rm static-builder-gnu`
-* `docker rmi gnu-ext`
+docker build -t gnu-ext -f static-builder-gnu.Dockerfile --build-arg FRANKENPHP_VERSION=1.0 .
+docker create --name static-builder-gnu -it gnu-ext /bin/sh
+docker start static-builder-gnu
+docker exec -it static-builder-gnu /bin/sh
+cd /go/src/app/dist/static-php-cli/buildroot/bin
+git clone https://github.com/xdebug/xdebug.git && cd xdebug
+source scl_source enable devtoolset-10
+../phpize
+./configure --with-php-config=/go/src/app/dist/static-php-cli/buildroot/bin/php-config
+make
+exit
+docker cp static-builder-gnu:/go/src/app/dist/static-php-cli/buildroot/bin/xdebug/modules/xdebug.so xdebug-zts.so
+docker cp static-builder-gnu:/go/src/app/dist/frankenphp-linux-$(uname -m) ./frankenphp
+docker stop static-builder-gnu
+docker rm static-builder-gnu
+docker rmi gnu-ext
 ```
 
 This will have created `frankenphp` and `xdebug-zts.so` in the current directory.
