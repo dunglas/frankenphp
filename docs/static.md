@@ -1,9 +1,9 @@
 # Create a Static Build
 
 Instead of using a local installation of the PHP library,
-it's possible to create a static build of FrankenPHP thanks to the great [static-php-cli project](https://github.com/crazywhalecc/static-php-cli) (despite its name, this project support all SAPIs, not only CLI).
+it's possible to create a static build of FrankenPHP thanks to the great [static-php-cli project](https://github.com/crazywhalecc/static-php-cli) (despite its name, this project supports all SAPIs, not only CLI).
 
-With this method, a single, portable, binary will contain the PHP interpreter, the Caddy web server and FrankenPHP!
+With this method, a single, portable, binary will contain the PHP interpreter, the Caddy web server, and FrankenPHP!
 
 FrankenPHP also supports [embedding the PHP app in the static binary](embed.md).
 
@@ -11,9 +11,9 @@ FrankenPHP also supports [embedding the PHP app in the static binary](embed.md).
 
 We provide Docker images to build static Linux binaries:
 
-### musl-based static build (fully static)
+### musl-Based, Fully Static Build
 
-For a fully static binary that runs on any Linux distribution without dependencies but doesn't support dynamic loading of extensions:
+For a fully-static binary that runs on any Linux distribution without dependencies but doesn't support dynamic loading of extensions:
 
 ```console
 docker buildx bake --load static-builder-musl
@@ -26,7 +26,7 @@ For better performance in heavily concurrent scenarios, consider using the [mima
 docker buildx bake --load --set static-builder-musl.args.MIMALLOC=1 static-builder-musl
 ```
 
-### glibc-Based Static Build (With Dynamic Extension Support)
+### glibc-Based, Mostly Static Build (With Dynamic Extension Support)
 
 For a binary that supports loading PHP extensions dynamically while still having the selected extensions compiled statically:
 
@@ -37,13 +37,13 @@ docker cp $(docker create --name static-builder-gnu dunglas/frankenphp:static-bu
 
 This binary supports all glibc versions 2.17 and superior but does not run on musl-based systems (like Alpine Linux).
 
-The resulting static binary is named `frankenphp` and is available in the current directory.
+The resulting mostly static (except `glibc`) binary is named `frankenphp` and is available in the current directory.
 
 If you want to build the static binary without Docker, take a look at the macOS instructions, which also work for Linux.
 
 ### Custom Extensions
 
-By default, most popular PHP extensions are compiled.
+By default, the most popular PHP extensions are compiled.
 
 To reduce the size of the binary and to reduce the attack surface, you can choose the list of extensions to build using the `PHP_EXTENSIONS` Docker ARG.
 
@@ -54,7 +54,7 @@ docker buildx bake --load --set static-builder-musl.args.PHP_EXTENSIONS=opcache,
 # ...
 ```
 
-To add libraries enabling additional functionality to the extensions you've enabled, you can pass use the `PHP_EXTENSION_LIBS` Docker ARG:
+To add libraries enabling additional functionality to the extensions you've enabled, you can pass the `PHP_EXTENSION_LIBS` Docker ARG:
 
 ```console
 docker buildx bake \
@@ -79,7 +79,7 @@ In this example, we add the [Souin](https://souin.io) HTTP cache module for Cadd
 
 > [!TIP]
 >
-> The cbrotli, Mercure and Vulcain modules are included by default if `XCADDY_ARGS` is empty or not set.
+> The cbrotli, Mercure, and Vulcain modules are included by default if `XCADDY_ARGS` is empty or not set.
 > If you customize the value of `XCADDY_ARGS`, you must include them explicitly if you want them to be included.
 
 See also how to [customize the build](#customizing-the-build)
@@ -118,7 +118,7 @@ script to customize the static build:
 * `EMBED`: path of the PHP application to embed in the binary
 * `CLEAN`: when set, libphp and all its dependencies are built from scratch (no cache)
 * `NO_COMPRESS`: don't compress the resulting binary using UPX
-* `DEBUG_SYMBOLS`: when set, debug-symbols will not be stripped and will be added within the binary
+* `DEBUG_SYMBOLS`: when set, debug-symbols will not be stripped and will be added to the binary
 * `MIMALLOC`: (experimental, Linux-only) replace musl's mallocng by [mimalloc](https://github.com/microsoft/mimalloc) for improved performance. We only recommend using this for musl targeting builds, for glibc prefer disabling this option and using [`LD_PRELOAD`](https://microsoft.github.io/mimalloc/overrides.html) when you run your binary instead.
 * `RELEASE`: (maintainers only) when set, the resulting binary will be uploaded on GitHub
 
@@ -151,4 +151,4 @@ docker rmi gnu-ext
 ```
 
 This will have created `frankenphp` and `xdebug-zts.so` in the current directory.
-If you move the `xdebug-zts.so` into your extension directory, add `zend_extension=xdebug-zts.so` to your php.ini and run FrankenPHP, it will load xdebug.
+If you move the `xdebug-zts.so` into your extension directory, add `zend_extension=xdebug-zts.so` to your php.ini and run FrankenPHP, it will load Xdebug.
