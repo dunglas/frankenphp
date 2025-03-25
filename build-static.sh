@@ -182,7 +182,7 @@ else
 		PHP_EXTENSION_LIBS="${PHP_EXTENSION_LIBS},brotli"
 	fi
 	# The mimalloc library must be built if MIMALLOC is true
-	if [ "${os}" = "linux" ] && [ -n "${MIMALLOC}" ]; then
+	if [ -n "${MIMALLOC}" ]; then
 		if ! echo "${PHP_EXTENSION_LIBS}" | grep -q "\bmimalloc\b"; then
 			PHP_EXTENSION_LIBS="${PHP_EXTENSION_LIBS},mimalloc"
 		fi
