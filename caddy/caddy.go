@@ -83,8 +83,16 @@ func (f FrankenPHPApp) CaddyModule() caddy.ModuleInfo {
 
 // Provision sets up the module.
 func (f *FrankenPHPApp) Provision(ctx caddy.Context) error {
-	f.metrics = frankenphp.NewPrometheusMetrics(ctx.GetMetricsRegistry())
 	f.logger = ctx.Logger()
+
+	if httpApp, err := ctx.AppIfConfigured("http"); err == nil {
+		if httpApp.(*caddyhttp.App).Metrics != nil {
+			f.metrics = frankenphp.NewPrometheusMetrics(ctx.GetMetricsRegistry())
+		}
+	} else {
+		// if the http module is not configured (this should never happen) then collect the metrics by default
+		f.metrics = frankenphp.NewPrometheusMetrics(ctx.GetMetricsRegistry())
+	}
 
 	return nil
 }
