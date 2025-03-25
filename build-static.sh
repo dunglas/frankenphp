@@ -181,6 +181,12 @@ else
 	if ! echo "${PHP_EXTENSION_LIBS}" | grep -q "\bbrotli\b"; then
 		PHP_EXTENSION_LIBS="${PHP_EXTENSION_LIBS},brotli"
 	fi
+	# The mimalloc library must be built if MIMALLOC is true
+	if [ -n "${MIMALLOC}" ]; then
+		if ! echo "${PHP_EXTENSION_LIBS}" | grep -q "\bmimalloc\b"; then
+			PHP_EXTENSION_LIBS="${PHP_EXTENSION_LIBS},mimalloc"
+		fi
+	fi
 
 	${spcCommand} doctor --auto-fix
 	# shellcheck disable=SC2086
@@ -248,6 +254,10 @@ if [ "${os}" = "linux" ] && [ "${SPC_LIBC}" = "glibc" ]; then
 fi
 
 CGO_LDFLAGS="${CGO_LDFLAGS} ${PWD}/buildroot/lib/libbrotlicommon.a ${PWD}/buildroot/lib/libbrotlienc.a ${PWD}/buildroot/lib/libbrotlidec.a ${PWD}/buildroot/lib/libwatcher-c.a $(${spcCommand} spc-config "${PHP_EXTENSIONS}" --with-libs="${PHP_EXTENSION_LIBS}" --libs)"
+if [[ "$CGO_LDFLAGS" == *"${PWD}/buildroot/lib/mimalloc.o"* ]]; then
+	CGO_LDFLAGS=${CGO_LDFLAGS//${PWD}\/buildroot\/lib\/mimalloc.o/}
+	CGO_LDFLAGS="${PWD}/buildroot/lib/libmimalloc.a $CGO_LDFLAGS"
+fi
 if [ "${os}" = "linux" ] && [ "${SPC_LIBC}" = "glibc" ]; then
 	CGO_LDFLAGS="${CGO_LDFLAGS//-lphp/-Wl,--whole-archive -lphp -Wl,--no-whole-archive}"
 	# shellcheck disable=SC2046
@@ -259,83 +269,6 @@ export CGO_LDFLAGS
 LIBPHP_VERSION="$(./buildroot/bin/php-config --version)"
 
 cd ../
-
-if [ "${os}" = "linux" ]; then
-	if [ -n "${MIMALLOC}" ]; then
-		# Replace musl's mallocng by mimalloc
-		# The default musl allocator is slow, especially when used by multi-threaded apps,
-		# and triggers weird bugs
-		# Adapted from https://www.tweag.io/blog/2023-08-10-rust-static-link-with-mimalloc/
-
-		echo 'The USE_MIMALLOC environment variable is EXPERIMENTAL.'
-		echo 'This option can be removed or its behavior modified at any time.'
-
-		if [ ! -f "mimalloc/out/libmimalloc.a" ]; then
-			if [ -d "mimalloc" ]; then
-				cd mimalloc/
-				git reset --hard
-				git clean -xdf
-				git fetch --tags
-			else
-				git clone https://github.com/microsoft/mimalloc.git
-				cd mimalloc/
-			fi
-
-			# mimalloc version must be compatible with version used in tweag/rust-alpine-mimalloc
-			git checkout v3.0.1
-
-			curl -fL --retry 5 https://raw.githubusercontent.com/tweag/rust-alpine-mimalloc/1a756444a5c1484d26af9cd39187752728416ba8/mimalloc.diff -o mimalloc.diff
-			patch -p1 <mimalloc.diff
-
-			mkdir -p out/
-			cd out/
-			if [ -n "${DEBUG_SYMBOLS}" ]; then
-				cmake \
-					-DCMAKE_BUILD_TYPE=Debug \
-					-DMI_BUILD_SHARED=OFF \
-					-DMI_BUILD_OBJECT=OFF \
-					-DMI_BUILD_TESTS=OFF \
-					../
-			else
-				cmake \
-					-DCMAKE_BUILD_TYPE=Release \
-					-DMI_BUILD_SHARED=OFF \
-					-DMI_BUILD_OBJECT=OFF \
-					-DMI_BUILD_TESTS=OFF \
-					../
-			fi
-			make -j"$(nproc || true)"
-
-			cd ../../
-		fi
-
-		if [ -n "${DEBUG_SYMBOLS}" ]; then
-			libmimalloc_path=mimalloc/out/libmimalloc-debug.a
-		else
-			libmimalloc_path=mimalloc/out/libmimalloc.a
-		fi
-
-		# Patch musl library to use mimalloc
-		for libc_path in "/usr/local/musl/lib/libc.a" "/usr/local/musl/$(uname -m)-linux-musl/lib/libc.a" "/usr/lib/libc.a"; do
-			if [ ! -f "${libc_path}" ] || [ -f "${libc_path}.unpatched" ]; then
-				continue
-			fi
-
-			{
-				echo "CREATE libc.a"
-				echo "ADDLIB ${libc_path}"
-				echo "DELETE aligned_alloc.lo calloc.lo donate.lo free.lo libc_calloc.lo lite_malloc.lo malloc.lo malloc_usable_size.lo memalign.lo posix_memalign.lo realloc.lo reallocarray.lo valloc.lo"
-				echo "ADDLIB ${libmimalloc_path}"
-				echo "SAVE"
-			} | ar -M
-			mv "${libc_path}" "${libc_path}.unpatched"
-			mv libc.a "${libc_path}"
-		done
-	fi
-
-	# Increase the default stack size to prevents issues with code including many files such as Symfony containers
-	extraExtldflags="-Wl,-z,stack-size=0x80000"
-fi
 
 if [ -z "${DEBUG_SYMBOLS}" ]; then
 	extraLdflags="-w -s"
@@ -358,12 +291,16 @@ if [ -n "${DEBUG_SYMBOLS}" ]; then
 	XCADDY_DEBUG=1
 fi
 
+if [ "${SPC_LIBC}" = "musl" ]; then
+	muslStackSizeFix="-Wl,-z,stack-size=0x80000"
+fi
+
 go env
 cd caddy/
 if [ -z "${SPC_LIBC}" ] || [ "${SPC_LIBC}" = "musl" ]; then
-	xcaddyGoBuildFlags="-buildmode=pie -tags cgo,netgo,osusergo,static_build,nobadger,nomysql,nopgx -ldflags \"-linkmode=external -extldflags '-static-pie ${extraExtldflags}' ${extraLdflags} -X 'github.com/caddyserver/caddy/v2.CustomVersion=FrankenPHP ${FRANKENPHP_VERSION} PHP ${LIBPHP_VERSION} Caddy'\""
+	xcaddyGoBuildFlags="-buildmode=pie -tags cgo,netgo,osusergo,static_build,nobadger,nomysql,nopgx -ldflags \"-linkmode=external -extldflags '-static-pie ${muslStackSizeFix}' ${extraLdflags} -X 'github.com/caddyserver/caddy/v2.CustomVersion=FrankenPHP ${FRANKENPHP_VERSION} PHP ${LIBPHP_VERSION} Caddy'\""
 elif [ "${SPC_LIBC}" = "glibc" ]; then
-	xcaddyGoBuildFlags="-buildmode=pie -tags cgo,netgo,osusergo,nobadger,nomysql,nopgx -ldflags \"-linkmode=external -extldflags '-pie ${extraExtldflags}' ${extraLdflags} -X 'github.com/caddyserver/caddy/v2.CustomVersion=FrankenPHP ${FRANKENPHP_VERSION} PHP ${LIBPHP_VERSION} Caddy'\""
+	xcaddyGoBuildFlags="-buildmode=pie -tags cgo,netgo,osusergo,nobadger,nomysql,nopgx -ldflags \"-linkmode=external -extldflags '-pie' ${extraLdflags} -X 'github.com/caddyserver/caddy/v2.CustomVersion=FrankenPHP ${FRANKENPHP_VERSION} PHP ${LIBPHP_VERSION} Caddy'\""
 fi
 
 # shellcheck disable=SC2086
