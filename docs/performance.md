@@ -19,12 +19,12 @@ To change the number of workers, use the `num` option of the `worker` section of
 ### `max_threads`
 
 While it's always better to know exactly what your traffic will look like, real-life applications tend to be more
-unpredictable. The `max_threads` allows FrankenPHP to automatically spawn additional threads at runtime up to the specified limit.
-`max_threads` can help you
-figure out how many threads you need to handle your traffic and can make the server more resilient to latency spikes.
+unpredictable. The `max_threads` [configuration](config.md#caddyfile-config) allows FrankenPHP to automatically spawn additional threads at runtime up to the specified limit.
+`max_threads` can help you figure out how many threads you need to handle your traffic and can make the server more resilient to latency spikes.
 If set to `auto`, the limit will be estimated based on the `memory_limit` in your `php.ini`. If not able to do so,
-`auto` will instead default to 2x `num_threads`.
-`max_threads is similar to PHP FPM's [pm.max_children](https://www.php.net/manual/en/install.fpm.configuration.php#pm.max-children).
+`auto` will instead default to 2x `num_threads`. Keep in mind that `auto` might strongly underestimate the number of threads needed.
+`max_threads` is similar to PHP FPM's [pm.max_children](https://www.php.net/manual/en/install.fpm.configuration.php#pm.max-children). The main difference is that FrankenPHP uses threads instead of
+processes and automatically delegates them across different worker scripts and 'classic mode' as needed.
 
 ## Worker Mode
 
