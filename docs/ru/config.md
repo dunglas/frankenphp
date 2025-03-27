@@ -119,7 +119,9 @@ route {
 	# FrankenPHP!
 	@phpFiles path *.php
 	php @phpFiles
-	file_server
+	file_server {
+		hide *.php
+	}
 }
 ```
 
