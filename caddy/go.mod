@@ -2,7 +2,7 @@ module github.com/dunglas/frankenphp/caddy
 
 go 1.23.0
 
-toolchain go1.24.0
+toolchain go1.24.1
 
 replace github.com/dunglas/frankenphp => ../
 
@@ -10,7 +10,7 @@ retract v1.0.0-rc.1 // Human error
 
 require (
 	github.com/caddyserver/caddy/v2 v2.9.1
-	github.com/caddyserver/certmagic v0.22.0
+	github.com/caddyserver/certmagic v0.22.2
 	github.com/dunglas/caddy-cbrotli v1.0.0
 	github.com/dunglas/frankenphp v1.5.0
 	github.com/dunglas/mercure/caddy v0.18.4
@@ -111,7 +111,7 @@ require (
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/maypok86/otter v1.2.4 // indirect
 	github.com/mgutz/ansi v0.0.0-20200706080929-d51e80ef957d // indirect
-	github.com/mholt/acmez/v3 v3.1.0 // indirect
+	github.com/mholt/acmez/v3 v3.1.1 // indirect
 	github.com/miekg/dns v1.1.63 // indirect
 	github.com/mitchellh/copystructure v1.2.0 // indirect
 	github.com/mitchellh/go-ps v1.0.0 // indirect
