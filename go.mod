@@ -2,7 +2,7 @@ module github.com/dunglas/frankenphp
 
 go 1.23.0
 
-toolchain go1.23.3
+toolchain go1.24.1
 
 retract v1.0.0-rc.1 // Human error
 
@@ -11,7 +11,7 @@ require (
 	github.com/prometheus/client_golang v1.21.1
 	github.com/stretchr/testify v1.10.0
 	go.uber.org/zap v1.27.0
-	golang.org/x/net v0.37.0
+	golang.org/x/net v0.38.0
 )
 
 require (
