@@ -75,3 +75,69 @@ docker run \
     -p 80:80 -p 443:443 -p 443:443/udp \
     dunglas/frankenphp
 ```
+
+## Scripts Composer Faisant Références à `@php`
+
+Les [scripts Composer](https://getcomposer.org/doc/articles/scripts.md)  peuvent vouloir exécuter un binaire PHP pour certaines tâches, par exemple dans [un projet Laravel](laravel.md) pour exécuter `@php artisan package:discover --ansi`. Cela [echoue actuellement](https://github.com/dunglas/frankenphp/issues/483#issuecomment-1899890915) pour deux raisons:
+
+* Composer ne sait pas comment appeler le binaire FrankenPHP ;
+* Composer peut ajouter des paramètres PHP en utilisant le paramètre `-d` dans la commande, ce que FrankenPHP ne supporte pas encore.
+
+Comme solution de contournement, nous pouvons créer un script shell dans `/usr/local/bin/php` qui supprime les paramètres non supportés et appelle ensuite FrankenPHP :
+
+```bash
+#!/usr/bin/env bash
+args=("$@")
+index=0
+for i in "$@"
+do
+    if [ "$i" == "-d" ]; then
+        unset 'args[$index]'
+        unset 'args[$index+1]'
+    fi
+    index=$((index+1))
+done
+
+/usr/local/bin/frankenphp php-cli ${args[@]}
+```
+
+Ensuite, mettez la variable d'environnement `PHP_BINARY` au chemin de notre script `php` et lancez Composer :
+
+```console
+export PHP_BINARY=/usr/local/bin/php
+composer install
+```
+
+## Résolution des problèmes TLS/SSL avec les binaires statiques
+
+Lorsque vous utilisez les binaires statiques, vous pouvez rencontrer les erreurs suivantes liées à TLS, par exemple lors de l'envoi de courriels utilisant STARTTLS :
+
+```text
+Unable to connect with STARTTLS: stream_socket_enable_crypto(): SSL operation failed with code 5. OpenSSL Error messages:
+error:80000002:system library::No such file or directory
+error:80000002:system library::No such file or directory
+error:80000002:system library::No such file or directory
+error:0A000086:SSL routines::certificate verify failed
+```
+
+Comme le binaire statique ne contient pas de certificats TLS, vous devez indiquer à OpenSSL l'installation de vos certificats CA locaux.
+
+Inspectez la sortie de [`openssl_get_cert_locations()`] (https://www.php.net/manual/en/function.openssl-get-cert-locations.php),
+pour trouver l'endroit où les certificats CA doivent être installés et stockez-les à cet endroit.
+
+> [!WARNING]
+>
+> Les contextes Web et CLI peuvent avoir des paramètres différents.
+> Assurez-vous d'exécuter `openssl_get_cert_locations()` dans le bon contexte.
+
+[Les certificats CA extraits de Mozilla peuvent être téléchargés sur le site curl](https://curl.se/docs/caextract.html).
+
+Alternativement, de nombreuses distributions, y compris Debian, Ubuntu, et Alpine fournissent des paquets nommés `ca-certificates` qui contiennent ces certificats.
+
+Il est également possible d'utiliser `SSL_CERT_FILE` et `SSL_CERT_DIR` pour indiquer à OpenSSL où chercher les certificats CA :
+
+```console
+# Définir les variables d'environnement des certificats TLS
+export SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
+export SSL_CERT_DIR=/etc/ssl/certs
+```
