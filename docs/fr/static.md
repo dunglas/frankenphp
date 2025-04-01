@@ -15,7 +15,7 @@ FrankenPHP permet également [d'embarquer l'application PHP dans le binaire stat
 
 ## Linux
 
-Nous fournissons des images Docker pour pour créer des binaires statiques pour Linux :
+Nous fournissons des images Docker pour créer des binaires statiques pour Linux :
 
 ### Build entièrement statique, basé sur musl
 
@@ -46,7 +46,7 @@ Ce binaire supporte toutes les versions 2.17 et supérieures de la glibc mais ne
 
 Le binaire résultant, principalement statique (à l'exception de `glibc`), est nommé `frankenphp` et est disponible dans le répertoire courant.
 
-Si vous voulez construire le binaire statique sans Docker, jetez un coup d'oeil aux instructions pour macOS, qui fonctionnent aussi pour Linux.
+Si vous voulez construire le binaire statique sans Docker, jetez un coup d'œil aux instructions pour macOS, qui fonctionnent aussi pour Linux.
 
 ### Extensions personnalisées
 
@@ -135,7 +135,7 @@ Comme la plupart des gestionnaires de paquets ne proposent pas de versions ZTS d
 
 Pour cela, vous pouvez construire et exécuter le conteneur Docker `static-builder-gnu`, vous y connecter à distance et compiler les extensions avec `./configure --with-php-config=/go/src/app/dist/static-php-cli/buildroot/bin/php-config`.
 
-Exemple d'étapes pour [l'extension Xdebug](https://xdebug.org):
+Exemple d'étapes pour [l'extension Xdebug](https://xdebug.org) :
 
 ```console
 docker build -t gnu-ext -f static-builder-gnu.Dockerfile --build-arg FRANKENPHP_VERSION=1.0 .

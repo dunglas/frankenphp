@@ -136,7 +136,7 @@ Suivez ces étapes pour empaqueter votre application Laravel en tant que binaire
     frankenphp php-cli artisan optimize
     ```
 
-5. Exécutez les migrations de base de données (s'il y en a) ::
+5. Exécutez les migrations de base de données (s'il y en a) :
 
     ```console
     frankenphp php-cli artisan migrate
@@ -157,7 +157,7 @@ Suivez ces étapes pour empaqueter votre application Laravel en tant que binaire
 Votre application est maintenant prête !
 
 Pour en savoir plus sur les options disponibles et sur la construction de binaires pour d'autres systèmes d'exploitation,
-consultez la documentation [Applications PHP en tant que binaires autonomes](embed.md)
+consultez la documentation [Applications PHP en tant que binaires autonomes](embed.md).
 
 ###  Changer le chemin de stockage
 

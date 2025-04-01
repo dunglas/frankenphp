@@ -176,7 +176,7 @@ docker buildx bake -f docker-bake.hcl --pull --no-cache --push
     gdb --args frankenphp.test -test.run ^MyTest$
     ```
 
-9. Quand le bug est corrigé, annulez tous les changements
+9. Quand le bug est corrigé, annulez tous les changements.
 
 ## Ressources Diverses pour le Développement
 

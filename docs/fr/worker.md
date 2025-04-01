@@ -28,7 +28,7 @@ frankenphp php-server --worker /path/to/your/worker/script.php
 Si votre application PHP est [intégrée dans le binaire](embed.md), vous pouvez également ajouter un `Caddyfile` personnalisé dans le répertoire racine de l'application.
 Il sera utilisé automatiquement.
 
-Il est également possible de [redémarrer le worker en cas de changement de fichier](config.md#watching-for-file-changes) avec l'option `--watch`.
+Il est également possible de [redémarrer le worker en cas de changement de fichier](config.md#surveillance-des-modifications-de-fichier) avec l'option `--watch`.
 La commande suivante déclenchera un redémarrage si un fichier se terminant par `.php` dans le répertoire `/path/to/your/app/` ou ses sous-répertoires est modifié :
 
 ```console
