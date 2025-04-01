@@ -122,6 +122,12 @@ cache_key="${PHP_VERSION}-${PHP_EXTENSIONS}-${PHP_EXTENSION_LIBS}"
 # Build libphp if necessary
 if [ -f dist/cache_key ] && [ "$(cat dist/cache_key)" = "${cache_key}" ] && [ -f "dist/static-php-cli/buildroot/lib/libphp.a" ]; then
 	cd dist/static-php-cli
+
+	if [ -f "./spc" ]; then
+		spcCommand="./spc"
+	elif [ -f "bin/spc" ]; then
+		spcCommand="./bin/spc"
+	fi
 else
 	mkdir -p dist/
 	cd dist/
@@ -144,10 +150,10 @@ else
 		fi
 	fi
 
-	if [ "${SPC_REL_TYPE}" = "binary" ]; then
-		mkdir static-php-cli/
+	if [ "${SPC_REL_TYPE}" = "binary" ] && [[ ! "${arch}" =~ arm ]]; then
+		mkdir -p static-php-cli/
 		cd static-php-cli/
-		curl -o spc -fsSL "https://dl.static-php.dev/static-php-cli/spc-bin/nightly/spc-linux-$(uname -m)"
+		curl -o spc -fsSL "https://dl.static-php.dev/static-php-cli/spc-bin/nightly/spc-linux-${arch}"
 		chmod +x spc
 		spcCommand="./spc"
 	elif [ -d "static-php-cli/src" ]; then
