@@ -38,7 +38,7 @@ Construire Caddy avec le module FrankenPHP :
 
 ```console
 cd caddy/frankenphp/
-go build
+go build -tags watcher,brotli,nobadger,nomysql,nopgx
 cd ../../
 ```
 
@@ -49,10 +49,14 @@ cd testdata/
 ../caddy/frankenphp/frankenphp run
 ```
 
-Le serveur est configuré pour écouter à l'adresse `127.0.0.1:8080`:
+Le serveur est configuré pour écouter à l'adresse `127.0.0.1:80`:
+
+> [!NOTE]
+> 
+> Si vous utilisez Docker, vous devrez soit lier le port 80 du conteneur, soit exécuter depuis l'intérieur du conteneur.
 
 ```console
-curl -vk https://localhost/phpinfo.php
+curl -vk http://127.0.0.1/phpinfo.php
 ```
 
 ## Serveur de test minimal
@@ -104,6 +108,32 @@ Construire à partir de zéro les images FrankenPHP pour arm64 & amd64 et les po
 docker buildx bake -f docker-bake.hcl --pull --no-cache --push
 ```
 
+## Déboguer les erreurs de segmentation avec les builds statiques
+
+1. Téléchargez la version de débogage du binaire FrankenPHP depuis GitHub ou créez votre propre build statique incluant des symboles de débogage :
+
+    ```console
+    docker buildx bake \
+        --load \
+        --set static-builder.args.DEBUG_SYMBOLS=1 \
+        --set "static-builder.platform=linux/amd64" \
+        static-builder
+    docker cp $(docker create --name static-builder-musl dunglas/frankenphp:static-builder-musl):/go/src/app/dist/frankenphp-linux-$(uname -m) frankenphp
+    ```
+
+2. Remplacez votre version actuelle de `frankenphp` par l'exécutable de débogage de FrankenPHP.
+3. Démarrez FrankenPHP comme d'habitude (alternativement, vous pouvez directement démarrer FrankenPHP avec GDB : `gdb --args frankenphp run`).
+4. Attachez-vous au processus avec GDB :
+
+    ```console
+    gdb -p `pidof frankenphp`
+    ```
+
+5. Si nécessaire, tapez `continue` dans le shell GDB
+6. Faites planter FrankenPHP.
+7. Tapez `bt` dans le shell GDB
+8. Copiez la sortie
+
 ## Déboguer les erreurs de segmentation dans GitHub Actions
 
 1. Ouvrir `.github/workflows/tests.yml`
@@ -120,16 +150,13 @@ docker buildx bake -f docker-bake.hcl --pull --no-cache --push
 3. Activer `tmate` pour se connecter au conteneur
 
     ```patch
-        -
-          name: Set CGO flags
+        - name: Set CGO flags
           run: echo "CGO_CFLAGS=$(php-config --includes)" >> "$GITHUB_ENV"
-    +   -
-    +     run: |
+    +   - run: |
     +       sudo apt install gdb
     +       mkdir -p /home/runner/.config/gdb/
     +       printf "set auto-load safe-path /\nhandle SIG34 nostop noprint pass" > /home/runner/.config/gdb/gdbinit
-    +   -
-    +     uses: mxschmitt/action-tmate@v3
+    +   - uses: mxschmitt/action-tmate@v3
     ```
 
 4. Se connecter au conteneur
@@ -174,3 +201,16 @@ docker buildx bake -f docker-bake.hcl --pull --no-cache --push
 apk add strace util-linux gdb
 strace -e 'trace=!futex,epoll_ctl,epoll_pwait,tgkill,rt_sigreturn' -p 1
 ```
+
+## Traduire la documentation
+
+Pour traduire la documentation et le site dans une nouvelle langue, procédez comme suit :
+
+1. Créez un nouveau répertoire nommé avec le code ISO à 2 caractères de la langue dans le répertoire `docs/` de ce dépôt
+2. Copiez tous les fichiers `.md` à la racine du répertoire `docs/` dans le nouveau répertoire (utilisez toujours la version anglaise comme source de traduction, car elle est toujours à jour).
+3. Copiez les fichiers `README.md` et `CONTRIBUTING.md` du répertoire racine vers le nouveau répertoire.
+4. Traduisez le contenu des fichiers, mais ne changez pas les noms de fichiers, ne traduisez pas non plus les chaînes commençant par `> [!` (c'est un balisage spécial pour GitHub).
+5. Créez une Pull Request avec les traductions
+6. Dans le [référentiel du site] (https://github.com/dunglas/frankenphp-website/tree/main), copiez et traduisez les fichiers de traduction dans les répertoires `content/`, `data/` et `i18n/`.
+7. Traduire les valeurs dans le fichier YAML créé.
+8. Ouvrir une Pull Request sur le dépôt du site.
