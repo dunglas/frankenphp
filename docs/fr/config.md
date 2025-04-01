@@ -139,7 +139,7 @@ php_server [<matcher>] {
 
 ### Surveillance des modifications de fichier
 
-Vu que les workers ne démarrent votre application qu'une suele fois et la gardent en mémoire, toute modification
+Vu que les workers ne démarrent votre application qu'une seule fois et la gardent en mémoire, toute modification
 apportée à vos fichiers PHP ne sera pas répercutée immédiatement. 
 
 Les workers peuvent être redémarrés en cas de changement de fichier via la directive `watch`.
