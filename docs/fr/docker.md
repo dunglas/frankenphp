@@ -4,6 +4,13 @@ Les images Docker de [FrankenPHP](https://hub.docker.com/r/dunglas/frankenphp) s
 
 Des variantes pour PHP 8.2, 8.3 et 8.4 sont disponibles. [Parcourir les tags](https://hub.docker.com/r/dunglas/frankenphp/tags).
 
+Les tags suivent le pattern suivant: `dunglas/frankenphp:<frankenphp-version>-php<php-version>-<os>`
+
+* `<frankenphp-version>` et `<php-version>` sont repsectivement les numéros de version de FrankenPHP et PHP, allant de majeur (e.g. `1`), mineur (e.g. `1.2`) à des versions correctives (e.g. `1.2.3`).
+* `<os>` est soit `bookworm` (pour Debian Bookworm) ou `alpine` (pour la dernière version stable d'Alpine).
+
+[Parcourir les tags](https://hub.docker.com/r/dunglas/frankenphp/tags).
+
 ## Comment utiliser les images
 
 Créez un `Dockerfile` dans votre projet :
@@ -167,12 +174,12 @@ FROM dunglas/frankenphp
 
 ARG USER=appuser
 
-RUN
+RUN \
 	# Utiliser "adduser -D ${USER}" pour les distros basées sur Alpine
-	useradd ${USER};
-	# Supprimer la capacité par défaut
+	useradd ${USER}; \
+	# Supprimer la capacité par défaut \
 	setcap -r /usr/local/bin/frankenphp; \
-	# Donner un accès en écriture à /data/caddy et /config/caddy
+	# Donner un accès en écriture à /data/caddy et /config/caddy \
 	chown -R ${USER}:${USER} /data/caddy && chown -R ${USER}:${USER} /config/caddy
 
 USER ${USER}
