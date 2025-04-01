@@ -150,7 +150,7 @@ else
 		fi
 	fi
 
-	if [ "${SPC_REL_TYPE}" = "binary" && "${arch}" != "arm64" ]; then
+	if [ "${SPC_REL_TYPE}" = "binary" ] && [[ ! "${arch}" =~ arm ]]; then
 		mkdir -p static-php-cli/
 		cd static-php-cli/
 		curl -o spc -fsSL "https://dl.static-php.dev/static-php-cli/spc-bin/nightly/spc-linux-${arch}"
