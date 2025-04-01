@@ -2,8 +2,7 @@
 
 ## Docker
 
-Déployer une application web [Laravel](https://laravel.com) avec FrankenPHP est très facile.
-Il suffit de monter le projet dans le répertoire `/app` de l'image Docker officielle.
+Déployer une application web [Laravel](https://laravel.com) avec FrankenPHP est très facile. Il suffit de monter le projet dans le répertoire `/app` de l'image Docker officielle.
 
 Exécutez cette commande depuis le répertoire principal de votre application Laravel :
 
@@ -20,19 +19,21 @@ Vous pouvez également exécuter vos projets Laravel avec FrankenPHP depuis votr
 1. [Téléchargez le binaire correspondant à votre système](README.md#binaire-autonome)
 2. Ajoutez la configuration suivante dans un fichier nommé `Caddyfile` placé dans le répertoire racine de votre projet Laravel :
 
- 	```caddyfile
+    ```caddyfile
     {
-     frankenphp
+    	frankenphp
     }
 
     # Le nom de domaine de votre serveur
     localhost {
-     # Définir le répertoire racine sur le dossier public/
-     root * public/
-     # Autoriser la compression (optionnel)
-     encode zstd br gzip
-     # Exécuter les scripts PHP du dossier public/ et servir les assets
-     php_server
+    	# Définir le répertoire racine sur le dossier public/
+    	root * public/
+    	# Autoriser la compression (optionnel)
+    	encode zstd br gzip
+    	# Exécuter les scripts PHP du dossier public/ et servir les assets
+    	php_server {
+    		try_files {path} index.php
+    	}
     }
     ```
 
@@ -76,3 +77,108 @@ La commande `octane:frankenphp` peut prendre les options suivantes :
 > Pour obtenir des logs structurés en JSON logs (utile quand vous utilisez des solutions d'analyse de logs), passez explicitement l'otpion `--log-level`.
 
 En savoir plus sur Laravel Octane [dans sa documentation officielle](https://laravel.com/docs/octane).
+
+## Les Applications Laravel En Tant Que Binaires Autonomes
+
+En utilisant la [fonctionnalité d'intégration d'applications de FrankenPHP](embed.md), il est possible de distribuer
+les applications Laravel sous forme de binaires autonomes.
+
+Suivez ces étapes pour empaqueter votre application Laravel en tant que binaire autonome pour Linux :
+
+1. Créez un fichier nommé `static-build.Dockerfile` dans le dépôt de votre application :
+
+    ```dockerfile
+    FROM --platform=linux/amd64 dunglas/frankenphp:static-builder
+
+    # Copiez votre application
+    WORKDIR /go/src/app/dist/app
+    COPY . .
+
+    # Supprimez les tests et autres fichiers inutiles pour gagner de la place
+    # Alternativement, ajoutez ces fichiers à un fichier .dockerignore
+    RUN rm -Rf tests/
+
+    # Copiez le fichier .env
+    RUN cp .env.example .env
+    # Modifier APP_ENV et APP_DEBUG pour qu'ils soient prêts pour la production
+    RUN sed -i'' -e 's/^APP_ENV=.*/APP_ENV=production/' -e 's/^APP_DEBUG=.*/APP_DEBUG=false/' .env
+
+    # Apportez d'autres modifications à votre fichier .env si nécessaire
+
+    # Installez les dépendances
+    RUN composer install --ignore-platform-reqs --no-dev -a
+
+    # Construire le binaire statique 
+    WORKDIR /go/src/app/
+    RUN EMBED=dist/app/ ./build-static.sh
+    ```
+
+   > [!CAUTION]
+   >
+   > Certains fichiers `.dockerignore` ignoreront le répertoire `vendor/`
+   > et les fichiers `.env`. Assurez-vous d'ajuster ou de supprimer le fichier `.dockerignore` avant la construction.
+
+2. Build:
+
+    ```console
+    docker build -t static-laravel-app -f static-build.Dockerfile .
+    ```
+
+3. Extraire le binaire
+
+    ```console
+    docker cp $(docker create --name static-laravel-app-tmp static-laravel-app):/go/src/app/dist/frankenphp-linux-x86_64 frankenphp ; docker rm static-laravel-app-tmp
+    ```
+
+4. Remplir les caches :
+
+    ```console
+    frankenphp php-cli artisan optimize
+    ```
+
+5. Exécutez les migrations de base de données (s'il y en a) ::
+
+    ```console
+    frankenphp php-cli artisan migrate
+    ````
+
+6. Générer la clé secrète de l'application :
+
+    ```console
+    frankenphp php-cli artisan key:generate
+    ```
+
+7. Démarrez le serveur:
+
+    ```console
+    frankenphp php-server
+    ```
+
+Votre application est maintenant prête !
+
+Pour en savoir plus sur les options disponibles et sur la construction de binaires pour d'autres systèmes d'exploitation,
+consultez la documentation [Applications PHP en tant que binaires autonomes](embed.md)
+
+###  Changer le chemin de stockage
+
+Par défaut, Laravel stocke les fichiers téléchargés, les caches, les logs, etc. dans le répertoire `storage/` de l'application.
+Ceci n'est pas adapté aux applications embarquées, car chaque nouvelle version sera extraite dans un répertoire temporaire différent.
+
+Définissez la variable d'environnement `LARAVEL_STORAGE_PATH` (par exemple, dans votre fichier `.env`) ou appelez la méthode `Illuminate\Foundation\Application::useStoragePath()` pour utiliser un répertoire en dehors du répertoire temporaire.
+
+### Exécuter Octane avec des binaires autonomes
+
+Il est même possible d'empaqueter les applications Laravel Octane en tant que binaires autonomes !
+
+Pour ce faire, [installez Octane correctement](#laravel-octane) et suivez les étapes décrites dans [la section précédente](#les-applications-laravel-en-tant-que-binaires-autonomes).
+
+Ensuite, pour démarrer FrankenPHP en mode worker via Octane, exécutez :
+
+```console
+PATH="$PWD:$PATH" frankenphp php-cli artisan octane:frankenphp
+```
+
+> [!CAUTION]
+>
+> Pour que la commande fonctionne, le binaire autonome **doit** être nommé `frankenphp`
+> car Octane a besoin d'un programme nommé `frankenphp` disponible dans le chemin
