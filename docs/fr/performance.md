@@ -16,6 +16,16 @@ Pour trouver les bonnes valeurs, il est souhaitable d'effectuer des tests de cha
 Pour configurer le nombre de threads, utilisez l'option `num_threads` des directives `php_server` et `php`.
 Pour changer le nombre de travailleurs, utilisez l'option `num` de la section `worker` de la directive `frankenphp`.
 
+### `max_threads`
+
+Bien qu'il soit toujours préférable de savoir exactement à quoi ressemblera votre trafic, les applications réelles
+ont tendance à être plus imprévisibles. Le paramètre `max_threads` permet à FrankenPHP de créer automatiquement des threads supplémentaires au moment de l'exécution, jusqu'à la limite spécifiée.
+`max_threads` peut vous aider
+à déterminer le nombre de threads dont vous avez besoin pour gérer votre trafic et peut rendre le serveur plus résistant aux pics de latence.
+If set to `auto`, the limit will be estimated based on the `memory_limit` in your `php.ini`. If not able to do so,
+`auto` will instead default to 2x `num_threads`.
+`max_threads` is similar to PHP FPM's [pm.max_children](https://www.php.net/manual/en/install.fpm.configuration.php#pm.max-children).
+
 ## Mode worker
 
 Activer [le mode worker](worker.md) améliore considérablement les performances,
@@ -62,6 +72,44 @@ Pour la désactiver, utilisez la configuration suivante :
 ```caddyfile
 php_server {
     file_server off
+}
+```
+
+## `try_files`
+
+En plus des fichiers statiques et des fichiers PHP, `php_server` essaiera aussi de servir les fichiers d'index
+et d'index de répertoire de votre application (`/path/` -> `/path/index.php`). Si vous n'avez pas besoin des index de répertoires,
+vous pouvez les désactiver en définissant explicitement `try_files` comme ceci :
+
+```caddyfile
+php_server {
+    try_files {path} index.php
+    root /root/to/your/app #  l'ajout explicite de la racine ici permet une meilleure mise en cache
+}
+```
+
+Cela permet de réduire considérablement le nombre d'opérations inutiles sur les fichiers.
+
+Une approche alternative avec 0 opérations inutiles sur le système de fichiers serait d'utiliser la directive `php`
+et de diviser les fichiers de PHP par chemin. Cette approche fonctionne bien si votre application entière est servie par un seul fichier d'entrée.
+Un exemple de [configuration](config.md#configuration-du-caddyfile) qui sert des fichiers statiques derrière un dossier `/assets` pourrait ressembler à ceci :
+
+```caddyfile
+route {
+    @assets {
+        path /assets/*
+    }
+
+    # tout ce qui se trouve derrière /assets est géré par le serveur de fichiers
+    file_server @assets {
+        root /root/to/your/app
+    }
+
+    #  tout ce qui n'est pas dans /assets est géré par votre index ou votre fichier PHP worker
+    rewrite index.php
+    php {
+        root /root/to/your/app #  l'ajout explicite de la racine ici permet une meilleure mise en cache
+    }
 }
 ```
 
