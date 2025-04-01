@@ -28,6 +28,13 @@ frankenphp php-server --worker /path/to/your/worker/script.php
 Si votre application PHP est [intégrée dans le binaire](embed.md), vous pouvez également ajouter un `Caddyfile` personnalisé dans le répertoire racine de l'application.
 Il sera utilisé automatiquement.
 
+Il est également possible de [redémarrer le worker en cas de changement de fichier](config.md#watching-for-file-changes) avec l'option `--watch`.
+La commande suivante déclenchera un redémarrage si un fichier se terminant par `.php` dans le répertoire `/path/to/your/app/` ou ses sous-répertoires est modifié :
+
+```console
+frankenphp php-server --worker /path/to/your/worker/script.php --watch "/path/to/your/app/**/*.php"
+```
+
 ## Runtime Symfony
 
 Le mode worker de FrankenPHP est pris en charge par le [Composant Runtime de Symfony](https://symfony.com/doc/current/components/runtime.html).
@@ -76,14 +83,17 @@ $handler = static function () use ($myApp) {
     echo $myApp->handle($_GET, $_POST, $_COOKIE, $_FILES, $_SERVER);
 };
 
-for ($nbRequests = 0, $running = true; isset($_SERVER['MAX_REQUESTS']) && ($nbRequests < ((int)$_SERVER['MAX_REQUESTS'])) && $running; ++$nbRequests) {
-    $running = \frankenphp_handle_request($handler);
+$maxRequests = (int)($_SERVER['MAX_REQUESTS'] ?? 0);
+for ($nbRequests = 0; !$maxRequests || $nbRequests < $maxRequests; ++$nbRequests) {
+    $keepRunning = \frankenphp_handle_request($handler);
 
     // Faire quelque chose après l'envoi de la réponse HTTP
     $myApp->terminate();
 
     // Exécuter le ramasse-miettes pour réduire les chances qu'il soit déclenché au milieu de la génération d'une page
     gc_collect_cycles();
+
+    if (!$keepRunning) break;
 }
 
 // Nettoyage
@@ -117,6 +127,34 @@ Comme PHP n'a pas été initialement conçu pour des processus de longue durée,
 Une solution pour utiliser ce type de code en mode worker est de redémarrer le script worker après avoir traité un certain nombre de requêtes :
 
 Le code du worker précédent permet de configurer un nombre maximal de requêtes à traiter en définissant une variable d'environnement nommée `MAX_REQUESTS`.
+
+### Redémarrer les workers manuellement
+
+While it's possible to restart workers [on file changes](config.md#watching-for-file-changes), it's also possible to restart all workers
+gracefully via the [Caddy admin API](https://caddyserver.com/docs/api). If the admin is enabled in your
+[Caddyfile](config.md#caddyfile-config), you can ping the restart endpoint with a simple POST request like this:
+
+Bien qu'il soit possible de redémarrer les workers [en cas de changement de fichier](config.md#surveillance-des-modifications-de-fichier),
+il est également possible de redémarrer tous les workers de manière élégante via l'[API Admin de Caddy](https://caddyserver.com/docs/api). 
+Si l'administration est activée dans votre [Caddyfile](config.md#configuration-du-caddyfile), vous pouvez envoyer un ping
+à l'endpoint de redémarrage avec une simple requête POST comme celle-ci :
+
+```console
+curl -X POST http://localhost:2019/frankenphp/workers/restart
+```
+
+> [!NOTE]
+> 
+> C'est une fonctionnalité expérimentale et peut être modifiée ou supprimée dans le futur.
+
+
+### Worker Failures
+
+If a worker script crashes with a non-zero exit code, FrankenPHP will restart it with an exponential backoff strategy.
+If the worker script stays up longer than the last backoff * 2,
+it will not penalize the worker script and restart it again.
+However, if the worker script continues to fail with a non-zero exit code in a short period of time
+(for example, having a typo in a script), FrankenPHP will crash with the error: `too many consecutive failures`.
 
 ## Comportement des superglobales
 
