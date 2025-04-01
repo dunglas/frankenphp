@@ -117,6 +117,7 @@ ENV SPC_REL_TYPE='binary'
 
 # not sure if this is needed
 ENV COMPOSER_ALLOW_SUPERUSER=1
+COPY --from=composer/composer:2-bin /composer /usr/bin/composer
 
 WORKDIR /go/src/app
 COPY go.mod go.sum ./
