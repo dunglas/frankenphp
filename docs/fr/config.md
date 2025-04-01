@@ -31,15 +31,15 @@ Exemple minimal :
 
 ```caddyfile
 {
- # Activer FrankenPHP
- frankenphp
+    # Activer FrankenPHP
+    frankenphp
 }
 
 localhost {
- # Activer la compression (optionnel)
- encode zstd br gzip
- # Exécuter les fichiers PHP dans le répertoire courant et servir les assets
- php_server
+    # Activer la compression (optionnel)
+    encode zstd br gzip
+    # Exécuter les fichiers PHP dans le répertoire courant et servir les assets
+    php_server
 }
 ```
 
@@ -47,18 +47,18 @@ En option, le nombre de threads à créer et les [workers](worker.md) à démarr
 
 ```caddyfile
 {
- frankenphp {
-  num_threads <num_threads> # Définit le nombre de threads PHP à démarrer. Par défaut : 2x le nombre de CPUs disponibles.
-  max_threads <num_threads> # Limite le nombre de threads PHP supplémentaires qui peuvent être démarrés au moment de l'exécution. Valeur par défaut : num_threads. Peut être mis à 'auto'.
-  php_ini <key> <value> Définit une directive php.ini. Peut être utilisé plusieurs fois pour définir plusieurs directives.   
-  worker {
-   file <path> # Définit le chemin vers le script worker.
-   num <num> # Définit le nombre de threads PHP à démarrer, par défaut 2x le nombre de CPUs disponibles.
-   env <key> <value> # Définit une variable d'environnement supplémentaire avec la valeur donnée. Peut être spécifié plusieurs fois pour régler plusieurs variables d'environnement.
-   watch <path> # Définit le chemin d'accès à surveiller pour les modifications de fichiers. Peut être spécifié plusieurs fois pour plusieurs chemins.
-   name <name> # Définit le nom du worker, utilisé dans les journaux et les métriques. Défaut : chemin absolu du fichier du worker
-  }
- }
+    frankenphp {
+        num_threads <num_threads> # Définit le nombre de threads PHP à démarrer. Par défaut : 2x le nombre de CPUs disponibles.
+        max_threads <num_threads> # Limite le nombre de threads PHP supplémentaires qui peuvent être démarrés au moment de l'exécution. Valeur par défaut : num_threads. Peut être mis à 'auto'.
+        php_ini <key> <value> Définit une directive php.ini. Peut être utilisé plusieurs fois pour définir plusieurs directives.   
+        worker {
+            file <path> # Définit le chemin vers le script worker.
+            num <num> # Définit le nombre de threads PHP à démarrer, par défaut 2x le nombre de CPUs disponibles.
+            env <key> <value> # Définit une variable d'environnement supplémentaire avec la valeur donnée. Peut être spécifié plusieurs fois pour régler plusieurs variables d'environnement.
+            watch <path> # Définit le chemin d'accès à surveiller pour les modifications de fichiers. Peut être spécifié plusieurs fois pour plusieurs chemins.
+            name <name> # Définit le nom du worker, utilisé dans les journaux et les métriques. Défaut : chemin absolu du fichier du worker
+        }
+    }
 }
 
 # ...
@@ -178,7 +178,7 @@ où le processus FrankenPHP a été lancé. Vous pouvez également spécifier un
 * Le motif `**` signifie une surveillance récursive.
 * Les répertoires peuvent également être relatifs (depuis l'endroit où le processus FrankenPHP est démarré).
 * Si vous avez défini plusieurs workers, ils seront tous redémarrés lorsqu'un fichier est modifié.
-* Méfiez-vous des fichiers créés au moment de l'exécution (comme les logs) car ils peuvent provoquer des redémarrages intempestifs du worker.
+*  Méfiez-vous des fichiers créés au moment de l'exécution (comme les logs) car ils peuvent provoquer des redémarrages intempestifs du worker.
 
 La surveillance des fichiers est basé sur [e-dant/watcher](https://github.com/e-dant/watcher).
 
@@ -197,7 +197,7 @@ Il s'agit d'une configuration optionnelle qui doit être ajoutée aux options gl
 }
 ```
 
-> [!ATTENTION]
+> [!CAUTION]
 >
 > L'activation de cette option peut entraîner un blocage (deadlock) des anciens clients HTTP/1.x qui ne supportent pas le full-duplex.
 > Cela peut aussi être configuré en utilisant la variable d'environnement `CADDY_GLOBAL_OPTIONS` :
