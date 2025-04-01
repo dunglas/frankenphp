@@ -35,7 +35,7 @@ Les options de configuration suivantes sont nécessaires pour la compilation, ma
 Utilisez le gestionnaire de paquets [Homebrew](https://brew.sh/) pour installer `libiconv`, `bison`, `re2c` et `pkg-config` :
 
 ```console
-brew install libiconv bison re2c pkg-config
+brew install libiconv bison brotli re2c pkg-config
 echo 'export PATH="/opt/homebrew/opt/bison/bin:$PATH"' >> ~/.zshrc
 ```
 
@@ -61,6 +61,16 @@ make -j"$(getconf _NPROCESSORS_ONLN)"
 sudo make install
 ```
 
+## Installez les dépendances optionnelles
+
+Certaines fonctionnalités de FrankenPHP nécessitent des dépendances optionnelles qui doivent être installées.
+Ces fonctionnalités peuvent également être désactivées en passant des balises de compilation au compilateur Go.
+
+| Fonctionnalité                                          | Dépendance                                                            | Balise de compilation pour la désactiver |
+|---------------------------------------------------------|-----------------------------------------------------------------------|------------------------------------------|
+| Compression Brotli                                      | [Brotli](https://github.com/google/brotli)                            | nobrotli                                 |
+| Redémarrage des workers en cas de changement de fichier | [Watcher C](https://github.com/e-dant/watcher/tree/release/watcher-c) | nowatcher                                |
+
 ## Compiler l'application Go
 
 Vous pouvez maintenant compiler FrankenPHP :
@@ -68,7 +78,7 @@ Vous pouvez maintenant compiler FrankenPHP :
 ```console
 curl -L https://github.com/dunglas/frankenphp/archive/refs/heads/main.tar.gz | tar xz
 cd frankenphp-main/caddy/frankenphp
-CGO_CFLAGS=$(php-config --includes) CGO_LDFLAGS="$(php-config --ldflags) $(php-config --libs)" go build
+CGO_CFLAGS=$(php-config --includes) CGO_LDFLAGS="$(php-config --ldflags) $(php-config --libs)" go build -tags=nobadger,nomysql,nopgx
 ```
 
 ### Utiliser xcaddy
@@ -77,7 +87,9 @@ Alternativement, vous pouvez utiliser [xcaddy](https://github.com/caddyserver/xc
 
 ```console
 CGO_ENABLED=1 \
-XCADDY_GO_BUILD_FLAGS="-ldflags '-w -s'" \
+XCADDY_GO_BUILD_FLAGS="-ldflags='-w -s' -tags=nobadger,nomysql,nopgx" \
+CGO_CFLAGS=$(php-config --includes) \
+CGO_LDFLAGS="$(php-config --ldflags) $(php-config --libs)" \
 xcaddy build \
     --output frankenphp \
     --with github.com/dunglas/frankenphp/caddy \
