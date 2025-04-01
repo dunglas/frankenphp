@@ -130,10 +130,6 @@ Le code du worker précédent permet de configurer un nombre maximal de requête
 
 ### Redémarrer les workers manuellement
 
-While it's possible to restart workers [on file changes](config.md#watching-for-file-changes), it's also possible to restart all workers
-gracefully via the [Caddy admin API](https://caddyserver.com/docs/api). If the admin is enabled in your
-[Caddyfile](config.md#caddyfile-config), you can ping the restart endpoint with a simple POST request like this:
-
 Bien qu'il soit possible de redémarrer les workers [en cas de changement de fichier](config.md#surveillance-des-modifications-de-fichier),
 il est également possible de redémarrer tous les workers de manière élégante via l'[API Admin de Caddy](https://caddyserver.com/docs/api). 
 Si l'administration est activée dans votre [Caddyfile](config.md#configuration-du-caddyfile), vous pouvez envoyer un ping
