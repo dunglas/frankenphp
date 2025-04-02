@@ -159,7 +159,7 @@ Votre application est maintenant prête !
 Pour en savoir plus sur les options disponibles et sur la construction de binaires pour d'autres systèmes d'exploitation,
 consultez la documentation [Applications PHP en tant que binaires autonomes](embed.md).
 
-###  Changer le chemin de stockage
+### Changer le chemin de stockage
 
 Par défaut, Laravel stocke les fichiers téléchargés, les caches, les logs, etc. dans le répertoire `storage/` de l'application.
 Ceci n'est pas adapté aux applications embarquées, car chaque nouvelle version sera extraite dans un répertoire temporaire différent.

@@ -131,7 +131,7 @@ Le code du worker précédent permet de configurer un nombre maximal de requête
 ### Redémarrer les workers manuellement
 
 Bien qu'il soit possible de redémarrer les workers [en cas de changement de fichier](config.md#surveillance-des-modifications-de-fichier),
-il est également possible de redémarrer tous les workers de manière élégante via l'[API Admin de Caddy](https://caddyserver.com/docs/api). 
+il est également possible de redémarrer tous les workers de manière élégante via l'[API Admin de Caddy](https://caddyserver.com/docs/api).
 Si l'administration est activée dans votre [Caddyfile](config.md#configuration-du-caddyfile), vous pouvez envoyer un ping
 à l'endpoint de redémarrage avec une simple requête POST comme celle-ci :
 
@@ -140,9 +140,8 @@ curl -X POST http://localhost:2019/frankenphp/workers/restart
 ```
 
 > [!NOTE]
-> 
+>
 > C'est une fonctionnalité expérimentale et peut être modifiée ou supprimée dans le futur.
-
 
 ### Worker Failures
 

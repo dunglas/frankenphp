@@ -52,7 +52,7 @@ cd testdata/
 Le serveur est configuré pour écouter à l'adresse `127.0.0.1:80`:
 
 > [!NOTE]
-> 
+>
 > Si vous utilisez Docker, vous devrez soit lier le port 80 du conteneur, soit exécuter depuis l'intérieur du conteneur.
 
 ```console
@@ -211,6 +211,6 @@ Pour traduire la documentation et le site dans une nouvelle langue, procédez co
 3. Copiez les fichiers `README.md` et `CONTRIBUTING.md` du répertoire racine vers le nouveau répertoire.
 4. Traduisez le contenu des fichiers, mais ne changez pas les noms de fichiers, ne traduisez pas non plus les chaînes commençant par `> [!` (c'est un balisage spécial pour GitHub).
 5. Créez une Pull Request avec les traductions
-6. Dans le [référentiel du site] (https://github.com/dunglas/frankenphp-website/tree/main), copiez et traduisez les fichiers de traduction dans les répertoires `content/`, `data/` et `i18n/`.
+6. Dans le [référentiel du site](https://github.com/dunglas/frankenphp-website/tree/main), copiez et traduisez les fichiers de traduction dans les répertoires `content/`, `data/` et `i18n/`.
 7. Traduire les valeurs dans le fichier YAML créé.
 8. Ouvrir une Pull Request sur le dépôt du site.

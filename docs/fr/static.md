@@ -19,7 +19,7 @@ Nous fournissons des images Docker pour créer des binaires statiques pour Linux
 
 ### Build entièrement statique, basé sur musl
 
-Pour un binaire entièrement statique qui fonctionne sur n'importe quelle distribution Linux sans dépendances, 
+Pour un binaire entièrement statique qui fonctionne sur n'importe quelle distribution Linux sans dépendances,
 mais qui ne prend pas en charge le chargement dynamique des extensions :
 
 ```console

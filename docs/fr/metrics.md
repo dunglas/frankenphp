@@ -14,5 +14,4 @@ Lorsque les [métriques Caddy](https://caddyserver.com/docs/metrics) sont activ�
 * `frankenphp_worker_restarts{worker=« [nom_du_worker] »}` : Le nombre de fois où un worker a été délibérément redémarré.
 * `frankenphp_worker_queue_depth{worker=« [nom_du_worker] »}` : Le nombre de requêtes en file d'attente.
 
-
 Pour les métriques de worker, le placeholder `[nom_du_worker]` est remplacé par le nom du worker dans le Caddyfile, sinon le chemin absolu du fichier du worker sera utilisé.

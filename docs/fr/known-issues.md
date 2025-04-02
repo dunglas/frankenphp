@@ -122,7 +122,7 @@ error:0A000086:SSL routines::certificate verify failed
 
 Comme le binaire statique ne contient pas de certificats TLS, vous devez indiquer à OpenSSL l'installation de vos certificats CA locaux.
 
-Inspectez la sortie de [`openssl_get_cert_locations()`] (https://www.php.net/manual/en/function.openssl-get-cert-locations.php),
+Inspectez la sortie de [`openssl_get_cert_locations()`](https://www.php.net/manual/en/function.openssl-get-cert-locations.php),
 pour trouver l'endroit où les certificats CA doivent être installés et stockez-les à cet endroit.
 
 > [!WARNING]

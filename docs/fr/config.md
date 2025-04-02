@@ -140,7 +140,7 @@ php_server [<matcher>] {
 ### Surveillance des modifications de fichier
 
 Vu que les workers ne démarrent votre application qu'une seule fois et la gardent en mémoire, toute modification
-apportée à vos fichiers PHP ne sera pas répercutée immédiatement. 
+apportée à vos fichiers PHP ne sera pas répercutée immédiatement.
 
 Les workers peuvent être redémarrés en cas de changement de fichier via la directive `watch`.
 Ceci est utile pour les environnements de développement.
@@ -159,7 +159,7 @@ Ceci est utile pour les environnements de développement.
 Si le répertoire `watch` n'est pas précisé, il se rabattra sur `./**/*.{php,yaml,yml,twig,env}`,
 qui surveille tous les fichiers `.php`, `.yaml`, `.yml`, `.twig` et `.env` dans le répertoire et les sous-répertoires
 où le processus FrankenPHP a été lancé. Vous pouvez également spécifier un ou plusieurs répertoires via une commande
-[motif de nom de fichier shell] (https://pkg.go.dev/path/filepath#Match) :
+[motif de nom de fichier shell](https://pkg.go.dev/path/filepath#Match) :
 
 ```caddyfile
 {
@@ -178,7 +178,7 @@ où le processus FrankenPHP a été lancé. Vous pouvez également spécifier un
 * Le motif `**` signifie une surveillance récursive.
 * Les répertoires peuvent également être relatifs (depuis l'endroit où le processus FrankenPHP est démarré).
 * Si vous avez défini plusieurs workers, ils seront tous redémarrés lorsqu'un fichier est modifié.
-*  Méfiez-vous des fichiers créés au moment de l'exécution (comme les logs) car ils peuvent provoquer des redémarrages intempestifs du worker.
+* Méfiez-vous des fichiers créés au moment de l'exécution (comme les logs) car ils peuvent provoquer des redémarrages intempestifs du worker.
 
 La surveillance des fichiers est basé sur [e-dant/watcher](https://github.com/e-dant/watcher).
 
