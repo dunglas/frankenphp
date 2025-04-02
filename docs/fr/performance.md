@@ -20,11 +20,11 @@ Pour changer le nombre de travailleurs, utilisez l'option `num` de la section `w
 
 Bien qu'il soit toujours préférable de savoir exactement à quoi ressemblera votre trafic, les applications réelles
 ont tendance à être plus imprévisibles. Le paramètre `max_threads` permet à FrankenPHP de créer automatiquement des threads supplémentaires au moment de l'exécution, jusqu'à la limite spécifiée.
-`max_threads` peut vous aider
-à déterminer le nombre de threads dont vous avez besoin pour gérer votre trafic et peut rendre le serveur plus résistant aux pics de latence.
+`max_threads` peut vous aider à déterminer le nombre de threads dont vous avez besoin pour gérer votre trafic et peut rendre le serveur plus résistant aux pics de latence.
 If set to `auto`, the limit will be estimated based on the `memory_limit` in your `php.ini`. If not able to do so,
-`auto` will instead default to 2x `num_threads`.
-`max_threads` is similar to PHP FPM's [pm.max_children](https://www.php.net/manual/en/install.fpm.configuration.php#pm.max-children).
+`auto` will instead default to 2x `num_threads`. Gardez à l'esprit que `auto` peut fortement sous-estimer le nombre de threads nécessaires.
+`max_threads` is similar to PHP FPM's [pm.max_children](https://www.php.net/manual/en/install.fpm.configuration.php#pm.max-children). La principale différence est que FrankenPHP utilise des threads au lieu de
+processus et les délègue automatiquement à différents scripts de travail et au `mode classique` selon les besoins.
 
 ## Mode worker
 

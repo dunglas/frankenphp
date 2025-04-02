@@ -4,11 +4,13 @@ FrankenPHP, Caddy ainsi que les modules Mercure et Vulcain peuvent être configu
 
 Dans [les images Docker](docker.md), le `Caddyfile` est situé dans `/etc/caddy/Caddyfile`.
 Le binaire statique cherchera le `Caddyfile` dans le répertoire dans lequel il est démarré.
+
 PHP lui-même peut être configuré [en utilisant un fichier `php.ini`](https://www.php.net/manual/fr/configuration.file.php).
 
 Par défaut, le PHP fourni avec les images Docker et celui inclus dans le binaire statique cherchera un fichier `php.ini` dans le répertoire dans lequel FrankenPHP est démarré et dans `/usr/local/etc/php/`. Ils chargeront également tous les fichiers se terminant par `.ini` dans `/usr/local/etc/php/conf.d/`.
 
 Aucun fichier `php.ini` n'est présent par défaut, vous devriez copier un modèle officiel fourni par le projet PHP.
+
 Sur Docker, les modèles sont fournis dans les images :
 
 ```dockerfile
@@ -50,6 +52,7 @@ En option, le nombre de threads à créer et les [workers](worker.md) à démarr
     frankenphp {
         num_threads <num_threads> # Définit le nombre de threads PHP à démarrer. Par défaut : 2x le nombre de CPUs disponibles.
         max_threads <num_threads> # Limite le nombre de threads PHP supplémentaires qui peuvent être démarrés au moment de l'exécution. Valeur par défaut : num_threads. Peut être mis à 'auto'.
+		max_wait_time <duration> # Définit le temps maximum pendant lequel une requête peut attendre un thread PHP libre avant d'être interrompue. Valeur par défaut : désactivé.
         php_ini <key> <value> Définit une directive php.ini. Peut être utilisé plusieurs fois pour définir plusieurs directives.   
         worker {
             file <path> # Définit le chemin vers le script worker.
@@ -224,7 +227,8 @@ La valeur `S` de [la directive `variables_order` de PHP](https://www.php.net/man
 
 ## Configuration PHP
 
-Pour charger [des fichiers de configuration PHP supplémentaires](https://www.php.net/manual/fr/configuration.file.php#configuration.file.scan), la variable d'environnement `PHP_INI_SCAN_DIR` peut être utilisée.
+Pour charger [des fichiers de configuration PHP supplémentaires](https://www.php.net/manual/fr/configuration.file.php#configuration.file.scan),
+la variable d'environnement `PHP_INI_SCAN_DIR` peut être utilisée.
 Lorsqu'elle est définie, PHP chargera tous les fichiers avec l'extension `.ini` présents dans les répertoires donnés.
 
 Vous pouvez également modifier la configuration de PHP en utilisant la directive `php_ini` dans le fichier `Caddyfile` :
