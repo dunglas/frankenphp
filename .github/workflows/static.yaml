@@ -221,7 +221,7 @@ jobs:
             *.cache-from=type=gha,scope=${{ needs.prepare.outputs.ref || github.ref }}-static-builder-gnu
             *.cache-from=type=gha,scope=refs/heads/main-static-builder-gnu
             *.cache-to=type=gha,scope=${{ needs.prepare.outputs.ref || github.ref }}-static-builder-gnu,ignore-error=true
-            ${{ fromJson(needs.prepare.outputs.push) && format('*.output=type=image,name={0}-gnu,push-by-digest=true,name-canonical=true,push=true', env.IMAGE_NAME) || '' }}
+            ${{ fromJson(needs.prepare.outputs.push) && format('*.output=type=image,name={0},push-by-digest=true,name-canonical=true,push=true', env.IMAGE_NAME) || '' }}
         env:
           SHA: ${{ github.sha }}
           VERSION: ${{ (github.ref_type == 'tag' && github.ref_name) || needs.prepare.outputs.ref || 'dev' }}
@@ -355,7 +355,7 @@ jobs:
         with:
           go-version: "1.24"
           cache-dependency-path: |
-            go.sum 
+            go.sum
             caddy/go.sum
       - name: Set FRANKENPHP_VERSION
         run: |

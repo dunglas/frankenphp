@@ -228,7 +228,7 @@ static int frankenphp_worker_request_startup() {
     zend_module_entry *module;
     for (module_name = MODULES_TO_RELOAD; *module_name; module_name++) {
       if ((module = zend_hash_str_find_ptr(&module_registry, *module_name,
-                                           sizeof(*module_name) - 1)) &&
+                                           strlen(*module_name))) &&
           module->request_startup_func) {
         module->request_startup_func(module->type, module->module_number);
       }
