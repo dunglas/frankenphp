@@ -61,7 +61,8 @@ int frankenphp_update_server_context(bool is_worker_request,
 int frankenphp_request_startup();
 int frankenphp_execute_script(char *file_name);
 
-int frankenphp_execute_script_cli(char *script, int argc, char **argv, bool eval);
+int frankenphp_execute_script_cli(char *script, int argc, char **argv,
+                                  bool eval);
 
 void frankenphp_register_variables_from_request_info(
     zval *track_vars_array, zend_string *content_type,

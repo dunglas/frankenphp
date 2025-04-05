@@ -791,11 +791,16 @@ func TestExecuteScriptCLI(t *testing.T) {
 }
 
 func TestExecuteCLICode(t *testing.T) {
-	var exitCode int
+	if _, err := os.Stat("internal/testcli/testcli"); err != nil {
+		t.Skip("internal/testcli/testcli has not been compiled, run `cd internal/testcli/ && go build`")
+	}
 
-	exitCode = frankenphp.ExecutePHPCode("exit(123);")
+	cmd := exec.Command("internal/testcli/testcli", "-r", "echo 'Hello World';")
+	stdoutStderr, err := cmd.CombinedOutput()
+	assert.NoError(t, err)
 
-	assert.Equal(t, 123, exitCode)
+	stdoutStderrStr := string(stdoutStderr)
+	assert.Equal(t, stdoutStderrStr, `Hello World`)
 }
 
 func ExampleServeHTTP() {
