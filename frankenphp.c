@@ -1108,6 +1108,7 @@ static void sapi_cli_register_variables(zval *track_vars_array) /* {{{ */
 
 static void *execute_script_cli(void *arg) {
   void *exit_status;
+  bool eval = (bool)arg;
 
   /*
    * The SAPI name "cli" is hardcoded into too many programs... let's usurp it.
@@ -1120,11 +1121,16 @@ static void *execute_script_cli(void *arg) {
 
   cli_register_file_handles(false);
   zend_first_try {
-    zend_file_handle file_handle;
-    zend_stream_init_filename(&file_handle, cli_script);
+    if (eval) {
+        /* evaluate the cli_script as literal PHP code (php-cli -r "...") */
+    	zend_eval_string_ex(cli_script, NULL, "Command line code", 1);
+    } else {
+        zend_file_handle file_handle;
+        zend_stream_init_filename(&file_handle, cli_script);
 
-    CG(skip_shebang) = 1;
-    php_execute_script(&file_handle);
+        CG(skip_shebang) = 1;
+        php_execute_script(&file_handle);
+    }
   }
   zend_end_try();
 
@@ -1135,7 +1141,7 @@ static void *execute_script_cli(void *arg) {
   return exit_status;
 }
 
-int frankenphp_execute_script_cli(char *script, int argc, char **argv) {
+int frankenphp_execute_script_cli(char *script, int argc, char **argv, bool eval) {
   pthread_t thread;
   int err;
   void *exit_status;
@@ -1148,7 +1154,7 @@ int frankenphp_execute_script_cli(char *script, int argc, char **argv) {
    * Start the script in a dedicated thread to prevent conflicts between Go and
    * PHP signal handlers
    */
-  err = pthread_create(&thread, NULL, execute_script_cli, NULL);
+  err = pthread_create(&thread, NULL, execute_script_cli, (void *)eval);
   if (err != 0) {
     return err;
   }

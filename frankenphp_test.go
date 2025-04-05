@@ -790,6 +790,14 @@ func TestExecuteScriptCLI(t *testing.T) {
 	assert.Contains(t, stdoutStderrStr, "From the CLI")
 }
 
+func TestExecuteCLICode(t *testing.T) {
+	var exitCode int
+
+	exitCode = frankenphp.ExecutePHPCode("exit(123);")
+
+	assert.Equal(t, 123, exitCode)
+}
+
 func ExampleServeHTTP() {
 	if err := frankenphp.Init(); err != nil {
 		panic(err)
