@@ -635,7 +635,13 @@ func ExecuteScriptCLI(script string, args []string) int {
 	argc, argv := convertArgs(args)
 	defer freeArgs(argv)
 
-	return int(C.frankenphp_execute_script_cli(cScript, argc, (**C.char)(unsafe.Pointer(&argv[0]))))
+	return int(C.frankenphp_execute_script_cli(cScript, argc, (**C.char)(unsafe.Pointer(&argv[0])), false))
+}
+
+func ExecutePHPCode(phpCode string) int {
+	cCode := C.CString(phpCode)
+	defer C.free(unsafe.Pointer(cCode))
+	return int(C.frankenphp_execute_script_cli(cCode, 0, nil, true))
 }
 
 func convertArgs(args []string) (C.int, []*C.char) {
