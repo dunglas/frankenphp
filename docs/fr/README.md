@@ -53,7 +53,7 @@ frankenphp php-cli /path/to/your/script.php
 Des [images Docker](https://frankenphp.dev/docs/fr/docker/) sont également disponibles :
 
 ```console
-docker run -v $PWD:/app/public \
+docker run -v .:/app/public \
     -p 80:80 -p 443:443 -p 443:443/udp \
     dunglas/frankenphp
 ```
