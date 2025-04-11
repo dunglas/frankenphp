@@ -78,6 +78,10 @@ func setupWorkerScript(handler *workerThread, worker *worker) {
 	handler.backoff.wait()
 	metrics.StartWorker(worker.name)
 
+	if handler.state.is(stateReady) {
+		metrics.ReadyWorker(handler.worker.name)
+	}
+
 	// Create a dummy request to set up the worker
 	fc, err := newDummyContext(
 		filepath.Base(worker.fileName),
