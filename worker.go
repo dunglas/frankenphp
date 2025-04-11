@@ -35,11 +35,11 @@ func initWorkers(opt []workerOpt) error {
 
 	for _, o := range opt {
 		worker, err := newWorker(o)
-		worker.threads = make([]*phpThread, 0, o.num)
-		workersReady.Add(o.num)
 		if err != nil {
 			return err
 		}
+
+		workersReady.Add(o.num)
 		for i := 0; i < worker.num; i++ {
 			thread := getInactivePHPThread()
 			convertToWorkerThread(thread, worker)
@@ -81,7 +81,14 @@ func newWorker(o workerOpt) (*worker, error) {
 		num:         o.num,
 		env:         o.env,
 		requestChan: make(chan *frankenPHPContext),
+		threads:     make([]*phpThread, 0, o.num),
 	}
+
+	// ensure the filename is not already registered
+	if _, ok := workers[absFileName]; ok {
+		return w, fmt.Errorf("2 workers cannot have the same filename: %q.", absFileName)
+	}
+
 	workers[absFileName] = w
 
 	return w, nil
