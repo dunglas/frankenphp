@@ -6,6 +6,8 @@ Grâce à cette fonctionnalité, les applications PHP peuvent être distribuées
 
 Pour en savoir plus sur cette fonctionnalité, consultez [la présentation faite par Kévin à la SymfonyCon 2023](https://dunglas.dev/2023/12/php-and-symfony-apps-as-standalone-binaries/).
 
+Pour embarquer des applications Laravel, [lisez ce point spécifique de la documentation](laravel.md#les-applications-laravel-en-tant-que-binaires-autonomes).
+
 ## Préparer votre application
 
 Avant de créer le binaire autonome, assurez-vous que votre application est prête à être intégrée.
@@ -29,7 +31,8 @@ cd $TMPDIR/my-prepared-app
 echo APP_ENV=prod > .env.local
 echo APP_DEBUG=0 >> .env.local
 
-# Supprimer les tests
+# Supprimer les tests et autres fichiers inutiles pour économiser de l'espace
+# Alternativement, ajoutez ces fichiers avec l'attribut export-ignore dans votre fichier .gitattributes
 rm -Rf tests/
 
 # Installer les dépendances
@@ -61,9 +64,7 @@ La manière la plus simple de créer un binaire Linux est d'utiliser le builder 
 
     # Build the static binary, be sure to select only the PHP extensions you want
     WORKDIR /go/src/app/
-    RUN EMBED=dist/app/ \
-        PHP_EXTENSIONS=ctype,iconv,pdo_sqlite \
-        ./build-static.sh
+    RUN EMBED=dist/app/ ./build-static.sh
     ```
 
     > [!CAUTION]
@@ -92,9 +93,7 @@ Si vous ne souhaitez pas utiliser Docker, ou souhaitez construire un binaire mac
 ```console
 git clone https://github.com/dunglas/frankenphp
 cd frankenphp
-EMBED=/path/to/your/app \
-    PHP_EXTENSIONS=ctype,iconv,pdo_sqlite \
-    ./build-static.sh
+EMBED=/path/to/your/app ./build-static.sh
 ```
 
 Le binaire obtenu est le fichier nommé `frankenphp-<os>-<arch>` dans le répertoire `dist/`.
@@ -125,6 +124,19 @@ Vous pouvez également exécuter les scripts CLI PHP incorporés dans votre bina
 
 ```console
 ./my-app php-cli bin/console
+```
+
+## Extensions PHP
+
+Par défaut, le script construira les extensions requises par le fichier `composer.json` de votre projet, s'il y en a.
+Si le fichier `composer.json` n'existe pas, les extensions par défaut sont construites, comme documenté dans [Créer un binaire statique](static.md).
+
+Pour personnaliser les extensions, utilisez la variable d'environnement `PHP_EXTENSIONS`.
+
+```console
+EMBED=/path/to/your/app \
+PHP_EXTENSIONS=ctype,iconv,pdo_sqlite \
+./build-static.sh
 ```
 
 ## Personnaliser la compilation
