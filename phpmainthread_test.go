@@ -177,6 +177,14 @@ func TestFinishBootingAWorkerScript(t *testing.T) {
 	assert.Nil(t, phpThreads)
 }
 
+func TestReturnAnErrorIf2WorkersHaveTheSameFileName(t *testing.T) {
+	_, err1 := newWorker(workerOpt{fileName: "filename.php"})
+	_, err2 := newWorker(workerOpt{fileName: "filename.php"})
+
+	assert.NoError(t, err1)
+	assert.Error(t, err2, "2 workers cannot have the same filename")
+}
+
 func getDummyWorker(fileName string) *worker {
 	if workers == nil {
 		workers = make(map[string]*worker)
