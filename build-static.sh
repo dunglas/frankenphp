@@ -117,82 +117,82 @@ if [ -n "${CLEAN}" ]; then
 	go clean -cache
 fi
 
-cache_key="${PHP_VERSION}-${PHP_EXTENSIONS}-${PHP_EXTENSION_LIBS}"
+mkdir -p dist/
+cd dist/
+
+if type "brew" >/dev/null 2>&1; then
+	if ! type "composer" >/dev/null; then
+		packages="composer"
+	fi
+	if ! type "go" >/dev/null 2>&1; then
+		packages="${packages} go"
+	fi
+	if [ -n "${RELEASE}" ] && ! type "gh" >/dev/null 2>&1; then
+		packages="${packages} gh"
+	fi
+
+	if [ -n "${packages}" ]; then
+		# shellcheck disable=SC2086
+		brew install --formula --quiet ${packages}
+	fi
+fi
+
+if [ "${SPC_REL_TYPE}" = "binary" ]; then
+	mkdir static-php-cli/
+	cd static-php-cli/
+	curl -o spc -fsSL "https://dl.static-php.dev/static-php-cli/spc-bin/nightly/spc-linux-$(uname -m)"
+	chmod +x spc
+	spcCommand="./spc"
+elif [ -d "static-php-cli/src" ]; then
+	cd static-php-cli/
+	git pull
+	composer install --no-dev -a --no-interaction
+	spcCommand="./bin/spc"
+else
+	git clone --depth 1 https://github.com/crazywhalecc/static-php-cli --branch main
+	cd static-php-cli/
+	composer install --no-dev -a --no-interaction
+	spcCommand="./bin/spc"
+fi
+
+# extensions to build
+if [ -z "${PHP_EXTENSIONS}" ]; then
+	# enable EMBED mode, first check if project has dumped extensions
+	if [ -n "${EMBED}" ] && [ -f "${EMBED}/composer.json" ] && [ -f "${EMBED}/composer.lock" ] && [ -f "${EMBED}/vendor/installed.json" ]; then
+		cd "${EMBED}"
+		# read the extensions using spc dump-extensions
+		PHP_EXTENSIONS=$(${spcCommand} dump-extensions "${EMBED}" --format=text --no-dev --no-ext-output="${defaultExtensions}")
+	else
+		PHP_EXTENSIONS="${defaultExtensions}"
+	fi
+fi
+# additional libs to build
+if [ -z "${PHP_EXTENSION_LIBS}" ]; then
+	PHP_EXTENSION_LIBS="${defaultExtensionLibs}"
+fi
+# The Brotli library must always be built as it is required by http://github.com/dunglas/caddy-cbrotli
+if ! echo "${PHP_EXTENSION_LIBS}" | grep -q "\bbrotli\b"; then
+	PHP_EXTENSION_LIBS="${PHP_EXTENSION_LIBS},brotli"
+fi
+# The mimalloc library must be built if MIMALLOC is true
+if [ -n "${MIMALLOC}" ]; then
+	if ! echo "${PHP_EXTENSION_LIBS}" | grep -q "\bmimalloc\b"; then
+		PHP_EXTENSION_LIBS="${PHP_EXTENSION_LIBS},mimalloc"
+	fi
+fi
 
 # Build libphp if necessary
-if [ -f dist/cache_key ] && [ "$(cat dist/cache_key)" = "${cache_key}" ] && [ -f "dist/static-php-cli/buildroot/lib/libphp.a" ]; then
-	cd dist/static-php-cli
+cache_key="${PHP_VERSION}-${PHP_EXTENSIONS}-${PHP_EXTENSION_LIBS}"
+if [ -f ../cache_key ] && [ "$(cat ../cache_key)" = "${cache_key}" ] && [ -f "buildroot/lib/libphp.a" ]; then
+	echo "Hit cache, skipping libphp build."
 else
-	mkdir -p dist/
-	cd dist/
-	echo -n "${cache_key}" >cache_key
-
-	if type "brew" >/dev/null 2>&1; then
-		if ! type "composer" >/dev/null; then
-			packages="composer"
-		fi
-		if ! type "go" >/dev/null 2>&1; then
-			packages="${packages} go"
-		fi
-		if [ -n "${RELEASE}" ] && ! type "gh" >/dev/null 2>&1; then
-			packages="${packages} gh"
-		fi
-
-		if [ -n "${packages}" ]; then
-			# shellcheck disable=SC2086
-			brew install --formula --quiet ${packages}
-		fi
-	fi
-
-	if [ "${SPC_REL_TYPE}" = "binary" ]; then
-		mkdir static-php-cli/
-		cd static-php-cli/
-		curl -o spc -fsSL "https://dl.static-php.dev/static-php-cli/spc-bin/nightly/spc-linux-$(uname -m)"
-		chmod +x spc
-		spcCommand="./spc"
-	elif [ -d "static-php-cli/src" ]; then
-		cd static-php-cli/
-		git pull
-		composer install --no-dev -a
-		spcCommand="./bin/spc"
-	else
-		git clone --depth 1 https://github.com/crazywhalecc/static-php-cli --branch main
-		cd static-php-cli/
-		composer install --no-dev -a
-		spcCommand="./bin/spc"
-	fi
-
-	# extensions to build
-	if [ -z "${PHP_EXTENSIONS}" ]; then
-		# enable EMBED mode, first check if project has dumped extensions
-		if [ -n "${EMBED}" ] && [ -f "${EMBED}/composer.json" ] && [ -f "${EMBED}/composer.lock" ] && [ -f "${EMBED}/vendor/installed.json" ]; then
-			cd "${EMBED}"
-			# read the extensions using spc dump-extensions
-			PHP_EXTENSIONS=$(${spcCommand} dump-extensions "${EMBED}" --format=text --no-dev --no-ext-output="${defaultExtensions}")
-		else
-			PHP_EXTENSIONS="${defaultExtensions}"
-		fi
-	fi
-	# additional libs to build
-	if [ -z "${PHP_EXTENSION_LIBS}" ]; then
-		PHP_EXTENSION_LIBS="${defaultExtensionLibs}"
-	fi
-	# The Brotli library must always be built as it is required by http://github.com/dunglas/caddy-cbrotli
-	if ! echo "${PHP_EXTENSION_LIBS}" | grep -q "\bbrotli\b"; then
-		PHP_EXTENSION_LIBS="${PHP_EXTENSION_LIBS},brotli"
-	fi
-	# The mimalloc library must be built if MIMALLOC is true
-	if [ -n "${MIMALLOC}" ]; then
-		if ! echo "${PHP_EXTENSION_LIBS}" | grep -q "\bmimalloc\b"; then
-			PHP_EXTENSION_LIBS="${PHP_EXTENSION_LIBS},mimalloc"
-		fi
-	fi
-
 	${spcCommand} doctor --auto-fix
 	# shellcheck disable=SC2086
 	${spcCommand} download --with-php="${PHP_VERSION}" --for-extensions="${PHP_EXTENSIONS}" --for-libs="${PHP_EXTENSION_LIBS}" ${SPC_OPT_DOWNLOAD_ARGS}
 	# shellcheck disable=SC2086
 	${spcCommand} build --enable-zts --build-embed ${SPC_OPT_BUILD_ARGS} "${PHP_EXTENSIONS}" --with-libs="${PHP_EXTENSION_LIBS}"
+
+	echo -n "${cache_key}" >../cache_key
 fi
 
 if ! type "go" >/dev/null 2>&1; then
