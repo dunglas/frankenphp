@@ -87,9 +87,13 @@ EOF
 
 iteration="1"
 cd dist
+glibc_version=$(ldd -v "$bin" | awk '/GLIBC_/ {gsub(/[()]/, "", $2); print $2}' | grep -v GLIBC_PRIVATE | sort -V | tail -n1)
+cxxabi_version=$(strings "$bin" | grep -oP 'CXXABI_\d+\.\d+(\.\d+)?' | sort -V | tail -n1)
 
 fpm -s dir -t rpm -n frankenphp -v "${FRANKENPHP_VERSION}" \
 	--config-files /etc/frankenphp/Caddyfile \
+	--depends "libc.so.6(${glibc_version})(64bit)" \
+	--depends "libstdc++.so.6(${cxxabi_version})(64bit)" \
 	"$bin=/usr/bin/frankenphp" \
 	"./frankenphp.service=/usr/lib/systemd/system/frankenphp.service" \
 	"./Caddyfile=/etc/frankenphp/Caddyfile"
