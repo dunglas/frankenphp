@@ -24,16 +24,16 @@ fi
 
 arch="$(uname -m)"
 os="$(uname -s | tr '[:upper:]' '[:lower:]')"
-bin="dist/frankenphp-${os}-${arch}"
+bin="frankenphp-${os}-${arch}"
 
-if [ ! -f "$bin" ]; then
+if [ ! -f "dist/$bin" ]; then
   echo "Error: $bin not found. Run './build-static.sh' first"
   exit 1
 fi
 
-if [ -z "${FRANKENPHP_VERSION}" ]; then
-	FRANKENPHP_VERSION="$(git rev-parse --verify HEAD)"
-	export FRANKENPHP_VERSION
+if [[ ! "${FRANKENPHP_VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+  echo "Error: FRANKENPHP_VERSION must be set to X.Y.Z (e.g. 1.5.1), got '${FRANKENPHP_VERSION}'"
+  exit 1
 fi
 
 cat <<EOF > dist/frankenphp.service
@@ -85,7 +85,17 @@ http:// {
 import Caddyfile.d/*.caddyfile
 EOF
 
+iteration="1"
+cd dist
+
 fpm -s dir -t rpm -n frankenphp -v "${FRANKENPHP_VERSION}" \
+  --config-files /etc/frankenphp/Caddyfile \
   "$bin=/usr/bin/frankenphp" \
-  "./dist/frankenphp.service=/usr/lib/systemd/system/frankenphp.service" \
-  "./dist/Caddyfile=/etc/frankenphp/Caddyfile"
+  "./frankenphp.service=/usr/lib/systemd/system/frankenphp.service" \
+  "./Caddyfile=/etc/frankenphp/Caddyfile"
+
+rpm_file="frankenphp-${FRANKENPHP_VERSION}-${iteration}.${arch}.rpm"
+
+fpm -s rpm -t deb "$rpm_file"
+
+cd ..
