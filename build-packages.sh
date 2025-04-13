@@ -5,21 +5,21 @@ set -x
 
 # Ensure required tools are installed
 if ! command -v rpmbuild &>/dev/null; then
-  echo "Error: rpm-build is required to create RPM packages."
-  echo "Install it with: sudo dnf install rpm-build"
-  exit 1
+	echo "Error: rpm-build is required to create RPM packages."
+	echo "Install it with: sudo dnf install rpm-build"
+	exit 1
 fi
 
 if ! command -v ruby &>/dev/null; then
-  echo "Error: Ruby is required by FPM."
-  echo "Install it with: sudo dnf install ruby"
-  exit 1
+	echo "Error: Ruby is required by FPM."
+	echo "Install it with: sudo dnf install ruby"
+	exit 1
 fi
 
 if ! command -v fpm &>/dev/null; then
-  echo "Error: FPM (rubygem-fpm) is required to create RPM packages."
-  echo "Install it with: sudo gem install fpm"
-  exit 1
+	echo "Error: FPM (rubygem-fpm) is required to create RPM packages."
+	echo "Install it with: sudo gem install fpm"
+	exit 1
 fi
 
 arch="$(uname -m)"
@@ -27,13 +27,13 @@ os="$(uname -s | tr '[:upper:]' '[:lower:]')"
 bin="frankenphp-${os}-${arch}"
 
 if [ ! -f "dist/$bin" ]; then
-  echo "Error: $bin not found. Run './build-static.sh' first"
-  exit 1
+	echo "Error: $bin not found. Run './build-static.sh' first"
+	exit 1
 fi
 
 if [[ ! "${FRANKENPHP_VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-  echo "Error: FRANKENPHP_VERSION must be set to X.Y.Z (e.g. 1.5.1), got '${FRANKENPHP_VERSION}'"
-  exit 1
+	echo "Error: FRANKENPHP_VERSION must be set to X.Y.Z (e.g. 1.5.1), got '${FRANKENPHP_VERSION}'"
+	exit 1
 fi
 
 cat <<EOF > dist/frankenphp.service
@@ -66,16 +66,16 @@ cat <<EOF > dist/Caddyfile
 # https://caddyserver.com/docs/caddyfile
 # https://frankenphp.dev/docs/config
 {
-    # enable the frankenphp module, otherwise "php_server" and "php" directives do not work
-    frankenphp {
-        # optionally set max_threads, num_threads and create workers here
-    }
+		# enable the frankenphp module, otherwise "php_server" and "php" directives do not work
+		frankenphp {
+				# optionally set max_threads, num_threads and create workers here
+		}
 }
 
 http:// {
-    root * /usr/share/caddy
-    php_server
-    file_server
+		root * /usr/share/caddy
+		php_server
+		file_server
 }
 
 # As an alternative to editing the above site block, you can add your own site
@@ -89,10 +89,10 @@ iteration="1"
 cd dist
 
 fpm -s dir -t rpm -n frankenphp -v "${FRANKENPHP_VERSION}" \
-  --config-files /etc/frankenphp/Caddyfile \
-  "$bin=/usr/bin/frankenphp" \
-  "./frankenphp.service=/usr/lib/systemd/system/frankenphp.service" \
-  "./Caddyfile=/etc/frankenphp/Caddyfile"
+	--config-files /etc/frankenphp/Caddyfile \
+	"$bin=/usr/bin/frankenphp" \
+	"./frankenphp.service=/usr/lib/systemd/system/frankenphp.service" \
+	"./Caddyfile=/etc/frankenphp/Caddyfile"
 
 rpm_file="frankenphp-${FRANKENPHP_VERSION}-${iteration}.${arch}.rpm"
 
