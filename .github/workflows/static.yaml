@@ -394,7 +394,7 @@ jobs:
           "${BINARY}" list-modules | grep http.encoders.br
           "${BINARY}" list-modules | grep http.handlers.mercure
           "${BINARY}" list-modules | grep http.handlers.mercure
-          "${BINARY}" list-modules | grep http.handlers.vulcain#
+          "${BINARY}" list-modules | grep http.handlers.vulcain
           "${BINARY}" php-cli -r "echo 'Sanity check passed';"
         env:
           BINARY: dist/frankenphp-mac-${{ matrix.platform }}
