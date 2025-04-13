@@ -103,7 +103,9 @@ other.example.com {
 ```
 
 Using the `php_server` directive is generally what you need,
-but if you need full control, you can use the lower level `php` directive:
+but if you need full control, you can use the lower level `php` directive.
+The `php` directive passes all input to php, instead of first checking whether
+it's a php file or not. Read more about it in the [performance page](performance.md).
 
 Using the `php_server` directive is equivalent to this configuration:
 
