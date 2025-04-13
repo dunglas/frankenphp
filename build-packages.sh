@@ -60,7 +60,7 @@ cat <<EOF >dist/frankenphp.service
 	WantedBy=multi-user.target
 EOF
 
-cat <<EOF > dist/Caddyfile
+cat <<EOF >dist/Caddyfile
 	# The Caddyfile is an easy way to configure your Caddy web server.
 	#
 	# https://caddyserver.com/docs/caddyfile
