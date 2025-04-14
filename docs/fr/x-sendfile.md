@@ -24,16 +24,17 @@ depuis un répertoire nommé `private-files/`.
 Tout d'abord, ajoutez la configuration suivante à votre `Caddyfile` pour activer cette fonctionnalité :
 
 ```patch
-    root * public/
-    # ...
+	root public/
+	# ...
 
 +	# Needed for Symfony, Laravel and other projects using the Symfony HttpFoundation component
 +	request_header X-Sendfile-Type x-accel-redirect
++	request_header X-Accel-Mapping ../private-files=/private-files
 +
 +	intercept {
 +		@accel header X-Accel-Redirect *
 +		handle_response @accel {
-+			root * private-files/
++			root private-files/
 +			rewrite * {resp.header.X-Accel-Redirect}
 +			method * GET
 +
@@ -57,7 +58,8 @@ header('X-Accel-Redirect: file.txt') ;
 
 ## Projets utilisant le composant Symfony HttpFoundation (Symfony, Laravel, Drupal...)
 
-Symfony HttpFoundation [supporte nativement cette fonctionnalité] (https://symfony.com/doc/current/components/http_foundation.html#serving-files). Il va automatiquement déterminer la bonne valeur pour l'en-tête `X-Accel-Redirect` et l'ajoutera à la réponse.
+Symfony HttpFoundation [supporte nativement cette fonctionnalité](https://symfony.com/doc/current/components/http_foundation.html#serving-files).
+Il va automatiquement déterminer la bonne valeur pour l'en-tête `X-Accel-Redirect` et l'ajoutera à la réponse.
 
 ```php
 use Symfony\Component\HttpFoundation\BinaryFileResponse;

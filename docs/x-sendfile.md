@@ -24,16 +24,17 @@ from a directory named `private-files/`.
 First, add the following configuration to your `Caddyfile` to enable this feature:
 
 ```patch
-    root * public/
-    # ...
+	root public/
+	# ...
 
 +	# Needed for Symfony, Laravel and other projects using the Symfony HttpFoundation component
 +	request_header X-Sendfile-Type x-accel-redirect
++	request_header X-Accel-Mapping ../private-files=/private-files
 +
 +	intercept {
 +		@accel header X-Accel-Redirect *
 +		handle_response @accel {
-+			root * private-files/
++			root private-files/
 +			rewrite * {resp.header.X-Accel-Redirect}
 +			method * GET
 +
