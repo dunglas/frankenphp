@@ -7,7 +7,7 @@
 	{$CADDY_GLOBAL_OPTIONS}
 
 	frankenphp {
-		worker /usr/share/frankenphp/index.php
+		worker /usr/share/frankenphp/public/index.php
 		{$FRANKENPHP_CONFIG}
 	}
 }
