@@ -117,7 +117,7 @@ ENV SPC_CMD_VAR_PHP_MAKE_EXTRA_LIBS='-ldl -lpthread -lm -lresolv -lutil -lrt'
 ENV SPC_OPT_DOWNLOAD_ARGS='--ignore-cache-sources=php-src'
 ENV SPC_OPT_BUILD_ARGS='--with-config-file-path=/etc/frankenphp/php.ini --with-config-file-scan-dir=/etc/frankenphp/php.d'
 ENV SPC_REL_TYPE='binary'
-ENV EXTENSION_DIR='/usr/lib64/frankenphp/modules'
+ENV EXTENSION_DIR='/usr/lib/frankenphp/modules'
 
 # not sure if this is needed
 ENV COMPOSER_ALLOW_SUPERUSER=1
