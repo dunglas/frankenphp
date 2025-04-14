@@ -1,10 +1,13 @@
-
+﻿# The Caddyfile is an easy way to configure your Caddy web server.
+#
+# https://caddyserver.com/docs/caddyfile
+# https://frankenphp.dev/docs/config
 
 {
 	{$CADDY_GLOBAL_OPTIONS}
 
 	frankenphp {
-		#worker /path/to/your/worker.php
+		worker /usr/share/frankenphp/index.php
 		{$FRANKENPHP_CONFIG}
 	}
 }
@@ -21,13 +24,15 @@
 	#	}
 	#}
 
-	root public/
+	root * /usr/share/frankenphp
 	encode zstd br gzip
 
 	# Uncomment the following lines to enable Mercure and Vulcain modules
 	#mercure {
 	#	# Transport to use (default to Bolt)
-	#	transport_url {$MERCURE_TRANSPORT_URL:bolt:///data/mercure.db}
+	#	transport bolt {
+    #       mercure.db
+	#   }
 	#	# Publisher JWT key
 	#	publisher_jwt {env.MERCURE_PUBLISHER_JWT_KEY} {env.MERCURE_PUBLISHER_JWT_ALG}
 	#	# Subscriber JWT key
@@ -46,8 +51,3 @@
 	php_server
 }
 
-# As an alternative to editing the above site block, you can add your own site
-# block files in the Caddyfile.d directory, and they will be included as long
-# as they use the .caddyfile extension.
-
-import Caddyfile.d/*.caddyfile

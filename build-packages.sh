@@ -27,7 +27,7 @@ os="$(uname -s | tr '[:upper:]' '[:lower:]')"
 bin="frankenphp-${os}-${arch}"
 
 if [ ! -f "dist/$bin" ]; then
-	echo "Error: $bin not found. Run './build-static.sh' first"
+	echo "Error: dist/$bin not found. Run './build-static.sh' first"
 	exit 1
 fi
 
@@ -36,55 +36,6 @@ if [[ ! "${FRANKENPHP_VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
 	exit 1
 fi
 
-cat <<EOF >dist/frankenphp.service
-	[Unit]
-	Description=FrankenPHP server
-	After=network.target
-
-	[Service]
-	Type=notify
-	User=caddy
-	Group=caddy
-	ExecStartPre=/usr/bin/frankenphp validate --config /etc/frankenphp/Caddyfile
-	ExecStart=/usr/bin/frankenphp run --environ --config /etc/frankenphp/Caddyfile
-	ExecReload=/usr/bin/frankenphp reload --config /etc/frankenphp/Caddyfile
-	TimeoutStopSec=5s
-	LimitNOFILE=1048576
-	LimitNPROC=512
-	PrivateTmp=true
-	ProtectHome=true
-	ProtectSystem=full
-	AmbientCapabilities=CAP_NET_BIND_SERVICE
-
-	[Install]
-	WantedBy=multi-user.target
-EOF
-
-cat <<EOF >dist/Caddyfile
-	# The Caddyfile is an easy way to configure your Caddy web server.
-	#
-	# https://caddyserver.com/docs/caddyfile
-	# https://frankenphp.dev/docs/config
-	{
-			# enable the frankenphp module, otherwise "php_server" and "php" directives do not work
-			frankenphp {
-					# optionally set max_threads, num_threads and create workers here
-			}
-	}
-
-	http:// {
-			root * /usr/share/caddy
-			php_server
-			file_server
-	}
-
-	# As an alternative to editing the above site block, you can add your own site
-	# block files in the Caddyfile.d directory, and they will be included as long
-	# as they use the .caddyfile extension.
-
-	import Caddyfile.d/*.caddyfile
-EOF
-
 iteration="1"
 cd dist
 glibc_version=$(ldd -v "$bin" | awk '/GLIBC_/ {gsub(/[()]/, "", $2); print $2}' | grep -v GLIBC_PRIVATE | sort -V | tail -n1)
@@ -92,11 +43,16 @@ cxxabi_version=$(strings "$bin" | grep -oP 'CXXABI_\d+\.\d+(\.\d+)?' | sort -V |
 
 fpm -s dir -t rpm -n frankenphp -v "${FRANKENPHP_VERSION}" \
 	--config-files /etc/frankenphp/Caddyfile \
+	--config-files /etc/frankenphp/php.ini \
 	--depends "libc.so.6(${glibc_version})(64bit)" \
 	--depends "libstdc++.so.6(${cxxabi_version})(64bit)" \
 	"$bin=/usr/bin/frankenphp" \
-	"./frankenphp.service=/usr/lib/systemd/system/frankenphp.service" \
-	"./Caddyfile=/etc/frankenphp/Caddyfile"
+	"../package/frankenphp.service=/usr/lib/systemd/system/frankenphp.service" \
+	"../package/Caddyfile=/etc/frankenphp/Caddyfile" \
+	"../package/etc/php.ini=/etc/frankenphp/php.ini" \
+	"../package/etc/php.d/=/etc/frankenphp/php.d" \
+	"../package/content/=/usr/share/frankenphp" \
+	"../package/modules/=/usr/lib/frankenphp/modules"
 
 rpm_file="frankenphp-${FRANKENPHP_VERSION}-${iteration}.${arch}.rpm"
 
