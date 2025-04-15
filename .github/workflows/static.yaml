@@ -246,12 +246,16 @@ jobs:
           path: /tmp/metadata-gnu/*
           if-no-files-found: error
           retention-days: 1
-      - name: Copy binary
+      - name: Copy all frankenphp* files
         run: |
           # shellcheck disable=SC2034
           digest=$(jq -r '."static-builder-gnu"."${{ fromJson(needs.prepare.outputs.push) && 'containerimage.digest' || 'containerimage.config.digest' }}"' <<< "${METADATA}")
-          docker create --platform=${{ matrix.platform }} --name static-builder-gnu "${{ fromJson(needs.prepare.outputs.push) && format('{0}-gnu@{1}', env.IMAGE_NAME, '${digest}') || '${digest}' }}"
-          docker cp "static-builder-gnu:/go/src/app/dist/${BINARY}" "${BINARY}-gnu"
+          container_id=$(docker create --platform=${{ matrix.platform }} "${{ fromJson(needs.prepare.outputs.push) && format('{0}-gnu@{1}', env.IMAGE_NAME, '${digest}') || '${digest}' }}")
+          for file in $(docker run --rm "${{ fromJson(needs.prepare.outputs.push) && format('{0}-gnu@{1}', env.IMAGE_NAME, '${digest}') || '${digest}' }}" sh -c "ls /go/src/app/dist | grep '^frankenphp'"); do
+            docker cp "${container_id}:/go/src/app/dist/${file}" "./${file}"
+          done
+          docker rm "${container_id}"
+          mv ${BINARY} ${BINARY}-gnu
         env:
           METADATA: ${{ steps.build.outputs.metadata }}
           BINARY: frankenphp-linux-${{ matrix.platform == 'linux/amd64' && 'x86_64' || 'aarch64' }}
@@ -259,11 +263,11 @@ jobs:
         if: ${{ !fromJson(needs.prepare.outputs.push) }}
         uses: actions/upload-artifact@v4
         with:
-          name: frankenphp-linux-${{ matrix.platform == 'linux/amd64' && 'x86_64' || 'aarch64' }}-gnu
-          path: frankenphp-linux-${{ matrix.platform == 'linux/amd64' && 'x86_64' || 'aarch64' }}-gnu
+          name: frankenphp-linux-${{ matrix.platform == 'linux/amd64' && 'x86_64' || 'aarch64' }}-gnu-files
+          path: frankenphp*
       - name: Upload assets
         if: fromJson(needs.prepare.outputs.push) && (needs.prepare.outputs.ref || github.ref_type == 'tag')
-        run: gh release upload "${{ (github.ref_type == 'tag' && github.ref_name) || needs.prepare.outputs.ref }}" frankenphp-linux-${{ matrix.platform == 'linux/amd64' && 'x86_64' || 'aarch64' }}-gnu --repo dunglas/frankenphp --clobber
+        run: gh release upload "${{ (github.ref_type == 'tag' && github.ref_name) || needs.prepare.outputs.ref }}" frankenphp* --repo dunglas/frankenphp --clobber
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - if: fromJson(needs.prepare.outputs.push) && (needs.prepare.outputs.ref || github.ref_type == 'tag')
