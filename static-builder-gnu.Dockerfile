@@ -126,7 +126,7 @@ ENV COMPOSER_ALLOW_SUPERUSER=1
 
 # install tools to build packages, if requested - needs gcc 10
 RUN if [ "${BUILD_PACKAGES}" != "" ]; then \
-        yum install -y make bzip2 openssl-devel libffi-devel zlib-devel libyaml libyaml-devel && \
+        yum install -y make bzip2 openssl-devel libffi-devel zlib-devel libyaml libyaml-devel rpm-build && \
         curl -o ruby.tar.gz -fsSL https://cache.ruby-lang.org/pub/ruby/3.2/ruby-3.2.2.tar.gz && \
         tar -xzf ruby.tar.gz && \
         cd ruby-3.2.2 && \
