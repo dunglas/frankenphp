@@ -65,12 +65,6 @@ RUN curl -o cmake.tgz -fsSL https://github.com/Kitware/CMake/releases/download/v
     tar -xzf cmake.tgz -C /cmake --strip-components 1 && \
     rm cmake.tgz
 
-# install tools to build packages, if requested
-RUN if [ "${BUILD_PACKAGES}" != "" ]; then \
-        yum install -y ruby rpm-build && \
-        gem install fpm; \
-    fi
-
 # install build essentials
 RUN yum install -y \
         perl \
@@ -129,6 +123,20 @@ ENV EXTENSION_DIR='/usr/lib/frankenphp/modules'
 
 # not sure if this is needed
 ENV COMPOSER_ALLOW_SUPERUSER=1
+
+# install tools to build packages, if requested - needs gcc 10
+RUN if [ "${BUILD_PACKAGES}" != "" ]; then \
+        yum install -y make bzip2 openssl-devel libffi-devel zlib-devel libyaml libyaml-devel && \
+        curl -o ruby.tar.gz -fsSL https://cache.ruby-lang.org/pub/ruby/3.2/ruby-3.2.2.tar.gz && \
+        tar -xzf ruby.tar.gz && \
+        cd ruby-3.2.2 && \
+        ./configure --without-baseruby && \
+        make && \
+        make install && \
+        cd .. && \
+        rm -rf ruby-3.2.2 ruby.tar.gz && \
+        gem install fpm; \
+    fi
 
 WORKDIR /go/src/app
 COPY go.mod go.sum ./
