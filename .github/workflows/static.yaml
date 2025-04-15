@@ -275,7 +275,7 @@ jobs:
       - if: fromJson(needs.prepare.outputs.push) && (needs.prepare.outputs.ref || github.ref_type == 'tag')
         uses: actions/attest-build-provenance@v2
         with:
-          subject-path: ${{ github.workspace }}/frankenphp-linux-*-gnu
+          subject-path: ${{ github.workspace }}/gh-output/frankenphp-linux-*-gnu
       - name: Run sanity checks
         run: |
           "${BINARY}" version
@@ -285,7 +285,7 @@ jobs:
           "${BINARY}" list-modules | grep http.handlers.mercure
           "${BINARY}" list-modules | grep http.handlers.vulcain
         env:
-          BINARY: ./frankenphp-linux-${{ matrix.platform == 'linux/amd64' && 'x86_64' || 'aarch64' }}-gnu
+          BINARY: ./gh-output/frankenphp-linux-${{ matrix.platform == 'linux/amd64' && 'x86_64' || 'aarch64' }}-gnu
 
   # Adapted from https://docs.docker.com/build/ci/github-actions/multi-platform/
   push:
