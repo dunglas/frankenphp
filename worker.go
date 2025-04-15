@@ -74,6 +74,10 @@ func newWorker(o workerOpt) (*worker, error) {
 		o.env = make(PreparedEnv, 1)
 	}
 
+	if o.name == "" {
+		o.name = absFileName
+	}
+
 	o.env["FRANKENPHP_WORKER\x00"] = "1"
 	w := &worker{
 		name:        o.name,
@@ -84,9 +88,14 @@ func newWorker(o workerOpt) (*worker, error) {
 		threads:     make([]*phpThread, 0, o.num),
 	}
 
-	// ensure the filename is not already registered
-	if _, ok := workers[absFileName]; ok {
-		return w, fmt.Errorf("2 workers cannot have the same filename: %q.", absFileName)
+	// ensure the filename or name are not already registered
+	for _, w := range workers {
+		if w.name == o.name {
+			return w, fmt.Errorf("2 workers cannot have the same name: %q.", o.name)
+		}
+		if w.fileName == absFileName {
+			return w, fmt.Errorf("2 workers cannot have the same filename: %q.", absFileName)
+		}
 	}
 
 	workers[absFileName] = w
