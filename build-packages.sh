@@ -56,6 +56,9 @@ if [[ ! "${FRANKENPHP_VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
 	FRANKENPHP_VERSION=0.0.0
 fi
 
+mkdir -p package/etc/php.d
+mkdir -p package/modules
+
 iteration="1"
 cd dist
 glibc_version=$(ldd -v "$bin" | awk '/GLIBC_/ {gsub(/[()]/, "", $2); print $2}' | grep -v GLIBC_PRIVATE | sort -V | tail -n1)
