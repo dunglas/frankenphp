@@ -6,6 +6,8 @@ FROM centos:7
 ARG FRANKENPHP_VERSION=''
 ENV FRANKENPHP_VERSION=${FRANKENPHP_VERSION}
 
+ARG BUILD_PACKAGES=''
+
 ARG PHP_VERSION=''
 ENV PHP_VERSION=${PHP_VERSION}
 
@@ -136,4 +138,7 @@ COPY --link caddy caddy
 COPY --link internal internal
 
 RUN --mount=type=secret,id=github-token ./build-static.sh && \
-	rm -Rf dist/static-php-cli/source/*
+	rm -Rf dist/static-php-cli/source/* && \
+    if [ "${BUILD_PACKAGES}" != "" ]; then \
+        ./build-packages.sh; \
+    fi

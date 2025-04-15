@@ -31,9 +31,29 @@ if [ ! -f "dist/$bin" ]; then
 	exit 1
 fi
 
+if [ -z "${FRANKENPHP_VERSION}" ]; then
+	FRANKENPHP_VERSION="$(git rev-parse --verify HEAD)"
+	export FRANKENPHP_VERSION
+elif [ -d ".git/" ]; then
+	CURRENT_REF="$(git rev-parse --abbrev-ref HEAD)"
+	export CURRENT_REF
+
+	if echo "${FRANKENPHP_VERSION}" | grep -F -q "."; then
+		# Tag
+
+		# Trim "v" prefix if any
+		FRANKENPHP_VERSION=${FRANKENPHP_VERSION#v}
+		export FRANKENPHP_VERSION
+
+		git checkout "v${FRANKENPHP_VERSION}"
+	else
+		git checkout "${FRANKENPHP_VERSION}"
+	fi
+fi
+
 if [[ ! "${FRANKENPHP_VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
 	echo "Error: FRANKENPHP_VERSION must be set to X.Y.Z (e.g. 1.5.1), got '${FRANKENPHP_VERSION}'"
-	exit 1
+	FRANKENPHP_VERSION=0.0.0
 fi
 
 iteration="1"
