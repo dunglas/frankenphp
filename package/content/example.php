@@ -127,8 +127,8 @@ $requestTime = $duration ?? 0;
                 </div>
 
                 <div class="logos">
-                    <a href="https://frankenphp.dev/"><img src="assets/frankenphp.png" height="56" width="174" alt="[ Powered by FrankenPHP ]" /></a>
-                    <a href="https://caddyserver.com/"><img src="assets/caddy.png" alt="[ Powered by Caddy ]" /></a>
+                    <a href="https://frankenphp.dev/"><img src="assets/frankenphp.png" height="50" width="166" alt="[ Powered by FrankenPHP ]" /></a>
+                    <a href="https://caddyserver.com/"><img src="assets/caddy.png" height="50" width="166" alt="[ Powered by Caddy ]" /></a>
                 </div>
             </div>
         </div>
