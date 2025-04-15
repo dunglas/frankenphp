@@ -251,7 +251,7 @@ jobs:
           # shellcheck disable=SC2034
           digest=$(jq -r '."static-builder-gnu"."${{ fromJson(needs.prepare.outputs.push) && 'containerimage.digest' || 'containerimage.config.digest' }}"' <<< "${METADATA}")
           container_id=$(docker create --platform=${{ matrix.platform }} "${{ fromJson(needs.prepare.outputs.push) && format('{0}-gnu@{1}', env.IMAGE_NAME, '${digest}') || '${digest}' }}")
-          for file in $(docker run --rm "${{ fromJson(needs.prepare.outputs.push) && format('{0}-gnu@{1}', env.IMAGE_NAME, '${digest}') || '${digest}' }}" sh -c "ls /go/src/app/dist | grep '^frankenphp'"); do
+          for file in $(docker run --rm "${{ fromJson(needs.prepare.outputs.push) && format('{0}-gnu@{1}', env.IMAGE_NAME, '${digest}') || '${digest}' }}" sh -c "ls /go/src/app/dist | grep '^frankenphp-'"); do
             docker cp "${container_id}:/go/src/app/dist/${file}" "./${file}"
           done
           docker rm "${container_id}"
