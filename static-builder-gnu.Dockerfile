@@ -150,6 +150,7 @@ WORKDIR /go/src/app
 COPY --link *.* ./
 COPY --link caddy caddy
 COPY --link internal internal
+COPY --link package package
 
 RUN --mount=type=secret,id=github-token ./build-static.sh && \
 	rm -Rf dist/static-php-cli/source/* && \
