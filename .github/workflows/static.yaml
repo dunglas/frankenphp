@@ -251,7 +251,9 @@ jobs:
           # shellcheck disable=SC2034
           digest=$(jq -r '."static-builder-gnu"."${{ fromJson(needs.prepare.outputs.push) && 'containerimage.digest' || 'containerimage.config.digest' }}"' <<< "${METADATA}")
           container_id=$(docker create --platform=${{ matrix.platform }} "${{ fromJson(needs.prepare.outputs.push) && format('{0}-gnu@{1}', env.IMAGE_NAME, '${digest}') || '${digest}' }}")
-          for file in $(docker run --rm "${{ fromJson(needs.prepare.outputs.push) && format('{0}-gnu@{1}', env.IMAGE_NAME, '${digest}') || '${digest}' }}" sh -c "ls /go/src/app/dist | grep '^frankenphp-'"); do
+          mkdir -p gh-output
+          cd gh-output
+          for file in $(docker run --rm "${{ fromJson(needs.prepare.outputs.push) && format('{0}-gnu@{1}', env.IMAGE_NAME, '${digest}') || '${digest}' }}" sh -c "ls /go/src/app/dist | grep '^frankenphp'"); do
             docker cp "${container_id}:/go/src/app/dist/${file}" "./${file}"
           done
           docker rm "${container_id}"
@@ -264,10 +266,10 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: frankenphp-linux-${{ matrix.platform == 'linux/amd64' && 'x86_64' || 'aarch64' }}-gnu-files
-          path: frankenphp-*
+          path: gh-output/*
       - name: Upload assets
         if: fromJson(needs.prepare.outputs.push) && (needs.prepare.outputs.ref || github.ref_type == 'tag')
-        run: gh release upload "${{ (github.ref_type == 'tag' && github.ref_name) || needs.prepare.outputs.ref }}" frankenphp-* --repo dunglas/frankenphp --clobber
+        run: gh release upload "${{ (github.ref_type == 'tag' && github.ref_name) || needs.prepare.outputs.ref }}" gh-output/* --repo dunglas/frankenphp --clobber
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - if: fromJson(needs.prepare.outputs.push) && (needs.prepare.outputs.ref || github.ref_type == 'tag')
