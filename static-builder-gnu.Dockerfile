@@ -43,6 +43,11 @@ RUN sed -i 's/mirror.centos.org/vault.centos.org/g' /etc/yum.repos.d/*.repo && \
     yum update -y && \
     yum install -y centos-release-scl
 
+RUN if [ "${BUILD_PACKAGES}" != "" ]; then \
+        yum install -y ruby rpm-build && \
+        gem install fpm; \
+    fi
+
 # different arch for different scl repo
 RUN if [ "$(uname -m)" = "aarch64" ]; then \
         sed -i 's|mirror.centos.org/centos|vault.centos.org/altarch|g' /etc/yum.repos.d/CentOS-SCLo-scl-rh.repo ; \
