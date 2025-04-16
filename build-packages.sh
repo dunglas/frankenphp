@@ -59,7 +59,6 @@ fi
 mkdir -p package/etc/php.d
 mkdir -p package/modules
 
-iteration="1"
 cd dist
 glibc_version=$(ldd -v "$bin" | awk '/GLIBC_/ {gsub(/[()]/, "", $2); print $2}' | grep -v GLIBC_PRIVATE | sort -V | tail -n1)
 cxxabi_version=$(strings "$bin" | grep -oP 'CXXABI_\d+\.\d+(\.\d+)?' | sort -V | tail -n1)
@@ -69,6 +68,7 @@ fpm -s dir -t rpm -n frankenphp -v "${FRANKENPHP_VERSION}" \
 	--config-files /etc/frankenphp/php.ini \
 	--depends "libc.so.6(${glibc_version})(64bit)" \
 	--depends "libstdc++.so.6(${cxxabi_version})(64bit)" \
+	--after-install ../package/after_install.sh \
 	"$bin=/usr/bin/frankenphp" \
 	"../package/frankenphp.service=/usr/lib/systemd/system/frankenphp.service" \
 	"../package/Caddyfile=/etc/frankenphp/Caddyfile" \
@@ -77,8 +77,22 @@ fpm -s dir -t rpm -n frankenphp -v "${FRANKENPHP_VERSION}" \
 	"../package/content/=/usr/share/frankenphp" \
 	"../package/modules/=/usr/lib/frankenphp/modules"
 
-rpm_file="frankenphp-${FRANKENPHP_VERSION}-${iteration}.${arch}.rpm"
+glibc_version=$(ldd -v "$bin" | awk '/GLIBC_/ {gsub(/[()]/, "", $2); print $2}' | grep -v GLIBC_PRIVATE | sed 's/GLIBC_//' | sort -V | tail -n1)
+cxxabi_version=$(strings "$bin" | grep -oP 'CXXABI_\d+\.\d+(\.\d+)?' | sed 's/CXXABI_//' | sort -V | tail -n1)
 
-fpm -s rpm -t deb "$rpm_file"
+fpm -s dir -t deb -n frankenphp -v "${FRANKENPHP_VERSION}" \
+	--config-files /etc/frankenphp/Caddyfile \
+	--config-files /etc/frankenphp/php.ini \
+	--depends "libc6 (>= ${glibc_version})" \
+	--depends "libstdc++6 (>= ${cxxabi_version})" \
+	--deb-suggests libcap2-bin \
+	--after-install ../package/after_install.sh \
+	"$bin=/usr/bin/frankenphp" \
+	"../package/frankenphp.service=/lib/systemd/system/frankenphp.service" \
+	"../package/Caddyfile=/etc/frankenphp/Caddyfile" \
+	"../package/etc/php.ini=/etc/frankenphp/php.ini" \
+	"../package/etc/php.d/=/etc/frankenphp/php.d" \
+	"../package/content/=/usr/share/frankenphp" \
+	"../package/modules/=/usr/lib/frankenphp/modules"
 
 cd ..
