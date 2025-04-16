@@ -2,7 +2,7 @@
 
 if command -v setcap >/dev/null 2>&1; then
 	setcap 'cap_net_bind_service=+ep' /usr/bin/frankenphp || echo "Warning: failed to set capabilities on frankenphp"
-	echo "Users without root privileges will not be able to bind to ports < 1024."
+	echo "Users without root privileges will not be to run 'frankenphp php-server' on ports 80/443."
 else
 	if [ -f /etc/debian_version ]; then
 		echo "Warning: setcap not found. Install it with: sudo apt install libcap2-bin"
@@ -11,5 +11,5 @@ else
 	else
 		echo "Warning: setcap not found. Install the appropriate libcap package for your system."
 	fi
-	echo "Users without root privileges will not be able to bind to ports < 1024."
+	echo "Users without root privileges will not be to run 'frankenphp php-server' on ports 80/443."
 fi
