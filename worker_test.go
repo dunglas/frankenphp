@@ -2,6 +2,7 @@ package frankenphp_test
 
 import (
 	"fmt"
+	"github.com/stretchr/testify/require"
 	"io"
 	"log"
 	"net/http"
@@ -139,7 +140,8 @@ func ExampleServeHTTP_workers() {
 }
 
 func TestWorkerHasOSEnvironmentVariableInSERVER(t *testing.T) {
-	os.Setenv("CUSTOM_OS_ENV_VARIABLE", "custom_env_variable_value")
+	require.NoError(t, os.Setenv("CUSTOM_OS_ENV_VARIABLE", "custom_env_variable_value"))
+
 	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
 		req := httptest.NewRequest("GET", "http://example.com/worker.php", nil)
 		w := httptest.NewRecorder()

@@ -220,7 +220,7 @@ func allPossibleTransitions(worker1Path string, worker2Path string) []func(*phpT
 
 func TestCorrectThreadCalculation(t *testing.T) {
 	maxProcs := runtime.GOMAXPROCS(0) * 2
-	oneWorkerThread := []workerOpt{workerOpt{num: 1}}
+	oneWorkerThread := []workerOpt{{num: 1}}
 
 	// default values
 	testThreadCalculation(t, maxProcs, maxProcs, &opt{})

@@ -107,7 +107,7 @@ func drainPHPThreads() {
 
 func (mainThread *phpMainThread) start() error {
 	if C.frankenphp_new_main_thread(C.int(mainThread.numThreads)) != 0 {
-		return MainThreadCreationError
+		return ErrMainThreadCreation
 	}
 
 	mainThread.state.waitFor(stateReady)
@@ -141,15 +141,6 @@ func getInactivePHPThread() *phpThread {
 		}
 	}
 
-	return nil
-}
-
-func getPHPThreadAtState(state stateID) *phpThread {
-	for _, thread := range phpThreads {
-		if thread.state.is(state) {
-			return thread
-		}
-	}
 	return nil
 }
 
