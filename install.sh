@@ -34,8 +34,8 @@ Linux*)
 	esac
 
 	if getconf GNU_LIBC_VERSION >/dev/null 2>&1; then
-	  THE_ARCH_BIN="${THE_ARCH_BIN}-gnu"
-	  GNU=" (glibc)"
+		THE_ARCH_BIN="${THE_ARCH_BIN}-gnu"
+		GNU=" (glibc)"
 	fi
 	;;
 Darwin*)
