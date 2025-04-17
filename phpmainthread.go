@@ -144,15 +144,6 @@ func getInactivePHPThread() *phpThread {
 	return nil
 }
 
-func getPHPThreadAtState(state stateID) *phpThread {
-	for _, thread := range phpThreads {
-		if thread.state.is(state) {
-			return thread
-		}
-	}
-	return nil
-}
-
 //export go_frankenphp_main_thread_is_ready
 func go_frankenphp_main_thread_is_ready() {
 	mainThread.setAutomaticMaxThreads()

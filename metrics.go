@@ -11,7 +11,7 @@ import (
 const (
 	StopReasonCrash = iota
 	StopReasonRestart
-	StopReasonShutdown
+	//StopReasonShutdown
 )
 
 type StopReason int
@@ -74,9 +74,9 @@ func (n nullMetrics) StartWorkerRequest(string) {
 func (n nullMetrics) Shutdown() {
 }
 
-func (n nullMetrics) QueuedWorkerRequest(name string) {}
+func (n nullMetrics) QueuedWorkerRequest(string) {}
 
-func (n nullMetrics) DequeuedWorkerRequest(name string) {}
+func (n nullMetrics) DequeuedWorkerRequest(string) {}
 
 func (n nullMetrics) QueuedRequest()   {}
 func (n nullMetrics) DequeuedRequest() {}
@@ -127,9 +127,10 @@ func (m *PrometheusMetrics) StopWorker(name string, reason StopReason) {
 	m.totalWorkers.WithLabelValues(name).Dec()
 	m.readyWorkers.WithLabelValues(name).Dec()
 
-	if reason == StopReasonCrash {
+	switch reason {
+	case StopReasonCrash:
 		m.workerCrashes.WithLabelValues(name).Inc()
-	} else if reason == StopReasonRestart {
+	case StopReasonRestart:
 		m.workerRestarts.WithLabelValues(name).Inc()
 	}
 }

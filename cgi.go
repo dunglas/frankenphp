@@ -168,7 +168,7 @@ func packCgiVariable(key *C.zend_string, value string) C.ht_key_value_pair {
 	return C.ht_key_value_pair{key, toUnsafeChar(value), C.size_t(len(value))}
 }
 
-func addHeadersToServer(thread *phpThread, fc *frankenPHPContext, trackVarsArray *C.zval) {
+func addHeadersToServer(fc *frankenPHPContext, trackVarsArray *C.zval) {
 	for field, val := range fc.request.Header {
 		if k := mainThread.commonHeaders[field]; k != nil {
 			v := strings.Join(val, ", ")
@@ -197,7 +197,7 @@ func go_register_variables(threadIndex C.uintptr_t, trackVarsArray *C.zval) {
 	fc := thread.getRequestContext()
 
 	addKnownVariablesToServer(thread, fc, trackVarsArray)
-	addHeadersToServer(thread, fc, trackVarsArray)
+	addHeadersToServer(fc, trackVarsArray)
 
 	// The Prepared Environment is registered last and can overwrite any previous values
 	addPreparedEnvToServer(fc, trackVarsArray)

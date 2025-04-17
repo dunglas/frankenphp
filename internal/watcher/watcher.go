@@ -187,7 +187,6 @@ func listenForFileEvents(triggerWatcher chan string, stopWatcher chan struct{}) 
 	for {
 		select {
 		case <-stopWatcher:
-			break
 		case lastChangedFile = <-triggerWatcher:
 			timer.Reset(debounceDuration)
 		case <-timer.C:
