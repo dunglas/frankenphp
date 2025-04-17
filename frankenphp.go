@@ -406,8 +406,11 @@ func ServeHTTP(responseWriter http.ResponseWriter, request *http.Request) error 
 
 	// Detect if a worker is available to handle this request
 	if worker, ok := workers[fc.scriptFilename]; ok {
-		worker.handleRequest(fc)
-		return nil
+		// can handle with a global worker, or a module worker from the matching module
+		if worker.moduleID == "" || worker.moduleID == fc.moduleID {
+			worker.handleRequest(fc)
+			return nil
+		}
 	}
 
 	// If no worker was availabe send the request to non-worker threads

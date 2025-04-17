@@ -20,6 +20,7 @@ type worker struct {
 	requestChan chan *frankenPHPContext
 	threads     []*phpThread
 	threadMutex sync.RWMutex
+	moduleID    string
 }
 
 var (
@@ -81,6 +82,7 @@ func newWorker(o workerOpt) (*worker, error) {
 		num:         o.num,
 		env:         o.env,
 		requestChan: make(chan *frankenPHPContext),
+		moduleID:    o.moduleID,
 	}
 	workers[absFileName] = w
 

@@ -31,6 +31,9 @@ type frankenPHPContext struct {
 
 	done      chan interface{}
 	startedAt time.Time
+
+	// The module ID that created this request
+	moduleID string
 }
 
 // fromContext extracts the frankenPHPContext from a context.
