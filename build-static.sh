@@ -58,7 +58,20 @@ if [ -n "${DEBUG_SYMBOLS}" ]; then
 fi
 # php version to build
 if [ -z "${PHP_VERSION}" ]; then
-	export PHP_VERSION="8.4"
+	get_latest_php_version() {
+		input="$1"
+		json=$(curl -s "https://www.php.net/releases/index.php?json&version=$input")
+		latest=$(echo "$json" | jq -r '.version')
+
+		if [[ "$latest" == "$input"* ]]; then
+			echo "$latest"
+		else
+			echo "$input"
+		fi
+	}
+
+	PHP_VERSION="$(get_latest_php_version "8")"
+	export PHP_VERSION
 fi
 # default extension set
 defaultExtensions="apcu,bcmath,bz2,calendar,ctype,curl,dba,dom,exif,fileinfo,filter,ftp,gd,gmp,gettext,iconv,igbinary,imagick,intl,ldap,mbregex,mbstring,mysqli,mysqlnd,opcache,openssl,parallel,pcntl,pdo,pdo_mysql,pdo_pgsql,pdo_sqlite,pgsql,phar,posix,protobuf,readline,redis,session,shmop,simplexml,soap,sockets,sodium,sqlite3,ssh2,sysvmsg,sysvsem,sysvshm,tidy,tokenizer,xlswriter,xml,xmlreader,xmlwriter,zip,zlib,yaml,zstd"
