@@ -52,7 +52,8 @@ elif [ -d ".git/" ]; then
 fi
 
 if [[ ! "${FRANKENPHP_VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-	echo "Error: FRANKENPHP_VERSION must be set to X.Y.Z (e.g. 1.5.1), got '${FRANKENPHP_VERSION}'"
+	echo "Warning: FRANKENPHP_VERSION must be set to X.Y.Z (e.g. 1.5.1), got '${FRANKENPHP_VERSION}'"
+	echo "Falling back to non-release version 0.0.0"
 	FRANKENPHP_VERSION=0.0.0
 fi
 
