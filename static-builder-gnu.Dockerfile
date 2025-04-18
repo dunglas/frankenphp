@@ -76,6 +76,7 @@ RUN yum install -y \
         unzip \
         gzip \
         gcc \
+        jq \
         bzip2 \
         patch \
         xz \
