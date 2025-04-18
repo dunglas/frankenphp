@@ -58,9 +58,10 @@ fi
 
 mkdir -p package/etc/php.d
 mkdir -p package/modules
-[ -f source_file ] && cp -f dist/static-php-cli/source/php-src/php.ini-production package/etc/php.ini
+[ -f ./dist/static-php-cli/source/php-src/php.ini-production ] && cp -f ./dist/static-php-cli/source/php-src/php.ini-production ./package/etc/php.ini
 
 cd dist
+iteration=1
 glibc_version=$(ldd -v "$bin" | awk '/GLIBC_/ {gsub(/[()]/, "", $2); print $2}' | grep -v GLIBC_PRIVATE | sort -V | tail -n1)
 cxxabi_version=$(strings "$bin" | grep -oP 'CXXABI_\d+\.\d+(\.\d+)?' | sort -V | tail -n1)
 
@@ -70,7 +71,8 @@ fpm -s dir -t rpm -n frankenphp -v "${FRANKENPHP_VERSION}" \
 	--depends "libc.so.6(${glibc_version})(64bit)" \
 	--depends "libstdc++.so.6(${cxxabi_version})(64bit)" \
 	--after-install ../package/after_install.sh \
-	"$bin=/usr/bin/frankenphp" \
+	--iteration "${iteration}"\
+	"${bin}=/usr/bin/frankenphp" \
 	"../package/frankenphp.service=/usr/lib/systemd/system/frankenphp.service" \
 	"../package/Caddyfile=/etc/frankenphp/Caddyfile" \
 	"../package/etc/php.ini=/etc/frankenphp/php.ini" \
@@ -88,7 +90,8 @@ fpm -s dir -t deb -n frankenphp -v "${FRANKENPHP_VERSION}" \
 	--depends "libstdc++6 (>= ${cxxabi_version})" \
 	--deb-suggests libcap2-bin \
 	--after-install ../package/after_install.sh \
-	"$bin=/usr/bin/frankenphp" \
+	--iteration "${iteration}"\
+	"${bin}=/usr/bin/frankenphp" \
 	"../package/frankenphp.service=/lib/systemd/system/frankenphp.service" \
 	"../package/Caddyfile=/etc/frankenphp/Caddyfile" \
 	"../package/etc/php.ini=/etc/frankenphp/php.ini" \
