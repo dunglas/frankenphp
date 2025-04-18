@@ -72,7 +72,7 @@ fpm -s dir -t rpm -n frankenphp -v "${FRANKENPHP_VERSION}" \
 	--depends "libc.so.6(${glibc_version})(64bit)" \
 	--depends "libstdc++.so.6(${cxxabi_version})(64bit)" \
 	--after-install ../package/after_install.sh \
-	--iteration "${iteration}"\
+	--iteration "${iteration}" \
 	"${bin}=/usr/bin/frankenphp" \
 	"../package/frankenphp.service=/usr/lib/systemd/system/frankenphp.service" \
 	"../package/Caddyfile=/etc/frankenphp/Caddyfile" \
@@ -91,7 +91,7 @@ fpm -s dir -t deb -n frankenphp -v "${FRANKENPHP_VERSION}" \
 	--depends "libstdc++6 (>= ${cxxabi_version})" \
 	--deb-suggests libcap2-bin \
 	--after-install ../package/after_install.sh \
-	--iteration "${iteration}"\
+	--iteration "${iteration}" \
 	"${bin}=/usr/bin/frankenphp" \
 	"../package/frankenphp.service=/lib/systemd/system/frankenphp.service" \
 	"../package/Caddyfile=/etc/frankenphp/Caddyfile" \
