@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unsafe"
 
 	"github.com/dunglas/frankenphp/internal/fastabs"
 
@@ -59,7 +60,7 @@ type workerConfig struct {
 	// Directories to watch for file changes
 	Watch []string `json:"watch,omitempty"`
 	// ModuleID identifies which module created this worker
-	ModuleID string `json:"module_id,omitempty"`
+	ModuleID uintptr `json:"module_id,omitempty"`
 }
 
 type FrankenPHPApp struct {
@@ -119,7 +120,7 @@ func (f *FrankenPHPApp) Start() error {
 		opts = append(opts, frankenphp.WithWorkers(w.Name, repl.ReplaceKnown(w.FileName, ""), w.Num, w.Env, w.Watch, w.ModuleID))
 	}
 
-	// Add workers from shared location (added by FrankenPHPModule)
+	// Add workers from FrankenPHPModule configurations
 	for _, w := range moduleWorkers {
 		opts = append(opts, frankenphp.WithWorkers(w.Name, repl.ReplaceKnown(w.FileName, ""), w.Num, w.Env, w.Watch, w.ModuleID))
 	}
@@ -147,7 +148,7 @@ func (f *FrankenPHPApp) Stop() error {
 	f.NumThreads = 0
 	f.MaxWaitTime = 0
 
-	// reset shared workers
+	// reset moduleWorkers
 	moduleWorkers = nil
 
 	return nil
@@ -376,7 +377,6 @@ func (FrankenPHPModule) CaddyModule() caddy.ModuleInfo {
 // Provision sets up the module.
 func (f *FrankenPHPModule) Provision(ctx caddy.Context) error {
 	f.logger = ctx.Logger()
-	f.logger.Info("FrankenPHPModule provisioning 🐘")
 
 	if f.Root == "" {
 		if frankenphp.EmbeddedAppPath == "" {
@@ -432,9 +432,8 @@ func (f *FrankenPHPModule) Provision(ctx caddy.Context) error {
 
 	if len(f.Workers) > 0 {
 		// Tag workers with a unique module ID based on the module's memory address
-		moduleID := fmt.Sprintf("%p", f)
 		for i := range f.Workers {
-			f.Workers[i].ModuleID = moduleID
+			f.Workers[i].ModuleID = uintptr(unsafe.Pointer(f))
 		}
 		moduleWorkers = append(moduleWorkers, f.Workers...)
 	}
@@ -474,7 +473,7 @@ func (f *FrankenPHPModule) ServeHTTP(w http.ResponseWriter, r *http.Request, _ c
 		frankenphp.WithRequestSplitPath(f.SplitPath),
 		frankenphp.WithRequestPreparedEnv(env),
 		frankenphp.WithOriginalRequest(&origReq),
-		frankenphp.WithModuleID(fmt.Sprintf("%p", f)),
+		frankenphp.WithModuleID(uintptr(unsafe.Pointer(f))),
 	)
 
 	if err != nil {
