@@ -153,7 +153,12 @@ fi
 if [ "${SPC_REL_TYPE}" = "binary" ]; then
 	mkdir -p static-php-cli/
 	cd static-php-cli/
-	curl -o spc -fsSL "https://dl.static-php.dev/static-php-cli/spc-bin/nightly/spc-linux-${arch}"
+	if [[ "${arch}" =~ "arm" ]]; then
+    dl_arch="aarch64"
+  else
+    dl_arch="${arch}"
+  fi
+	curl -o spc -fsSL "https://dl.static-php.dev/static-php-cli/spc-bin/nightly/spc-linux-${dl_arch}"
 	chmod +x spc
 	spcCommand="./spc"
 elif [ -d "static-php-cli/src" ]; then
