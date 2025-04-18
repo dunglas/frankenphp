@@ -90,7 +90,6 @@ func (f FrankenPHPApp) CaddyModule() caddy.ModuleInfo {
 // Provision sets up the module.
 func (f *FrankenPHPApp) Provision(ctx caddy.Context) error {
 	f.logger = ctx.Logger()
-	f.logger.Info("FrankenPHPApp provisioning 🐘")
 
 	if httpApp, err := ctx.AppIfConfigured("http"); err == nil {
 		if httpApp.(*caddyhttp.App).Metrics != nil {
@@ -431,7 +430,6 @@ func (f *FrankenPHPModule) Provision(ctx caddy.Context) error {
 	}
 
 	if len(f.Workers) > 0 {
-		// Tag workers with a unique module ID based on the module's memory address
 		for i := range f.Workers {
 			f.Workers[i].ModuleID = uintptr(unsafe.Pointer(f))
 		}
@@ -489,11 +487,67 @@ func (f *FrankenPHPModule) ServeHTTP(w http.ResponseWriter, r *http.Request, _ c
 
 // UnmarshalCaddyfile implements caddyfile.Unmarshaler.
 func (f *FrankenPHPModule) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
-	// when adding a new directive, also update the allowedDirectives error message
+	// First pass: Parse all directives except "worker"
 	for d.Next() {
 		for d.NextBlock(0) {
 			switch d.Val() {
+			case "root":
+				if !d.NextArg() {
+					return d.ArgErr()
+				}
+				f.Root = d.Val()
+
+			case "split":
+				f.SplitPath = d.RemainingArgs()
+				if len(f.SplitPath) == 0 {
+					return d.ArgErr()
+				}
+
+			case "env":
+				args := d.RemainingArgs()
+				if len(args) != 2 {
+					return d.ArgErr()
+				}
+				if f.Env == nil {
+					f.Env = make(map[string]string)
+					f.preparedEnv = make(frankenphp.PreparedEnv)
+				}
+				f.Env[args[0]] = args[1]
+				f.preparedEnv[args[0]+"\x00"] = args[1]
+
+			case "resolve_root_symlink":
+				if !d.NextArg() {
+					continue
+				}
+				v, err := strconv.ParseBool(d.Val())
+				if err != nil {
+					return err
+				}
+				if d.NextArg() {
+					return d.ArgErr()
+				}
+				f.ResolveRootSymlink = &v
+
 			case "worker":
+				for d.NextBlock(1) {
+				}
+				for d.NextArg() {
+				}
+				// Skip "worker" blocks in the first pass
+				continue
+
+			default:
+				allowedDirectives := "root, split, env, resolve_root_symlink, worker"
+				return wrongSubDirectiveError("php or php_server", allowedDirectives, d.Val())
+			}
+		}
+	}
+
+	// Second pass: Parse only "worker" blocks
+	d.Reset()
+	for d.Next() {
+		for d.NextBlock(0) {
+			if d.Val() == "worker" {
 				wc := workerConfig{}
 				if d.NextArg() {
 					wc.FileName = d.Val()
@@ -552,48 +606,24 @@ func (f *FrankenPHPModule) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 					return errors.New(`the "file" argument must be specified`)
 				}
 
+				// Inherit environment variables from the parent php_server directive
+				if !filepath.IsAbs(wc.FileName) && f.Root != "" {
+					wc.FileName = filepath.Join(f.Root, wc.FileName)
+				}
+
+				if f.Env != nil {
+					if wc.Env == nil {
+						wc.Env = make(map[string]string)
+					}
+					for k, v := range f.Env {
+						// Only set if not already defined in the worker
+						if _, exists := wc.Env[k]; !exists {
+							wc.Env[k] = v
+						}
+					}
+				}
+
 				f.Workers = append(f.Workers, wc)
-			case "root":
-				if !d.NextArg() {
-					return d.ArgErr()
-				}
-				f.Root = d.Val()
-
-			case "split":
-				f.SplitPath = d.RemainingArgs()
-				if len(f.SplitPath) == 0 {
-					return d.ArgErr()
-				}
-
-			case "env":
-				args := d.RemainingArgs()
-				if len(args) != 2 {
-					return d.ArgErr()
-				}
-				if f.Env == nil {
-					f.Env = make(map[string]string)
-					f.preparedEnv = make(frankenphp.PreparedEnv)
-				}
-				f.Env[args[0]] = args[1]
-				f.preparedEnv[args[0]+"\x00"] = args[1]
-
-			case "resolve_root_symlink":
-				if !d.NextArg() {
-					continue
-				}
-
-				v, err := strconv.ParseBool(d.Val())
-				if err != nil {
-					return err
-				}
-				if d.NextArg() {
-					return d.ArgErr()
-				}
-
-				f.ResolveRootSymlink = &v
-			default:
-				allowedDirectives := "root, split, env, resolve_root_symlink, worker"
-				return wrongSubDirectiveError("php or php_server", allowedDirectives, d.Val())
 			}
 		}
 	}

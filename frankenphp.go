@@ -413,7 +413,7 @@ func ServeHTTP(responseWriter http.ResponseWriter, request *http.Request) error 
 		}
 	}
 
-	// If no worker was availabe send the request to non-worker threads
+	// If no worker was available send the request to non-worker threads
 	handleRequestWithRegularPHPThreads(fc)
 
 	return nil
