@@ -55,13 +55,13 @@ type contextKeyStruct struct{}
 var contextKey = contextKeyStruct{}
 
 var (
-	InvalidRequestError         = errors.New("not a FrankenPHP request")
-	AlreadyStartedError         = errors.New("FrankenPHP is already started")
-	InvalidPHPVersionError      = errors.New("FrankenPHP is only compatible with PHP 8.2+")
-	MainThreadCreationError     = errors.New("error creating the main thread")
-	RequestContextCreationError = errors.New("error during request context creation")
-	ScriptExecutionError        = errors.New("error during PHP script execution")
-	NotRunningError             = errors.New("FrankenPHP is not running. For proper configuration visit: https://frankenphp.dev/docs/config/#caddyfile-config")
+	ErrInvalidRequest         = errors.New("not a FrankenPHP request")
+	ErrAlreadyStarted         = errors.New("FrankenPHP is already started")
+	ErrInvalidPHPVersion      = errors.New("FrankenPHP is only compatible with PHP 8.2+")
+	ErrMainThreadCreation     = errors.New("error creating the main thread")
+	ErrRequestContextCreation = errors.New("error during request context creation")
+	ErrScriptExecution        = errors.New("error during PHP script execution")
+	ErrNotRunning             = errors.New("FrankenPHP is not running. For proper configuration visit: https://frankenphp.dev/docs/config/#caddyfile-config")
 
 	isRunning bool
 
@@ -189,7 +189,7 @@ func calculateMaxThreads(opt *opt) (int, int, int, error) {
 		return opt.numThreads, numWorkers, opt.maxThreads, nil
 	}
 
-	if !numThreadsIsSet && !maxThreadsIsSet {
+	if !numThreadsIsSet {
 		if numWorkers >= maxProcs {
 			// Start at least as many threads as workers, and keep a free thread to handle requests in non-worker mode
 			opt.numThreads = numWorkers + 1
@@ -218,7 +218,7 @@ func calculateMaxThreads(opt *opt) (int, int, int, error) {
 // Init starts the PHP runtime and the configured workers.
 func Init(options ...Option) error {
 	if isRunning {
-		return AlreadyStartedError
+		return ErrAlreadyStarted
 	}
 	isRunning = true
 
@@ -265,7 +265,7 @@ func Init(options ...Option) error {
 	config := Config()
 
 	if config.Version.MajorVersion < 8 || (config.Version.MajorVersion == 8 && config.Version.MinorVersion < 2) {
-		return InvalidPHPVersionError
+		return ErrInvalidPHPVersion
 	}
 
 	if config.ZTS {
@@ -381,7 +381,7 @@ func updateServerContext(thread *phpThread, fc *frankenPHPContext, isWorkerReque
 	)
 
 	if ret > 0 {
-		return RequestContextCreationError
+		return ErrRequestContextCreation
 	}
 
 	return nil
@@ -390,12 +390,12 @@ func updateServerContext(thread *phpThread, fc *frankenPHPContext, isWorkerReque
 // ServeHTTP executes a PHP script according to the given context.
 func ServeHTTP(responseWriter http.ResponseWriter, request *http.Request) error {
 	if !isRunning {
-		return NotRunningError
+		return ErrNotRunning
 	}
 
 	fc, ok := fromContext(request.Context())
 	if !ok {
-		return InvalidRequestError
+		return ErrInvalidRequest
 	}
 
 	fc.responseWriter = responseWriter

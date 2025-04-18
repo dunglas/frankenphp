@@ -33,7 +33,7 @@ func (handler *inactiveThread) beforeScriptExecution() string {
 	panic("unexpected state: " + thread.state.name())
 }
 
-func (handler *inactiveThread) afterScriptExecution(exitStatus int) {
+func (handler *inactiveThread) afterScriptExecution(int) {
 	panic("inactive threads should not execute scripts")
 }
 

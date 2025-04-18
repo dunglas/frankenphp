@@ -138,9 +138,9 @@ if type "brew" >/dev/null 2>&1; then
 fi
 
 if [ "${SPC_REL_TYPE}" = "binary" ]; then
-	mkdir static-php-cli/
+	mkdir -p static-php-cli/
 	cd static-php-cli/
-	curl -o spc -fsSL "https://dl.static-php.dev/static-php-cli/spc-bin/nightly/spc-linux-$(uname -m)"
+	curl -o spc -fsSL "https://dl.static-php.dev/static-php-cli/spc-bin/nightly/spc-linux-${arch}"
 	chmod +x spc
 	spcCommand="./spc"
 elif [ -d "static-php-cli/src" ]; then
