@@ -2,7 +2,7 @@
 
 FrankenPHP, Caddy ainsi que les modules Mercure et Vulcain peuvent être configurés en utilisant [les formats pris en charge par Caddy](https://caddyserver.com/docs/getting-started#your-first-config).
 
-Dans [les images Docker](docker.md), le `Caddyfile` est situé dans `/etc/caddy/Caddyfile`.
+Dans [les images Docker](docker.md), le `Caddyfile` est situé dans `/etc/frankenphp/Caddyfile`.
 Le binaire statique cherchera le `Caddyfile` dans le répertoire dans lequel il est démarré.
 
 PHP lui-même peut être configuré [en utilisant un fichier `php.ini`](https://www.php.net/manual/fr/configuration.file.php).
