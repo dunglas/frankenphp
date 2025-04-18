@@ -411,7 +411,6 @@ func ServeHTTP(responseWriter http.ResponseWriter, request *http.Request) error 
 			worker.handleRequest(fc)
 			return nil
 		}
-		fc.logger.Warn(fmt.Sprintf("Module ID mismatch: %s != %s", worker.moduleID, fc.moduleID))
 	}
 
 	// If no worker was available send the request to non-worker threads
