@@ -33,7 +33,7 @@ if [ "$1" = "configure" ]; then
 	fi
 fi
 
-if [ "$1" = "configure" ] || [ "$1" = "abort-upgrade" ] || [ "$1" = "abort-deconfigure" ] || [ "$1" = "abort-remove" ] ; then
+if [ "$1" = "configure" ] || [ "$1" = "abort-upgrade" ] || [ "$1" = "abort-deconfigure" ] || [ "$1" = "abort-remove" ]; then
 	# This will only remove masks created by d-s-h on package removal.
 	deb-systemd-helper unmask frankenphp.service >/dev/null || true
 
