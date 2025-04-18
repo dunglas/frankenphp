@@ -20,7 +20,7 @@ type worker struct {
 	requestChan chan *frankenPHPContext
 	threads     []*phpThread
 	threadMutex sync.RWMutex
-	moduleID    uintptr
+	moduleID    string
 }
 
 var (

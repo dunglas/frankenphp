@@ -4,6 +4,8 @@
 package caddy
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -12,7 +14,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"unsafe"
 
 	"github.com/dunglas/frankenphp/internal/fastabs"
 
@@ -60,7 +61,7 @@ type workerConfig struct {
 	// Directories to watch for file changes
 	Watch []string `json:"watch,omitempty"`
 	// ModuleID identifies which module created this worker
-	ModuleID uintptr `json:"module_id,omitempty"`
+	ModuleID string `json:"module_id,omitempty"`
 }
 
 type FrankenPHPApp struct {
@@ -356,6 +357,8 @@ type FrankenPHPModule struct {
 	ResolveRootSymlink *bool `json:"resolve_root_symlink,omitempty"`
 	// Env sets an extra environment variable to the given value. Can be specified more than once for multiple environment variables.
 	Env map[string]string `json:"env,omitempty"`
+	// ModuleID is the module ID that created this request.
+	ModuleID string `json:"-"`
 	// Workers configures the worker scripts to start.
 	Workers []workerConfig `json:"workers,omitempty"`
 
@@ -429,9 +432,13 @@ func (f *FrankenPHPModule) Provision(ctx caddy.Context) error {
 		}
 	}
 
+	data := []byte(f.Root + strings.Join(f.SplitPath, ",") + time.Now().String())
+	hash := sha256.Sum256(data)
+	f.ModuleID = hex.EncodeToString(hash[:8])
+
 	if len(f.Workers) > 0 {
-		for i := range f.Workers {
-			f.Workers[i].ModuleID = uintptr(unsafe.Pointer(f))
+		for _, w := range f.Workers {
+			w.ModuleID = f.ModuleID
 		}
 		moduleWorkers = append(moduleWorkers, f.Workers...)
 	}
@@ -471,7 +478,7 @@ func (f *FrankenPHPModule) ServeHTTP(w http.ResponseWriter, r *http.Request, _ c
 		frankenphp.WithRequestSplitPath(f.SplitPath),
 		frankenphp.WithRequestPreparedEnv(env),
 		frankenphp.WithOriginalRequest(&origReq),
-		frankenphp.WithModuleID(uintptr(unsafe.Pointer(f))),
+		frankenphp.WithModuleID(f.ModuleID),
 	)
 
 	if err != nil {
