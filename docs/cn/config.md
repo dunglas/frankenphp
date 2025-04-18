@@ -2,7 +2,7 @@
 
 FrankenPHP，Caddy 以及 Mercure 和 Vulcain 模块可以使用 [Caddy 支持的格式](https://caddyserver.com/docs/getting-started#your-first-config) 进行配置。
 
-在[Docker 映像](docker.md) 中，`Caddyfile` 位于 `/etc/caddy/Caddyfile`。
+在[Docker 映像](docker.md) 中，`Caddyfile` 位于 `/etc/frankenphp/Caddyfile`。
 静态二进制文件会在启动时所在的目录中查找 `Caddyfile`。
 PHP 本身可以[使用 `php.ini` 文件](https://www.php.net/manual/zh/configuration.file.php)进行配置。
 默认情况下，随 Docker 映像提供的 PHP 和静态二进制文件中包含的 PHP 将在启动 FrankenPHP 的目录和 `/usr/local/etc/php/` 中查找`php.ini` 文件。它们还会从 `/usr/local/etc/php/conf.d/` 中加载所有以 `.ini` 结尾的文件。
