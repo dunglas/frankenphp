@@ -11,6 +11,7 @@ DEST=${BIN_DIR}/frankenphp
 
 OS=$(uname -s)
 ARCH=$(uname -m)
+GNU=""
 
 if type "tput" >/dev/null 2>&1; then
 	bold=$(tput bold || true)
@@ -31,6 +32,11 @@ Linux*)
 		THE_ARCH_BIN=""
 		;;
 	esac
+
+	if getconf GNU_LIBC_VERSION >/dev/null 2>&1; then
+		THE_ARCH_BIN="${THE_ARCH_BIN}-gnu"
+		GNU=" (glibc)"
+	fi
 	;;
 Darwin*)
 	case ${ARCH} in
@@ -58,7 +64,7 @@ fi
 
 SUDO=""
 
-echo "📦 Downloading ${bold}FrankenPHP${normal} for ${OS} (${ARCH}):"
+echo "📦 Downloading ${bold}FrankenPHP${normal} for ${OS}${GNU} (${ARCH}):"
 
 # check if $DEST is writable and suppress an error message
 touch "${DEST}" 2>/dev/null
