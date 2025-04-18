@@ -2,7 +2,7 @@
 
 FrankenPHP, Caddy'nin yanı sıra Mercure ve Vulcain modülleri [Caddy tarafından desteklenen formatlar](https://caddyserver.com/docs/getting-started#your-first-config) kullanılarak yapılandırılabilir.
 
-Docker imajlarında] (docker.md), `Caddyfile` `/etc/caddy/Caddyfile` adresinde bulunur.
+Docker imajlarında] (docker.md), `Caddyfile` `/etc/frankenphp/Caddyfile` adresinde bulunur.
 Statik ikili, başlatıldığı dizinde `Caddyfile` dosyasını arayacaktır.
 
 PHP'nin kendisi [bir `php.ini` dosyası kullanılarak yapılandırılabilir](https://www.php.net/manual/tr/configuration.file.php).
