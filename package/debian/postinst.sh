@@ -1,13 +1,5 @@
-﻿#!/bin/sh
+#!/bin/sh
 set -e
-
-if command -v setcap >/dev/null 2>&1; then
-	setcap 'cap_net_bind_service=+ep' /usr/bin/frankenphp || echo "Warning: failed to set capabilities on frankenphp"
-	echo "Users without root privileges will not be to run 'frankenphp php-server' on ports 80/443."
-else
-  echo "Warning: setcap not found. Install it with: sudo apt install libcap2-bin"
-	echo "Users without root privileges will not be to run 'frankenphp php-server' on ports 80/443."
-fi
 
 if [ "$1" = "configure" ]; then
         # Add user and group

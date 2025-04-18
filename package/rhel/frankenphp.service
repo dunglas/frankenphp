@@ -1,4 +1,4 @@
-﻿[Unit]
+[Unit]
 Description=FrankenPHP server
 After=network.target
 

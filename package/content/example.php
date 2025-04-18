@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 $requestCount = $i ?? 0;
 $requestTime = $duration ?? 0;
 ?>
