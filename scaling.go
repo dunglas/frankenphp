@@ -20,8 +20,6 @@ const (
 	cpuProbeTime = 120 * time.Millisecond
 	// do not scale over this amount of CPU usage
 	maxCpuUsageForScaling = 0.8
-	// upscale stalled threads every x milliseconds
-	upscaleCheckTime = 100 * time.Millisecond
 	// downscale idle threads every x seconds
 	downScaleCheckTime = 5 * time.Second
 	// max amount of threads stopped in one iteration of downScaleCheckTime
@@ -31,13 +29,11 @@ const (
 )
 
 var (
+	ErrMaxThreadsReached = errors.New("max amount of overall threads reached")
+
 	scaleChan         chan *frankenPHPContext
 	autoScaledThreads = []*phpThread{}
 	scalingMu         = new(sync.RWMutex)
-
-	MaxThreadsReachedError      = errors.New("max amount of overall threads reached")
-	CannotRemoveLastThreadError = errors.New("cannot remove last thread")
-	WorkerNotFoundError         = errors.New("worker not found for given filename")
 )
 
 func initAutoScaling(mainThread *phpMainThread) {
@@ -67,7 +63,7 @@ func drainAutoScaling() {
 func addRegularThread() (*phpThread, error) {
 	thread := getInactivePHPThread()
 	if thread == nil {
-		return nil, MaxThreadsReachedError
+		return nil, ErrMaxThreadsReached
 	}
 	convertToRegularThread(thread)
 	thread.state.waitFor(stateReady, stateShuttingDown, stateReserved)
@@ -77,7 +73,7 @@ func addRegularThread() (*phpThread, error) {
 func addWorkerThread(worker *worker) (*phpThread, error) {
 	thread := getInactivePHPThread()
 	if thread == nil {
-		return nil, MaxThreadsReachedError
+		return nil, ErrMaxThreadsReached
 	}
 	convertToWorkerThread(thread, worker)
 	thread.state.waitFor(stateReady, stateShuttingDown, stateReserved)

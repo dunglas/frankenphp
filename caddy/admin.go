@@ -44,7 +44,7 @@ func (admin *FrankenPHPAdmin) restartWorkers(w http.ResponseWriter, r *http.Requ
 	return nil
 }
 
-func (admin *FrankenPHPAdmin) threads(w http.ResponseWriter, r *http.Request) error {
+func (admin *FrankenPHPAdmin) threads(w http.ResponseWriter, _ *http.Request) error {
 	debugState := frankenphp.DebugState()
 	prettyJson, err := json.MarshalIndent(debugState, "", "    ")
 	if err != nil {

@@ -37,14 +37,15 @@ var failureMu = sync.Mutex{}
 var watcherIsActive = atomic.Bool{}
 
 var (
+	ErrAlreadyStarted        = errors.New("the watcher is already running")
+	ErrUnableToStartWatching = errors.New("unable to start the watcher")
+
 	// the currently active file watcher
 	activeWatcher *watcher
 	// after stopping the watcher we will wait for eventual reloads to finish
 	reloadWaitGroup sync.WaitGroup
 	// we are passing the logger from the main package to the watcher
-	logger                *zap.Logger
-	AlreadyStartedError   = errors.New("the watcher is already running")
-	UnableToStartWatching = errors.New("unable to start the watcher")
+	logger *zap.Logger
 )
 
 func InitWatcher(filePatterns []string, callback func(), zapLogger *zap.Logger) error {
@@ -52,7 +53,7 @@ func InitWatcher(filePatterns []string, callback func(), zapLogger *zap.Logger) 
 		return nil
 	}
 	if watcherIsActive.Load() {
-		return AlreadyStartedError
+		return ErrAlreadyStarted
 	}
 	watcherIsActive.Store(true)
 	logger = zapLogger
@@ -142,7 +143,7 @@ func startSession(w *watchPattern) (C.uintptr_t, error) {
 	}
 	logger.Error("couldn't start watching", zap.String("dir", w.dir))
 
-	return watchSession, UnableToStartWatching
+	return watchSession, ErrUnableToStartWatching
 }
 
 func stopSession(session C.uintptr_t) {
@@ -186,7 +187,6 @@ func listenForFileEvents(triggerWatcher chan string, stopWatcher chan struct{}) 
 	for {
 		select {
 		case <-stopWatcher:
-			break
 		case lastChangedFile = <-triggerWatcher:
 			timer.Reset(debounceDuration)
 		case <-timer.C:

@@ -47,7 +47,7 @@ func (handler *regularThread) beforeScriptExecution() string {
 }
 
 // return true if the worker should continue to run
-func (handler *regularThread) afterScriptExecution(exitStatus int) {
+func (handler *regularThread) afterScriptExecution(int) {
 	handler.afterRequest()
 }
 

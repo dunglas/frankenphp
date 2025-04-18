@@ -754,7 +754,7 @@ func testFileUpload(t *testing.T, opts *testOptions) {
 		_, err := part.Write([]byte("bar"))
 		require.NoError(t, err)
 
-		writer.Close()
+		require.NoError(t, writer.Close())
 
 		req := httptest.NewRequest("POST", "http://example.com/file-upload.php", requestBody)
 		req.Header.Add("Content-Type", writer.FormDataContentType())
