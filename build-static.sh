@@ -128,6 +128,9 @@ if [ -f dist/cache_key ] && [ "$(cat dist/cache_key)" = "${cache_key}" ] && [ -f
 	elif [ -f "bin/spc" ]; then
 		spcCommand="./bin/spc"
 	fi
+
+	PHP_EXTENSIONS="${defaultExtensions}"
+	PHP_EXTENSION_LIBS="${defaultExtensionLibs}"
 else
 	mkdir -p dist/
 	cd dist/
