@@ -71,10 +71,13 @@ fpm -s dir -t rpm -n frankenphp -v "${FRANKENPHP_VERSION}" \
 	--config-files /etc/frankenphp/php.ini \
 	--depends "libc.so.6(${glibc_version})(64bit)" \
 	--depends "libstdc++.so.6(${cxxabi_version})(64bit)" \
-	--after-install ../package/after_install.sh \
+	--before-install ../package/rhel/preinstall.sh \
+	--after-install ../package/rhel/postinstall.sh \
+	--before-remove ../package/rhel/preuninstall.sh \
+	--after-remove ../package/rhel/postuninstall.sh \
 	--iteration "${iteration}" \
 	"${bin}=/usr/bin/frankenphp" \
-	"../package/frankenphp.service=/usr/lib/systemd/system/frankenphp.service" \
+	"../package/rhel/frankenphp.service=/usr/lib/systemd/system/frankenphp.service" \
 	"../package/Caddyfile=/etc/frankenphp/Caddyfile" \
 	"../package/etc/php.ini=/etc/frankenphp/php.ini" \
 	"../package/etc/php.d/=/etc/frankenphp/php.d" \
@@ -90,10 +93,12 @@ fpm -s dir -t deb -n frankenphp -v "${FRANKENPHP_VERSION}" \
 	--depends "libc6 (>= ${glibc_version})" \
 	--depends "libstdc++6 (>= ${cxxabi_version})" \
 	--deb-suggests libcap2-bin \
-	--after-install ../package/after_install.sh \
+	--after-install ../package/debian/postinst.sh \
+	--before-remove ../package/debian/prerm.sh \
+	--after-remove ../package/debian/postrm.sh \
 	--iteration "${iteration}" \
 	"${bin}=/usr/bin/frankenphp" \
-	"../package/frankenphp.service=/lib/systemd/system/frankenphp.service" \
+	"../package/debian/frankenphp.service=/usr/lib/systemd/system/frankenphp.service" \
 	"../package/Caddyfile=/etc/frankenphp/Caddyfile" \
 	"../package/etc/php.ini=/etc/frankenphp/php.ini" \
 	"../package/etc/php.d/=/etc/frankenphp/php.d" \
