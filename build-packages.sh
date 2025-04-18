@@ -92,7 +92,6 @@ fpm -s dir -t deb -n frankenphp -v "${FRANKENPHP_VERSION}" \
 	--config-files /etc/frankenphp/php.ini \
 	--depends "libc6 (>= ${glibc_version})" \
 	--depends "libstdc++6 (>= ${cxxabi_version})" \
-	--deb-suggests libcap2-bin \
 	--after-install ../package/debian/postinst.sh \
 	--before-remove ../package/debian/prerm.sh \
 	--after-remove ../package/debian/postrm.sh \

@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 
 $i = 0;
 $duration = 0;

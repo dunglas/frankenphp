@@ -1,4 +1,4 @@
-﻿#!/bin/bash
+#!/bin/bash
 
 getent group frankenphp &> /dev/null || \
 groupadd -r frankenphp &> /dev/null
