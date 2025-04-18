@@ -5,7 +5,6 @@ if [ "$1" -ge 1 ] && [ -x "/usr/lib/systemd/systemd-update-helper" ]; then
 	/usr/lib/systemd/systemd-update-helper mark-restart-system-units frankenphp.service || :
 fi
 
-
 if [ "$1" -eq 0 ]; then
 	if [ -x /usr/sbin/getsebool ]; then
 		# connect to ACME endpoint to request certificates
