@@ -6,7 +6,6 @@ In [the Docker images](docker.md), the `Caddyfile` is located at `/etc/frankenph
 The static binary will also look for the `Caddyfile` in the directory where the `frankenphp run` command is executed.
 You can specify a custom path with the `-c` or `--config` option.
 
-
 PHP itself can be configured [using a `php.ini` file](https://www.php.net/manual/en/configuration.file.php).
 
 By default, PHP supplied with Docker images and the one included in the static binary will look for a `php.ini` file in the directory where FrankenPHP is started and in `/usr/local/etc/php/`. They will also load all files ending in `.ini` from `/usr/local/etc/php/conf.d/`.
