@@ -127,14 +127,14 @@ ENV COMPOSER_ALLOW_SUPERUSER=1
 # install tools to build packages, if requested - needs gcc 10
 RUN if [ "${BUILD_PACKAGES}" != "" ]; then \
         yum install -y make bzip2 openssl-devel libffi-devel zlib-devel libyaml libyaml-devel rpm-build && \
-        curl -o ruby.tar.gz -fsSL https://cache.ruby-lang.org/pub/ruby/3.2/ruby-3.2.2.tar.gz && \
+        curl -o ruby.tar.gz -fsSL https://cache.ruby-lang.org/pub/ruby/3.4/ruby-3.4.2.tar.gz && \
         tar -xzf ruby.tar.gz && \
-        cd ruby-3.2.2 && \
+        cd ruby-3.4.2 && \
         ./configure --without-baseruby && \
         make && \
         make install && \
         cd .. && \
-        rm -rf ruby-3.2.2 ruby.tar.gz && \
+        rm -rf ruby-3.4.2 ruby.tar.gz && \
         gem install fpm; \
     fi
 
@@ -153,7 +153,7 @@ COPY --link internal internal
 COPY --link package package
 
 RUN --mount=type=secret,id=github-token ./build-static.sh && \
-	rm -Rf dist/static-php-cli/source/* && \
     if [ "${BUILD_PACKAGES}" != "" ]; then \
         ./build-packages.sh; \
-    fi
+    fi ; \
+	rm -Rf dist/static-php-cli/source/*

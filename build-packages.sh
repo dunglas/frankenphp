@@ -58,6 +58,7 @@ fi
 
 mkdir -p package/etc/php.d
 mkdir -p package/modules
+[ -f source_file ] && cp -f dist/static-php-cli/source/php-src/php.ini-production package/etc/php.ini
 
 cd dist
 glibc_version=$(ldd -v "$bin" | awk '/GLIBC_/ {gsub(/[()]/, "", $2); print $2}' | grep -v GLIBC_PRIVATE | sort -V | tail -n1)
