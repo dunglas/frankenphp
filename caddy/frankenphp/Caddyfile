@@ -1,3 +1,7 @@
+# The Caddyfile is an easy way to configure your Caddy web server.
+#
+# https://caddyserver.com/docs/caddyfile
+# https://frankenphp.dev/docs/config
 
 {
 	{$CADDY_GLOBAL_OPTIONS}
