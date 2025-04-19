@@ -4,6 +4,7 @@ package frankenphp
 import "C"
 import (
 	"fmt"
+	"sort"
 	"sync"
 	"time"
 
@@ -24,12 +25,12 @@ type worker struct {
 }
 
 var (
-	workers          map[string]*worker
+	workers          map[string][]*worker
 	watcherIsEnabled bool
 )
 
 func initWorkers(opt []workerOpt) error {
-	workers = make(map[string]*worker, len(opt))
+	workers = make(map[string][]*worker, len(opt))
 	workersReady := sync.WaitGroup{}
 	directoriesToWatch := getDirectoriesToWatch(opt)
 	watcherIsEnabled = len(directoriesToWatch) > 0
@@ -84,7 +85,17 @@ func newWorker(o workerOpt) (*worker, error) {
 		requestChan: make(chan *frankenPHPContext),
 		moduleID:    o.moduleID,
 	}
-	workers[absFileName] = w
+
+	// Check if we already have workers for this filename
+	if _, ok := workers[absFileName]; !ok {
+		workers[absFileName] = make([]*worker, 0)
+	}
+	workers[absFileName] = append(workers[absFileName], w)
+
+	// Sort workers by descending moduleID, this way FrankenPHPApp::ServeHTTP will prefer a module-specific worker over a global one
+	sort.Slice(workers[absFileName], func(i, j int) bool {
+		return workers[absFileName][i].moduleID > workers[absFileName][j].moduleID
+	})
 
 	return w, nil
 }
@@ -97,23 +108,25 @@ func DrainWorkers() {
 func drainWorkerThreads() []*phpThread {
 	ready := sync.WaitGroup{}
 	drainedThreads := make([]*phpThread, 0)
-	for _, worker := range workers {
-		worker.threadMutex.RLock()
-		ready.Add(len(worker.threads))
-		for _, thread := range worker.threads {
-			if !thread.state.requestSafeStateChange(stateRestarting) {
-				// no state change allowed == thread is shutting down
-				// we'll proceed to restart all other threads anyways
-				continue
+	for _, workersList := range workers {
+		for _, worker := range workersList {
+			worker.threadMutex.RLock()
+			ready.Add(len(worker.threads))
+			for _, thread := range worker.threads {
+				if !thread.state.requestSafeStateChange(stateRestarting) {
+					// no state change allowed == thread is shutting down
+					// we'll proceed to restart all other threads anyways
+					continue
+				}
+				close(thread.drainChan)
+				drainedThreads = append(drainedThreads, thread)
+				go func(thread *phpThread) {
+					thread.state.waitFor(stateYielding)
+					ready.Done()
+				}(thread)
 			}
-			close(thread.drainChan)
-			drainedThreads = append(drainedThreads, thread)
-			go func(thread *phpThread) {
-				thread.state.waitFor(stateYielding)
-				ready.Done()
-			}(thread)
+			worker.threadMutex.RUnlock()
 		}
-		worker.threadMutex.RUnlock()
 	}
 	ready.Wait()
 
