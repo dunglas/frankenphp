@@ -37,12 +37,16 @@ func initWorkers(opt []workerOpt) error {
 
 	for _, o := range opt {
 		worker, err := newWorker(o)
-		worker.threads = make([]*phpThread, 0, o.num)
-		workersReady.Add(o.num)
 		if err != nil {
 			return err
 		}
-		for i := 0; i < worker.num; i++ {
+		if worker.threads == nil {
+			worker.threads = make([]*phpThread, 0, o.num)
+		} else {
+			worker.num += o.num
+		}
+		workersReady.Add(o.num)
+		for i := 0; i < o.num; i++ {
 			thread := getInactivePHPThread()
 			convertToWorkerThread(thread, worker)
 			go func() {
@@ -70,6 +74,18 @@ func newWorker(o workerOpt) (*worker, error) {
 	absFileName, err := fastabs.FastAbs(o.fileName)
 	if err != nil {
 		return nil, fmt.Errorf("worker filename is invalid %q: %w", o.fileName, err)
+	}
+
+	// Check if a worker with the same fileName and moduleID already exists
+	if existingWorkers, ok := workers[absFileName]; ok {
+		for _, existingWorker := range existingWorkers {
+			if existingWorker.moduleID == o.moduleID {
+				if o.moduleID == 0 {
+					return nil, fmt.Errorf("cannot add a multiple global workers with the same filename: %s", absFileName)
+				}
+				return existingWorker, nil
+			}
+		}
 	}
 
 	if o.env == nil {
