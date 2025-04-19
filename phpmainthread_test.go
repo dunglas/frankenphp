@@ -94,8 +94,8 @@ func TestTransitionThreadsWhileDoingRequests(t *testing.T) {
 
 	assert.NoError(t, Init(
 		WithNumThreads(numThreads),
-		WithWorkers(worker1Name, worker1Path, 1, map[string]string{"ENV1": "foo"}, []string{}, ""),
-		WithWorkers(worker2Name, worker2Path, 1, map[string]string{"ENV1": "foo"}, []string{}, ""),
+		WithWorkers(worker1Name, worker1Path, 1, map[string]string{"ENV1": "foo"}, []string{}, 0),
+		WithWorkers(worker2Name, worker2Path, 1, map[string]string{"ENV1": "foo"}, []string{}, 0),
 		WithLogger(zap.NewNop()),
 	))
 

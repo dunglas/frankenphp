@@ -5,7 +5,7 @@ package caddy
 
 import (
 	"crypto/sha256"
-	"encoding/hex"
+	"encoding/binary"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -32,8 +32,11 @@ const defaultDocumentRoot = "public"
 
 var iniError = errors.New("'php_ini' must be in the format: php_ini \"<key>\" \"<value>\"")
 
-// moduleWorkers is a package-level variable to store workers that can be accessed by both FrankenPHPModule and FrankenPHPApp
-var moduleWorkers []workerConfig
+// sharedState is a package-level variable to store information that can be accessed by both FrankenPHPModule and FrankenPHPApp
+var sharedState struct {
+	ModuleIDs []uint64
+	Workers   []workerConfig
+}
 
 func init() {
 	caddy.RegisterModule(FrankenPHPApp{})
@@ -61,7 +64,7 @@ type workerConfig struct {
 	// Directories to watch for file changes
 	Watch []string `json:"watch,omitempty"`
 	// ModuleID identifies which module created this worker
-	ModuleID string `json:"module_id,omitempty"`
+	ModuleID uint64 `json:"module_id,omitempty"`
 }
 
 type FrankenPHPApp struct {
@@ -121,7 +124,7 @@ func (f *FrankenPHPApp) Start() error {
 	}
 
 	// Add workers from FrankenPHPModule configurations
-	for _, w := range moduleWorkers {
+	for _, w := range sharedState.Workers {
 		opts = append(opts, frankenphp.WithWorkers(w.Name, repl.ReplaceKnown(w.FileName, ""), w.Num, w.Env, w.Watch, w.ModuleID))
 	}
 
@@ -143,13 +146,13 @@ func (f *FrankenPHPApp) Stop() error {
 		frankenphp.DrainWorkers()
 	}
 
-	// reset configuration so it doesn't bleed into later tests
+	// reset the configuration so it doesn't bleed into later tests
 	f.Workers = nil
 	f.NumThreads = 0
 	f.MaxWaitTime = 0
 
 	// reset moduleWorkers
-	moduleWorkers = nil
+	sharedState.Workers = nil
 
 	return nil
 }
@@ -358,7 +361,7 @@ type FrankenPHPModule struct {
 	// Env sets an extra environment variable to the given value. Can be specified more than once for multiple environment variables.
 	Env map[string]string `json:"env,omitempty"`
 	// ModuleID is the module ID that created this request.
-	ModuleID string `json:"-"`
+	ModuleID uint64 `json:"-"`
 	// Workers configures the worker scripts to start.
 	Workers []workerConfig `json:"workers,omitempty"`
 
@@ -432,15 +435,20 @@ func (f *FrankenPHPModule) Provision(ctx caddy.Context) error {
 		}
 	}
 
-	data := []byte(f.Root + strings.Join(f.SplitPath, ",") + time.Now().String())
-	hash := sha256.Sum256(data)
-	f.ModuleID = hex.EncodeToString(hash[:8])
-
 	if len(f.Workers) > 0 {
+		envString := ""
+		for k, v := range f.Env {
+			envString += k + "=" + v + ","
+		}
+		data := []byte(f.Root + envString)
+		hash := sha256.Sum256(data)
+		f.ModuleID = binary.LittleEndian.Uint64(hash[:8])
+
 		for _, w := range f.Workers {
 			w.ModuleID = f.ModuleID
 		}
-		moduleWorkers = append(moduleWorkers, f.Workers...)
+		sharedState.Workers = append(sharedState.Workers, f.Workers...)
+		f.logger.Warn(fmt.Sprintf("Initialized FrankenPHP module %d with %d workers", f.ModuleID, len(f.Workers)))
 	}
 
 	return nil

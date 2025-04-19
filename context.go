@@ -33,7 +33,7 @@ type frankenPHPContext struct {
 	startedAt time.Time
 
 	// The module ID that created this request
-	moduleID string
+	moduleID uint64
 }
 
 // fromContext extracts the frankenPHPContext from a context.

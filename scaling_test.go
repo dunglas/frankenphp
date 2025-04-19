@@ -36,7 +36,7 @@ func TestScaleAWorkerThreadUpAndDown(t *testing.T) {
 	assert.NoError(t, Init(
 		WithNumThreads(2),
 		WithMaxThreads(3),
-		WithWorkers(workerName, workerPath, 1, map[string]string{}, []string{}, ""),
+		WithWorkers(workerName, workerPath, 1, map[string]string{}, []string{}, 0),
 		WithLogger(zap.NewNop()),
 	))
 
