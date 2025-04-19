@@ -123,3 +123,12 @@ func WithRequestLogger(logger *zap.Logger) RequestOption {
 		return nil
 	}
 }
+
+// WithModuleID sets the module ID associated with the current request
+func WithModuleID(moduleID uint64) RequestOption {
+	return func(o *frankenPHPContext) error {
+		o.moduleID = moduleID
+
+		return nil
+	}
+}

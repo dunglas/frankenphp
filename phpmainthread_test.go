@@ -94,8 +94,8 @@ func TestTransitionThreadsWhileDoingRequests(t *testing.T) {
 
 	assert.NoError(t, Init(
 		WithNumThreads(numThreads),
-		WithWorkers(worker1Name, worker1Path, 1, map[string]string{"ENV1": "foo"}, []string{}),
-		WithWorkers(worker2Name, worker2Path, 1, map[string]string{"ENV1": "foo"}, []string{}),
+		WithWorkers(worker1Name, worker1Path, 1, map[string]string{"ENV1": "foo"}, []string{}, 0),
+		WithWorkers(worker2Name, worker2Path, 1, map[string]string{"ENV1": "foo"}, []string{}, 0),
 		WithLogger(zap.NewNop()),
 	))
 
@@ -179,7 +179,7 @@ func TestFinishBootingAWorkerScript(t *testing.T) {
 
 func getDummyWorker(fileName string) *worker {
 	if workers == nil {
-		workers = make(map[string]*worker)
+		workers = make(map[string][]*worker)
 	}
 	worker, _ := newWorker(workerOpt{
 		fileName: testDataPath + "/" + fileName,
@@ -211,9 +211,9 @@ func allPossibleTransitions(worker1Path string, worker2Path string) []func(*phpT
 				thread.boot()
 			}
 		},
-		func(thread *phpThread) { convertToWorkerThread(thread, workers[worker1Path]) },
+		func(thread *phpThread) { convertToWorkerThread(thread, workers[worker1Path][0]) },
 		convertToInactiveThread,
-		func(thread *phpThread) { convertToWorkerThread(thread, workers[worker2Path]) },
+		func(thread *phpThread) { convertToWorkerThread(thread, workers[worker2Path][0]) },
 		convertToInactiveThread,
 	}
 }

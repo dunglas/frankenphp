@@ -4,6 +4,7 @@ package frankenphp
 import "C"
 import (
 	"fmt"
+	"sort"
 	"sync"
 	"time"
 
@@ -20,27 +21,32 @@ type worker struct {
 	requestChan chan *frankenPHPContext
 	threads     []*phpThread
 	threadMutex sync.RWMutex
+	moduleID    uint64
 }
 
 var (
-	workers          map[string]*worker
+	workers          map[string][]*worker
 	watcherIsEnabled bool
 )
 
 func initWorkers(opt []workerOpt) error {
-	workers = make(map[string]*worker, len(opt))
+	workers = make(map[string][]*worker, len(opt))
 	workersReady := sync.WaitGroup{}
 	directoriesToWatch := getDirectoriesToWatch(opt)
 	watcherIsEnabled = len(directoriesToWatch) > 0
 
 	for _, o := range opt {
 		worker, err := newWorker(o)
-		worker.threads = make([]*phpThread, 0, o.num)
-		workersReady.Add(o.num)
 		if err != nil {
 			return err
 		}
-		for i := 0; i < worker.num; i++ {
+		if worker.threads == nil {
+			worker.threads = make([]*phpThread, 0, o.num)
+		} else {
+			worker.num += o.num
+		}
+		workersReady.Add(o.num)
+		for i := 0; i < o.num; i++ {
 			thread := getInactivePHPThread()
 			convertToWorkerThread(thread, worker)
 			go func() {
@@ -70,6 +76,15 @@ func newWorker(o workerOpt) (*worker, error) {
 		return nil, fmt.Errorf("worker filename is invalid %q: %w", o.fileName, err)
 	}
 
+	// Check if a worker with the same fileName and moduleID already exists
+	if existingWorkers, ok := workers[absFileName]; ok {
+		for _, existingWorker := range existingWorkers {
+			if existingWorker.moduleID == o.moduleID && o.moduleID != 0 {
+				return existingWorker, nil
+			}
+		}
+	}
+
 	if o.env == nil {
 		o.env = make(PreparedEnv, 1)
 	}
@@ -81,8 +96,27 @@ func newWorker(o workerOpt) (*worker, error) {
 		num:         o.num,
 		env:         o.env,
 		requestChan: make(chan *frankenPHPContext),
+		moduleID:    o.moduleID,
 	}
-	workers[absFileName] = w
+
+	// Check if we already have workers for this filename
+	if _, ok := workers[absFileName]; !ok {
+		workers[absFileName] = make([]*worker, 0)
+	} else {
+		// check if a global worker already exists and overwrite it instead of appending
+		for i, existingWorker := range workers[absFileName] {
+			if existingWorker.moduleID == 0 && o.moduleID == 0 {
+				workers[absFileName][i] = w
+				return w, nil
+			}
+		}
+	}
+	workers[absFileName] = append(workers[absFileName], w)
+
+	// Sort workers by descending moduleID, this way FrankenPHPApp::ServeHTTP will prefer a module-specific worker over a global one
+	sort.Slice(workers[absFileName], func(i, j int) bool {
+		return workers[absFileName][i].moduleID > workers[absFileName][j].moduleID
+	})
 
 	return w, nil
 }
@@ -95,23 +129,25 @@ func DrainWorkers() {
 func drainWorkerThreads() []*phpThread {
 	ready := sync.WaitGroup{}
 	drainedThreads := make([]*phpThread, 0)
-	for _, worker := range workers {
-		worker.threadMutex.RLock()
-		ready.Add(len(worker.threads))
-		for _, thread := range worker.threads {
-			if !thread.state.requestSafeStateChange(stateRestarting) {
-				// no state change allowed == thread is shutting down
-				// we'll proceed to restart all other threads anyways
-				continue
+	for _, workersList := range workers {
+		for _, worker := range workersList {
+			worker.threadMutex.RLock()
+			ready.Add(len(worker.threads))
+			for _, thread := range worker.threads {
+				if !thread.state.requestSafeStateChange(stateRestarting) {
+					// no state change allowed == thread is shutting down
+					// we'll proceed to restart all other threads anyways
+					continue
+				}
+				close(thread.drainChan)
+				drainedThreads = append(drainedThreads, thread)
+				go func(thread *phpThread) {
+					thread.state.waitFor(stateYielding)
+					ready.Done()
+				}(thread)
 			}
-			close(thread.drainChan)
-			drainedThreads = append(drainedThreads, thread)
-			go func(thread *phpThread) {
-				thread.state.waitFor(stateYielding)
-				ready.Done()
-			}(thread)
+			worker.threadMutex.RUnlock()
 		}
-		worker.threadMutex.RUnlock()
 	}
 	ready.Wait()
 
