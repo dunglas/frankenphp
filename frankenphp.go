@@ -32,7 +32,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/davecgh/go-spew/spew"
 	"io"
 	"net/http"
 	"os"
@@ -406,20 +405,10 @@ func ServeHTTP(responseWriter http.ResponseWriter, request *http.Request) error 
 	}
 
 	// Detect if a worker is available to handle this request
+	// Look for a worker with matching moduleID or a global worker (moduleID == 0)
 	if workersList, ok := workers[fc.scriptFilename]; ok {
-		workersString := ""
-		for _, worker := range workersList {
-			envString := ""
-			for k, v := range worker.env {
-				envString += k + "=" + v + ","
-			}
-			workersString += strconv.FormatUint(worker.moduleID, 10) + ":" + envString + "\n"
-		}
-		fc.logger.Info(fmt.Sprintf("Available workers: %s", workersString))
-		// Look for a worker with matching moduleID or a global worker (moduleID == 0)
 		for _, worker := range workersList {
 			if worker.moduleID == 0 || worker.moduleID == fc.moduleID {
-				fc.logger.Warn(fmt.Sprintf("Handled %d by worker %d with env: %s", fc.moduleID, worker.moduleID, spew.Sdump(worker.env)))
 				worker.handleRequest(fc)
 				return nil
 			}

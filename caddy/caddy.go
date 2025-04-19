@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/davecgh/go-spew/spew"
 	"net/http"
 	"path/filepath"
 	"strconv"
@@ -122,13 +121,11 @@ func (f *FrankenPHPApp) Start() error {
 	// Add workers from FrankenPHPApp configuration
 	for _, w := range f.Workers {
 		opts = append(opts, frankenphp.WithWorkers(w.Name, repl.ReplaceKnown(w.FileName, ""), w.Num, w.Env, w.Watch, w.ModuleID))
-		caddy.Log().Warn(fmt.Sprintf("Starting FrankenPHP with worker: %s", spew.Sdump(w)))
 	}
 
 	// Add workers from FrankenPHPModule configurations
 	for _, w := range sharedState.Workers {
 		opts = append(opts, frankenphp.WithWorkers(w.Name, repl.ReplaceKnown(w.FileName, ""), w.Num, w.Env, w.Watch, w.ModuleID))
-		caddy.Log().Warn(fmt.Sprintf("Starting FrankenPHP with worker: %s", spew.Sdump(w)))
 	}
 
 	frankenphp.Shutdown()
@@ -451,7 +448,6 @@ func (f *FrankenPHPModule) Provision(ctx caddy.Context) error {
 			f.Workers[i].ModuleID = f.ModuleID
 		}
 		sharedState.Workers = append(sharedState.Workers, f.Workers...)
-		f.logger.Warn(fmt.Sprintf("Initialized FrankenPHP module %d with %d workers", f.ModuleID, len(f.Workers)))
 	}
 
 	return nil
