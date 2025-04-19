@@ -79,10 +79,7 @@ func newWorker(o workerOpt) (*worker, error) {
 	// Check if a worker with the same fileName and moduleID already exists
 	if existingWorkers, ok := workers[absFileName]; ok {
 		for _, existingWorker := range existingWorkers {
-			if existingWorker.moduleID == o.moduleID {
-				if o.moduleID == 0 {
-					return nil, fmt.Errorf("cannot add a multiple global workers with the same filename: %s", absFileName)
-				}
+			if existingWorker.moduleID == o.moduleID && o.moduleID != 0 {
 				return existingWorker, nil
 			}
 		}
@@ -105,6 +102,14 @@ func newWorker(o workerOpt) (*worker, error) {
 	// Check if we already have workers for this filename
 	if _, ok := workers[absFileName]; !ok {
 		workers[absFileName] = make([]*worker, 0)
+	} else {
+		// check if a global worker already exists and overwrite it instead of appending
+		for i, existingWorker := range workers[absFileName] {
+			if existingWorker.moduleID == 0 && o.moduleID == 0 {
+				workers[absFileName][i] = w
+				return w, nil
+			}
+		}
 	}
 	workers[absFileName] = append(workers[absFileName], w)
 
