@@ -2,7 +2,6 @@
 #
 # https://caddyserver.com/docs/caddyfile
 # https://frankenphp.dev/docs/config
-
 {
 	{$CADDY_GLOBAL_OPTIONS}
 

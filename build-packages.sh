@@ -57,8 +57,7 @@ if [[ ! "${FRANKENPHP_VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
 	FRANKENPHP_VERSION=0.0.0
 fi
 
-mkdir -p package/etc/php.d
-mkdir -p package/modules
+mkdir -p package/empty
 [ -f ./dist/static-php-cli/source/php-src/php.ini-production ] && cp -f ./dist/static-php-cli/source/php-src/php.ini-production ./package/etc/php.ini
 
 cd dist
@@ -76,13 +75,15 @@ fpm -s dir -t rpm -n frankenphp -v "${FRANKENPHP_VERSION}" \
 	--before-remove ../package/rhel/preuninstall.sh \
 	--after-remove ../package/rhel/postuninstall.sh \
 	--iteration "${iteration}" \
+	--rpm-user frankenphp --rpm-group frankenphp \
 	"${bin}=/usr/bin/frankenphp" \
 	"../package/rhel/frankenphp.service=/usr/lib/systemd/system/frankenphp.service" \
 	"../package/Caddyfile=/etc/frankenphp/Caddyfile" \
-	"../package/etc/php.ini=/etc/frankenphp/php.ini" \
-	"../package/etc/php.d/=/etc/frankenphp/php.d" \
 	"../package/content/=/usr/share/frankenphp" \
-	"../package/modules/=/usr/lib/frankenphp/modules"
+	"../package/etc/php.ini=/etc/frankenphp/php.ini" \
+	"../package/empty/=/etc/frankenphp/php.d" \
+	"../package/empty/=/usr/lib/frankenphp/modules" \
+	"../package/empty/=/var/lib/frankenphp"
 
 glibc_version=$(ldd -v "$bin" | awk '/GLIBC_/ {gsub(/[()]/, "", $2); print $2}' | grep -v GLIBC_PRIVATE | sed 's/GLIBC_//' | sort -V | tail -n1)
 cxxabi_version=$(strings "$bin" | grep -oP 'CXXABI_\d+\.\d+(\.\d+)?' | sed 's/CXXABI_//' | sort -V | tail -n1)
@@ -96,12 +97,14 @@ fpm -s dir -t deb -n frankenphp -v "${FRANKENPHP_VERSION}" \
 	--before-remove ../package/debian/prerm.sh \
 	--after-remove ../package/debian/postrm.sh \
 	--iteration "${iteration}" \
+	--deb-user frankenphp --deb-group frankenphp \
 	"${bin}=/usr/bin/frankenphp" \
 	"../package/debian/frankenphp.service=/usr/lib/systemd/system/frankenphp.service" \
 	"../package/Caddyfile=/etc/frankenphp/Caddyfile" \
-	"../package/etc/php.ini=/etc/frankenphp/php.ini" \
-	"../package/etc/php.d/=/etc/frankenphp/php.d" \
 	"../package/content/=/usr/share/frankenphp" \
-	"../package/modules/=/usr/lib/frankenphp/modules"
+	"../package/etc/php.ini=/etc/frankenphp/php.ini" \
+	"../package/empty/=/etc/frankenphp/php.d" \
+	"../package/empty/=/usr/lib/frankenphp/modules" \
+	"../package/empty/=/var/lib/frankenphp"
 
 cd ..

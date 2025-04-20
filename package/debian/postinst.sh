@@ -57,3 +57,5 @@ if [ "$1" = "configure" ] || [ "$1" = "abort-upgrade" ] || [ "$1" = "abort-decon
 		fi
 	fi
 fi
+
+HOME=~frankenphp frankenphp trust
