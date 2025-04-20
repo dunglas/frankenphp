@@ -405,18 +405,12 @@ func ServeHTTP(responseWriter http.ResponseWriter, request *http.Request) error 
 	}
 
 	// Detect if a worker is available to handle this request
-	// Look for a worker with matching moduleID or a global worker (moduleID == 0)
-	if workersList, ok := workers[fc.scriptFilename]; ok {
-		for _, worker := range workersList {
-			if worker.moduleID == 0 || worker.moduleID == fc.moduleID {
-				worker.handleRequest(fc)
-				return nil
-			}
-		}
+	if worker := getWorkerForContext(fc); worker != nil {
+		worker.handleRequest(fc)
+	} else {
+		// If no worker was available, send the request to non-worker threads
+		handleRequestWithRegularPHPThreads(fc)
 	}
-
-	// If no worker was available, send the request to non-worker threads
-	handleRequestWithRegularPHPThreads(fc)
 
 	return nil
 }

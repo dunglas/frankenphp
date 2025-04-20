@@ -70,6 +70,18 @@ func initWorkers(opt []workerOpt) error {
 	return nil
 }
 
+func getWorkerForContext(fc *frankenPHPContext) *worker {
+	if workersList, ok := workers[fc.scriptFilename]; ok {
+		// Look for a worker with matching moduleID or a global worker (moduleID == 0)
+		for _, worker := range workersList {
+			if worker.moduleID == 0 || worker.moduleID == fc.moduleID {
+				return worker
+			}
+		}
+	}
+	return nil
+}
+
 func newWorker(o workerOpt) (*worker, error) {
 	absFileName, err := fastabs.FastAbs(o.fileName)
 	if err != nil {

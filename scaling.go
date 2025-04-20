@@ -130,19 +130,6 @@ func scaleRegularThread() {
 	autoScaledThreads = append(autoScaledThreads, thread)
 }
 
-func getWorker(fc *frankenPHPContext) *worker {
-	// if the request has been stalled long enough, scale
-	if workersList, ok := workers[fc.scriptFilename]; ok {
-		// Look for a worker with matching moduleID or a global worker (moduleID == 0)
-		for _, worker := range workersList {
-			if worker.moduleID == 0 || worker.moduleID == fc.moduleID {
-				return worker
-			}
-		}
-	}
-	return nil
-}
-
 func startUpscalingThreads(maxScaledThreads int, scale chan *frankenPHPContext, done chan struct{}) {
 	for {
 		scalingMu.Lock()
@@ -173,7 +160,7 @@ func startUpscalingThreads(maxScaledThreads int, scale chan *frankenPHPContext, 
 			}
 
 			// if the request has been stalled long enough, scale
-			if worker := getWorker(fc); worker != nil {
+			if worker := getWorkerForContext(fc); worker != nil {
 				scaleWorkerThread(worker)
 			} else {
 				scaleRegularThread()
