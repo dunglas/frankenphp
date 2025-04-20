@@ -32,6 +32,7 @@ func TestStartAndStopTheMainThreadWithOneInactiveThread(t *testing.T) {
 }
 
 func TestTransitionRegularThreadToWorkerThread(t *testing.T) {
+	workers = nil
 	logger = zap.NewNop()
 	_, err := initPHPThreads(1, 1, nil)
 	assert.NoError(t, err)
@@ -56,6 +57,7 @@ func TestTransitionRegularThreadToWorkerThread(t *testing.T) {
 }
 
 func TestTransitionAThreadBetween2DifferentWorkers(t *testing.T) {
+	workers = nil
 	logger = zap.NewNop()
 	_, err := initPHPThreads(1, 1, nil)
 	assert.NoError(t, err)
@@ -156,6 +158,7 @@ func TestAllCommonHeadersAreCorrect(t *testing.T) {
 	}
 }
 func TestFinishBootingAWorkerScript(t *testing.T) {
+	workers = nil
 	logger = zap.NewNop()
 	_, err := initPHPThreads(1, 1, nil)
 	assert.NoError(t, err)

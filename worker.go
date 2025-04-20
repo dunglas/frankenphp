@@ -91,7 +91,10 @@ func newWorker(o workerOpt) (*worker, error) {
 	// Check if a worker with the same fileName and moduleID already exists
 	if existingWorkers, ok := workers[absFileName]; ok {
 		for _, existingWorker := range existingWorkers {
-			if existingWorker.moduleID == o.moduleID && o.moduleID != 0 {
+			if existingWorker.moduleID == o.moduleID {
+				if o.moduleID == 0 {
+					return nil, fmt.Errorf("cannot add multiple global workers with the same filename: %s", absFileName)
+				}
 				return existingWorker, nil
 			}
 		}
