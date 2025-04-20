@@ -6,12 +6,12 @@
 	{$CADDY_GLOBAL_OPTIONS}
 
 	frankenphp {
-		worker /usr/share/frankenphp/public/index.php
+		worker /usr/share/frankenphp/public/index.php 
 		{$FRANKENPHP_CONFIG}
 	}
 }
 
-{$CADDY_EXTRA_CONFIG}
+{$CADDY_EXTRA_CONFIG} 
 
 {$SERVER_NAME:localhost} {
 	#log {
