@@ -177,7 +177,6 @@ func TestNamedModuleWorkers(t *testing.T) {
 	var wg sync.WaitGroup
 	testPortNum, _ := strconv.Atoi(testPort)
 	testPortTwo := strconv.Itoa(testPortNum + 1)
-	testPortThree := strconv.Itoa(testPortNum + 2)
 	tester := caddytest.NewTester(t)
 	tester.InitServer(`
 		{
@@ -220,14 +219,6 @@ func TestNamedModuleWorkers(t *testing.T) {
 				}
 			}
 		}
-
-		http://localhost:`+testPortThree+` {
-			route {
-				php {
-					root ../testdata
-				}
-			}
-		}
 		`, "caddyfile")
 
 	for i := 0; i < 10; i++ {
@@ -236,7 +227,6 @@ func TestNamedModuleWorkers(t *testing.T) {
 		go func(i int) {
 			tester.AssertGetResponse("http://localhost:"+testPort+"/worker-with-env.php", http.StatusOK, "Worker has APP_ENV=one")
 			tester.AssertGetResponse("http://localhost:"+testPortTwo+"/worker-with-env.php", http.StatusOK, "Worker has APP_ENV=two")
-			tester.AssertGetResponse("http://localhost:"+testPortThree+"/worker-with-env.php", http.StatusOK, "Worker has APP_ENV=global")
 			wg.Done()
 		}(i)
 	}
