@@ -30,11 +30,8 @@ const defaultDocumentRoot = "public"
 
 var iniError = errors.New("'php_ini' must be in the format: php_ini \"<key>\" \"<value>\"")
 
-// sharedState is a package-level variable to store information that can be accessed by both FrankenPHPModule and FrankenPHPApp
-var sharedState struct {
-	ModuleIDs []uint64
-	Workers   []workerConfig
-}
+// FrankenPHPModule instances register their workers and FrankenPHPApp reads them at Start() time
+var moduleWorkers = make([]workerConfig, 0)
 
 func init() {
 	caddy.RegisterModule(FrankenPHPApp{})
@@ -115,7 +112,7 @@ func (f *FrankenPHPApp) Start() error {
 		frankenphp.WithMaxWaitTime(f.MaxWaitTime),
 	}
 	// Add workers from FrankenPHPApp configuration
-	for _, w := range append(f.Workers, sharedState.Workers...) {
+	for _, w := range append(f.Workers, moduleWorkers...) {
 		opts = append(opts, frankenphp.WithWorkers(w.Name, repl.ReplaceKnown(w.FileName, ""), w.Num, w.Env, w.Watch))
 	}
 
@@ -141,9 +138,7 @@ func (f *FrankenPHPApp) Stop() error {
 	f.Workers = nil
 	f.NumThreads = 0
 	f.MaxWaitTime = 0
-
-	// reset moduleWorkers
-	sharedState.Workers = nil
+	moduleWorkers = nil
 
 	return nil
 }
@@ -433,7 +428,7 @@ func (f *FrankenPHPModule) Provision(ctx caddy.Context) error {
 	}
 
 	if len(f.Workers) > 0 {
-		sharedState.Workers = append(sharedState.Workers, f.Workers...)
+		moduleWorkers = append(moduleWorkers, f.Workers...)
 	}
 
 	return nil
