@@ -625,22 +625,17 @@ func (f *FrankenPHPModule) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 					}
 				}
 
-				if wc.Name == "" {
-					name, _ := fastabs.FastAbs(wc.FileName)
-					if name == "" {
-						name = wc.FileName
-					}
-					wc.Name = name
-
+				if wc.Name == "" && len(wc.Env) > 0 {
 					if len(wc.Env) > 0 {
 						envString := ""
 						for k, v := range wc.Env {
 							envString += k + "=" + v + ","
 						}
-						wc.Name += "#" + envString
+						envString = strings.TrimSuffix(envString, ",")
+						wc.Name += "env:" + envString + "_"
 					}
 				}
-				if !strings.HasPrefix(wc.Name, "m#") {
+				if wc.Name != "" && !strings.HasPrefix(wc.Name, "m#") {
 					wc.Name = "m#" + wc.Name
 				}
 
