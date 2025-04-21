@@ -4,7 +4,7 @@ package frankenphp
 import "C"
 import (
 	"fmt"
-	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -25,12 +25,12 @@ type worker struct {
 }
 
 var (
-	workers          map[string][]*worker
+	workers          map[string]*worker
 	watcherIsEnabled bool
 )
 
 func initWorkers(opt []workerOpt) error {
-	workers = make(map[string][]*worker, len(opt))
+	workers = make(map[string]*worker, len(opt))
 	workersReady := sync.WaitGroup{}
 	directoriesToWatch := getDirectoriesToWatch(opt)
 	watcherIsEnabled = len(directoriesToWatch) > 0
@@ -70,14 +70,9 @@ func initWorkers(opt []workerOpt) error {
 	return nil
 }
 
-func getWorkerForContext(fc *frankenPHPContext) *worker {
-	if workersList, ok := workers[fc.scriptFilename]; ok {
-		// Look for a worker with matching moduleID or a global worker (moduleID == 0)
-		for _, worker := range workersList {
-			if worker.moduleID == 0 || worker.moduleID == fc.moduleID {
-				return worker
-			}
-		}
+func getWorkerForName(name string) *worker {
+	if wrk, ok := workers[name]; ok {
+		return wrk
 	}
 	return nil
 }
@@ -88,16 +83,12 @@ func newWorker(o workerOpt) (*worker, error) {
 		return nil, fmt.Errorf("worker filename is invalid %q: %w", o.fileName, err)
 	}
 
-	// Check if a worker with the same fileName and moduleID already exists
-	if existingWorkers, ok := workers[absFileName]; ok {
-		for _, existingWorker := range existingWorkers {
-			if existingWorker.moduleID == o.moduleID {
-				if o.moduleID == 0 {
-					return nil, fmt.Errorf("cannot add multiple global workers with the same filename: %s", absFileName)
-				}
-				return existingWorker, nil
-			}
-		}
+	key := absFileName
+	if strings.HasPrefix(o.name, "m#") {
+		key = o.name + absFileName
+	}
+	if wrk := getWorkerForName(key); wrk != nil {
+		return wrk, nil
 	}
 
 	if o.env == nil {
@@ -111,27 +102,9 @@ func newWorker(o workerOpt) (*worker, error) {
 		num:         o.num,
 		env:         o.env,
 		requestChan: make(chan *frankenPHPContext),
-		moduleID:    o.moduleID,
 	}
 
-	// Check if we already have workers for this filename
-	if _, ok := workers[absFileName]; !ok {
-		workers[absFileName] = make([]*worker, 0)
-	} else {
-		// check if a global worker already exists and overwrite it instead of appending
-		for i, existingWorker := range workers[absFileName] {
-			if existingWorker.moduleID == 0 && o.moduleID == 0 {
-				workers[absFileName][i] = w
-				return w, nil
-			}
-		}
-	}
-	workers[absFileName] = append(workers[absFileName], w)
-
-	// Sort workers by descending moduleID, this way FrankenPHPApp::ServeHTTP will prefer a module-specific worker over a global one
-	sort.Slice(workers[absFileName], func(i, j int) bool {
-		return workers[absFileName][i].moduleID > workers[absFileName][j].moduleID
-	})
+	workers[key] = w
 
 	return w, nil
 }
@@ -144,25 +117,23 @@ func DrainWorkers() {
 func drainWorkerThreads() []*phpThread {
 	ready := sync.WaitGroup{}
 	drainedThreads := make([]*phpThread, 0)
-	for _, workersList := range workers {
-		for _, worker := range workersList {
-			worker.threadMutex.RLock()
-			ready.Add(len(worker.threads))
-			for _, thread := range worker.threads {
-				if !thread.state.requestSafeStateChange(stateRestarting) {
-					// no state change allowed == thread is shutting down
-					// we'll proceed to restart all other threads anyways
-					continue
-				}
-				close(thread.drainChan)
-				drainedThreads = append(drainedThreads, thread)
-				go func(thread *phpThread) {
-					thread.state.waitFor(stateYielding)
-					ready.Done()
-				}(thread)
+	for _, worker := range workers {
+		worker.threadMutex.RLock()
+		ready.Add(len(worker.threads))
+		for _, thread := range worker.threads {
+			if !thread.state.requestSafeStateChange(stateRestarting) {
+				// no state change allowed == thread is shutting down
+				// we'll proceed to restart all other threads anyways
+				continue
 			}
-			worker.threadMutex.RUnlock()
+			close(thread.drainChan)
+			drainedThreads = append(drainedThreads, thread)
+			go func(thread *phpThread) {
+				thread.state.waitFor(stateYielding)
+				ready.Done()
+			}(thread)
 		}
+		worker.threadMutex.RUnlock()
 	}
 	ready.Wait()
 

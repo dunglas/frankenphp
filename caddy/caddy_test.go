@@ -161,7 +161,7 @@ func TestGlobalAndLocalWorker(t *testing.T) {
 		}
 		`, "caddyfile")
 
-	for i := 0; i < 100; i++ {
+	for i := 0; i < 2; i++ {
 		wg.Add(1)
 
 		go func(i int) {

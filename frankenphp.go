@@ -32,6 +32,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/davecgh/go-spew/spew"
 	"io"
 	"net/http"
 	"os"
@@ -292,6 +293,8 @@ func Init(options ...Option) error {
 		return err
 	}
 
+	logger.Warn(fmt.Sprintf("FrankenPHP initialised workers: %s", spew.Sdump(opt.workers)))
+
 	initAutoScaling(mainThread)
 
 	if c := logger.Check(zapcore.InfoLevel, "FrankenPHP started 🐘"); c != nil {
@@ -404,14 +407,20 @@ func ServeHTTP(responseWriter http.ResponseWriter, request *http.Request) error 
 		return nil
 	}
 
-	// Detect if a worker is available to handle this request
-	if worker := getWorkerForContext(fc); worker != nil {
-		worker.handleRequest(fc)
-	} else {
-		// If no worker was available, send the request to non-worker threads
-		handleRequestWithRegularPHPThreads(fc)
+	workerNames := append(fc.workerNames, "")
+	fc.logger.Warn(fmt.Sprintf("ServeHTTP Worker Names: %s", spew.Sdump(workerNames)))
+	for _, workerName := range workerNames {
+		// Detect if a worker is available to handle this request
+		workername := workerName + fc.scriptFilename
+		if worker := getWorkerForName(workername); worker != nil {
+			fc.logger.Info(fmt.Sprintf("Found worker: %s", workername))
+			worker.handleRequest(fc)
+			return nil
+		}
 	}
 
+	// If no worker was available, send the request to non-worker threads
+	handleRequestWithRegularPHPThreads(fc)
 	return nil
 }
 

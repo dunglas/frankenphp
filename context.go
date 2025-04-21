@@ -23,6 +23,7 @@ type frankenPHPContext struct {
 	pathInfo       string
 	scriptName     string
 	scriptFilename string
+	workerNames    []string
 
 	// Whether the request is already closed by us
 	isDone bool
@@ -31,9 +32,6 @@ type frankenPHPContext struct {
 
 	done      chan interface{}
 	startedAt time.Time
-
-	// The module ID that created this request
-	moduleID uint64
 }
 
 // fromContext extracts the frankenPHPContext from a context.
@@ -42,8 +40,7 @@ func fromContext(ctx context.Context) (fctx *frankenPHPContext, ok bool) {
 	return
 }
 
-// NewRequestWithContext creates a new FrankenPHP request context.
-func NewRequestWithContext(r *http.Request, opts ...RequestOption) (*http.Request, error) {
+func newFrankenPHPContext(r *http.Request, opts ...RequestOption) (*frankenPHPContext, error) {
 	fc := &frankenPHPContext{
 		done:      make(chan interface{}),
 		startedAt: time.Now(),
@@ -94,7 +91,15 @@ func NewRequestWithContext(r *http.Request, opts ...RequestOption) (*http.Reques
 
 	// SCRIPT_FILENAME is the absolute path of SCRIPT_NAME
 	fc.scriptFilename = sanitizedPathJoin(fc.documentRoot, fc.scriptName)
+	return fc, nil
+}
 
+// NewRequestWithContext creates a new FrankenPHP request context.
+func NewRequestWithContext(r *http.Request, opts ...RequestOption) (*http.Request, error) {
+	fc, err2 := newFrankenPHPContext(r, opts...)
+	if err2 != nil {
+		return nil, err2
+	}
 	c := context.WithValue(r.Context(), contextKey, fc)
 
 	return r.WithContext(c), nil

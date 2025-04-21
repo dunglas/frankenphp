@@ -4,11 +4,10 @@
 package caddy
 
 import (
-	"crypto/sha256"
-	"encoding/binary"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/davecgh/go-spew/spew"
 	"net/http"
 	"path/filepath"
 	"strconv"
@@ -53,7 +52,7 @@ func init() {
 }
 
 type workerConfig struct {
-	// Name for the worker
+	// Name for the worker. Default: the filename for FrankenPHPApp workers, filename + environment variables for FrankenPHPModule workers.
 	Name string `json:"name,omitempty"`
 	// FileName sets the path to the worker script.
 	FileName string `json:"file_name,omitempty"`
@@ -63,8 +62,6 @@ type workerConfig struct {
 	Env map[string]string `json:"env,omitempty"`
 	// Directories to watch for file changes
 	Watch []string `json:"watch,omitempty"`
-	// ModuleID identifies which module created this worker
-	ModuleID uint64 `json:"module_id,omitempty"`
 }
 
 type FrankenPHPApp struct {
@@ -119,19 +116,16 @@ func (f *FrankenPHPApp) Start() error {
 		frankenphp.WithMaxWaitTime(f.MaxWaitTime),
 	}
 	// Add workers from FrankenPHPApp configuration
-	for _, w := range f.Workers {
-		opts = append(opts, frankenphp.WithWorkers(w.Name, repl.ReplaceKnown(w.FileName, ""), w.Num, w.Env, w.Watch, w.ModuleID))
-	}
-
-	// Add workers from FrankenPHPModule configurations
-	for _, w := range sharedState.Workers {
-		opts = append(opts, frankenphp.WithWorkers(w.Name, repl.ReplaceKnown(w.FileName, ""), w.Num, w.Env, w.Watch, w.ModuleID))
+	for _, w := range append(f.Workers, sharedState.Workers...) {
+		opts = append(opts, frankenphp.WithWorkers(w.Name, repl.ReplaceKnown(w.FileName, ""), w.Num, w.Env, w.Watch))
 	}
 
 	frankenphp.Shutdown()
 	if err := frankenphp.Init(opts...); err != nil {
 		return err
 	}
+
+	caddy.Log().Warn(fmt.Sprintf("FrankenPHPApp started with workers: %s", spew.Sdump(append(f.Workers, sharedState.Workers...))))
 
 	return nil
 }
@@ -360,8 +354,6 @@ type FrankenPHPModule struct {
 	ResolveRootSymlink *bool `json:"resolve_root_symlink,omitempty"`
 	// Env sets an extra environment variable to the given value. Can be specified more than once for multiple environment variables.
 	Env map[string]string `json:"env,omitempty"`
-	// ModuleID is the module ID that created this request.
-	ModuleID uint64 `json:"-"`
 	// Workers configures the worker scripts to start.
 	Workers []workerConfig `json:"workers,omitempty"`
 
@@ -436,17 +428,6 @@ func (f *FrankenPHPModule) Provision(ctx caddy.Context) error {
 	}
 
 	if len(f.Workers) > 0 {
-		envString := ""
-		for k, v := range f.Env {
-			envString += k + "=" + v + ","
-		}
-		data := []byte(f.Root + envString)
-		hash := sha256.Sum256(data)
-		f.ModuleID = binary.LittleEndian.Uint64(hash[:8])
-
-		for i := range f.Workers {
-			f.Workers[i].ModuleID = f.ModuleID
-		}
 		sharedState.Workers = append(sharedState.Workers, f.Workers...)
 	}
 
@@ -479,13 +460,20 @@ func (f *FrankenPHPModule) ServeHTTP(w http.ResponseWriter, r *http.Request, _ c
 		}
 	}
 
+	workerNames := make([]string, len(f.Workers))
+	for i, w := range f.Workers {
+		workerNames[i] = w.Name
+	}
+
+	caddy.Log().Info(fmt.Sprintf("ServeHTTP module has workers: %s", spew.Sdump(f.Workers)))
+
 	fr, err := frankenphp.NewRequestWithContext(
 		r,
 		documentRootOption,
 		frankenphp.WithRequestSplitPath(f.SplitPath),
 		frankenphp.WithRequestPreparedEnv(env),
 		frankenphp.WithOriginalRequest(&origReq),
-		frankenphp.WithModuleID(f.ModuleID),
+		frankenphp.WithWorkerNames(workerNames),
 	)
 
 	if err != nil {
@@ -637,10 +625,31 @@ func (f *FrankenPHPModule) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 					}
 				}
 
+				if wc.Name == "" {
+					name, _ := fastabs.FastAbs(wc.FileName)
+					if name == "" {
+						name = wc.FileName
+					}
+					wc.Name = name
+
+					if len(wc.Env) > 0 {
+						envString := ""
+						for k, v := range wc.Env {
+							envString += k + "=" + v + ","
+						}
+						wc.Name += "#" + envString
+					}
+				}
+				if !strings.HasPrefix(wc.Name, "m#") {
+					wc.Name = "m#" + wc.Name
+				}
+
 				f.Workers = append(f.Workers, wc)
 			}
 		}
 	}
+
+	caddy.Log().Warn(fmt.Sprintf("FrankenPHPModule UnmarshalCaddyfile with workers: %s", spew.Sdump(f.Workers)))
 
 	return nil
 }
