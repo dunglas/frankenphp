@@ -103,7 +103,6 @@ func newWorker(o workerOpt) (*worker, error) {
 		env:         o.env,
 		requestChan: make(chan *frankenPHPContext),
 	}
-
 	workers[key] = w
 
 	return w, nil

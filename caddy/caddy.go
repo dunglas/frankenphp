@@ -51,7 +51,7 @@ func init() {
 }
 
 type workerConfig struct {
-	// Name for the worker. Default: the filename for FrankenPHPApp workers, filename + environment variables for FrankenPHPModule workers.
+	// Name for the worker. Default: the filename for FrankenPHPApp workers, always prefixed with "m#" for FrankenPHPModule workers.
 	Name string `json:"name,omitempty"`
 	// FileName sets the path to the worker script.
 	FileName string `json:"file_name,omitempty"`
@@ -148,6 +148,86 @@ func (f *FrankenPHPApp) Stop() error {
 	return nil
 }
 
+func parseWorkerConfig(d *caddyfile.Dispenser) (workerConfig, error) {
+	wc := workerConfig{}
+	if d.NextArg() {
+		wc.FileName = d.Val()
+	}
+
+	if d.NextArg() {
+		if d.Val() == "watch" {
+			wc.Watch = append(wc.Watch, "./**/*.{php,yaml,yml,twig,env}")
+		} else {
+			v, err := strconv.Atoi(d.Val())
+			if err != nil {
+				return wc, err
+			}
+
+			wc.Num = v
+		}
+	}
+
+	if d.NextArg() {
+		return wc, errors.New("FrankenPHP: too many 'worker' arguments: " + d.Val())
+	}
+
+	for d.NextBlock(1) {
+		v := d.Val()
+		switch v {
+		case "name":
+			if !d.NextArg() {
+				return wc, d.ArgErr()
+			}
+			wc.Name = d.Val()
+		case "file":
+			if !d.NextArg() {
+				return wc, d.ArgErr()
+			}
+			wc.FileName = d.Val()
+		case "num":
+			if !d.NextArg() {
+				return wc, d.ArgErr()
+			}
+
+			v, err := strconv.Atoi(d.Val())
+			if err != nil {
+				return wc, err
+			}
+
+			wc.Num = v
+		case "env":
+			args := d.RemainingArgs()
+			if len(args) != 2 {
+				return wc, d.ArgErr()
+			}
+			if wc.Env == nil {
+				wc.Env = make(map[string]string)
+			}
+			wc.Env[args[0]] = args[1]
+		case "watch":
+			if !d.NextArg() {
+				// the default if the watch directory is left empty:
+				wc.Watch = append(wc.Watch, "./**/*.{php,yaml,yml,twig,env}")
+			} else {
+				wc.Watch = append(wc.Watch, d.Val())
+			}
+		default:
+			allowedDirectives := "name, file, num, env, watch"
+			return wc, wrongSubDirectiveError("worker", allowedDirectives, v)
+		}
+	}
+
+	if wc.FileName == "" {
+		return wc, errors.New(`the "file" argument must be specified`)
+	}
+
+	if frankenphp.EmbeddedAppPath != "" && filepath.IsLocal(wc.FileName) {
+		wc.FileName = filepath.Join(frankenphp.EmbeddedAppPath, wc.FileName)
+	}
+
+	return wc, nil
+}
+
 // UnmarshalCaddyfile implements caddyfile.Unmarshaler.
 func (f *FrankenPHPApp) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 	for d.Next() {
@@ -229,82 +309,10 @@ func (f *FrankenPHPApp) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 				}
 
 			case "worker":
-				wc := workerConfig{}
-				if d.NextArg() {
-					wc.FileName = d.Val()
+				wc, err := parseWorkerConfig(d)
+				if err != nil {
+					return err
 				}
-
-				if d.NextArg() {
-					if d.Val() == "watch" {
-						wc.Watch = append(wc.Watch, "./**/*.{php,yaml,yml,twig,env}")
-					} else {
-						v, err := strconv.Atoi(d.Val())
-						if err != nil {
-							return err
-						}
-
-						wc.Num = v
-					}
-				}
-
-				if d.NextArg() {
-					return errors.New("FrankenPHP: too many 'worker' arguments: " + d.Val())
-				}
-
-				for d.NextBlock(1) {
-					v := d.Val()
-					switch v {
-					case "name":
-						if !d.NextArg() {
-							return d.ArgErr()
-						}
-						wc.Name = d.Val()
-					case "file":
-						if !d.NextArg() {
-							return d.ArgErr()
-						}
-						wc.FileName = d.Val()
-					case "num":
-						if !d.NextArg() {
-							return d.ArgErr()
-						}
-
-						v, err := strconv.Atoi(d.Val())
-						if err != nil {
-							return err
-						}
-
-						wc.Num = v
-					case "env":
-						args := d.RemainingArgs()
-						if len(args) != 2 {
-							return d.ArgErr()
-						}
-						if wc.Env == nil {
-							wc.Env = make(map[string]string)
-						}
-						wc.Env[args[0]] = args[1]
-					case "watch":
-						if !d.NextArg() {
-							// the default if the watch directory is left empty:
-							wc.Watch = append(wc.Watch, "./**/*.{php,yaml,yml,twig,env}")
-						} else {
-							wc.Watch = append(wc.Watch, d.Val())
-						}
-					default:
-						allowedDirectives := "name, file, num, env, watch"
-						return wrongSubDirectiveError("worker", allowedDirectives, v)
-					}
-				}
-
-				if wc.FileName == "" {
-					return errors.New(`the "file" argument must be specified`)
-				}
-
-				if frankenphp.EmbeddedAppPath != "" && filepath.IsLocal(wc.FileName) {
-					wc.FileName = filepath.Join(frankenphp.EmbeddedAppPath, wc.FileName)
-				}
-
 				if wc.Name == "" {
 					// let worker initialization validate if the FileName is valid or not
 					name, _ := fastabs.FastAbs(wc.FileName)
@@ -545,62 +553,9 @@ func (f *FrankenPHPModule) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 	for d.Next() {
 		for d.NextBlock(0) {
 			if d.Val() == "worker" {
-				wc := workerConfig{}
-				if d.NextArg() {
-					wc.FileName = d.Val()
-				}
-
-				if d.NextArg() {
-					v, err := strconv.Atoi(d.Val())
-					if err != nil {
-						return err
-					}
-					wc.Num = v
-				}
-
-				for d.NextBlock(1) {
-					switch d.Val() {
-					case "name":
-						if !d.NextArg() {
-							return d.ArgErr()
-						}
-						wc.Name = d.Val()
-					case "file":
-						if !d.NextArg() {
-							return d.ArgErr()
-						}
-						wc.FileName = d.Val()
-					case "num":
-						if !d.NextArg() {
-							return d.ArgErr()
-						}
-						v, err := strconv.Atoi(d.Val())
-						if err != nil {
-							return err
-						}
-						wc.Num = v
-					case "env":
-						args := d.RemainingArgs()
-						if len(args) != 2 {
-							return d.ArgErr()
-						}
-						if wc.Env == nil {
-							wc.Env = make(map[string]string)
-						}
-						wc.Env[args[0]] = args[1]
-					case "watch":
-						if !d.NextArg() {
-							wc.Watch = append(wc.Watch, "./**/*.{php,yaml,yml,twig,env}")
-						} else {
-							wc.Watch = append(wc.Watch, d.Val())
-						}
-					default:
-						return fmt.Errorf("unknown worker subdirective: %s", d.Val())
-					}
-				}
-
-				if wc.FileName == "" {
-					return errors.New(`the "file" argument must be specified`)
+				wc, err := parseWorkerConfig(d)
+				if err != nil {
+					return err
 				}
 
 				// Inherit environment variables from the parent php_server directive

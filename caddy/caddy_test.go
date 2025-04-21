@@ -120,7 +120,7 @@ func TestWorker(t *testing.T) {
 	wg.Wait()
 }
 
-func TestGlobalAndLocalWorker(t *testing.T) {
+func TestGlobalAndModuleWorker(t *testing.T) {
 	var wg sync.WaitGroup
 	testPortNum, _ := strconv.Atoi(testPort)
 	testPortTwo := strconv.Itoa(testPortNum + 1)
@@ -146,7 +146,7 @@ func TestGlobalAndLocalWorker(t *testing.T) {
 					worker {
 						file worker-with-env.php
 						num 2
-						env APP_ENV local
+						env APP_ENV module
 					}
 				}
 			}
@@ -161,12 +161,82 @@ func TestGlobalAndLocalWorker(t *testing.T) {
 		}
 		`, "caddyfile")
 
-	for i := 0; i < 2; i++ {
+	for i := 0; i < 10; i++ {
 		wg.Add(1)
 
 		go func(i int) {
-			tester.AssertGetResponse("http://localhost:"+testPort+"/worker-with-env.php", http.StatusOK, "Worker has APP_ENV=local")
+			tester.AssertGetResponse("http://localhost:"+testPort+"/worker-with-env.php", http.StatusOK, "Worker has APP_ENV=module")
 			tester.AssertGetResponse("http://localhost:"+testPortTwo+"/worker-with-env.php", http.StatusOK, "Worker has APP_ENV=global")
+			wg.Done()
+		}(i)
+	}
+	wg.Wait()
+}
+
+func TestNamedModuleWorkers(t *testing.T) {
+	var wg sync.WaitGroup
+	testPortNum, _ := strconv.Atoi(testPort)
+	testPortTwo := strconv.Itoa(testPortNum + 1)
+	testPortThree := strconv.Itoa(testPortNum + 2)
+	tester := caddytest.NewTester(t)
+	tester.InitServer(`
+		{
+			skip_install_trust
+			admin localhost:2999
+
+			frankenphp {
+				worker {
+					file ../testdata/worker-with-env.php
+					num 1
+					env APP_ENV global
+				}
+			}
+		}
+
+		http://localhost:`+testPort+` {
+			route {
+				php {
+					root ../testdata
+					worker {
+						file worker-with-env.php
+						num 2
+						env APP_ENV one
+						name module1
+					}
+				}
+			}
+		}
+
+		http://localhost:`+testPortTwo+` {
+			route {
+				php {
+					root ../testdata
+					worker {
+						file worker-with-env.php
+						num 1
+						env APP_ENV two
+						name module2
+					}
+				}
+			}
+		}
+
+		http://localhost:`+testPortThree+` {
+			route {
+				php {
+					root ../testdata
+				}
+			}
+		}
+		`, "caddyfile")
+
+	for i := 0; i < 10; i++ {
+		wg.Add(1)
+
+		go func(i int) {
+			tester.AssertGetResponse("http://localhost:"+testPort+"/worker-with-env.php", http.StatusOK, "Worker has APP_ENV=one")
+			tester.AssertGetResponse("http://localhost:"+testPortTwo+"/worker-with-env.php", http.StatusOK, "Worker has APP_ENV=two")
+			tester.AssertGetResponse("http://localhost:"+testPortThree+"/worker-with-env.php", http.StatusOK, "Worker has APP_ENV=global")
 			wg.Done()
 		}(i)
 	}
