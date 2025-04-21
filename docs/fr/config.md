@@ -53,7 +53,7 @@ En option, le nombre de threads à créer et les [workers](worker.md) à démarr
         num_threads <num_threads> # Définit le nombre de threads PHP à démarrer. Par défaut : 2x le nombre de CPUs disponibles.
         max_threads <num_threads> # Limite le nombre de threads PHP supplémentaires qui peuvent être démarrés au moment de l'exécution. Valeur par défaut : num_threads. Peut être mis à 'auto'.
 		max_wait_time <duration> # Définit le temps maximum pendant lequel une requête peut attendre un thread PHP libre avant d'être interrompue. Valeur par défaut : désactivé.
-        php_ini <key> <value> Définit une directive php.ini. Peut être utilisé plusieurs fois pour définir plusieurs directives.   
+        php_ini <key> <value> Définit une directive php.ini. Peut être utilisé plusieurs fois pour définir plusieurs directives.
         worker {
             file <path> # Définit le chemin vers le script worker.
             num <num> # Définit le nombre de threads PHP à démarrer, par défaut 2x le nombre de CPUs disponibles.
@@ -90,12 +90,12 @@ Vous pouvez aussi définir plusieurs workers si vous servez plusieurs applicatio
 }
 
 app.example.com {
-    root * /path/to/app/public
+    root /path/to/app/public
     php_server
 }
 
 other.example.com {
-    root * /path/to/other/public
+    root /path/to/other/public
     php_server
 }
 

@@ -4,7 +4,7 @@
 
 http:// {
 	route {
-		root * .
+		root .
 
 		encode zstd br gzip
 
