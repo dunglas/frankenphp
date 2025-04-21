@@ -32,7 +32,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/davecgh/go-spew/spew"
 	"io"
 	"net/http"
 	"os"
@@ -293,8 +292,6 @@ func Init(options ...Option) error {
 		return err
 	}
 
-	logger.Warn(fmt.Sprintf("FrankenPHP initialised workers: %s", spew.Sdump(opt.workers)))
-
 	initAutoScaling(mainThread)
 
 	if c := logger.Check(zapcore.InfoLevel, "FrankenPHP started 🐘"); c != nil {
@@ -407,13 +404,10 @@ func ServeHTTP(responseWriter http.ResponseWriter, request *http.Request) error 
 		return nil
 	}
 
-	workerNames := append(fc.workerNames, "")
-	fc.logger.Warn(fmt.Sprintf("ServeHTTP Worker Names: %s", spew.Sdump(workerNames)))
+	workerNames := append(fc.workerNames, fc.scriptFilename)
 	for _, workerName := range workerNames {
 		// Detect if a worker is available to handle this request
-		workername := workerName + fc.scriptFilename
-		if worker := getWorkerForName(workername); worker != nil {
-			fc.logger.Info(fmt.Sprintf("Found worker: %s", workername))
+		if worker := getWorkerForName(workerName); worker != nil {
 			worker.handleRequest(fc)
 			return nil
 		}

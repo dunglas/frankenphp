@@ -85,7 +85,7 @@ func newWorker(o workerOpt) (*worker, error) {
 
 	key := absFileName
 	if strings.HasPrefix(o.name, "m#") {
-		key = o.name + absFileName
+		key = o.name
 	}
 	if wrk := getWorkerForName(key); wrk != nil {
 		return wrk, nil

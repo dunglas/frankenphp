@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/davecgh/go-spew/spew"
 	"net/http"
 	"path/filepath"
 	"strconv"
@@ -124,8 +123,6 @@ func (f *FrankenPHPApp) Start() error {
 	if err := frankenphp.Init(opts...); err != nil {
 		return err
 	}
-
-	caddy.Log().Warn(fmt.Sprintf("FrankenPHPApp started with workers: %s", spew.Sdump(append(f.Workers, sharedState.Workers...))))
 
 	return nil
 }
@@ -465,8 +462,6 @@ func (f *FrankenPHPModule) ServeHTTP(w http.ResponseWriter, r *http.Request, _ c
 		workerNames[i] = w.Name
 	}
 
-	caddy.Log().Info(fmt.Sprintf("ServeHTTP module has workers: %s", spew.Sdump(f.Workers)))
-
 	fr, err := frankenphp.NewRequestWithContext(
 		r,
 		documentRootOption,
@@ -632,7 +627,7 @@ func (f *FrankenPHPModule) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 							envString += k + "=" + v + ","
 						}
 						envString = strings.TrimSuffix(envString, ",")
-						wc.Name += "env:" + envString + "_"
+						wc.Name += "env:" + envString + "_" + wc.FileName
 					}
 				}
 				if wc.Name != "" && !strings.HasPrefix(wc.Name, "m#") {
@@ -643,8 +638,6 @@ func (f *FrankenPHPModule) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 			}
 		}
 	}
-
-	caddy.Log().Warn(fmt.Sprintf("FrankenPHPModule UnmarshalCaddyfile with workers: %s", spew.Sdump(f.Workers)))
 
 	return nil
 }
