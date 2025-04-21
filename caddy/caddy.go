@@ -111,7 +111,7 @@ func (f *FrankenPHPApp) Start() error {
 		frankenphp.WithPhpIni(f.PhpIni),
 		frankenphp.WithMaxWaitTime(f.MaxWaitTime),
 	}
-	// Add workers from FrankenPHPApp configuration
+	// Add workers from FrankenPHPApp and FrankenPHPModule configurations
 	for _, w := range append(f.Workers, moduleWorkers...) {
 		opts = append(opts, frankenphp.WithWorkers(w.Name, repl.ReplaceKnown(w.FileName, ""), w.Num, w.Env, w.Watch))
 	}
