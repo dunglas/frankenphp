@@ -27,7 +27,7 @@ Vous pouvez également exécuter vos projets Laravel avec FrankenPHP depuis votr
     # Le nom de domaine de votre serveur
     localhost {
     	# Définir le répertoire racine sur le dossier public/
-    	root * public/
+    	root public/
     	# Autoriser la compression (optionnel)
     	encode zstd br gzip
     	# Exécuter les scripts PHP du dossier public/ et servir les assets
@@ -108,7 +108,7 @@ Suivez ces étapes pour empaqueter votre application Laravel en tant que binaire
     # Installez les dépendances
     RUN composer install --ignore-platform-reqs --no-dev -a
 
-    # Construire le binaire statique 
+    # Construire le binaire statique
     WORKDIR /go/src/app/
     RUN EMBED=dist/app/ ./build-static.sh
     ```

@@ -27,7 +27,7 @@ docker run -p 80:80 -p 443:443 -p 443:443/udp -v $PWD:/app dunglas/frankenphp
     # 服务器的域名
     localhost {
     	# 将 webroot 设置为 public/ 目录
-    	root * public/
+    	root public/
     	# 启用压缩(可选)
     	encode zstd br gzip
     	# 执行当前目录中的 PHP 文件并提供资产

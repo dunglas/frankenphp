@@ -27,7 +27,7 @@ Alternatif olarak, Laravel projelerinizi FrankenPHP ile yerel makinenizden çal�
     # Sunucunuzun alan adı
     localhost {
     	# Webroot'u public/ dizinine ayarlayın
-    	root * public/
+    	root public/
     	# Sıkıştırmayı etkinleştir (isteğe bağlı)
     	encode zstd br gzip
     	# PHP dosyalarını public/ dizininden çalıştırın ve varlıkları sunun
