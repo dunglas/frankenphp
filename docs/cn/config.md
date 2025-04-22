@@ -81,12 +81,12 @@ localhost {
 }
 
 app.example.com {
-	root * /path/to/app/public
+	root /path/to/app/public
 	php_server
 }
 
 other.example.com {
-	root * /path/to/other/public
+	root /path/to/other/public
 	php_server
 }
 # ...

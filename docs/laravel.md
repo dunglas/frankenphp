@@ -27,7 +27,7 @@ Alternatively, you can run your Laravel projects with FrankenPHP from your local
     # The domain name of your server
     localhost {
     	# Set the webroot to the public/ directory
-    	root * public/
+    	root public/
     	# Enable compression (optional)
     	encode zstd br gzip
     	# Execute PHP files from the public/ directory and serve assets

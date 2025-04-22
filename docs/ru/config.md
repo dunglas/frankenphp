@@ -2,7 +2,7 @@
 
 FrankenPHP, Caddy, а также модули Mercure и Vulcain могут быть настроены с использованием [конфигурационных форматов, поддерживаемых Caddy](https://caddyserver.com/docs/getting-started#your-first-config).
 
-В [Docker-образах](docker.md) файл `Caddyfile` находится по пути `/etc/caddy/Caddyfile`.  
+В [Docker-образах](docker.md) файл `Caddyfile` находится по пути `/etc/caddy/Caddyfile`.
 Статический бинарный файл будет искать `Caddyfile` в директории запуска.
 
 PHP можно настроить [с помощью файла `php.ini`](https://www.php.net/manual/en/configuration.file.php).
@@ -86,12 +86,12 @@ localhost {
 }
 
 app.example.com {
-	root * /path/to/app/public
+	root /path/to/app/public
 	php_server
 }
 
 other.example.com {
-	root * /path/to/other/public
+	root /path/to/other/public
 	php_server
 }
 
@@ -152,7 +152,7 @@ php_server [<matcher>] {
 }
 ```
 
-Если директория для `watch` не указана, по умолчанию будет использоваться путь `./**/*.{php,yaml,yml,twig,env}`,  
+Если директория для `watch` не указана, по умолчанию будет использоваться путь `./**/*.{php,yaml,yml,twig,env}`,
 который отслеживает все файлы с расширениями `.php`, `.yaml`, `.yml`, `.twig` и `.env` в директории, где был запущен процесс FrankenPHP, и во всех её поддиректориях. Вы также можете указать одну или несколько директорий с использованием [шаблона имён файлов](https://pkg.go.dev/path/filepath#Match):
 
 ```caddyfile
@@ -169,12 +169,12 @@ php_server [<matcher>] {
 }
 ```
 
-* Шаблон `**` указывает на рекурсивное отслеживание.  
-* Директории могут быть указаны относительно директории запуска FrankenPHP.  
-* Если у вас определено несколько workers, все они будут перезапущены при изменении файлов.  
+* Шаблон `**` указывает на рекурсивное отслеживание.
+* Директории могут быть указаны относительно директории запуска FrankenPHP.
+* Если у вас определено несколько workers, все они будут перезапущены при изменении файлов.
 * Избегайте отслеживания файлов, создаваемых во время выполнения (например, логов), так как это может вызвать нежелательные перезапуски.
 
-Механизм отслеживания файлов основан на [e-dant/watcher](https://github.com/e-dant/watcher).  
+Механизм отслеживания файлов основан на [e-dant/watcher](https://github.com/e-dant/watcher).
 
 ### Полный дуплекс (HTTP/1)
 
@@ -192,7 +192,7 @@ php_server [<matcher>] {
 
 > [!CAUTION]
 >
-> Включение этой опции может привести к зависанию устаревших HTTP/1.x клиентов, которые не поддерживают полный дуплекс.  
+> Включение этой опции может привести к зависанию устаревших HTTP/1.x клиентов, которые не поддерживают полный дуплекс.
 > Настройка также доступна через переменную окружения `CADDY_GLOBAL_OPTIONS`:
 
 ```sh
@@ -207,8 +207,8 @@ CADDY_GLOBAL_OPTIONS="servers {
 
 Следующие переменные окружения могут быть использованы для добавления директив в `Caddyfile` без его изменения:
 
-* `SERVER_NAME`: изменение [адресов для прослушивания](https://caddyserver.com/docs/caddyfile/concepts#addresses); предоставленные хостнеймы также будут использованы для генерации TLS-сертификата.  
-* `CADDY_GLOBAL_OPTIONS`: добавление [глобальных опций](https://caddyserver.com/docs/caddyfile/options).  
+* `SERVER_NAME`: изменение [адресов для прослушивания](https://caddyserver.com/docs/caddyfile/concepts#addresses); предоставленные хостнеймы также будут использованы для генерации TLS-сертификата.
+* `CADDY_GLOBAL_OPTIONS`: добавление [глобальных опций](https://caddyserver.com/docs/caddyfile/options).
 * `FRANKENPHP_CONFIG`: добавление конфигурации в директиву `frankenphp`.
 
 Как и для FPM и CLI SAPIs, переменные окружения по умолчанию доступны в суперглобальной переменной `$_SERVER`.
@@ -217,7 +217,7 @@ CADDY_GLOBAL_OPTIONS="servers {
 
 ## Конфигурация PHP
 
-Для загрузки [дополнительных конфигурационных файлов PHP](https://www.php.net/manual/en/configuration.file.php#configuration.file.scan) можно использовать переменную окружения `PHP_INI_SCAN_DIR`.  
+Для загрузки [дополнительных конфигурационных файлов PHP](https://www.php.net/manual/en/configuration.file.php#configuration.file.scan) можно использовать переменную окружения `PHP_INI_SCAN_DIR`.
 Если она установлена, PHP загрузит все файлы с расширением `.ini`, находящиеся в указанных директориях.
 
 ## Включение режима отладки

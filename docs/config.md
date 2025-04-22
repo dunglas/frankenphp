@@ -89,12 +89,12 @@ You can also define multiple workers if you serve multiple apps on the same serv
 }
 
 app.example.com {
-	root * /path/to/app/public
+	root /path/to/app/public
 	php_server
 }
 
 other.example.com {
-	root * /path/to/other/public
+	root /path/to/other/public
 	php_server
 }
 

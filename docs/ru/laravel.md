@@ -27,7 +27,7 @@ docker run -p 80:80 -p 443:443 -p 443:443/udp -v $PWD:/app dunglas/frankenphp
     # Доменное имя вашего сервера
     localhost {
     	# Укажите веб-корень как директорию public/
-    	root * public/
+    	root public/
     	# Включите сжатие (опционально)
     	encode zstd br gzip
     	# Выполняйте PHP-файлы из директории public/ и обслуживайте статические файлы
