@@ -44,11 +44,12 @@ func TestModuleWorkerDuplicateFilenamesFail(t *testing.T) {
 	resetModuleWorkers()
 }
 
-func TestModuleWorkersDuplicateNameFail(t *testing.T) {
+func TestModuleWorkersDuplicateNameWithDifferentEnvironmentsFail(t *testing.T) {
 	// Create a test configuration with a worker name
 	configWithWorkerName1 := `
 	{
 		php_server {
+			env APP_ENV something
 			worker {
 				name test-worker
 				file ../testdata/worker-with-env.php
@@ -70,6 +71,7 @@ func TestModuleWorkersDuplicateNameFail(t *testing.T) {
 	{
 		php_server {
 			worker {
+				env APP_ENV mismatch
 				name test-worker
 				file ../testdata/worker-with-env.php
 				num 1
@@ -85,8 +87,8 @@ func TestModuleWorkersDuplicateNameFail(t *testing.T) {
 	err = module2.UnmarshalCaddyfile(d2)
 
 	// Verify that an error was returned
-	require.Error(t, err, "Expected an error when two workers have the same name")
-	require.Contains(t, err.Error(), "workers must not have duplicate names", "Error message should mention duplicate names")
+	require.Error(t, err, "Expected an error when two workers have the same name, but different environments")
+	require.Contains(t, err.Error(), "module workers with different environments must not have duplicate names", "Error message should mention duplicate names")
 	resetModuleWorkers()
 }
 

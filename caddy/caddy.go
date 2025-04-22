@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net/http"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -491,6 +492,30 @@ func (f *FrankenPHPModule) ServeHTTP(w http.ResponseWriter, r *http.Request, _ c
 	return nil
 }
 
+func getEnvString(env map[string]string) string {
+	// 1. Create a slice of keys from the map
+	keys := make([]string, 0, len(env))
+	for k := range env {
+		keys = append(keys, k)
+	}
+
+	// 2. Sort the keys alphabetically
+	sort.Strings(keys)
+
+	// 3. Build the string using sorted keys
+	var builder strings.Builder
+	for i, k := range keys {
+		v := env[k] // Get value from the original map using the sorted key
+		if i > 0 {
+		}
+		builder.WriteString(k)
+		builder.WriteString("=")
+		builder.WriteString(v)
+		builder.WriteString(",")
+	}
+	return strings.TrimSuffix(builder.String(), ",")
+}
+
 // UnmarshalCaddyfile implements caddyfile.Unmarshaler.
 func (f *FrankenPHPModule) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 	// First pass: Parse all directives except "worker"
@@ -576,17 +601,14 @@ func (f *FrankenPHPModule) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 					}
 				}
 
+				envString := getEnvString(wc.Env)
+
 				if wc.Name == "" {
 					if len(wc.Env) > 0 {
-						envString := ""
-						for k, v := range wc.Env {
-							envString += k + "=" + v + ","
-						}
-						envString = strings.TrimSuffix(envString, ",")
 						// Environment is required in order not to collide with other FrankenPHPModules
-						// Filename is required to avoid collisions with other workers in this module
 						wc.Name += "env:" + envString
 					}
+					// Filename is required to avoid collisions with other workers in this module
 					wc.Name += "_" + wc.FileName
 				}
 				if !strings.HasPrefix(wc.Name, "m#") {
@@ -599,10 +621,27 @@ func (f *FrankenPHPModule) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 						return fmt.Errorf("workers must not have duplicate filenames: %s", wc.FileName)
 					}
 				}
-				// Check if a worker with this name already exists
-				for _, existingWorker := range moduleWorkers {
+				// Check if a worker with this name and a different environment or filename already exists
+				for i, existingWorker := range moduleWorkers {
 					if existingWorker.Name == wc.Name {
-						return fmt.Errorf("workers must not have duplicate names: %s", wc.Name)
+						efs, _ := fastabs.FastAbs(existingWorker.FileName)
+						wcfs, _ := fastabs.FastAbs(wc.FileName)
+						if efs != wcfs {
+							return fmt.Errorf("module workers with different filenames must not have duplicate names: %s", wc.Name)
+						}
+						if len(existingWorker.Env) != len(wc.Env) {
+							// If lengths are different, the maps are definitely different
+							return fmt.Errorf("module workers with different environments must not have duplicate names: %s", wc.Name)
+						}
+						// If lengths are the same, iterate and compare key-value pairs
+						if getEnvString(existingWorker.Env) != envString {
+							return fmt.Errorf("module workers with different environments must not have duplicate names: %s", wc.Name)
+						}
+						// If we reach this point, the maps are equal.
+						// Increase the number of threads for this worker and skip adding it to the moduleWorkers again
+						moduleWorkers[i].Num += wc.Num
+						f.Workers = append(f.Workers, wc)
+						return nil
 					}
 				}
 

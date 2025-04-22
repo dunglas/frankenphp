@@ -41,8 +41,6 @@ func initWorkers(opt []workerOpt) error {
 		}
 		if worker.threads == nil {
 			worker.threads = make([]*phpThread, 0, o.num)
-		} else {
-			worker.num += o.num
 		}
 		workersReady.Add(o.num)
 		for i := 0; i < o.num; i++ {
