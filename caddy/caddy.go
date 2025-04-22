@@ -576,17 +576,20 @@ func (f *FrankenPHPModule) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 					}
 				}
 
-				if wc.Name == "" && len(wc.Env) > 0 {
+				if wc.Name == "" {
 					if len(wc.Env) > 0 {
 						envString := ""
 						for k, v := range wc.Env {
 							envString += k + "=" + v + ","
 						}
 						envString = strings.TrimSuffix(envString, ",")
+						// Environment is required in order not to collide with other FrankenPHPModules
+						// Filename is required to avoid collisions with other workers in this module
 						wc.Name += "env:" + envString
 					}
+					wc.Name += "_" + wc.FileName
 				}
-				if wc.Name != "" && !strings.HasPrefix(wc.Name, "m#") {
+				if !strings.HasPrefix(wc.Name, "m#") {
 					wc.Name = "m#" + wc.Name
 				}
 
@@ -604,7 +607,7 @@ func (f *FrankenPHPModule) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 				}
 
 				f.Workers = append(f.Workers, wc)
-				moduleWorkers = append(moduleWorkers, f.Workers...)
+				moduleWorkers = append(moduleWorkers, wc)
 			}
 		}
 	}
