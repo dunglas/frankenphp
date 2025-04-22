@@ -173,7 +173,7 @@ else
 	spcCommand="./bin/spc"
 fi
 
-# extensions to build
+# Extensions to build
 if [ -z "${PHP_EXTENSIONS}" ]; then
 	# enable EMBED mode, first check if project has dumped extensions
 	if [ -n "${EMBED}" ] && [ -f "${EMBED}/composer.json" ] && [ -f "${EMBED}/composer.lock" ] && [ -f "${EMBED}/vendor/installed.json" ]; then
@@ -184,14 +184,17 @@ if [ -z "${PHP_EXTENSIONS}" ]; then
 		PHP_EXTENSIONS="${defaultExtensions}"
 	fi
 fi
-# additional libs to build
+
+# Additional libraries to build
 if [ -z "${PHP_EXTENSION_LIBS}" ]; then
 	PHP_EXTENSION_LIBS="${defaultExtensionLibs}"
 fi
+
 # The Brotli library must always be built as it is required by http://github.com/dunglas/caddy-cbrotli
 if ! echo "${PHP_EXTENSION_LIBS}" | grep -q "\bbrotli\b"; then
 	PHP_EXTENSION_LIBS="${PHP_EXTENSION_LIBS},brotli"
 fi
+
 # The mimalloc library must be built if MIMALLOC is true
 if [ -n "${MIMALLOC}" ]; then
 	if ! echo "${PHP_EXTENSION_LIBS}" | grep -q "\bmimalloc\b"; then
