@@ -83,9 +83,11 @@ frankenphp php-server
 
 ## Documentation
 
+* [Le mode classique](classic.md)
 * [Le mode worker](worker.md)
 * [Le support des Early Hints (code de statut HTTP 103)](early-hints.md)
 * [Temps réel](mercure.md)
+* [Servir efficacement les fichiers statiques volumineux](x-sendfile.md)
 * [Configuration](config.md)
 * [Images Docker](docker.md)
 * [Déploiement en production](production.md)
@@ -93,6 +95,7 @@ frankenphp php-server
 * [Créer des applications PHP **standalone**, auto-exécutables](embed.md)
 * [Créer un build statique](static.md)
 * [Compiler depuis les sources](compile.md)
+* [Surveillance de FrankenPHP](metrics.md)
 * [Intégration Laravel](laravel.md)
 * [Problèmes connus](known-issues.md)
 * [Application de démo (Symfony) et benchmarks](https://github.com/dunglas/frankenphp-demo)
