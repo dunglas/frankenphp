@@ -14,10 +14,10 @@ Avant de créer le binaire autonome, assurez-vous que votre application est prê
 
 Vous devrez probablement :
 
-* Installer les dépendances de production de l'application
-* Dumper l'autoloader
-* Activer le mode production de votre application (si disponible)
-* Supprimer les fichiers inutiles tels que `.git` ou les tests pour réduire la taille de votre binaire final
+- Installer les dépendances de production de l'application
+- Dumper l'autoloader
+- Activer le mode production de votre application (si disponible)
+- Supprimer les fichiers inutiles tels que `.git` ou les tests pour réduire la taille de votre binaire final
 
 Par exemple, pour une application Symfony, lancez les commandes suivantes :
 
@@ -55,34 +55,34 @@ La manière la plus simple de créer un binaire Linux est d'utiliser le builder 
 
 1. Créez un fichier nommé `static-build.Dockerfile` dans le répertoire de votre application préparée :
 
-    ```dockerfile
-    FROM --platform=linux/amd64 dunglas/frankenphp:static-builder
+   ```dockerfile
+   FROM --platform=linux/amd64 dunglas/frankenphp:static-builder
 
-    # Copy your app
-    WORKDIR /go/src/app/dist/app
-    COPY . .
+   # Copy your app
+   WORKDIR /go/src/app/dist/app
+   COPY . .
 
-    # Build the static binary, be sure to select only the PHP extensions you want
-    WORKDIR /go/src/app/
-    RUN EMBED=dist/app/ ./build-static.sh
-    ```
+   # Build the static binary, be sure to select only the PHP extensions you want
+   WORKDIR /go/src/app/
+   RUN EMBED=dist/app/ ./build-static.sh
+   ```
 
-    > [!CAUTION]
-    >
-    > Certains fichiers `.dockerignore` (par exemple celui fourni par défaut par [Symfony Docker](https://github.com/dunglas/symfony-docker/blob/main/.dockerignore))
-    > empêchent la copie du dossier `vendor/` et des fichiers `.env`. Assurez-vous d'ajuster ou de supprimer le fichier `.dockerignore` avant le build.
+   > [!CAUTION]
+   >
+   > Certains fichiers `.dockerignore` (par exemple celui fourni par défaut par [Symfony Docker](https://github.com/dunglas/symfony-docker/blob/main/.dockerignore))
+   > empêchent la copie du dossier `vendor/` et des fichiers `.env`. Assurez-vous d'ajuster ou de supprimer le fichier `.dockerignore` avant le build.
 
 2. Construisez:
 
-    ```console
-    docker build -t static-app -f static-build.Dockerfile .
-    ```
+   ```console
+   docker build -t static-app -f static-build.Dockerfile .
+   ```
 
 3. Extrayez le binaire :
 
-    ```console
-    docker cp $(docker create --name static-app-tmp static-app):/go/src/app/dist/frankenphp-linux-x86_64 my-app ; docker rm static-app-tmp
-    ```
+   ```console
+   docker cp $(docker create --name static-app-tmp static-app):/go/src/app/dist/frankenphp-linux-x86_64 my-app ; docker rm static-app-tmp
+   ```
 
 Le binaire généré sera nommé `my-app` dans le répertoire courant.
 

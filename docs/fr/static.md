@@ -116,17 +116,17 @@ Note : ce script fonctionne également sur Linux (et probablement sur d'autres U
 
 Les variables d'environnement suivantes peuvent être transmises à `docker build` et au script `build-static.sh` pour personnaliser la construction statique :
 
-* `FRANKENPHP_VERSION` : la version de FrankenPHP à utiliser
-* `PHP_VERSION` : la version de PHP à utiliser
-* `PHP_EXTENSIONS` : les extensions PHP à construire ([liste des extensions prises en charge](https://static-php.dev/en/guide/extensions.html))
-* `PHP_EXTENSION_LIBS` : bibliothèques supplémentaires à construire qui ajoutent des fonctionnalités aux extensions
-* `XCADDY_ARGS` : arguments à passer à [xcaddy](https://github.com/caddyserver/xcaddy), par exemple pour ajouter des modules Caddy supplémentaires
-* `EMBED` : chemin de l'application PHP à intégrer dans le binaire
-* `CLEAN` : lorsque défini, `libphp` et toutes ses dépendances sont construites à partir de zéro (pas de cache)
-* `DEBUG_SYMBOLS` : lorsque défini, les symboles de débogage ne seront pas supprimés et seront ajoutés dans le binaire
-* `NO_COMPRESS`: ne pas compresser le binaire avec UPX
-* `MIMALLOC`: (expérimental, Linux seulement) remplace l'allocateur mallocng de musl par [mimalloc](https://github.com/microsoft/mimalloc) pour des performances améliorées
-* `RELEASE` : (uniquement pour les mainteneurs) lorsque défini, le binaire résultant sera uploadé sur GitHub
+- `FRANKENPHP_VERSION` : la version de FrankenPHP à utiliser
+- `PHP_VERSION` : la version de PHP à utiliser
+- `PHP_EXTENSIONS` : les extensions PHP à construire ([liste des extensions prises en charge](https://static-php.dev/en/guide/extensions.html))
+- `PHP_EXTENSION_LIBS` : bibliothèques supplémentaires à construire qui ajoutent des fonctionnalités aux extensions
+- `XCADDY_ARGS` : arguments à passer à [xcaddy](https://github.com/caddyserver/xcaddy), par exemple pour ajouter des modules Caddy supplémentaires
+- `EMBED` : chemin de l'application PHP à intégrer dans le binaire
+- `CLEAN` : lorsque défini, `libphp` et toutes ses dépendances sont construites à partir de zéro (pas de cache)
+- `DEBUG_SYMBOLS` : lorsque défini, les symboles de débogage ne seront pas supprimés et seront ajoutés dans le binaire
+- `NO_COMPRESS`: ne pas compresser le binaire avec UPX
+- `MIMALLOC`: (expérimental, Linux seulement) remplace l'allocateur mallocng de musl par [mimalloc](https://github.com/microsoft/mimalloc) pour des performances améliorées
+- `RELEASE` : (uniquement pour les mainteneurs) lorsque défini, le binaire résultant sera uploadé sur GitHub
 
 ## Extensions
 

@@ -10,7 +10,7 @@ updates:
     groups:
       go-modules:
         patterns:
-          - '*'
+          - "*"
   - package-ecosystem: gomod
     directory: /caddy
     schedule:
@@ -25,7 +25,7 @@ updates:
     groups:
       go-modules:
         patterns:
-          - '*'
+          - "*"
   - package-ecosystem: github-actions
     directory: /
     schedule:
@@ -35,4 +35,4 @@ updates:
     groups:
       github-actions:
         patterns:
-          - '*'
+          - "*"

@@ -141,7 +141,7 @@ curl -X POST http://localhost:2019/frankenphp/workers/restart
 ### Worker Failures
 
 If a worker script crashes with a non-zero exit code, FrankenPHP will restart it with an exponential backoff strategy.
-If the worker script stays up longer than the last backoff * 2,
+If the worker script stays up longer than the last backoff \* 2,
 it will not penalize the worker script and restart it again.
 However, if the worker script continues to fail with a non-zero exit code in a short period of time
 (for example, having a typo in a script), FrankenPHP will crash with the error: `too many consecutive failures`.
@@ -151,8 +151,8 @@ However, if the worker script continues to fail with a non-zero exit code in a s
 [PHP superglobals](https://www.php.net/manual/en/language.variables.superglobals.php) (`$_SERVER`, `$_ENV`, `$_GET`...)
 behave as follows:
 
-* before the first call to `frankenphp_handle_request()`, superglobals contain values bound to the worker script itself
-* during and after the call to `frankenphp_handle_request()`, superglobals contain values generated from the processed HTTP request, each call to `frankenphp_handle_request()` changes the superglobals values
+- before the first call to `frankenphp_handle_request()`, superglobals contain values bound to the worker script itself
+- during and after the call to `frankenphp_handle_request()`, superglobals contain values generated from the processed HTTP request, each call to `frankenphp_handle_request()` changes the superglobals values
 
 To access the superglobals of the worker script inside the callback, you must copy them and import the copy in the scope of the callback:
 

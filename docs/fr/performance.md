@@ -37,7 +37,7 @@ vous devez créer un script worker et vous assurer que l'application n'a pas de 
 Les binaires statiques que nous fournissons, ainsi que la variante Alpine Linux des images Docker officielles, utilisent [la bibliothèque musl](https://musl.libc.org).
 
 PHP est connu pour être [significativement plus lent](https://gitlab.alpinelinux.org/alpine/aports/-/issues/14381) lorsqu'il utilise cette bibliothèque C alternative au lieu de la bibliothèque GNU traditionnelle,
-surtout lorsqu'il est compilé en mode ZTS (*thread-safe*), ce qui est nécessaire pour FrankenPHP.
+surtout lorsqu'il est compilé en mode ZTS (_thread-safe_), ce qui est nécessaire pour FrankenPHP.
 
 En outre, [certains bogues ne se produisent que lors de l'utilisation de musl](https://github.com/php/php-src/issues?q=sort%3Aupdated-desc+is%3Aissue+is%3Aopen+label%3ABug+musl).
 
@@ -113,16 +113,16 @@ route {
 }
 ```
 
-## *Placeholders*
+## _Placeholders_
 
-Vous pouvez utiliser des [*placeholders*](https://caddyserver.com/docs/conventions#placeholders) dans les directives `root` et `env`.
+Vous pouvez utiliser des [_placeholders_](https://caddyserver.com/docs/conventions#placeholders) dans les directives `root` et `env`.
 Cependant, cela empêche la mise en cache de ces valeurs et a un coût important en termes de performances.
 
-Si possible, évitez les *placeholders* dans ces directives.
+Si possible, évitez les _placeholders_ dans ces directives.
 
 ## `resolve_root_symlink`
 
-Par défaut, si le *document root* est un lien symbolique, il est automatiquement résolu par FrankenPHP (c'est nécessaire pour le bon fonctionnement de PHP).
+Par défaut, si le _document root_ est un lien symbolique, il est automatiquement résolu par FrankenPHP (c'est nécessaire pour le bon fonctionnement de PHP).
 Si la racine du document n'est pas un lien symbolique, vous pouvez désactiver cette fonctionnalité.
 
 ```caddyfile
@@ -131,12 +131,12 @@ php_server {
 }
 ```
 
-Cela améliorera les performances si la directive `root` contient des [*placeholders*](https://caddyserver.com/docs/conventions#placeholders).
+Cela améliorera les performances si la directive `root` contient des [_placeholders_](https://caddyserver.com/docs/conventions#placeholders).
 Le gain sera négligeable dans les autres cas.
 
 ## Journaux
 
-La journalisation est évidemment très utile, mais, par définition, elle nécessite des opérations d'*I/O* et des allocations de mémoire,
+La journalisation est évidemment très utile, mais, par définition, elle nécessite des opérations d'_I/O_ et des allocations de mémoire,
 ce qui réduit considérablement les performances.
 Assurez-vous de [définir le niveau de journalisation](https://caddyserver.com/docs/caddyfile/options#log) correctement,
 et de ne journaliser que ce qui est nécessaire.
@@ -148,10 +148,10 @@ Toutes les optimisations de performances habituelles liées à PHP s'appliquent 
 
 En particulier :
 
-* vérifiez que [OPcache](https://www.php.net/manual/en/book.opcache.php) est installé, activé et correctement configuré
-* activez [les optimisations de l'autoloader de Composer](https://getcomposer.org/doc/articles/autoloader-optimization.md)
-* assurez-vous que le cache `realpath` est suffisamment grand pour les besoins de votre application
-* utilisez le [pré-chargement](https://www.php.net/manual/en/opcache.preloading.php)
+- vérifiez que [OPcache](https://www.php.net/manual/en/book.opcache.php) est installé, activé et correctement configuré
+- activez [les optimisations de l'autoloader de Composer](https://getcomposer.org/doc/articles/autoloader-optimization.md)
+- assurez-vous que le cache `realpath` est suffisamment grand pour les besoins de votre application
+- utilisez le [pré-chargement](https://www.php.net/manual/en/opcache.preloading.php)
 
 Pour plus de détails, lisez [l'entrée de la documentation dédiée de Symfony](https://symfony.com/doc/current/performance.html)
 (la plupart des conseils sont utiles même si vous n'utilisez pas Symfony).

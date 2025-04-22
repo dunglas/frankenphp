@@ -5,15 +5,15 @@
 Aşağıdaki eklentilerin FrankenPHP ile uyumlu olmadığı bilinmektedir:
 
 | Adı                                                         | Nedeni                     | Alternatifleri                                                                                                       |
-|-------------------------------------------------------------|----------------------------|----------------------------------------------------------------------------------------------------------------------|
+| ----------------------------------------------------------- | -------------------------- | -------------------------------------------------------------------------------------------------------------------- |
 | [imap](https://www.php.net/manual/en/imap.installation.php) | İş parçacığı güvenli değil | [javanile/php-imap2](https://github.com/javanile/php-imap2), [webklex/php-imap](https://github.com/Webklex/php-imap) |
 
 ## Sorunlu PHP Eklentileri
 
 Aşağıdaki eklentiler FrankenPHP ile kullanıldığında bilinen hatalara ve beklenmeyen davranışlara sahiptir:
 
-| Adı                               | Problem                                                                                                                                                                                                                                                    |
-|-----------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Adı | Problem |
+| --- | ------- |
 
 ## get_browser
 
@@ -21,7 +21,7 @@ Aşağıdaki eklentiler FrankenPHP ile kullanıldığında bilinen hatalara ve b
 
 ## Binary Çıktısı ve Alpine Tabanlı Docker İmajları
 
-Binary çıktısı ve Alpine tabanlı Docker imajları (dunglas/frankenphp:*-alpine), daha küçük bir binary boyutu korumak için glibc ve arkadaşları yerine musl libc kullanır. Bu durum bazı uyumluluk sorunlarına yol açabilir. Özellikle, glob seçeneği GLOB_BRACE mevcut değildir.
+Binary çıktısı ve Alpine tabanlı Docker imajları (dunglas/frankenphp:\*-alpine), daha küçük bir binary boyutu korumak için glibc ve arkadaşları yerine musl libc kullanır. Bu durum bazı uyumluluk sorunlarına yol açabilir. Özellikle, glob seçeneği GLOB_BRACE mevcut değildir.
 
 ## Docker ile `https://127.0.0.1` Kullanımı
 
@@ -78,8 +78,8 @@ docker run \
 
 [Composer betikleri](https://getcomposer.org/doc/articles/scripts.md) bazı görevler için bir PHP binary çalıştırmak isteyebilir, örneğin [bir Laravel projesinde](laravel.md) `@php artisan package:discover --ansi` çalıştırmak. Bu [şu anda mümkün değil](https://github.com/dunglas/frankenphp/issues/483#issuecomment-1899890915) ve 2 nedeni var:
 
-* Composer FrankenPHP binary dosyasını nasıl çağıracağını bilmiyor;
-* Composer, FrankenPHP'nin henüz desteklemediği `-d` bayrağını kullanarak PHP ayarlarını komuta ekleyebilir.
+- Composer FrankenPHP binary dosyasını nasıl çağıracağını bilmiyor;
+- Composer, FrankenPHP'nin henüz desteklemediği `-d` bayrağını kullanarak PHP ayarlarını komuta ekleyebilir.
 
 Geçici bir çözüm olarak, `/usr/local/bin/php` içinde desteklenmeyen parametreleri silen ve ardından FrankenPHP'yi çağıran bir kabuk betiği oluşturabiliriz:
 

@@ -146,7 +146,7 @@ curl -X POST http://localhost:2019/frankenphp/workers/restart
 ### Worker Failures
 
 Si un script de worker se plante avec un code de sortie non nul, FrankenPHP le redémarre avec une stratégie de backoff exponentielle.
-Si le script worker reste en place plus longtemps que le dernier backoff * 2, FrankenPHP ne pénalisera pas le script et le redémarrera à nouveau.
+Si le script worker reste en place plus longtemps que le dernier backoff \* 2, FrankenPHP ne pénalisera pas le script et le redémarrera à nouveau.
 Toutefois, si le script de worker continue d'échouer avec un code de sortie non nul dans un court laps de temps
 (par exemple, une faute de frappe dans un script), FrankenPHP plantera avec l'erreur : `too many consecutive failures` (trop d'échecs consécutifs).
 
@@ -155,8 +155,8 @@ Toutefois, si le script de worker continue d'échouer avec un code de sortie non
 [Les superglobales PHP](https://www.php.net/manual/fr/language.variables.superglobals.php) (`$_SERVER`, `$_ENV`, `$_GET`...)
 se comportent comme suit :
 
-* avant le premier appel à `frankenphp_handle_request()`, les superglobales contiennent des valeurs liées au script worker lui-même
-* pendant et après l'appel à `frankenphp_handle_request()`, les superglobales contiennent des valeurs générées à partir de la requête HTTP traitée, chaque appel à `frankenphp_handle_request()` change les valeurs des superglobales
+- avant le premier appel à `frankenphp_handle_request()`, les superglobales contiennent des valeurs liées au script worker lui-même
+- pendant et après l'appel à `frankenphp_handle_request()`, les superglobales contiennent des valeurs générées à partir de la requête HTTP traitée, chaque appel à `frankenphp_handle_request()` change les valeurs des superglobales
 
 Pour accéder aux superglobales du script worker à l'intérieur de la fonction de rappel, vous devez les copier et importer la copie dans le scope de la fonction :
 
