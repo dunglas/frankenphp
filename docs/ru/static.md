@@ -87,14 +87,14 @@ cd frankenphp
 
 Следующие переменные окружения можно передать в `docker build` и скрипт `build-static.sh`, чтобы настроить статическую сборку:
 
-* `FRANKENPHP_VERSION`: версия FrankenPHP
-* `PHP_VERSION`: версия PHP
-* `PHP_EXTENSIONS`: PHP-расширения для сборки ([список поддерживаемых расширений](https://static-php.dev/en/guide/extensions.html))
-* `PHP_EXTENSION_LIBS`: дополнительные библиотеки, добавляющие функциональность расширениям
-* `XCADDY_ARGS`: аргументы для [xcaddy](https://github.com/caddyserver/xcaddy), например, для добавления модулей Caddy
-* `EMBED`: путь к PHP-приложению для встраивания в бинарник
-* `CLEAN`: если задано, libphp и все его зависимости будут пересобраны с нуля (без кэша)
-* `NO_COMPRESS`: отключает сжатие результирующего бинарника с помощью UPX
-* `DEBUG_SYMBOLS`: если задано, отладочные символы не будут удалены и будут добавлены в бинарник
-* `MIMALLOC`: (экспериментально, только для Linux) заменяет musl's mallocng на [mimalloc](https://github.com/microsoft/mimalloc) для повышения производительности
-* `RELEASE`: (только для мейнтейнеров) если задано, бинарник будет загружен на GitHub
+- `FRANKENPHP_VERSION`: версия FrankenPHP
+- `PHP_VERSION`: версия PHP
+- `PHP_EXTENSIONS`: PHP-расширения для сборки ([список поддерживаемых расширений](https://static-php.dev/en/guide/extensions.html))
+- `PHP_EXTENSION_LIBS`: дополнительные библиотеки, добавляющие функциональность расширениям
+- `XCADDY_ARGS`: аргументы для [xcaddy](https://github.com/caddyserver/xcaddy), например, для добавления модулей Caddy
+- `EMBED`: путь к PHP-приложению для встраивания в бинарник
+- `CLEAN`: если задано, libphp и все его зависимости будут пересобраны с нуля (без кэша)
+- `NO_COMPRESS`: отключает сжатие результирующего бинарника с помощью UPX
+- `DEBUG_SYMBOLS`: если задано, отладочные символы не будут удалены и будут добавлены в бинарник
+- `MIMALLOC`: (экспериментально, только для Linux) заменяет musl's mallocng на [mimalloc](https://github.com/microsoft/mimalloc) для повышения производительности
+- `RELEASE`: (только для мейнтейнеров) если задано, бинарник будет загружен на GitHub

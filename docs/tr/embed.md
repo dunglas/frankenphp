@@ -12,10 +12,10 @@ Bağımsız binary dosyayı oluşturmadan önce uygulamanızın gömülmeye haz�
 
 Örneğin muhtemelen şunları yapmak istersiniz:
 
-* Uygulamanın üretim bağımlılıklarını yükleyin
-* Otomatik yükleyiciyi boşaltın
-* Uygulamanızın üretim modunu etkinleştirin (varsa)
-* Nihai binary dosyanızın boyutunu küçültmek için `.git` veya testler gibi gerekli olmayan dosyaları çıkarın
+- Uygulamanın üretim bağımlılıklarını yükleyin
+- Otomatik yükleyiciyi boşaltın
+- Uygulamanızın üretim modunu etkinleştirin (varsa)
+- Nihai binary dosyanızın boyutunu küçültmek için `.git` veya testler gibi gerekli olmayan dosyaları çıkarın
 
 Örneğin, bir Symfony uygulaması için aşağıdaki komutları kullanabilirsiniz:
 
@@ -45,19 +45,19 @@ Bir Linux binary çıktısı almanın en kolay yolu, sağladığımız Docker ta
 
 1. Hazırladığınız uygulamanın deposunda `static-build.Dockerfile` adlı bir dosya oluşturun:
 
-    ```dockerfile
-    FROM --platform=linux/amd64 dunglas/frankenphp:static-builder
+   ```dockerfile
+   FROM --platform=linux/amd64 dunglas/frankenphp:static-builder
 
-    # Uygulamanızı kopyalayın
-    WORKDIR /go/src/app/dist/app
-    COPY . .
+   # Uygulamanızı kopyalayın
+   WORKDIR /go/src/app/dist/app
+   COPY . .
 
-    # Statik binary dosyasını oluşturun, yalnızca istediğiniz PHP eklentilerini seçtiğinizden emin olun
-    WORKDIR /go/src/app/
-    RUN EMBED=dist/app/ \
-        PHP_EXTENSIONS=ctype,iconv,pdo_sqlite \
-        ./build-static.sh
-    ```
+   # Statik binary dosyasını oluşturun, yalnızca istediğiniz PHP eklentilerini seçtiğinizden emin olun
+   WORKDIR /go/src/app/
+   RUN EMBED=dist/app/ \
+       PHP_EXTENSIONS=ctype,iconv,pdo_sqlite \
+       ./build-static.sh
+   ```
 
    > [!CAUTION]
    >
@@ -66,15 +66,15 @@ Bir Linux binary çıktısı almanın en kolay yolu, sağladığımız Docker ta
 
 2. Derleyin:
 
-    ```console
-    docker build -t static-app -f static-build.Dockerfile .
-    ```
+   ```console
+   docker build -t static-app -f static-build.Dockerfile .
+   ```
 
 3. Binary dosyasını çıkarın:
 
-    ```console
-    docker cp $(docker create --name static-app-tmp static-app):/go/src/app/dist/frankenphp-linux-x86_64 my-app ; docker rm static-app-tmp
-    ```
+   ```console
+   docker cp $(docker create --name static-app-tmp static-app):/go/src/app/dist/frankenphp-linux-x86_64 my-app ; docker rm static-app-tmp
+   ```
 
 Elde edilen binary dosyası, geçerli dizindeki `my-app` adlı dosyadır.
 

@@ -51,34 +51,34 @@ composer dump-env prod
 
 1. Создайте файл `static-build.Dockerfile` в репозитории вашего приложения:
 
-    ```dockerfile
-    FROM --platform=linux/amd64 dunglas/frankenphp:static-builder
+   ```dockerfile
+   FROM --platform=linux/amd64 dunglas/frankenphp:static-builder
 
-    # Скопировать приложение
-    WORKDIR /go/src/app/dist/app
-    COPY . .
+   # Скопировать приложение
+   WORKDIR /go/src/app/dist/app
+   COPY . .
 
-    # Сборка статического бинарного файла
-    WORKDIR /go/src/app/
-    RUN EMBED=dist/app/ ./build-static.sh
-    ```
+   # Сборка статического бинарного файла
+   WORKDIR /go/src/app/
+   RUN EMBED=dist/app/ ./build-static.sh
+   ```
 
-    > [!CAUTION]
-    >
-    > Некоторые `.dockerignore` файлы (например, [Symfony Docker `.dockerignore`](https://github.com/dunglas/symfony-docker/blob/main/.dockerignore))  
-    > игнорируют директорию `vendor/` и файлы `.env`. Перед сборкой убедитесь, что `.dockerignore` файл настроен корректно или удалён.
+   > [!CAUTION]
+   >
+   > Некоторые `.dockerignore` файлы (например, [Symfony Docker `.dockerignore`](https://github.com/dunglas/symfony-docker/blob/main/.dockerignore))  
+   > игнорируют директорию `vendor/` и файлы `.env`. Перед сборкой убедитесь, что `.dockerignore` файл настроен корректно или удалён.
 
 2. Соберите образ:
 
-    ```console
-    docker build -t static-app -f static-build.Dockerfile .
-    ```
+   ```console
+   docker build -t static-app -f static-build.Dockerfile .
+   ```
 
 3. Извлеките бинарный файл:
 
-    ```console
-    docker cp $(docker create --name static-app-tmp static-app):/go/src/app/dist/frankenphp-linux-x86_64 my-app ; docker rm static-app-tmp
-    ```
+   ```console
+   docker cp $(docker create --name static-app-tmp static-app):/go/src/app/dist/frankenphp-linux-x86_64 my-app ; docker rm static-app-tmp
+   ```
 
 Созданный бинарный файл сохранится в текущей директории под именем `my-app`.
 

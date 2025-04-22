@@ -19,21 +19,21 @@ docker run -p 80:80 -p 443:443 -p 443:443/udp -v $PWD:/app dunglas/frankenphp
 1. [Скачайте бинарный файл для вашей системы](README.md#автономный-бинарный-файл)
 2. Добавьте следующую конфигурацию в файл с именем `Caddyfile` в корневой директории вашего Laravel-проекта:
 
-    ```caddyfile
-    {
-    	frankenphp
-    }
+   ```caddyfile
+   {
+   	frankenphp
+   }
 
-    # Доменное имя вашего сервера
-    localhost {
-    	# Укажите веб-корень как директорию public/
-    	root public/
-    	# Включите сжатие (опционально)
-    	encode zstd br gzip
-    	# Выполняйте PHP-файлы из директории public/ и обслуживайте статические файлы
-    	php_server
-    }
-    ```
+   # Доменное имя вашего сервера
+   localhost {
+   	# Укажите веб-корень как директорию public/
+   	root public/
+   	# Включите сжатие (опционально)
+   	encode zstd br gzip
+   	# Выполняйте PHP-файлы из директории public/ и обслуживайте статические файлы
+   	php_server
+   }
+   ```
 
 3. Запустите FrankenPHP из корневой директории вашего Laravel-проекта: `frankenphp run`
 
@@ -59,17 +59,17 @@ php artisan octane:frankenphp
 
 Команда `octane:frankenphp` поддерживает следующие опции:
 
-* `--host`: IP-адрес, к которому должен привязаться сервер (по умолчанию: `127.0.0.1`)
-* `--port`: Порт, на котором сервер будет доступен (по умолчанию: `8000`)
-* `--admin-port`: Порт, на котором будет доступен административный сервер (по умолчанию: `2019`)
-* `--workers`: Количество worker-скриптов для обработки запросов (по умолчанию: `auto`)
-* `--max-requests`: Количество запросов, обрабатываемых перед перезагрузкой сервера (по умолчанию: `500`)
-* `--caddyfile`: Путь к файлу `Caddyfile` FrankenPHP (по умолчанию: [stubbed `Caddyfile` в Laravel Octane](https://github.com/laravel/octane/blob/2.x/src/Commands/stubs/Caddyfile))
-* `--https`: Включить HTTPS, HTTP/2 и HTTP/3, а также автоматически генерировать и обновлять сертификаты
-* `--http-redirect`: Включить редирект с HTTP на HTTPS (включается только при передаче --https)
-* `--watch`: Автоматически перезагружать сервер при изменении приложения
-* `--poll`: Использовать опрос файловой системы для отслеживания изменений в файлах через сеть
-* `--log-level`: Установить уровень логирования, используя встроенный логгер Caddy
+- `--host`: IP-адрес, к которому должен привязаться сервер (по умолчанию: `127.0.0.1`)
+- `--port`: Порт, на котором сервер будет доступен (по умолчанию: `8000`)
+- `--admin-port`: Порт, на котором будет доступен административный сервер (по умолчанию: `2019`)
+- `--workers`: Количество worker-скриптов для обработки запросов (по умолчанию: `auto`)
+- `--max-requests`: Количество запросов, обрабатываемых перед перезагрузкой сервера (по умолчанию: `500`)
+- `--caddyfile`: Путь к файлу `Caddyfile` FrankenPHP (по умолчанию: [stubbed `Caddyfile` в Laravel Octane](https://github.com/laravel/octane/blob/2.x/src/Commands/stubs/Caddyfile))
+- `--https`: Включить HTTPS, HTTP/2 и HTTP/3, а также автоматически генерировать и обновлять сертификаты
+- `--http-redirect`: Включить редирект с HTTP на HTTPS (включается только при передаче --https)
+- `--watch`: Автоматически перезагружать сервер при изменении приложения
+- `--poll`: Использовать опрос файловой системы для отслеживания изменений в файлах через сеть
+- `--log-level`: Установить уровень логирования, используя встроенный логгер Caddy
 
 > [!TIP]
 > Чтобы получить структурированные JSON-логи (полезно при использовании решений для анализа логов), явно укажите опцию `--log-level`.
@@ -84,71 +84,71 @@ php artisan octane:frankenphp
 
 1. Создайте файл с именем `static-build.Dockerfile` в репозитории вашего приложения:
 
-    ```dockerfile
-    FROM --platform=linux/amd64 dunglas/frankenphp:static-builder
+   ```dockerfile
+   FROM --platform=linux/amd64 dunglas/frankenphp:static-builder
 
-    # Скопируйте ваше приложение
-    WORKDIR /go/src/app/dist/app
-    COPY . .
+   # Скопируйте ваше приложение
+   WORKDIR /go/src/app/dist/app
+   COPY . .
 
-    # Удалите тесты и другие ненужные файлы, чтобы сэкономить место
-    # В качестве альтернативы добавьте эти файлы в .dockerignore
-    RUN rm -Rf tests/
+   # Удалите тесты и другие ненужные файлы, чтобы сэкономить место
+   # В качестве альтернативы добавьте эти файлы в .dockerignore
+   RUN rm -Rf tests/
 
-    # Скопируйте файл .env
-    RUN cp .env.example .env
-    # Измените APP_ENV и APP_DEBUG для продакшна
-    RUN sed -i'' -e 's/^APP_ENV=.*/APP_ENV=production/' -e 's/^APP_DEBUG=.*/APP_DEBUG=false/' .env
+   # Скопируйте файл .env
+   RUN cp .env.example .env
+   # Измените APP_ENV и APP_DEBUG для продакшна
+   RUN sed -i'' -e 's/^APP_ENV=.*/APP_ENV=production/' -e 's/^APP_DEBUG=.*/APP_DEBUG=false/' .env
 
-    # Внесите другие изменения в файл .env, если необходимо
+   # Внесите другие изменения в файл .env, если необходимо
 
-    # Установите зависимости
-    RUN composer install --ignore-platform-reqs --no-dev -a
+   # Установите зависимости
+   RUN composer install --ignore-platform-reqs --no-dev -a
 
-    # Соберите статический бинарный файл
-    WORKDIR /go/src/app/
-    RUN EMBED=dist/app/ ./build-static.sh
-    ```
+   # Соберите статический бинарный файл
+   WORKDIR /go/src/app/
+   RUN EMBED=dist/app/ ./build-static.sh
+   ```
 
-    > [!CAUTION]
-    >
-    > Некоторые `.dockerignore` файлы могут игнорировать директорию `vendor/` и файлы `.env`. Убедитесь, что вы скорректировали или удалили `.dockerignore` перед сборкой.
+   > [!CAUTION]
+   >
+   > Некоторые `.dockerignore` файлы могут игнорировать директорию `vendor/` и файлы `.env`. Убедитесь, что вы скорректировали или удалили `.dockerignore` перед сборкой.
 
 2. Соберите:
 
-    ```console
-    docker build -t static-laravel-app -f static-build.Dockerfile .
-    ```
+   ```console
+   docker build -t static-laravel-app -f static-build.Dockerfile .
+   ```
 
 3. Извлеките бинарный файл:
 
-    ```console
-    docker cp $(docker create --name static-laravel-app-tmp static-laravel-app):/go/src/app/dist/frankenphp-linux-x86_64 frankenphp ; docker rm static-laravel-app-tmp
-    ```
+   ```console
+   docker cp $(docker create --name static-laravel-app-tmp static-laravel-app):/go/src/app/dist/frankenphp-linux-x86_64 frankenphp ; docker rm static-laravel-app-tmp
+   ```
 
 4. Заполните кеши:
 
-    ```console
-    frankenphp php-cli artisan optimize
-    ```
+   ```console
+   frankenphp php-cli artisan optimize
+   ```
 
 5. Запустите миграции базы данных (если есть):
 
-    ```console
-    frankenphp php-cli artisan migrate
-    ```
+   ```console
+   frankenphp php-cli artisan migrate
+   ```
 
 6. Сгенерируйте секретный ключ приложения:
 
-    ```console
-    frankenphp php-cli artisan key:generate
-    ```
+   ```console
+   frankenphp php-cli artisan key:generate
+   ```
 
 7. Запустите сервер:
 
-    ```console
-    frankenphp php-server
-    ```
+   ```console
+   frankenphp php-server
+   ```
 
 Ваше приложение готово!
 

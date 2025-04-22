@@ -5,7 +5,7 @@
 Les extensions suivantes sont connues pour ne pas être compatibles avec FrankenPHP :
 
 | Nom                                                                                                         | Raison          | Alternatives                                                                                                         |
-|-------------------------------------------------------------------------------------------------------------|-----------------|----------------------------------------------------------------------------------------------------------------------|
+| ----------------------------------------------------------------------------------------------------------- | --------------- | -------------------------------------------------------------------------------------------------------------------- |
 | [imap](https://www.php.net/manual/en/imap.installation.php)                                                 | Non thread-safe | [javanile/php-imap2](https://github.com/javanile/php-imap2), [webklex/php-imap](https://github.com/Webklex/php-imap) |
 | [newrelic](https://docs.newrelic.com/docs/apm/agents/php-agent/getting-started/introduction-new-relic-php/) | Non thread-safe | -                                                                                                                    |
 
@@ -14,7 +14,7 @@ Les extensions suivantes sont connues pour ne pas être compatibles avec Franken
 Les extensions suivantes ont des bugs connus ou des comportements inattendus lorsqu'elles sont utilisées avec FrankenPHP :
 
 | Nom                                                           | Problème                                                                                                                                                                                                                                                                                                                                      |
-|---------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| ------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | [ext-openssl](https://www.php.net/manual/fr/book.openssl.php) | Lors de l'utilisation d'une version statique de FrankenPHP (construite avec la libc musl), l'extension OpenSSL peut planter sous de fortes charges. Une solution consiste à utiliser une version liée dynamiquement (comme celle utilisée dans les images Docker). Ce bogue est [suivi par PHP](https://github.com/php/php-src/issues/13648). |
 
 ## get_browser
@@ -80,8 +80,8 @@ docker run \
 
 Les [scripts Composer](https://getcomposer.org/doc/articles/scripts.md) peuvent vouloir exécuter un binaire PHP pour certaines tâches, par exemple dans [un projet Laravel](laravel.md) pour exécuter `@php artisan package:discover --ansi`. Cela [echoue actuellement](https://github.com/dunglas/frankenphp/issues/483#issuecomment-1899890915) pour deux raisons :
 
-* Composer ne sait pas comment appeler le binaire FrankenPHP ;
-* Composer peut ajouter des paramètres PHP en utilisant le paramètre `-d` dans la commande, ce que FrankenPHP ne supporte pas encore.
+- Composer ne sait pas comment appeler le binaire FrankenPHP ;
+- Composer peut ajouter des paramètres PHP en utilisant le paramètre `-d` dans la commande, ce que FrankenPHP ne supporte pas encore.
 
 Comme solution de contournement, nous pouvons créer un script shell dans `/usr/local/bin/php` qui supprime les paramètres non supportés et appelle ensuite FrankenPHP :
 

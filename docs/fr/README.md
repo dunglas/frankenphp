@@ -4,7 +4,7 @@
 
 FrankenPHP est un serveur d'applications moderne pour PHP construit à partir du serveur web [Caddy](https://caddyserver.com/).
 
-FrankenPHP donne des super-pouvoirs à vos applications PHP grâce à ses fonctionnalités à la pointe : [*Early Hints*](early-hints.md), [mode worker](worker.md), [fonctionnalités en temps réel](mercure.md), HTTPS automatique, prise en charge de HTTP/2 et HTTP/3...
+FrankenPHP donne des super-pouvoirs à vos applications PHP grâce à ses fonctionnalités à la pointe : [_Early Hints_](early-hints.md), [mode worker](worker.md), [fonctionnalités en temps réel](mercure.md), HTTPS automatique, prise en charge de HTTP/2 et HTTP/3...
 
 FrankenPHP fonctionne avec n'importe quelle application PHP et rend vos projets Laravel et Symfony plus rapides que jamais grâce à leurs intégrations officielles avec le mode worker.
 
@@ -83,33 +83,33 @@ frankenphp php-server
 
 ## Documentation
 
-* [Le mode classique](classic.md)
-* [Le mode worker](worker.md)
-* [Le support des Early Hints (code de statut HTTP 103)](early-hints.md)
-* [Temps réel](mercure.md)
-* [Servir efficacement les fichiers statiques volumineux](x-sendfile.md)
-* [Configuration](config.md)
-* [Images Docker](docker.md)
-* [Déploiement en production](production.md)
-* [Optimisation des performances](performance.md)
-* [Créer des applications PHP **standalone**, auto-exécutables](embed.md)
-* [Créer un build statique](static.md)
-* [Compiler depuis les sources](compile.md)
-* [Surveillance de FrankenPHP](metrics.md)
-* [Intégration Laravel](laravel.md)
-* [Problèmes connus](known-issues.md)
-* [Application de démo (Symfony) et benchmarks](https://github.com/dunglas/frankenphp-demo)
-* [Documentation de la bibliothèque Go](https://pkg.go.dev/github.com/dunglas/frankenphp)
-* [Contribuer et débugger](CONTRIBUTING.md)
+- [Le mode classique](classic.md)
+- [Le mode worker](worker.md)
+- [Le support des Early Hints (code de statut HTTP 103)](early-hints.md)
+- [Temps réel](mercure.md)
+- [Servir efficacement les fichiers statiques volumineux](x-sendfile.md)
+- [Configuration](config.md)
+- [Images Docker](docker.md)
+- [Déploiement en production](production.md)
+- [Optimisation des performances](performance.md)
+- [Créer des applications PHP **standalone**, auto-exécutables](embed.md)
+- [Créer un build statique](static.md)
+- [Compiler depuis les sources](compile.md)
+- [Surveillance de FrankenPHP](metrics.md)
+- [Intégration Laravel](laravel.md)
+- [Problèmes connus](known-issues.md)
+- [Application de démo (Symfony) et benchmarks](https://github.com/dunglas/frankenphp-demo)
+- [Documentation de la bibliothèque Go](https://pkg.go.dev/github.com/dunglas/frankenphp)
+- [Contribuer et débugger](CONTRIBUTING.md)
 
 ## Exemples et squelettes
 
-* [Symfony](https://github.com/dunglas/symfony-docker)
-* [API Platform](https://api-platform.com/docs/distribution/)
-* [Laravel](laravel.md)
-* [Sulu](https://sulu.io/blog/running-sulu-with-frankenphp)
-* [WordPress](https://github.com/StephenMiracle/frankenwp)
-* [Drupal](https://github.com/dunglas/frankenphp-drupal)
-* [Joomla](https://github.com/alexandreelise/frankenphp-joomla)
-* [TYPO3](https://github.com/ochorocho/franken-typo3)
-* [Magento2](https://github.com/ekino/frankenphp-magento2)
+- [Symfony](https://github.com/dunglas/symfony-docker)
+- [API Platform](https://api-platform.com/docs/distribution/)
+- [Laravel](laravel.md)
+- [Sulu](https://sulu.io/blog/running-sulu-with-frankenphp)
+- [WordPress](https://github.com/StephenMiracle/frankenwp)
+- [Drupal](https://github.com/dunglas/frankenphp-drupal)
+- [Joomla](https://github.com/alexandreelise/frankenphp-joomla)
+- [TYPO3](https://github.com/ochorocho/franken-typo3)
+- [Magento2](https://github.com/ekino/frankenphp-magento2)

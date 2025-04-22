@@ -111,22 +111,22 @@ docker buildx bake -f docker-bake.hcl --pull --no-cache --push
 
 1. Download the debug version of the FrankenPHP binary from GitHub or create your custom static build including debug symbols:
 
-    ```console
-    docker buildx bake \
-        --load \
-        --set static-builder.args.DEBUG_SYMBOLS=1 \
-        --set "static-builder.platform=linux/amd64" \
-        static-builder
-    docker cp $(docker create --name static-builder-musl dunglas/frankenphp:static-builder-musl):/go/src/app/dist/frankenphp-linux-$(uname -m) frankenphp
-    ```
+   ```console
+   docker buildx bake \
+       --load \
+       --set static-builder.args.DEBUG_SYMBOLS=1 \
+       --set "static-builder.platform=linux/amd64" \
+       static-builder
+   docker cp $(docker create --name static-builder-musl dunglas/frankenphp:static-builder-musl):/go/src/app/dist/frankenphp-linux-$(uname -m) frankenphp
+   ```
 
 2. Replace your current version of `frankenphp` by the debug FrankenPHP executable
 3. Start FrankenPHP as usual (alternatively, you can directly start FrankenPHP with GDB: `gdb --args frankenphp run`)
 4. Attach to the process with GDB:
 
-    ```console
-    gdb -p `pidof frankenphp`
-    ```
+   ```console
+   gdb -p `pidof frankenphp`
+   ```
 
 5. If necessary, type `continue` in the GDB shell
 6. Make FrankenPHP crash
@@ -138,60 +138,60 @@ docker buildx bake -f docker-bake.hcl --pull --no-cache --push
 1. Open `.github/workflows/tests.yml`
 2. Enable PHP debug symbols
 
-    ```patch
-        - uses: shivammathur/setup-php@v2
-          # ...
-          env:
-            phpts: ts
-    +       debug: true
-    ```
+   ```patch
+       - uses: shivammathur/setup-php@v2
+         # ...
+         env:
+           phpts: ts
+   +       debug: true
+   ```
 
 3. Enable `tmate` to connect to the container
 
-    ```patch
-        - name: Set CGO flags
-          run: echo "CGO_CFLAGS=$(php-config --includes)" >> "$GITHUB_ENV"
-    +   - run: |
-    +       sudo apt install gdb
-    +       mkdir -p /home/runner/.config/gdb/
-    +       printf "set auto-load safe-path /\nhandle SIG34 nostop noprint pass" > /home/runner/.config/gdb/gdbinit
-    +   - uses: mxschmitt/action-tmate@v3
-    ```
+   ```patch
+       - name: Set CGO flags
+         run: echo "CGO_CFLAGS=$(php-config --includes)" >> "$GITHUB_ENV"
+   +   - run: |
+   +       sudo apt install gdb
+   +       mkdir -p /home/runner/.config/gdb/
+   +       printf "set auto-load safe-path /\nhandle SIG34 nostop noprint pass" > /home/runner/.config/gdb/gdbinit
+   +   - uses: mxschmitt/action-tmate@v3
+   ```
 
 4. Connect to the container
 5. Open `frankenphp.go`
 6. Enable `cgosymbolizer`
 
-    ```patch
-    -	//_ "github.com/ianlancetaylor/cgosymbolizer"
-    +	_ "github.com/ianlancetaylor/cgosymbolizer"
-    ```
+   ```patch
+   -	//_ "github.com/ianlancetaylor/cgosymbolizer"
+   +	_ "github.com/ianlancetaylor/cgosymbolizer"
+   ```
 
 7. Download the module: `go get`
 8. In the container, you can use GDB and the like:
 
-    ```console
-    go test -tags watcher -c -ldflags=-w
-    gdb --args frankenphp.test -test.run ^MyTest$
-    ```
+   ```console
+   go test -tags watcher -c -ldflags=-w
+   gdb --args frankenphp.test -test.run ^MyTest$
+   ```
 
 9. When the bug is fixed, revert all these changes
 
 ## Misc Dev Resources
 
-* [PHP embedding in uWSGI](https://github.com/unbit/uwsgi/blob/master/plugins/php/php_plugin.c)
-* [PHP embedding in NGINX Unit](https://github.com/nginx/unit/blob/master/src/nxt_php_sapi.c)
-* [PHP embedding in Go (go-php)](https://github.com/deuill/go-php)
-* [PHP embedding in Go (GoEmPHP)](https://github.com/mikespook/goemphp)
-* [PHP embedding in C++](https://gist.github.com/paresy/3cbd4c6a469511ac7479aa0e7c42fea7)
-* [Extending and Embedding PHP by Sara Golemon](https://books.google.fr/books?id=zMbGvK17_tYC&pg=PA254&lpg=PA254#v=onepage&q&f=false)
-* [What the heck is TSRMLS_CC, anyway?](http://blog.golemon.com/2006/06/what-heck-is-tsrmlscc-anyway.html)
-* [SDL bindings](https://pkg.go.dev/github.com/veandco/go-sdl2@v0.4.21/sdl#Main)
+- [PHP embedding in uWSGI](https://github.com/unbit/uwsgi/blob/master/plugins/php/php_plugin.c)
+- [PHP embedding in NGINX Unit](https://github.com/nginx/unit/blob/master/src/nxt_php_sapi.c)
+- [PHP embedding in Go (go-php)](https://github.com/deuill/go-php)
+- [PHP embedding in Go (GoEmPHP)](https://github.com/mikespook/goemphp)
+- [PHP embedding in C++](https://gist.github.com/paresy/3cbd4c6a469511ac7479aa0e7c42fea7)
+- [Extending and Embedding PHP by Sara Golemon](https://books.google.fr/books?id=zMbGvK17_tYC&pg=PA254&lpg=PA254#v=onepage&q&f=false)
+- [What the heck is TSRMLS_CC, anyway?](http://blog.golemon.com/2006/06/what-heck-is-tsrmlscc-anyway.html)
+- [SDL bindings](https://pkg.go.dev/github.com/veandco/go-sdl2@v0.4.21/sdl#Main)
 
 ## Docker-Related Resources
 
-* [Bake file definition](https://docs.docker.com/build/customize/bake/file-definition/)
-* [docker buildx build](https://docs.docker.com/engine/reference/commandline/buildx_build/)
+- [Bake file definition](https://docs.docker.com/build/customize/bake/file-definition/)
+- [docker buildx build](https://docs.docker.com/engine/reference/commandline/buildx_build/)
 
 ## Useful Command
 

@@ -179,10 +179,10 @@ where the FrankenPHP process was started. You can instead also specify one or mo
 }
 ```
 
-* The `**` pattern signifies recursive watching
-* Directories can also be relative (to where the FrankenPHP process is started from)
-* If you have multiple workers defined, all of them will be restarted when a file changes
-* Be wary about watching files that are created at runtime (like logs) since they might cause unwanted worker restarts.
+- The `**` pattern signifies recursive watching
+- Directories can also be relative (to where the FrankenPHP process is started from)
+- If you have multiple workers defined, all of them will be restarted when a file changes
+- Be wary about watching files that are created at runtime (like logs) since they might cause unwanted worker restarts.
 
 The file watcher is based on [e-dant/watcher](https://github.com/e-dant/watcher).
 
@@ -218,9 +218,9 @@ You can find more information about this setting in the [Caddy documentation](ht
 
 The following environment variables can be used to inject Caddy directives in the `Caddyfile` without modifying it:
 
-* `SERVER_NAME`: change [the addresses on which to listen](https://caddyserver.com/docs/caddyfile/concepts#addresses), the provided hostnames will also be used for the generated TLS certificate
-* `CADDY_GLOBAL_OPTIONS`: inject [global options](https://caddyserver.com/docs/caddyfile/options)
-* `FRANKENPHP_CONFIG`: inject config under the `frankenphp` directive
+- `SERVER_NAME`: change [the addresses on which to listen](https://caddyserver.com/docs/caddyfile/concepts#addresses), the provided hostnames will also be used for the generated TLS certificate
+- `CADDY_GLOBAL_OPTIONS`: inject [global options](https://caddyserver.com/docs/caddyfile/options)
+- `FRANKENPHP_CONFIG`: inject config under the `frankenphp` directive
 
 As for FPM and CLI SAPIs, environment variables are exposed by default in the `$_SERVER` superglobal.
 

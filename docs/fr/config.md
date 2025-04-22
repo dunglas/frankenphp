@@ -180,10 +180,10 @@ où le processus FrankenPHP a été lancé. Vous pouvez également spécifier un
 }
 ```
 
-* Le motif `**` signifie une surveillance récursive.
-* Les répertoires peuvent également être relatifs (depuis l'endroit où le processus FrankenPHP est démarré).
-* Si vous avez défini plusieurs workers, ils seront tous redémarrés lorsqu'un fichier est modifié.
-* Méfiez-vous des fichiers créés au moment de l'exécution (comme les logs) car ils peuvent provoquer des redémarrages intempestifs du worker.
+- Le motif `**` signifie une surveillance récursive.
+- Les répertoires peuvent également être relatifs (depuis l'endroit où le processus FrankenPHP est démarré).
+- Si vous avez défini plusieurs workers, ils seront tous redémarrés lorsqu'un fichier est modifié.
+- Méfiez-vous des fichiers créés au moment de l'exécution (comme les logs) car ils peuvent provoquer des redémarrages intempestifs du worker.
 
 La surveillance des fichiers est basé sur [e-dant/watcher](https://github.com/e-dant/watcher).
 
@@ -219,9 +219,9 @@ Vous trouverez plus d'informations sur ce paramètre dans la [documentation Cadd
 
 Les variables d'environnement suivantes peuvent être utilisées pour insérer des directives Caddy dans le `Caddyfile` sans le modifier :
 
-* `SERVER_NAME` : change [les adresses sur lesquelles écouter](https://caddyserver.com/docs/caddyfile/concepts#addresses), les noms d'hôte fournis seront également utilisés pour le certificat TLS généré
-* `CADDY_GLOBAL_OPTIONS` : injecte [des options globales](https://caddyserver.com/docs/caddyfile/options)
-* `FRANKENPHP_CONFIG` : insère la configuration sous la directive `frankenphp`
+- `SERVER_NAME` : change [les adresses sur lesquelles écouter](https://caddyserver.com/docs/caddyfile/concepts#addresses), les noms d'hôte fournis seront également utilisés pour le certificat TLS généré
+- `CADDY_GLOBAL_OPTIONS` : injecte [des options globales](https://caddyserver.com/docs/caddyfile/options)
+- `FRANKENPHP_CONFIG` : insère la configuration sous la directive `frankenphp`
 
 Comme pour les SAPI FPM et CLI, les variables d'environnement ne sont exposées par défaut dans la superglobale `$_SERVER`.
 

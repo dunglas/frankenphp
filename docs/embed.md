@@ -14,10 +14,10 @@ Before creating the self-contained binary be sure that your app is ready for emb
 
 For instance, you likely want to:
 
-* Install the production dependencies of the app
-* Dump the autoloader
-* Enable the production mode of your application (if any)
-* Strip unneeded files such as `.git` or tests to reduce the size of your final binary
+- Install the production dependencies of the app
+- Dump the autoloader
+- Enable the production mode of your application (if any)
+- Strip unneeded files such as `.git` or tests to reduce the size of your final binary
 
 For instance, for a Symfony app, you can use the following commands:
 
@@ -53,34 +53,34 @@ The easiest way to create a Linux binary is to use the Docker-based builder we p
 
 1. Create a file named `static-build.Dockerfile` in the repository of your app:
 
-    ```dockerfile
-    FROM --platform=linux/amd64 dunglas/frankenphp:static-builder
+   ```dockerfile
+   FROM --platform=linux/amd64 dunglas/frankenphp:static-builder
 
-    # Copy your app
-    WORKDIR /go/src/app/dist/app
-    COPY . .
+   # Copy your app
+   WORKDIR /go/src/app/dist/app
+   COPY . .
 
-    # Build the static binary
-    WORKDIR /go/src/app/
-    RUN EMBED=dist/app/ ./build-static.sh
-    ```
+   # Build the static binary
+   WORKDIR /go/src/app/
+   RUN EMBED=dist/app/ ./build-static.sh
+   ```
 
-    > [!CAUTION]
-    >
-    > Some `.dockerignore` files (e.g. default [Symfony Docker `.dockerignore`](https://github.com/dunglas/symfony-docker/blob/main/.dockerignore))
-    > will ignore the `vendor/` directory and `.env` files. Be sure to adjust or remove the `.dockerignore` file before the build.
+   > [!CAUTION]
+   >
+   > Some `.dockerignore` files (e.g. default [Symfony Docker `.dockerignore`](https://github.com/dunglas/symfony-docker/blob/main/.dockerignore))
+   > will ignore the `vendor/` directory and `.env` files. Be sure to adjust or remove the `.dockerignore` file before the build.
 
 2. Build:
 
-    ```console
-    docker build -t static-app -f static-build.Dockerfile .
-    ```
+   ```console
+   docker build -t static-app -f static-build.Dockerfile .
+   ```
 
 3. Extract the binary:
 
-    ```console
-    docker cp $(docker create --name static-app-tmp static-app):/go/src/app/dist/frankenphp-linux-x86_64 my-app ; docker rm static-app-tmp
-    ```
+   ```console
+   docker cp $(docker create --name static-app-tmp static-app):/go/src/app/dist/frankenphp-linux-x86_64 my-app ; docker rm static-app-tmp
+   ```
 
 The resulting binary is the file named `my-app` in the current directory.
 

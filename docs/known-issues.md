@@ -5,7 +5,7 @@
 The following extensions are known not to be compatible with FrankenPHP:
 
 | Name                                                                                                        | Reason          | Alternatives                                                                                                         |
-|-------------------------------------------------------------------------------------------------------------|-----------------|----------------------------------------------------------------------------------------------------------------------|
+| ----------------------------------------------------------------------------------------------------------- | --------------- | -------------------------------------------------------------------------------------------------------------------- |
 | [imap](https://www.php.net/manual/en/imap.installation.php)                                                 | Not thread-safe | [javanile/php-imap2](https://github.com/javanile/php-imap2), [webklex/php-imap](https://github.com/Webklex/php-imap) |
 | [newrelic](https://docs.newrelic.com/docs/apm/agents/php-agent/getting-started/introduction-new-relic-php/) | Not thread-safe | -                                                                                                                    |
 
@@ -14,7 +14,7 @@ The following extensions are known not to be compatible with FrankenPHP:
 The following extensions have known bugs and unexpected behaviors when used with FrankenPHP:
 
 | Name                                                          | Problem                                                                                                                                                                                                                                                                                         |
-|---------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| ------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | [ext-openssl](https://www.php.net/manual/en/book.openssl.php) | When using a static build of FrankenPHP (built with the musl libc), the OpenSSL extension may crash under heavy loads. A workaround is to use a dynamically linked build (like the one used in Docker images). This bug is [being tracked by PHP](https://github.com/php/php-src/issues/13648). |
 
 ## get_browser
@@ -80,8 +80,8 @@ docker run \
 
 [Composer scripts](https://getcomposer.org/doc/articles/scripts.md) may want to execute a PHP binary for some tasks, e.g. in [a Laravel project](laravel.md) to run `@php artisan package:discover --ansi`. This [currently fails](https://github.com/dunglas/frankenphp/issues/483#issuecomment-1899890915) for two reasons:
 
-* Composer does not know how to call the FrankenPHP binary;
-* Composer may add PHP settings using the `-d` flag in the command, which FrankenPHP does not yet support.
+- Composer does not know how to call the FrankenPHP binary;
+- Composer may add PHP settings using the `-d` flag in the command, which FrankenPHP does not yet support.
 
 As a workaround, we can create a shell script in `/usr/local/bin/php` which strips the unsupported parameters and then calls FrankenPHP:
 

@@ -159,8 +159,8 @@ USER ${USER}
 
 Docker imajları oluşturulur:
 
-* Yeni bir sürüm etiketlendiğinde
-* Her gün UTC ile saat 4'te Resmi PHP imajlarının yeni sürümleri mevcutsa
+- Yeni bir sürüm etiketlendiğinde
+- Her gün UTC ile saat 4'te Resmi PHP imajlarının yeni sürümleri mevcutsa
 
 ## Geliştirme Sürümleri
 
