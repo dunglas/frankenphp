@@ -427,10 +427,6 @@ func (f *FrankenPHPModule) Provision(ctx caddy.Context) error {
 		}
 	}
 
-	if len(f.Workers) > 0 {
-		moduleWorkers = append(moduleWorkers, f.Workers...)
-	}
-
 	return nil
 }
 
@@ -460,20 +456,30 @@ func (f *FrankenPHPModule) ServeHTTP(w http.ResponseWriter, r *http.Request, _ c
 		}
 	}
 
-	workerNames := make([]string, len(f.Workers))
-	for i, w := range f.Workers {
-		workerNames[i] = w.Name
-	}
-
-	fr, err := frankenphp.NewRequestWithContext(
+	filename, fc, err := frankenphp.NewFrankenPHPContext(
 		r,
 		documentRootOption,
 		frankenphp.WithRequestSplitPath(f.SplitPath),
 		frankenphp.WithRequestPreparedEnv(env),
 		frankenphp.WithOriginalRequest(&origReq),
-		frankenphp.WithWorkerNames(workerNames),
 	)
+	if err != nil {
+		return caddyhttp.Error(http.StatusInternalServerError, err)
+	}
 
+	workerName := ""
+	for _, w := range f.Workers {
+		if p, _ := fastabs.FastAbs(w.FileName); p == filename {
+			workerName = w.Name
+		}
+	}
+
+	err = frankenphp.WithModuleWorker(workerName)(fc)
+	if err != nil {
+		return caddyhttp.Error(http.StatusInternalServerError, err)
+	}
+
+	fr, err := frankenphp.NewRequestWithExistingContext(r, fc)
 	if err != nil {
 		return caddyhttp.Error(http.StatusInternalServerError, err)
 	}
@@ -577,14 +583,28 @@ func (f *FrankenPHPModule) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 							envString += k + "=" + v + ","
 						}
 						envString = strings.TrimSuffix(envString, ",")
-						wc.Name += "env:" + envString + "_" + wc.FileName
+						wc.Name += "env:" + envString
 					}
 				}
 				if wc.Name != "" && !strings.HasPrefix(wc.Name, "m#") {
 					wc.Name = "m#" + wc.Name
 				}
 
+				// Check if a worker with this filename already exists in this module
+				for _, existingWorker := range f.Workers {
+					if existingWorker.FileName == wc.FileName {
+						return fmt.Errorf("workers must not have duplicate filenames: %s", wc.FileName)
+					}
+				}
+				// Check if a worker with this name already exists
+				for _, existingWorker := range moduleWorkers {
+					if existingWorker.Name == wc.Name {
+						return fmt.Errorf("workers must not have duplicate names: %s", wc.Name)
+					}
+				}
+
 				f.Workers = append(f.Workers, wc)
+				moduleWorkers = append(moduleWorkers, f.Workers...)
 			}
 		}
 	}

@@ -404,13 +404,14 @@ func ServeHTTP(responseWriter http.ResponseWriter, request *http.Request) error 
 		return nil
 	}
 
-	workerNames := append(fc.workerNames, fc.scriptFilename)
-	for _, workerName := range workerNames {
-		// Detect if a worker is available to handle this request
-		if worker := getWorkerForName(workerName); worker != nil {
-			worker.handleRequest(fc)
-			return nil
-		}
+	workerName := fc.workerName
+	if workerName == "" {
+		workerName = fc.scriptFilename
+	}
+	// Detect if a worker is available to handle this request
+	if worker := getWorkerForName(workerName); worker != nil {
+		worker.handleRequest(fc)
+		return nil
 	}
 
 	// If no worker was available, send the request to non-worker threads

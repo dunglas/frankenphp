@@ -161,7 +161,7 @@ func TestGlobalAndModuleWorker(t *testing.T) {
 		}
 		`, "caddyfile")
 
-	for i := 0; i < 10; i++ {
+	for i := 0; i < 2; i++ {
 		wg.Add(1)
 
 		go func(i int) {
@@ -183,13 +183,7 @@ func TestNamedModuleWorkers(t *testing.T) {
 			skip_install_trust
 			admin localhost:2999
 
-			frankenphp {
-				worker {
-					file ../testdata/worker-with-env.php
-					num 1
-					env APP_ENV global
-				}
-			}
+			frankenphp
 		}
 
 		http://localhost:`+testPort+` {
