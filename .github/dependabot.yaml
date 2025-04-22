@@ -7,6 +7,10 @@ updates:
       interval: weekly
     commit-message:
       prefix: chore
+    groups:
+      go-modules:
+        patterns:
+          - '*'
   - package-ecosystem: gomod
     directory: /caddy
     schedule:
@@ -18,9 +22,17 @@ updates:
     ignore:
       - dependency-name: github.com/google/cel-go
       - dependency-name: github.com/quic-go/*
+    groups:
+      go-modules:
+        patterns:
+          - '*'
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
     commit-message:
       prefix: ci
+    groups:
+      github-actions:
+        patterns:
+          - '*'
