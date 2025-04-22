@@ -1,18 +1,19 @@
 package frankenphp
 
 import (
+	"io"
+	"log/slog"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"go.uber.org/zap"
 )
 
 func TestScaleARegularThreadUpAndDown(t *testing.T) {
 	assert.NoError(t, Init(
 		WithNumThreads(1),
 		WithMaxThreads(2),
-		WithLogger(zap.NewNop()),
+		WithLogger(slog.New(slog.NewTextHandler(io.Discard, nil))),
 	))
 
 	autoScaledThread := phpThreads[1]
@@ -37,7 +38,7 @@ func TestScaleAWorkerThreadUpAndDown(t *testing.T) {
 		WithNumThreads(2),
 		WithMaxThreads(3),
 		WithWorkers(workerName, workerPath, 1, map[string]string{}, []string{}),
-		WithLogger(zap.NewNop()),
+		WithLogger(slog.New(slog.NewTextHandler(io.Discard, nil))),
 	))
 
 	autoScaledThread := phpThreads[2]

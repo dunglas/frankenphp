@@ -2,10 +2,10 @@
 
 package watcher
 
-import "go.uber.org/zap"
+import "log/slog"
 
-func InitWatcher(filePatterns []string, callback func(), zapLogger *zap.Logger) error {
-	zapLogger.Error("watcher support is not enabled")
+func InitWatcher(filePatterns []string, callback func(), logger *slog.Logger) error {
+	logger.Error("watcher support is not enabled")
 
 	return nil
 }
