@@ -112,22 +112,22 @@ docker buildx bake -f docker-bake.hcl --pull --no-cache --push
 
 1. Téléchargez la version de débogage du binaire FrankenPHP depuis GitHub ou créez votre propre build statique incluant des symboles de débogage :
 
-    ```console
-    docker buildx bake \
-        --load \
-        --set static-builder.args.DEBUG_SYMBOLS=1 \
-        --set "static-builder.platform=linux/amd64" \
-        static-builder
-    docker cp $(docker create --name static-builder-musl dunglas/frankenphp:static-builder-musl):/go/src/app/dist/frankenphp-linux-$(uname -m) frankenphp
-    ```
+   ```console
+   docker buildx bake \
+       --load \
+       --set static-builder.args.DEBUG_SYMBOLS=1 \
+       --set "static-builder.platform=linux/amd64" \
+       static-builder
+   docker cp $(docker create --name static-builder-musl dunglas/frankenphp:static-builder-musl):/go/src/app/dist/frankenphp-linux-$(uname -m) frankenphp
+   ```
 
 2. Remplacez votre version actuelle de `frankenphp` par l'exécutable de débogage de FrankenPHP.
 3. Démarrez FrankenPHP comme d'habitude (alternativement, vous pouvez directement démarrer FrankenPHP avec GDB : `gdb --args frankenphp run`).
 4. Attachez-vous au processus avec GDB :
 
-    ```console
-    gdb -p `pidof frankenphp`
-    ```
+   ```console
+   gdb -p `pidof frankenphp`
+   ```
 
 5. Si nécessaire, tapez `continue` dans le shell GDB
 6. Faites planter FrankenPHP.
@@ -139,61 +139,61 @@ docker buildx bake -f docker-bake.hcl --pull --no-cache --push
 1. Ouvrir `.github/workflows/tests.yml`
 2. Activer les symboles de débogage de la bibliothèque PHP
 
-    ```patch
-        - uses: shivammathur/setup-php@v2
-          # ...
-          env:
-            phpts: ts
-    +       debug: true
-    ```
+   ```patch
+       - uses: shivammathur/setup-php@v2
+         # ...
+         env:
+           phpts: ts
+   +       debug: true
+   ```
 
 3. Activer `tmate` pour se connecter au conteneur
 
-    ```patch
-        - name: Set CGO flags
-          run: echo "CGO_CFLAGS=$(php-config --includes)" >> "$GITHUB_ENV"
-    +   - run: |
-    +       sudo apt install gdb
-    +       mkdir -p /home/runner/.config/gdb/
-    +       printf "set auto-load safe-path /\nhandle SIG34 nostop noprint pass" > /home/runner/.config/gdb/gdbinit
-    +   - uses: mxschmitt/action-tmate@v3
-    ```
+   ```patch
+       - name: Set CGO flags
+         run: echo "CGO_CFLAGS=$(php-config --includes)" >> "$GITHUB_ENV"
+   +   - run: |
+   +       sudo apt install gdb
+   +       mkdir -p /home/runner/.config/gdb/
+   +       printf "set auto-load safe-path /\nhandle SIG34 nostop noprint pass" > /home/runner/.config/gdb/gdbinit
+   +   - uses: mxschmitt/action-tmate@v3
+   ```
 
 4. Se connecter au conteneur
 5. Ouvrir `frankenphp.go`
 6. Activer `cgosymbolizer`
 
-    ```patch
-    - //_ "github.com/ianlancetaylor/cgosymbolizer"
-    + _ "github.com/ianlancetaylor/cgosymbolizer"
-    ```
+   ```patch
+   - //_ "github.com/ianlancetaylor/cgosymbolizer"
+   + _ "github.com/ianlancetaylor/cgosymbolizer"
+   ```
 
 7. Télécharger le module : `go get`
 8. Dans le conteneur, vous pouvez utiliser GDB et similaires :
 
-    ```console
-    go test -tags watcher -c -ldflags=-w
-    gdb --args frankenphp.test -test.run ^MyTest$
-    ```
+   ```console
+   go test -tags watcher -c -ldflags=-w
+   gdb --args frankenphp.test -test.run ^MyTest$
+   ```
 
 9. Quand le bug est corrigé, annulez tous les changements.
 
 ## Ressources Diverses pour le Développement
 
-* [Intégration de PHP dans uWSGI](https://github.com/unbit/uwsgi/blob/master/plugins/php/php_plugin.c)
-* [Intégration de PHP dans NGINX Unit](https://github.com/nginx/unit/blob/master/src/nxt_php_sapi.c)
-* [Intégration de PHP dans Go (go-php)](https://github.com/deuill/go-php)
-* [Intégration de PHP dans Go (GoEmPHP)](https://github.com/mikespook/goemphp)
-* [Intégration de PHP dans C++](https://gist.github.com/paresy/3cbd4c6a469511ac7479aa0e7c42fea7)
-* [Extending and Embedding PHP par Sara Golemon](https://books.google.fr/books?id=zMbGvK17_tYC&pg=PA254&lpg=PA254#v=onepage&q&f=false)
-* [Qu'est-ce que TSRMLS_CC, au juste ?](http://blog.golemon.com/2006/06/what-heck-is-tsrmlscc-anyway.html)
-* [Intégration de PHP sur Mac](https://gist.github.com/jonnywang/61427ffc0e8dde74fff40f479d147db4)
-* [Bindings SDL](https://pkg.go.dev/github.com/veandco/go-sdl2@v0.4.21/sdl#Main)
+- [Intégration de PHP dans uWSGI](https://github.com/unbit/uwsgi/blob/master/plugins/php/php_plugin.c)
+- [Intégration de PHP dans NGINX Unit](https://github.com/nginx/unit/blob/master/src/nxt_php_sapi.c)
+- [Intégration de PHP dans Go (go-php)](https://github.com/deuill/go-php)
+- [Intégration de PHP dans Go (GoEmPHP)](https://github.com/mikespook/goemphp)
+- [Intégration de PHP dans C++](https://gist.github.com/paresy/3cbd4c6a469511ac7479aa0e7c42fea7)
+- [Extending and Embedding PHP par Sara Golemon](https://books.google.fr/books?id=zMbGvK17_tYC&pg=PA254&lpg=PA254#v=onepage&q&f=false)
+- [Qu'est-ce que TSRMLS_CC, au juste ?](http://blog.golemon.com/2006/06/what-heck-is-tsrmlscc-anyway.html)
+- [Intégration de PHP sur Mac](https://gist.github.com/jonnywang/61427ffc0e8dde74fff40f479d147db4)
+- [Bindings SDL](https://pkg.go.dev/github.com/veandco/go-sdl2@v0.4.21/sdl#Main)
 
 ## Ressources Liées à Docker
 
-* [Définition du fichier Bake](https://docs.docker.com/build/customize/bake/file-definition/)
-* [docker buildx build](https://docs.docker.com/engine/reference/commandline/buildx_build/)
+- [Définition du fichier Bake](https://docs.docker.com/build/customize/bake/file-definition/)
+- [docker buildx build](https://docs.docker.com/engine/reference/commandline/buildx_build/)
 
 ## Commande utile
 

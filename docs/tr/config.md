@@ -122,7 +122,7 @@ route {
 }
 ```
 
-php_server` ve `php` yönergeleri aşağıdaki seçeneklere sahiptir:
+php_server`ve`php` yönergeleri aşağıdaki seçeneklere sahiptir:
 
 ```caddyfile
 php_server [<matcher>] {
@@ -137,9 +137,9 @@ php_server [<matcher>] {
 
 Aşağıdaki ortam değişkenleri `Caddyfile` içinde değişiklik yapmadan Caddy yönergelerini entegre etmek için kullanılabilir:
 
-* `SERVER_NAME`: değiştirin [dinlenecek adresleri](https://caddyserver.com/docs/caddyfile/concepts#addresses), sağlanan ana bilgisayar adları oluşturulan TLS sertifikası için de kullanılacaktır
-* `CADDY_GLOBAL_OPTIONS`: entegre edin [global seçenekler](https://caddyserver.com/docs/caddyfile/options)
-* `FRANKENPHP_CONFIG`: `frankenphp` yönergesi altına yapılandırma entegre edin
+- `SERVER_NAME`: değiştirin [dinlenecek adresleri](https://caddyserver.com/docs/caddyfile/concepts#addresses), sağlanan ana bilgisayar adları oluşturulan TLS sertifikası için de kullanılacaktır
+- `CADDY_GLOBAL_OPTIONS`: entegre edin [global seçenekler](https://caddyserver.com/docs/caddyfile/options)
+- `FRANKENPHP_CONFIG`: `frankenphp` yönergesi altına yapılandırma entegre edin
 
 FPM ve CLI SAPI'lerinde olduğu gibi, ortam değişkenleri varsayılan olarak `$_SERVER` süper globalinde gösterilir.
 

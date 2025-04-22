@@ -117,17 +117,17 @@ Note: this script also works on Linux (and probably on other Unixes), and is use
 The following environment variables can be passed to `docker build` and to the `build-static.sh`
 script to customize the static build:
 
-* `FRANKENPHP_VERSION`: the version of FrankenPHP to use
-* `PHP_VERSION`: the version of PHP to use
-* `PHP_EXTENSIONS`: the PHP extensions to build ([list of supported extensions](https://static-php.dev/en/guide/extensions.html))
-* `PHP_EXTENSION_LIBS`: extra libraries to build that add features to the extensions
-* `XCADDY_ARGS`: arguments to pass to [xcaddy](https://github.com/caddyserver/xcaddy), for instance to add extra Caddy modules
-* `EMBED`: path of the PHP application to embed in the binary
-* `CLEAN`: when set, libphp and all its dependencies are built from scratch (no cache)
-* `NO_COMPRESS`: don't compress the resulting binary using UPX
-* `DEBUG_SYMBOLS`: when set, debug-symbols will not be stripped and will be added to the binary
-* `MIMALLOC`: (experimental, Linux-only) replace musl's mallocng by [mimalloc](https://github.com/microsoft/mimalloc) for improved performance. We only recommend using this for musl targeting builds, for glibc prefer disabling this option and using [`LD_PRELOAD`](https://microsoft.github.io/mimalloc/overrides.html) when you run your binary instead.
-* `RELEASE`: (maintainers only) when set, the resulting binary will be uploaded on GitHub
+- `FRANKENPHP_VERSION`: the version of FrankenPHP to use
+- `PHP_VERSION`: the version of PHP to use
+- `PHP_EXTENSIONS`: the PHP extensions to build ([list of supported extensions](https://static-php.dev/en/guide/extensions.html))
+- `PHP_EXTENSION_LIBS`: extra libraries to build that add features to the extensions
+- `XCADDY_ARGS`: arguments to pass to [xcaddy](https://github.com/caddyserver/xcaddy), for instance to add extra Caddy modules
+- `EMBED`: path of the PHP application to embed in the binary
+- `CLEAN`: when set, libphp and all its dependencies are built from scratch (no cache)
+- `NO_COMPRESS`: don't compress the resulting binary using UPX
+- `DEBUG_SYMBOLS`: when set, debug-symbols will not be stripped and will be added to the binary
+- `MIMALLOC`: (experimental, Linux-only) replace musl's mallocng by [mimalloc](https://github.com/microsoft/mimalloc) for improved performance. We only recommend using this for musl targeting builds, for glibc prefer disabling this option and using [`LD_PRELOAD`](https://microsoft.github.io/mimalloc/overrides.html) when you run your binary instead.
+- `RELEASE`: (maintainers only) when set, the resulting binary will be uploaded on GitHub
 
 ## Extensions
 
