@@ -1,7 +1,6 @@
 module github.com/dunglas/frankenphp/caddy
 
 go 1.24
-
 toolchain go1.24.2
 
 replace github.com/dunglas/frankenphp => ../
@@ -13,7 +12,7 @@ require (
 	github.com/caddyserver/certmagic v0.23.0
 	github.com/dunglas/caddy-cbrotli v1.0.0
 	github.com/dunglas/frankenphp v1.5.0
-	github.com/dunglas/mercure/caddy v0.18.4
+	github.com/dunglas/mercure/caddy v0.19.0
 	github.com/dunglas/vulcain/caddy v1.2.0
 	github.com/prometheus/client_golang v1.22.0
 	github.com/spf13/cobra v1.9.1
@@ -60,7 +59,7 @@ require (
 	github.com/dlclark/regexp2 v1.11.5 // indirect
 	github.com/dolthub/maphash v0.1.0 // indirect
 	github.com/dunglas/httpsfv v1.1.0 // indirect
-	github.com/dunglas/mercure v0.18.4 // indirect
+	github.com/dunglas/mercure v0.19.0 // indirect
 	github.com/dunglas/vulcain v1.2.0 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
