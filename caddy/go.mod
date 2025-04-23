@@ -1,6 +1,6 @@
 module github.com/dunglas/frankenphp/caddy
 
-go 1.24
+go 1.24.0
 
 toolchain go1.24.2
 
@@ -13,7 +13,7 @@ require (
 	github.com/caddyserver/certmagic v0.23.0
 	github.com/dunglas/caddy-cbrotli v1.0.0
 	github.com/dunglas/frankenphp v1.5.0
-	github.com/dunglas/mercure/caddy v0.18.4
+	github.com/dunglas/mercure/caddy v0.19.0
 	github.com/dunglas/vulcain/caddy v1.2.0
 	github.com/prometheus/client_golang v1.22.0
 	github.com/spf13/cobra v1.9.1
@@ -60,7 +60,7 @@ require (
 	github.com/dlclark/regexp2 v1.11.5 // indirect
 	github.com/dolthub/maphash v0.1.0 // indirect
 	github.com/dunglas/httpsfv v1.1.0 // indirect
-	github.com/dunglas/mercure v0.18.4 // indirect
+	github.com/dunglas/mercure v0.19.0 // indirect
 	github.com/dunglas/vulcain v1.2.0 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
@@ -83,12 +83,12 @@ require (
 	github.com/golang-jwt/jwt/v5 v5.2.2 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/golang/snappy v1.0.0 // indirect
-	github.com/google/brotli/go/cbrotli v0.0.0-20250131134309-440e03642b89 // indirect
-	github.com/google/cel-go v0.24.1 // indirect
+	github.com/google/brotli/go/cbrotli v0.0.0-20241111155135-4303850b01d6 // indirect
+	github.com/google/cel-go v0.25.0 // indirect
 	github.com/google/certificate-transparency-go v1.3.1 // indirect
 	github.com/google/go-tpm v0.9.3 // indirect
 	github.com/google/go-tspi v0.3.0 // indirect
-	github.com/google/pprof v0.0.0-20250418163039-24c5476c6587 // indirect
+	github.com/google/pprof v0.0.0-20250422154841-e1f9c1950416 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/gorilla/handlers v1.5.2 // indirect
 	github.com/gorilla/mux v1.8.1 // indirect
@@ -199,8 +199,8 @@ require (
 	golang.org/x/text v0.24.0 // indirect
 	golang.org/x/time v0.11.0 // indirect
 	golang.org/x/tools v0.32.0 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20250421163800-61c742ae3ef0 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20250421163800-61c742ae3ef0 // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20250422160041-2d3770c4ea7f // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20250422160041-2d3770c4ea7f // indirect
 	google.golang.org/grpc v1.72.0 // indirect
 	google.golang.org/grpc/cmd/protoc-gen-go-grpc v1.5.1 // indirect
 	google.golang.org/protobuf v1.36.6 // indirect
