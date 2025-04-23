@@ -1,7 +1,4 @@
-﻿//go:build !noconfig
-// +build !noconfig
-
-package caddy
+﻿package caddy
 
 import (
 	"testing"

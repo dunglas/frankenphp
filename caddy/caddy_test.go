@@ -1,6 +1,3 @@
-//go:build !nocaddy
-// +build !nocaddy
-
 package caddy_test
 
 import (
