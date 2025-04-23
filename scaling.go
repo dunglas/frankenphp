@@ -160,7 +160,7 @@ func startUpscalingThreads(maxScaledThreads int, scale chan *frankenPHPContext, 
 			}
 
 			// if the request has been stalled long enough, scale
-			if worker := getWorkerForName(fc.scriptFilename); worker != nil {
+			if worker, ok := workers[getWorkerKey(fc.workerName, fc.scriptFilename)]; ok {
 				scaleWorkerThread(worker)
 			} else {
 				scaleRegularThread()

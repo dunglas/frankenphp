@@ -67,11 +67,12 @@ func initWorkers(opt []workerOpt) error {
 	return nil
 }
 
-func getWorkerForName(name string) *worker {
-	if wrk, ok := workers[name]; ok {
-		return wrk
+func getWorkerKey(name string, filename string) string {
+	key := filename
+	if strings.HasPrefix(name, "m#") {
+		key = name
 	}
-	return nil
+	return key
 }
 
 func newWorker(o workerOpt) (*worker, error) {
@@ -80,11 +81,8 @@ func newWorker(o workerOpt) (*worker, error) {
 		return nil, fmt.Errorf("worker filename is invalid %q: %w", o.fileName, err)
 	}
 
-	key := absFileName
-	if strings.HasPrefix(o.name, "m#") {
-		key = o.name
-	}
-	if wrk := getWorkerForName(key); wrk != nil {
+	key := getWorkerKey(o.name, absFileName)
+	if wrk, ok := workers[key]; ok {
 		return wrk, nil
 	}
 

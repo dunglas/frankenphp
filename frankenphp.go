@@ -404,12 +404,8 @@ func ServeHTTP(responseWriter http.ResponseWriter, request *http.Request) error 
 		return nil
 	}
 
-	workerName := fc.workerName
-	if workerName == "" {
-		workerName = fc.scriptFilename
-	}
 	// Detect if a worker is available to handle this request
-	if worker := getWorkerForName(workerName); worker != nil {
+	if worker, ok := workers[getWorkerKey(fc.workerName, fc.scriptFilename)]; ok {
 		worker.handleRequest(fc)
 		return nil
 	}

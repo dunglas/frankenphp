@@ -40,6 +40,7 @@ func fromContext(ctx context.Context) (fctx *frankenPHPContext, ok bool) {
 	return
 }
 
+// NewFrankenPHPContext parses out the correct filename and context to pass to NewRequestWithExistingContext
 func NewFrankenPHPContext(r *http.Request, opts ...RequestOption) (string, *frankenPHPContext, error) {
 	fc := &frankenPHPContext{
 		done:      make(chan interface{}),
@@ -94,22 +95,21 @@ func NewFrankenPHPContext(r *http.Request, opts ...RequestOption) (string, *fran
 	return fc.scriptFilename, fc, nil
 }
 
+// NewRequestWithExistingContext wraps an http request with an existing FrankenPHP request context.
+func NewRequestWithExistingContext(r *http.Request, fc *frankenPHPContext) *http.Request {
+	c := context.WithValue(r.Context(), contextKey, fc)
+
+	return r.WithContext(c)
+}
+
 // NewRequestWithContext creates a new FrankenPHP request context.
 func NewRequestWithContext(r *http.Request, opts ...RequestOption) (*http.Request, error) {
 	_, fc, err2 := NewFrankenPHPContext(r, opts...)
 	if err2 != nil {
 		return nil, err2
 	}
-	c := context.WithValue(r.Context(), contextKey, fc)
 
-	return r.WithContext(c), nil
-}
-
-// NewRequestWithExistingContext wraps an http request with an existing FrankenPHP request context.
-func NewRequestWithExistingContext(r *http.Request, fc *frankenPHPContext) (*http.Request, error) {
-	c := context.WithValue(r.Context(), contextKey, fc)
-
-	return r.WithContext(c), nil
+	return NewRequestWithExistingContext(r, fc), nil
 }
 
 func newDummyContext(requestPath string, opts ...RequestOption) (*frankenPHPContext, error) {
