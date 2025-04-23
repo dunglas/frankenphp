@@ -480,10 +480,7 @@ func (f *FrankenPHPModule) ServeHTTP(w http.ResponseWriter, r *http.Request, _ c
 		return caddyhttp.Error(http.StatusInternalServerError, err)
 	}
 
-	fr, err := frankenphp.NewRequestWithExistingContext(r, fc)
-	if err != nil {
-		return caddyhttp.Error(http.StatusInternalServerError, err)
-	}
+	fr := frankenphp.NewRequestWithExistingContext(r, fc)
 
 	if err = frankenphp.ServeHTTP(w, fr); err != nil {
 		return caddyhttp.Error(http.StatusInternalServerError, err)
