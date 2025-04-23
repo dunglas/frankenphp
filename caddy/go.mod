@@ -83,7 +83,7 @@ require (
 	github.com/golang-jwt/jwt/v5 v5.2.2 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/golang/snappy v1.0.0 // indirect
-	github.com/google/brotli/go/cbrotli v0.0.0-20250131134309-440e03642b89 // indirect
+	github.com/google/brotli/go/cbrotli v0.0.0-20241111155135-4303850b01d6 // indirect
 	github.com/google/cel-go v0.25.0 // indirect
 	github.com/google/certificate-transparency-go v1.3.1 // indirect
 	github.com/google/go-tpm v0.9.3 // indirect
