@@ -63,10 +63,10 @@ RUN git clone --branch=PHP-8.4 https://github.com/php/php-src.git . && \
 	make -j"$(nproc)" && \
 	make install && \
 	ldconfig && \
-    mkdir -p /etc/frankenphp/php.d && \
-	cp php.ini-development /etc/frankenphp/php.ini && \
-	echo "zend_extension=opcache.so" >> /etc/frankenphp/php.ini && \
-	echo "opcache.enable=1" >> /etcfrankenphp/php.ini && \
+		mkdir -p /etc/frankenphp/php.d && \
+			cp php.ini-development /etc/frankenphp/php.ini && \
+			echo "zend_extension=opcache.so" >> /etc/frankenphp/php.ini && \
+			echo "opcache.enable=1" >> /etcfrankenphp/php.ini && \
 	php --version
 
 # Install e-dant/watcher (necessary for file watching)

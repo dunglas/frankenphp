@@ -6,7 +6,7 @@ if [ "$1" -eq 1 ] && [ -x "/usr/lib/systemd/systemd-update-helper" ]; then
 fi
 
 if [ -x /usr/sbin/getsebool ]; then
-	# connect to ACME endpoint to request certificates
+	# Connect to ACME endpoint to request certificates
 	setsebool -P httpd_can_network_connect on
 fi
 if [ -x /usr/sbin/semanage ] && [ -x /usr/sbin/restorecon ]; then

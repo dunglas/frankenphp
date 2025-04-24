@@ -19,7 +19,7 @@ if [ "$1" = "configure" ]; then
 		usermod -aG www-data frankenphp
 	fi
 
-	# handle cases where package was installed and then purged;
+	# Handle cases where package was installed and then purged;
 	# user and group will still exist but with no home dir
 	if [ ! -d /var/lib/frankenphp ]; then
 		mkdir -p /var/lib/frankenphp
