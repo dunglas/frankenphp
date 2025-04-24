@@ -57,8 +57,8 @@ RUN git clone --branch=PHP-8.4 https://github.com/php/php-src.git . && \
 		--enable-zts \
 		--disable-zend-signals \
 		--enable-zend-max-execution-timers \
-        --with-config-file-path=/etc/frankenphp/php.ini \
-        --with-config-file-scan-dir=/etc/frankenphp/php.d \
+		--with-config-file-path=/etc/frankenphp/php.ini \
+		--with-config-file-scan-dir=/etc/frankenphp/php.d \
 		--enable-debug && \
 	make -j"$(nproc)" && \
 	make install && \
