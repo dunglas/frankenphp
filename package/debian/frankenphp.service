@@ -1,9 +1,3 @@
-# See https://caddyserver.com/docs/install for instructions.
-#
-# WARNING: This service does not use the --resume flag, so if you
-# use the API to make changes, they will be overwritten by the
-# Caddyfile next time the service is restarted. If you intend to
-
 [Unit]
 Description=FrankenPHP
 Documentation=https://frankenphp.dev/docs/
