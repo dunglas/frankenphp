@@ -7,9 +7,9 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// resetModuleWorkers resets the moduleWorkers slice for testing
+// resetModuleWorkers resets the workerConfigs slice for testing
 func resetModuleWorkers() {
-	moduleWorkers = make([]workerConfig, 0)
+	workerConfigs = make([]workerConfig, 0)
 }
 
 func TestModuleWorkerDuplicateFilenamesFail(t *testing.T) {
@@ -41,12 +41,11 @@ func TestModuleWorkerDuplicateFilenamesFail(t *testing.T) {
 	resetModuleWorkers()
 }
 
-func TestModuleWorkersDuplicateNameWithDifferentEnvironmentsFail(t *testing.T) {
+func TestModuleWorkersDuplicateNameFail(t *testing.T) {
 	// Create a test configuration with a worker name
 	configWithWorkerName1 := `
 	{
 		php_server {
-			env APP_ENV something
 			worker {
 				name test-worker
 				file ../testdata/worker-with-env.php
@@ -68,7 +67,6 @@ func TestModuleWorkersDuplicateNameWithDifferentEnvironmentsFail(t *testing.T) {
 	{
 		php_server {
 			worker {
-				env APP_ENV mismatch
 				name test-worker
 				file ../testdata/worker-with-env.php
 				num 1
@@ -85,7 +83,7 @@ func TestModuleWorkersDuplicateNameWithDifferentEnvironmentsFail(t *testing.T) {
 
 	// Verify that an error was returned
 	require.Error(t, err, "Expected an error when two workers have the same name, but different environments")
-	require.Contains(t, err.Error(), "module workers with different environments must not have duplicate names", "Error message should mention duplicate names")
+	require.Contains(t, err.Error(), "workers must not have duplicate names", "Error message should mention duplicate names")
 	resetModuleWorkers()
 }
 
@@ -160,10 +158,10 @@ func TestModuleWorkersDifferentNamesSucceed(t *testing.T) {
 	// Verify that no error was returned
 	require.NoError(t, err, "Expected no error when two workers have different names")
 
-	// Verify that both workers were added to moduleWorkers
-	require.Len(t, moduleWorkers, 2, "Expected two workers to be added to moduleWorkers")
-	require.Equal(t, "m#test-worker-1", moduleWorkers[0].Name, "First worker should have the correct name")
-	require.Equal(t, "m#test-worker-2", moduleWorkers[1].Name, "Second worker should have the correct name")
+	// Verify that both workers were added to workerConfigs
+	require.Len(t, workerConfigs, 2, "Expected two workers to be added to workerConfigs")
+	require.Equal(t, "m#test-worker-1", workerConfigs[0].Name, "First worker should have the correct name")
+	require.Equal(t, "m#test-worker-2", workerConfigs[1].Name, "Second worker should have the correct name")
 
 	resetModuleWorkers()
 }
@@ -269,7 +267,7 @@ func TestModuleWorkerWithCustomName(t *testing.T) {
 	require.Len(t, module.Workers, 1, "Expected one worker to be added to the module")
 	require.Equal(t, "../testdata/worker-with-env.php", module.Workers[0].FileName, "Worker should have the correct filename")
 
-	// Verify that the worker was added to moduleWorkers with the m# prefix
+	// Verify that the worker was added to workerConfigs with the m# prefix
 	require.Equal(t, "m#custom-worker-name", module.Workers[0].Name, "Worker should have the custom name")
 
 	resetModuleWorkers()

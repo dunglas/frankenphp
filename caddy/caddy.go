@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"net/http"
 	"path/filepath"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -32,7 +31,7 @@ const defaultDocumentRoot = "public"
 var iniError = errors.New("'php_ini' must be in the format: php_ini \"<key>\" \"<value>\"")
 
 // FrankenPHPModule instances register their workers and FrankenPHPApp reads them at Start() time
-var moduleWorkers = make([]workerConfig, 0)
+var workerConfigs = make([]workerConfig, 0)
 
 func init() {
 	caddy.RegisterModule(FrankenPHPApp{})
@@ -113,7 +112,7 @@ func (f *FrankenPHPApp) Start() error {
 		frankenphp.WithMaxWaitTime(f.MaxWaitTime),
 	}
 	// Add workers from FrankenPHPApp and FrankenPHPModule configurations
-	for _, w := range append(f.Workers, moduleWorkers...) {
+	for _, w := range append(f.Workers, workerConfigs...) {
 		opts = append(opts, frankenphp.WithWorkers(w.Name, repl.ReplaceKnown(w.FileName, ""), w.Num, w.Env, w.Watch))
 	}
 
@@ -139,7 +138,7 @@ func (f *FrankenPHPApp) Stop() error {
 	f.Workers = nil
 	f.NumThreads = 0
 	f.MaxWaitTime = 0
-	moduleWorkers = nil
+	workerConfigs = nil
 
 	return nil
 }
@@ -317,6 +316,9 @@ func (f *FrankenPHPApp) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 					}
 					wc.Name = name
 				}
+				if strings.HasPrefix(wc.Name, "m#") {
+					return fmt.Errorf("global worker names must not start with 'm#': %q", wc.Name)
+				}
 
 				f.Workers = append(f.Workers, wc)
 			default:
@@ -485,28 +487,25 @@ func (f *FrankenPHPModule) ServeHTTP(w http.ResponseWriter, r *http.Request, _ c
 	return nil
 }
 
-func getEnvString(env map[string]string) string {
-	// 1. Create a slice of keys from the map
-	keys := make([]string, 0, len(env))
-	for k := range env {
-		keys = append(keys, k)
-	}
-
-	// 2. Sort the keys alphabetically
-	sort.Strings(keys)
-
-	// 3. Build the string using sorted keys
-	var builder strings.Builder
-	for i, k := range keys {
-		v := env[k] // Get value from the original map using the sorted key
-		if i > 0 {
+func generateUniqueModuleWorkerName(filepath string) string {
+	name := "m#" + filepath
+	i := 0
+	for {
+		nameExists := false
+		for _, wc := range workerConfigs {
+			if wc.Name == name {
+				nameExists = true
+				break
+			}
 		}
-		builder.WriteString(k)
-		builder.WriteString("=")
-		builder.WriteString(v)
-		builder.WriteString(",")
+		if !nameExists {
+			break
+		}
+		i++
+		name = fmt.Sprintf("m#%s_%d", filepath, i)
 	}
-	return strings.TrimSuffix(builder.String(), ",")
+
+	return name
 }
 
 // UnmarshalCaddyfile implements caddyfile.Unmarshaler.
@@ -594,15 +593,8 @@ func (f *FrankenPHPModule) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 					}
 				}
 
-				envString := getEnvString(wc.Env)
-
 				if wc.Name == "" {
-					if len(wc.Env) > 0 {
-						// Environment is required in order not to collide with other FrankenPHPModules
-						wc.Name += "env:" + envString
-					}
-					// Filename is required to avoid collisions with other workers in this module
-					wc.Name += "_" + wc.FileName
+					wc.Name = generateUniqueModuleWorkerName(wc.FileName)
 				}
 				if !strings.HasPrefix(wc.Name, "m#") {
 					wc.Name = "m#" + wc.Name
@@ -615,31 +607,14 @@ func (f *FrankenPHPModule) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 					}
 				}
 				// Check if a worker with this name and a different environment or filename already exists
-				for i, existingWorker := range moduleWorkers {
+				for _, existingWorker := range workerConfigs {
 					if existingWorker.Name == wc.Name {
-						efs, _ := fastabs.FastAbs(existingWorker.FileName)
-						wcfs, _ := fastabs.FastAbs(wc.FileName)
-						if efs != wcfs {
-							return fmt.Errorf("module workers with different filenames must not have duplicate names: %s", wc.Name)
-						}
-						if len(existingWorker.Env) != len(wc.Env) {
-							// If lengths are different, the maps are definitely different
-							return fmt.Errorf("module workers with different environments must not have duplicate names: %s", wc.Name)
-						}
-						// If lengths are the same, iterate and compare key-value pairs
-						if getEnvString(existingWorker.Env) != envString {
-							return fmt.Errorf("module workers with different environments must not have duplicate names: %s", wc.Name)
-						}
-						// If we reach this point, the maps are equal.
-						// Increase the number of threads for this worker and skip adding it to the moduleWorkers again
-						moduleWorkers[i].Num += wc.Num
-						f.Workers = append(f.Workers, wc)
-						return nil
+						return fmt.Errorf("workers must not have duplicate names: %s", wc.Name)
 					}
 				}
 
 				f.Workers = append(f.Workers, wc)
-				moduleWorkers = append(moduleWorkers, wc)
+				workerConfigs = append(workerConfigs, wc)
 			}
 		}
 	}
