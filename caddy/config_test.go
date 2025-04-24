@@ -160,8 +160,8 @@ func TestModuleWorkersDifferentNamesSucceed(t *testing.T) {
 
 	// Verify that both workers were added to moduleWorkerConfigs
 	require.Len(t, moduleWorkerConfigs, 2, "Expected two workers to be added to moduleWorkerConfigs")
-	require.Equal(t, "m#test-worker-1", moduleWorkerConfigs[0].Name, "First worker should have the correct name")
-	require.Equal(t, "m#test-worker-2", moduleWorkerConfigs[1].Name, "Second worker should have the correct name")
+	require.Equal(t, "🧩 test-worker-1", moduleWorkerConfigs[0].Name, "First worker should have the correct name")
+	require.Equal(t, "🧩 test-worker-2", moduleWorkerConfigs[1].Name, "Second worker should have the correct name")
 
 	resetModuleWorkers()
 }
@@ -267,8 +267,8 @@ func TestModuleWorkerWithCustomName(t *testing.T) {
 	require.Len(t, module.Workers, 1, "Expected one worker to be added to the module")
 	require.Equal(t, "../testdata/worker-with-env.php", module.Workers[0].FileName, "Worker should have the correct filename")
 
-	// Verify that the worker was added to moduleWorkerConfigs with the m# prefix
-	require.Equal(t, "m#custom-worker-name", module.Workers[0].Name, "Worker should have the custom name")
+	// Verify that the worker was added to moduleWorkerConfigs with the 🧩  prefix
+	require.Equal(t, "🧩 custom-worker-name", module.Workers[0].Name, "Worker should have the custom name")
 
 	resetModuleWorkers()
 }

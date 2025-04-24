@@ -49,7 +49,7 @@ func init() {
 }
 
 type workerConfig struct {
-	// Name for the worker. Default: the filename for FrankenPHPApp workers, always prefixed with "m#" for FrankenPHPModule workers.
+	// Name for the worker. Default: the filename for FrankenPHPApp workers, always prefixed with "🧩 " for FrankenPHPModule workers.
 	Name string `json:"name,omitempty"`
 	// FileName sets the path to the worker script.
 	FileName string `json:"file_name,omitempty"`
@@ -318,8 +318,8 @@ func (f *FrankenPHPApp) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 					}
 					wc.Name = name
 				}
-				if strings.HasPrefix(wc.Name, "m#") {
-					return fmt.Errorf("global worker names must not start with 'm#': %q", wc.Name)
+				if strings.HasPrefix(wc.Name, "🧩 ") {
+					return fmt.Errorf("global worker names must not start with '🧩 ': %q", wc.Name)
 				}
 				// check for duplicate workers
 				for _, existingWorker := range f.Workers {
@@ -499,7 +499,7 @@ func (f *FrankenPHPModule) ServeHTTP(w http.ResponseWriter, r *http.Request, _ c
 }
 
 func generateUniqueModuleWorkerName(filepath string) string {
-	name := "m#" + filepath
+	name := "🧩 " + filepath
 	i := 0
 	for {
 		nameExists := false
@@ -513,7 +513,7 @@ func generateUniqueModuleWorkerName(filepath string) string {
 			break
 		}
 		i++
-		name = fmt.Sprintf("m#%s_%d", filepath, i)
+		name = fmt.Sprintf("🧩 %s_%d", filepath, i)
 	}
 
 	return name
@@ -607,8 +607,8 @@ func (f *FrankenPHPModule) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 				if wc.Name == "" {
 					wc.Name = generateUniqueModuleWorkerName(wc.FileName)
 				}
-				if !strings.HasPrefix(wc.Name, "m#") {
-					wc.Name = "m#" + wc.Name
+				if !strings.HasPrefix(wc.Name, "🧩 ") {
+					wc.Name = "🧩 " + wc.Name
 				}
 
 				// Check if a worker with this filename already exists in this module
