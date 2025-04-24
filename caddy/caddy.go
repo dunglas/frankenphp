@@ -318,8 +318,8 @@ func (f *FrankenPHPApp) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 					}
 					wc.Name = name
 				}
-				if strings.HasPrefix(wc.Name, "🧩 ") {
-					return fmt.Errorf("global worker names must not start with '🧩 ': %q", wc.Name)
+				if !strings.HasPrefix(wc.Name, "🌍 ") {
+					wc.Name = "🌍 " + wc.Name
 				}
 				// check for duplicate workers
 				for _, existingWorker := range f.Workers {

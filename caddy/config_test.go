@@ -267,7 +267,7 @@ func TestModuleWorkerWithCustomName(t *testing.T) {
 	require.Len(t, module.Workers, 1, "Expected one worker to be added to the module")
 	require.Equal(t, "../testdata/worker-with-env.php", module.Workers[0].FileName, "Worker should have the correct filename")
 
-	// Verify that the worker was added to moduleWorkerConfigs with the 🧩  prefix
+	// Verify that the worker was added to moduleWorkerConfigs with the 🧩 prefix
 	require.Equal(t, "🧩 custom-worker-name", module.Workers[0].Name, "Worker should have the custom name")
 
 	resetModuleWorkers()
