@@ -443,10 +443,13 @@ func (f *FrankenPHPModule) ServeHTTP(w http.ResponseWriter, r *http.Request, _ c
 	repl := r.Context().Value(caddy.ReplacerCtxKey).(*caddy.Replacer)
 
 	var documentRootOption frankenphp.RequestOption
+	var documentRoot string
 	if f.resolvedDocumentRoot == "" {
-		documentRootOption = frankenphp.WithRequestDocumentRoot(repl.ReplaceKnown(f.Root, ""), *f.ResolveRootSymlink)
+		documentRoot = repl.ReplaceKnown(f.Root, "")
+		documentRootOption = frankenphp.WithRequestDocumentRoot(documentRoot, *f.ResolveRootSymlink)
 	} else {
-		documentRootOption = frankenphp.WithRequestResolvedDocumentRoot(f.resolvedDocumentRoot)
+		documentRoot = f.resolvedDocumentRoot
+		documentRootOption = frankenphp.WithRequestResolvedDocumentRoot(documentRoot)
 	}
 
 	env := f.preparedEnv
@@ -457,30 +460,23 @@ func (f *FrankenPHPModule) ServeHTTP(w http.ResponseWriter, r *http.Request, _ c
 		}
 	}
 
-	filename, fc, err := frankenphp.NewFrankenPHPContext(
+	fullScriptPath, _ := fastabs.FastAbs(documentRoot + "/" + r.URL.Path)
+
+	workerName := ""
+	for _, w := range f.Workers {
+		if p, _ := fastabs.FastAbs(w.FileName); p == fullScriptPath {
+			workerName = w.Name
+		}
+	}
+
+	fr, err := frankenphp.NewRequestWithContext(
 		r,
 		documentRootOption,
 		frankenphp.WithRequestSplitPath(f.SplitPath),
 		frankenphp.WithRequestPreparedEnv(env),
 		frankenphp.WithOriginalRequest(&origReq),
+		frankenphp.WithModuleWorker(workerName),
 	)
-	if err != nil {
-		return caddyhttp.Error(http.StatusInternalServerError, err)
-	}
-
-	workerName := ""
-	for _, w := range f.Workers {
-		if p, _ := fastabs.FastAbs(w.FileName); p == filename {
-			workerName = w.Name
-		}
-	}
-
-	err = frankenphp.WithModuleWorker(workerName)(fc)
-	if err != nil {
-		return caddyhttp.Error(http.StatusInternalServerError, err)
-	}
-
-	fr := frankenphp.NewRequestWithExistingContext(r, fc)
 
 	if err = frankenphp.ServeHTTP(w, fr); err != nil {
 		return caddyhttp.Error(http.StatusInternalServerError, err)
