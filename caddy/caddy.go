@@ -30,8 +30,9 @@ const defaultDocumentRoot = "public"
 
 var iniError = errors.New("'php_ini' must be in the format: php_ini \"<key>\" \"<value>\"")
 
-// FrankenPHPModule instances register their workers and FrankenPHPApp reads them at Start() time
-var workerConfigs = make([]workerConfig, 0)
+// FrankenPHPModule instances register their workers, and FrankenPHPApp reads them at Start() time.
+// FrankenPHPApp.Workers may be set by JSON config, so keep them separate.
+var moduleWorkerConfigs []workerConfig
 
 func init() {
 	caddy.RegisterModule(FrankenPHPApp{})
@@ -112,7 +113,8 @@ func (f *FrankenPHPApp) Start() error {
 		frankenphp.WithMaxWaitTime(f.MaxWaitTime),
 	}
 	// Add workers from FrankenPHPApp and FrankenPHPModule configurations
-	for _, w := range append(f.Workers, workerConfigs...) {
+	// f.Workers may have been set by JSON config, so keep them separate
+	for _, w := range append(f.Workers, moduleWorkerConfigs...) {
 		opts = append(opts, frankenphp.WithWorkers(w.Name, repl.ReplaceKnown(w.FileName, ""), w.Num, w.Env, w.Watch))
 	}
 
@@ -138,7 +140,7 @@ func (f *FrankenPHPApp) Stop() error {
 	f.Workers = nil
 	f.NumThreads = 0
 	f.MaxWaitTime = 0
-	workerConfigs = nil
+	moduleWorkerConfigs = nil
 
 	return nil
 }
@@ -319,6 +321,12 @@ func (f *FrankenPHPApp) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 				if strings.HasPrefix(wc.Name, "m#") {
 					return fmt.Errorf("global worker names must not start with 'm#': %q", wc.Name)
 				}
+				// check for duplicate workers
+				for _, existingWorker := range f.Workers {
+					if existingWorker.FileName == wc.FileName {
+						return fmt.Errorf("global workers must not have duplicate filenames: %s", wc.FileName)
+					}
+				}
 
 				f.Workers = append(f.Workers, wc)
 			default:
@@ -495,7 +503,7 @@ func generateUniqueModuleWorkerName(filepath string) string {
 	i := 0
 	for {
 		nameExists := false
-		for _, wc := range workerConfigs {
+		for _, wc := range moduleWorkerConfigs {
 			if wc.Name == name {
 				nameExists = true
 				break
@@ -606,18 +614,18 @@ func (f *FrankenPHPModule) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 				// Check if a worker with this filename already exists in this module
 				for _, existingWorker := range f.Workers {
 					if existingWorker.FileName == wc.FileName {
-						return fmt.Errorf("workers must not have duplicate filenames: %s", wc.FileName)
+						return fmt.Errorf("workers in a single `php_server` block must not have duplicate filenames: %s", wc.FileName)
 					}
 				}
 				// Check if a worker with this name and a different environment or filename already exists
-				for _, existingWorker := range workerConfigs {
+				for _, existingWorker := range moduleWorkerConfigs {
 					if existingWorker.Name == wc.Name {
 						return fmt.Errorf("workers must not have duplicate names: %s", wc.Name)
 					}
 				}
 
 				f.Workers = append(f.Workers, wc)
-				workerConfigs = append(workerConfigs, wc)
+				moduleWorkerConfigs = append(moduleWorkerConfigs, wc)
 			}
 		}
 	}
