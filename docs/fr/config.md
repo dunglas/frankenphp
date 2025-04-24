@@ -7,11 +7,21 @@ Le binaire statique cherchera le `Caddyfile` dans le répertoire dans lequel il 
 
 PHP lui-même peut être configuré [en utilisant un fichier `php.ini`](https://www.php.net/manual/fr/configuration.file.php).
 
-Par défaut, le PHP fourni avec les images Docker et celui inclus dans le binaire statique cherchera un fichier `php.ini` dans le répertoire dans lequel FrankenPHP est démarré et dans `/usr/local/etc/php/`. Ils chargeront également tous les fichiers se terminant par `.ini` dans `/usr/local/etc/php/conf.d/`.
+L'interpréteur PHP cherchera dans les emplacements suivants :
+Docker :
+- php.ini : `/usr/local/etc/php/` Aucun php.ini n'est fourni par défaut.
+- fichiers de configuration supplémentaires : `/usr/local/etc/php/conf.d/`
+- extensions php : `/usr/local/lib/php/extensions/no-debug-zts-<YYYYMMDD>/`
+Installation de FrankenPHP (.rpm ou .deb) :
+- php.ini : `/etc/frankenphp/` Un fichier php.ini avec des préréglages de production est fourni par défaut.
+- fichiers de configuration supplémentaires : `/etc/frankenphp/php.d/`
+- extensions php : `/usr/lib/frankenphp/modules/`
+Binaire statique :
+- php.ini : Le répertoire dans lequel `frankenphp run` ou `frankenphp php-server` est exécuté, puis `/etc/frankenphp/`
+- fichiers de configuration supplémentaires : `/etc/frankenphp/php.d/`
+- extensions php : `/usr/lib/frankenphp/modules/`
 
-Aucun fichier `php.ini` n'est présent par défaut, vous devriez copier un modèle officiel fourni par le projet PHP.
-
-Sur Docker, les modèles sont fournis dans les images :
+Dans Docker, vous devriez copier un modèle officiel fourni par le projet PHP :
 
 ```dockerfile
 FROM dunglas/frankenphp

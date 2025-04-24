@@ -7,10 +7,21 @@ Statik ikili, başlatıldığı dizinde `Caddyfile` dosyasını arayacaktır.
 
 PHP'nin kendisi [bir `php.ini` dosyası kullanılarak yapılandırılabilir](https://www.php.net/manual/tr/configuration.file.php).
 
-Varsayılan olarak, Docker imajlarıyla birlikte verilen PHP ve statik ikili dosyada bulunan PHP, FrankenPHP'nin başlatıldığı dizinde ve `/usr/local/etc/php/` içinde bir `php.ini` dosyası arayacaktır. Ayrıca `.ini` ile biten tüm dosyaları `/usr/local/etc/php/conf.d/` dizininden yükleyecektir.
+PHP yorumlayıcısı aşağıdaki konumlarda arama yapacaktır:
+Docker:
+- php.ini: `/usr/local/etc/php/` Varsayılan olarak php.ini sağlanmaz.
+- ek yapılandırma dosyaları: `/usr/local/etc/php/conf.d/`
+- php uzantıları: `/usr/local/lib/php/extensions/no-debug-zts-<YYYYMMDD>/`
+FrankenPHP kurulumu (.rpm veya .deb):
+- php.ini: `/etc/frankenphp/` Varsayılan olarak üretim ön ayarlarına sahip bir php.ini dosyası sağlanır.
+- ek yapılandırma dosyaları: `/etc/frankenphp/php.d/`
+- php uzantıları: `/usr/lib/frankenphp/modules/`
+Statik ikili:
+- php.ini: `frankenphp run` veya `frankenphp php-server` komutunun çalıştırıldığı dizin, ardından `/etc/frankenphp/`
+- ek yapılandırma dosyaları: `/etc/frankenphp/php.d/`
+- php uzantıları: `/usr/lib/frankenphp/modules/`
 
-Öntanımlı olarak `php.ini` dosyası yoktur, PHP projesi tarafından sağlanan resmi bir şablonu kopyalamanız gerekir.
-Docker'da şablonlar imajlar içinde sağlanır:
+Docker'da, PHP projesi tarafından sağlanan resmi bir şablonu kopyalamalısınız:
 
 ```dockerfile
 FROM dunglas/frankenphp

@@ -7,11 +7,21 @@ FrankenPHP, Caddy, а также модули Mercure и Vulcain могут бы
 
 PHP можно настроить [с помощью файла `php.ini`](https://www.php.net/manual/en/configuration.file.php).
 
-PHP из Docker-образов и статического бинарного файла по умолчанию будет искать файл `php.ini` в директории, где был запущен FrankenPHP, а также в `/usr/local/etc/php/`. Кроме того, будут загружены все файлы с расширением `.ini` из директории `/usr/local/etc/php/conf.d/`.
+PHP-интерпретатор будет искать в следующих местах:
+Docker:
+- php.ini: `/usr/local/etc/php/` По умолчанию php.ini не предоставляется.
+- дополнительные файлы конфигурации: `/usr/local/etc/php/conf.d/`
+- расширения php: `/usr/local/lib/php/extensions/no-debug-zts-<YYYYMMDD>/`
+Установка FrankenPHP (.rpm или .deb):
+- php.ini: `/etc/frankenphp/` По умолчанию предоставляется файл php.ini с производственными настройками.
+- дополнительные файлы конфигурации: `/etc/frankenphp/php.d/`
+- расширения php: `/usr/lib/frankenphp/modules/`
+Статический бинарный файл:
+- php.ini: Директория, в которой выполняется `frankenphp run` или `frankenphp php-server`, затем `/etc/frankenphp/`
+- дополнительные файлы конфигурации: `/etc/frankenphp/php.d/`
+- расширения php: `/usr/lib/frankenphp/modules/`
 
-Файл `php.ini` по умолчанию отсутствует. Вы можете скопировать официальный шаблон, предоставляемый проектом PHP.
-
-В Docker-шаблоны включены в образы:
+В Docker вы должны скопировать официальный шаблон, предоставляемый проектом PHP:
 
 ```dockerfile
 FROM dunglas/frankenphp

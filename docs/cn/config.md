@@ -5,9 +5,21 @@ FrankenPHP，Caddy 以及 Mercure 和 Vulcain 模块可以使用 [Caddy 支持�
 在[Docker 映像](docker.md) 中，`Caddyfile` 位于 `/etc/frankenphp/Caddyfile`。
 静态二进制文件会在启动时所在的目录中查找 `Caddyfile`。
 PHP 本身可以[使用 `php.ini` 文件](https://www.php.net/manual/zh/configuration.file.php)进行配置。
-默认情况下，随 Docker 映像提供的 PHP 和静态二进制文件中包含的 PHP 将在启动 FrankenPHP 的目录和 `/usr/local/etc/php/` 中查找`php.ini` 文件。它们还会从 `/usr/local/etc/php/conf.d/` 中加载所有以 `.ini` 结尾的文件。
-默认情况下没有 `php.ini` 文件，因此应复制 PHP 项目提供的官方模板。
-在 Docker 上，模板在镜像中提供：
+PHP 解释器将在以下位置查找：
+Docker:
+- php.ini: `/usr/local/etc/php/` 默认情况下不提供 php.ini。
+- 附加配置文件: `/usr/local/etc/php/conf.d/`
+- php 扩展: `/usr/local/lib/php/extensions/no-debug-zts-<YYYYMMDD>/`
+FrankenPHP 安装 (.rpm 或 .deb),:
+- php.ini: `/etc/frankenphp/` 默认情况下提供带有生产预设的 php.ini 文件。
+- 附加配置文件: `/etc/frankenphp/php.d/`
+- php 扩展: `/usr/lib/frankenphp/modules/`
+静态二进制:
+- php.ini: 执行 `frankenphp run` 或 `frankenphp php-server` 的目录，然后是 `/etc/frankenphp/`
+- 附加配置文件: `/etc/frankenphp/php.d/`
+- php 扩展: `/usr/lib/frankenphp/modules/`
+
+在 Docker 中，您应该复制 PHP 项目提供的官方模板：
 
 ```dockerfile
 FROM dunglas/frankenphp
