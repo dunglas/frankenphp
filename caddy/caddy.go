@@ -448,6 +448,9 @@ func (f *FrankenPHPModule) ServeHTTP(w http.ResponseWriter, r *http.Request, _ c
 	var documentRoot string
 	if f.resolvedDocumentRoot == "" {
 		documentRoot = repl.ReplaceKnown(f.Root, "")
+		if documentRoot == "" && frankenphp.EmbeddedAppPath != "" {
+			documentRoot = frankenphp.EmbeddedAppPath
+		}
 		documentRootOption = frankenphp.WithRequestDocumentRoot(documentRoot, *f.ResolveRootSymlink)
 	} else {
 		documentRoot = f.resolvedDocumentRoot
