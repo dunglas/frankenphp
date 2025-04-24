@@ -10,7 +10,8 @@ PHP itself can be configured [using a `php.ini` file](https://www.php.net/manual
 
 The PHP interpreter will look in the following locations:
 
-Docker: 
+Docker:
+
 - php.ini: `/usr/local/etc/php/php.ini` No php.ini is provided by default.
 - additional configuration files: `/usr/local/etc/php/conf.d/*.ini`
 - php extensions: `/usr/local/lib/php/extensions/no-debug-zts-<YYYYMMDD>/`
@@ -27,16 +28,19 @@ RUN cp $PHP_INI_DIR/php.ini-development $PHP_INI_DIR/php.ini
 ```
 
 dev.Dockerfile:
+
 - php.ini: `/etc/frankenphp/php.ini` A php.ini file with development presets is provided by default.
 - additional configuration files: `/etc/frankenphp/php.d/*.ini`
 - php extensions: `/usr/lib/frankenphp/modules/`
 
 FrankenPHP installation (.rpm or .deb):
+
 - php.ini: `/etc/frankenphp/php.ini` A php.ini file with production presets is provided by default.
 - additional configuration files: `/etc/frankenphp/php.d/*.ini`
 - php extensions: `/usr/lib/frankenphp/modules/`
 
 Static binary:
+
 - php.ini: The directory in which `frankenphp run` or `frankenphp php-server` is executed, then `/etc/frankenphp/php.ini`
 - additional configuration files: `/etc/frankenphp/php.d/*.ini`
 - php extensions: cannot be loaded

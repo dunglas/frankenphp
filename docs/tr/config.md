@@ -10,10 +10,12 @@ PHP'nin kendisi [bir `php.ini` dosyası kullanılarak yapılandırılabilir](htt
 PHP yorumlayıcısı aşağıdaki konumlarda arama yapacaktır:
 
 Docker:
+
 - php.ini: `/usr/local/etc/php/php.ini` Varsayılan olarak php.ini sağlanmaz.
 - ek yapılandırma dosyaları: `/usr/local/etc/php/conf.d/*.ini`
 - php uzantıları: `/usr/local/lib/php/extensions/no-debug-zts-<YYYYMMDD>/`
 - PHP projesi tarafından sağlanan resmi bir şablonu kopyalamalısınız:
+
 ```dockerfile
 FROM dunglas/frankenphp
 
@@ -25,16 +27,19 @@ RUN cp $PHP_INI_DIR/php.ini-production $PHP_INI_DIR/php.ini
 ```
 
 dev.Dockerfile:
+
 - php.ini: `/etc/frankenphp/php.ini` Varsayılan olarak geliştirme ön ayarlarına sahip bir php.ini dosyası sağlanır.
 - ek yapılandırma dosyaları: `/etc/frankenphp/php.d/*.ini`
 - php uzantıları: `/usr/lib/frankenphp/modules/`
 
 FrankenPHP kurulumu (.rpm veya .deb):
+
 - php.ini: `/etc/frankenphp/php.ini` Varsayılan olarak üretim ön ayarlarına sahip bir php.ini dosyası sağlanır.
 - ek yapılandırma dosyaları: `/etc/frankenphp/php.d/*.ini`
 - php uzantıları: `/usr/lib/frankenphp/modules/`
 
 Statik ikili:
+
 - php.ini: `frankenphp run` veya `frankenphp php-server` komutunun çalıştırıldığı dizin, ardından `/etc/frankenphp/php.ini`
 - ek yapılandırma dosyaları: `/etc/frankenphp/php.d/*.ini`
 - php uzantıları: yüklenemez

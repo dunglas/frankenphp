@@ -8,10 +8,12 @@ PHP 本身可以[使用 `php.ini` 文件](https://www.php.net/manual/zh/configur
 PHP 解释器将在以下位置查找：
 
 Docker:
+
 - php.ini: `/usr/local/etc/php/php.ini` 默认情况下不提供 php.ini。
 - 附加配置文件: `/usr/local/etc/php/conf.d/*.ini`
 - php 扩展: `/usr/local/lib/php/extensions/no-debug-zts-<YYYYMMDD>/`
 - 您应该复制 PHP 项目提供的官方模板：
+
 ```dockerfile
 FROM dunglas/frankenphp
 
@@ -23,16 +25,19 @@ RUN cp $PHP_INI_DIR/php.ini-development $PHP_INI_DIR/php.ini
 ```
 
 dev.Dockerfile:
+
 - php.ini: `/etc/frankenphp/php.ini` 默认情况下提供带有开发预设的 php.ini 文件。
 - 附加配置文件: `/etc/frankenphp/php.d/*.ini`
 - php 扩展: `/usr/lib/frankenphp/modules/`
 
 FrankenPHP 安装 (.rpm 或 .deb):
+
 - php.ini: `/etc/frankenphp/php.ini` 默认情况下提供带有生产预设的 php.ini 文件。
 - 附加配置文件: `/etc/frankenphp/php.d/*.ini`
 - php 扩展: `/usr/lib/frankenphp/modules/`
 
 静态二进制:
+
 - php.ini: 执行 `frankenphp run` 或 `frankenphp php-server` 的目录，然后是 `/etc/frankenphp/php.ini`
 - 附加配置文件: `/etc/frankenphp/php.d/*.ini`
 - php 扩展: 无法加载
@@ -150,9 +155,9 @@ php_server [<matcher>] {
 
 以下环境变量可用于在 `Caddyfile` 中注入 Caddy 指令，而无需对其进行修改：
 
-* `SERVER_NAME`: 更改 [要监听的地址](https://caddyserver.com/docs/caddyfile/concepts#addresses)，提供的主机名也将用于生成的 TLS 证书
-* `CADDY_GLOBAL_OPTIONS`: 注入 [全局选项](https://caddyserver.com/docs/caddyfile/options)
-* `FRANKENPHP_CONFIG`: 在 `frankenphp` 指令下注入配置
+- `SERVER_NAME`: 更改 [要监听的地址](https://caddyserver.com/docs/caddyfile/concepts#addresses)，提供的主机名也将用于生成的 TLS 证书
+- `CADDY_GLOBAL_OPTIONS`: 注入 [全局选项](https://caddyserver.com/docs/caddyfile/options)
+- `FRANKENPHP_CONFIG`: 在 `frankenphp` 指令下注入配置
 
 ## PHP 配置
 
