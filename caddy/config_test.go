@@ -37,7 +37,7 @@ func TestModuleWorkerDuplicateFilenamesFail(t *testing.T) {
 
 	// Verify that an error was returned
 	require.Error(t, err, "Expected an error when two workers in the same module have the same filename")
-	require.Contains(t, err.Error(), "workers must not have duplicate filenames", "Error message should mention duplicate filenames")
+	require.Contains(t, err.Error(), "must not have duplicate filenames", "Error message should mention duplicate filenames")
 	resetModuleWorkers()
 }
 
@@ -83,7 +83,7 @@ func TestModuleWorkersDuplicateNameFail(t *testing.T) {
 
 	// Verify that an error was returned
 	require.Error(t, err, "Expected an error when two workers have the same name, but different environments")
-	require.Contains(t, err.Error(), "workers must not have duplicate names", "Error message should mention duplicate names")
+	require.Contains(t, err.Error(), "must not have duplicate names", "Error message should mention duplicate names")
 	resetModuleWorkers()
 }
 
