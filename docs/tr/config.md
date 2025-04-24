@@ -8,21 +8,12 @@ Statik ikili, başlatıldığı dizinde `Caddyfile` dosyasını arayacaktır.
 PHP'nin kendisi [bir `php.ini` dosyası kullanılarak yapılandırılabilir](https://www.php.net/manual/tr/configuration.file.php).
 
 PHP yorumlayıcısı aşağıdaki konumlarda arama yapacaktır:
+
 Docker:
-- php.ini: `/usr/local/etc/php/` Varsayılan olarak php.ini sağlanmaz.
-- ek yapılandırma dosyaları: `/usr/local/etc/php/conf.d/`
+- php.ini: `/usr/local/etc/php/php.ini` Varsayılan olarak php.ini sağlanmaz.
+- ek yapılandırma dosyaları: `/usr/local/etc/php/conf.d/*.ini`
 - php uzantıları: `/usr/local/lib/php/extensions/no-debug-zts-<YYYYMMDD>/`
-FrankenPHP kurulumu (.rpm veya .deb):
-- php.ini: `/etc/frankenphp/` Varsayılan olarak üretim ön ayarlarına sahip bir php.ini dosyası sağlanır.
-- ek yapılandırma dosyaları: `/etc/frankenphp/php.d/`
-- php uzantıları: `/usr/lib/frankenphp/modules/`
-Statik ikili:
-- php.ini: `frankenphp run` veya `frankenphp php-server` komutunun çalıştırıldığı dizin, ardından `/etc/frankenphp/`
-- ek yapılandırma dosyaları: `/etc/frankenphp/php.d/`
-- php uzantıları: `/usr/lib/frankenphp/modules/`
-
-Docker'da, PHP projesi tarafından sağlanan resmi bir şablonu kopyalamalısınız:
-
+- PHP projesi tarafından sağlanan resmi bir şablonu kopyalamalısınız:
 ```dockerfile
 FROM dunglas/frankenphp
 
@@ -33,7 +24,21 @@ RUN cp $PHP_INI_DIR/php.ini-development $PHP_INI_DIR/php.ini
 RUN cp $PHP_INI_DIR/php.ini-production $PHP_INI_DIR/php.ini
 ```
 
-Docker kullanmıyorsanız, [PHP kaynak kodu](https://github.com/php/php-src/) ile birlikte verilen `php.ini-production` veya `php.ini-development` dosyalarından birini kopyalayın.
+dev.Dockerfile:
+- php.ini: `/etc/frankenphp/php.ini` Varsayılan olarak geliştirme ön ayarlarına sahip bir php.ini dosyası sağlanır.
+- ek yapılandırma dosyaları: `/etc/frankenphp/php.d/*.ini`
+- php uzantıları: `/usr/lib/frankenphp/modules/`
+
+FrankenPHP kurulumu (.rpm veya .deb):
+- php.ini: `/etc/frankenphp/php.ini` Varsayılan olarak üretim ön ayarlarına sahip bir php.ini dosyası sağlanır.
+- ek yapılandırma dosyaları: `/etc/frankenphp/php.d/*.ini`
+- php uzantıları: `/usr/lib/frankenphp/modules/`
+
+Statik ikili:
+- php.ini: `frankenphp run` veya `frankenphp php-server` komutunun çalıştırıldığı dizin, ardından `/etc/frankenphp/php.ini`
+- ek yapılandırma dosyaları: `/etc/frankenphp/php.d/*.ini`
+- php uzantıları: yüklenemez
+- [PHP kaynak kodu](https://github.com/php/php-src/) ile birlikte verilen `php.ini-production` veya `php.ini-development` dosyalarından birini kopyalayın.
 
 ## Caddyfile Konfigürasyonu
 

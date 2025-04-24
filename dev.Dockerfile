@@ -52,7 +52,7 @@ WORKDIR /usr/local/src/php
 RUN git clone --branch=PHP-8.4 https://github.com/php/php-src.git . && \
 	# --enable-embed is only necessary to generate libphp.so, we don't use this SAPI directly
 	./buildconf --force && \
-	./configure \
+	EXTENSION_DIR=/usr/lib/frankenphp/modules ./configure \
 		--enable-embed \
 		--enable-zts \
 		--disable-zend-signals \
