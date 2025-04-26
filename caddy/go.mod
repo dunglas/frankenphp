@@ -18,7 +18,6 @@ require (
 	github.com/prometheus/client_golang v1.22.0
 	github.com/spf13/cobra v1.9.1
 	github.com/stretchr/testify v1.10.0
-	go.uber.org/zap v1.27.0
 )
 
 require github.com/smallstep/go-attestation v0.4.4-0.20240109183208-413678f90935 // indirect
@@ -186,6 +185,7 @@ require (
 	go.uber.org/automaxprocs v1.6.0 // indirect
 	go.uber.org/mock v0.5.1 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
+	go.uber.org/zap v1.27.0 // indirect
 	go.uber.org/zap/exp v0.3.0 // indirect
 	golang.org/x/crypto v0.37.0 // indirect
 	golang.org/x/crypto/x509roots/fallback v0.0.0-20250418111936-9c1aa6af88df // indirect

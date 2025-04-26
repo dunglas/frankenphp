@@ -8,13 +8,12 @@ package frankenphp
 // #include "frankenphp.h"
 import "C"
 import (
+	"log/slog"
 	"strings"
 	"sync"
 
 	"github.com/dunglas/frankenphp/internal/memory"
 	"github.com/dunglas/frankenphp/internal/phpheaders"
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
 )
 
 // represents the main PHP thread
@@ -171,9 +170,7 @@ func (mainThread *phpMainThread) setAutomaticMaxThreads() {
 	maxAllowedThreads := totalSysMemory / uint64(perThreadMemoryLimit)
 	mainThread.maxThreads = int(maxAllowedThreads)
 
-	if c := logger.Check(zapcore.DebugLevel, "Automatic thread limit"); c != nil {
-		c.Write(zap.Int("perThreadMemoryLimitMB", int(perThreadMemoryLimit/1024/1024)), zap.Int("maxThreads", mainThread.maxThreads))
-	}
+	logger.LogAttrs(nil, slog.LevelDebug, "Automatic thread limit", slog.Int("perThreadMemoryLimitMB", int(perThreadMemoryLimit/1024/1024)), slog.Int("maxThreads", mainThread.maxThreads))
 }
 
 //export go_frankenphp_shutdown_main_thread

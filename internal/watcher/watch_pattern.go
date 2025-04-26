@@ -3,11 +3,11 @@
 package watcher
 
 import (
-	"github.com/dunglas/frankenphp/internal/fastabs"
+	"log/slog"
 	"path/filepath"
 	"strings"
 
-	"go.uber.org/zap"
+	"github.com/dunglas/frankenphp/internal/fastabs"
 )
 
 type watchPattern struct {
@@ -82,7 +82,7 @@ func isValidEventType(eventType int) bool {
 // 0:dir,1:file,2:hard_link,3:sym_link,4:watcher,5:other,
 func isValidPathType(pathType int, fileName string) bool {
 	if pathType == 4 {
-		logger.Debug("special edant/watcher event", zap.String("fileName", fileName))
+		logger.LogAttrs(nil, slog.LevelDebug, "special edant/watcher event", slog.String("fileName", fileName))
 	}
 	return pathType <= 2
 }
@@ -165,7 +165,7 @@ func matchPattern(pattern string, fileName string) bool {
 	}
 	patternMatches, err := filepath.Match(pattern, fileName)
 	if err != nil {
-		logger.Error("failed to match filename", zap.String("file", fileName), zap.Error(err))
+		logger.LogAttrs(nil, slog.LevelError, "failed to match filename", slog.String("file", fileName), slog.Any("error", err))
 		return false
 	}
 

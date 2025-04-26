@@ -1,13 +1,13 @@
 package frankenphp
 
 import (
-	"github.com/dunglas/frankenphp/internal/fastabs"
+	"log/slog"
 	"net/http"
 	"path/filepath"
 	"sync"
 	"sync/atomic"
 
-	"go.uber.org/zap"
+	"github.com/dunglas/frankenphp/internal/fastabs"
 )
 
 // RequestOption instances allow to configure a FrankenPHP Request.
@@ -116,7 +116,7 @@ func WithOriginalRequest(r *http.Request) RequestOption {
 }
 
 // WithRequestLogger sets the logger associated with the current request
-func WithRequestLogger(logger *zap.Logger) RequestOption {
+func WithRequestLogger(logger *slog.Logger) RequestOption {
 	return func(o *frankenPHPContext) error {
 		o.logger = logger
 
