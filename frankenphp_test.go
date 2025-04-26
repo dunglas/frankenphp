@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"log/slog"
 	"mime/multipart"
 	"net/http"
 	"net/http/cookiejar"
@@ -30,7 +31,7 @@ import (
 	"github.com/dunglas/frankenphp/internal/fastabs"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/zap"
+	"go.uber.org/zap/exp/zapslog"
 	"go.uber.org/zap/zapcore"
 	"go.uber.org/zap/zaptest"
 	"go.uber.org/zap/zaptest/observer"
@@ -43,7 +44,7 @@ type testOptions struct {
 	env                map[string]string
 	nbParallelRequests int
 	realServer         bool
-	logger             *zap.Logger
+	logger             *slog.Logger
 	initOpts           []frankenphp.Option
 	phpIni             map[string]string
 }
@@ -60,7 +61,7 @@ func runTest(t *testing.T, test func(func(http.ResponseWriter, *http.Request), *
 	testDataDir := cwd + "/testdata/"
 
 	if opts.logger == nil {
-		opts.logger = zaptest.NewLogger(t)
+		opts.logger = slog.New(zapslog.NewHandler(zaptest.NewLogger(t).Core()))
 	}
 
 	initOpts := []frankenphp.Option{frankenphp.WithLogger(opts.logger)}
@@ -445,7 +446,7 @@ func TestLog_worker(t *testing.T) {
 }
 func testLog(t *testing.T, opts *testOptions) {
 	logger, logs := observer.New(zapcore.InfoLevel)
-	opts.logger = zap.New(logger)
+	opts.logger = slog.New(zapslog.NewHandler(logger))
 
 	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
 		req := httptest.NewRequest("GET", fmt.Sprintf("http://example.com/log.php?i=%d", i), nil)
@@ -465,7 +466,7 @@ func testConnectionAbort(t *testing.T, opts *testOptions) {
 	testFinish := func(finish string) {
 		t.Run(fmt.Sprintf("finish=%s", finish), func(t *testing.T) {
 			logger, logs := observer.New(zapcore.InfoLevel)
-			opts.logger = zap.New(logger)
+			opts.logger = slog.New(zapslog.NewHandler(logger))
 
 			runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
 				req := httptest.NewRequest("GET", fmt.Sprintf("http://example.com/connectionStatusLog.php?i=%d&finish=%s", i, finish), nil)
@@ -819,7 +820,7 @@ func ExampleExecuteScriptCLI() {
 }
 
 func BenchmarkHelloWorld(b *testing.B) {
-	if err := frankenphp.Init(frankenphp.WithLogger(zap.NewNop())); err != nil {
+	if err := frankenphp.Init(frankenphp.WithLogger(slog.New(slog.NewTextHandler(io.Discard, nil)))); err != nil {
 		panic(err)
 	}
 	defer frankenphp.Shutdown()
@@ -847,7 +848,7 @@ func BenchmarkHelloWorld(b *testing.B) {
 }
 
 func BenchmarkEcho(b *testing.B) {
-	if err := frankenphp.Init(frankenphp.WithLogger(zap.NewNop())); err != nil {
+	if err := frankenphp.Init(frankenphp.WithLogger(slog.New(slog.NewTextHandler(io.Discard, nil)))); err != nil {
 		panic(err)
 	}
 	defer frankenphp.Shutdown()
@@ -914,7 +915,7 @@ func BenchmarkEcho(b *testing.B) {
 }
 
 func BenchmarkServerSuperGlobal(b *testing.B) {
-	if err := frankenphp.Init(frankenphp.WithLogger(zap.NewNop())); err != nil {
+	if err := frankenphp.Init(frankenphp.WithLogger(slog.New(slog.NewTextHandler(io.Discard, nil)))); err != nil {
 		panic(err)
 	}
 	defer frankenphp.Shutdown()

@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"path/filepath"
 	"strconv"
@@ -23,7 +24,6 @@ import (
 	"github.com/caddyserver/caddy/v2/modules/caddyhttp/fileserver"
 	"github.com/caddyserver/caddy/v2/modules/caddyhttp/rewrite"
 	"github.com/dunglas/frankenphp"
-	"go.uber.org/zap"
 )
 
 const defaultDocumentRoot = "public"
@@ -70,7 +70,7 @@ type FrankenPHPApp struct {
 	MaxWaitTime time.Duration `json:"max_wait_time,omitempty"`
 
 	metrics frankenphp.Metrics
-	logger  *zap.Logger
+	logger  *slog.Logger
 }
 
 // CaddyModule returns the Caddy module information.
@@ -83,7 +83,7 @@ func (f FrankenPHPApp) CaddyModule() caddy.ModuleInfo {
 
 // Provision sets up the module.
 func (f *FrankenPHPApp) Provision(ctx caddy.Context) error {
-	f.logger = ctx.Logger()
+	f.logger = ctx.Slogger()
 
 	if httpApp, err := ctx.AppIfConfigured("http"); err == nil {
 		if httpApp.(*caddyhttp.App).Metrics != nil {
@@ -345,7 +345,7 @@ type FrankenPHPModule struct {
 	resolvedDocumentRoot        string
 	preparedEnv                 frankenphp.PreparedEnv
 	preparedEnvNeedsReplacement bool
-	logger                      *zap.Logger
+	logger                      *slog.Logger
 }
 
 // CaddyModule returns the Caddy module information.
@@ -358,7 +358,7 @@ func (FrankenPHPModule) CaddyModule() caddy.ModuleInfo {
 
 // Provision sets up the module.
 func (f *FrankenPHPModule) Provision(ctx caddy.Context) error {
-	f.logger = ctx.Logger()
+	f.logger = ctx.Slogger()
 
 	if f.Root == "" {
 		if frankenphp.EmbeddedAppPath == "" {
