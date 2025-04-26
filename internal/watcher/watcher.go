@@ -9,14 +9,13 @@ package watcher
 import "C"
 import (
 	"errors"
+	"log/slog"
 	"runtime/cgo"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
 	"unsafe"
-
-	"go.uber.org/zap"
 )
 
 type watcher struct {
@@ -45,10 +44,10 @@ var (
 	// after stopping the watcher we will wait for eventual reloads to finish
 	reloadWaitGroup sync.WaitGroup
 	// we are passing the logger from the main package to the watcher
-	logger *zap.Logger
+	logger *slog.Logger
 )
 
-func InitWatcher(filePatterns []string, callback func(), zapLogger *zap.Logger) error {
+func InitWatcher(filePatterns []string, callback func(), slogger *slog.Logger) error {
 	if len(filePatterns) == 0 {
 		return nil
 	}
@@ -56,7 +55,7 @@ func InitWatcher(filePatterns []string, callback func(), zapLogger *zap.Logger) 
 		return ErrAlreadyStarted
 	}
 	watcherIsActive.Store(true)
-	logger = zapLogger
+	logger = slogger
 	activeWatcher = &watcher{callback: callback}
 	err := activeWatcher.startWatching(filePatterns)
 	if err != nil {
@@ -83,10 +82,10 @@ func retryWatching(watchPattern *watchPattern) {
 	failureMu.Lock()
 	defer failureMu.Unlock()
 	if watchPattern.failureCount >= maxFailureCount {
-		logger.Warn("gave up watching", zap.String("dir", watchPattern.dir))
+		logger.LogAttrs(nil, slog.LevelWarn, "giving up watching", slog.String("dir", watchPattern.dir))
 		return
 	}
-	logger.Info("watcher was closed prematurely, retrying...", zap.String("dir", watchPattern.dir))
+	logger.LogAttrs(nil, slog.LevelInfo, "watcher was closed prematurely, retrying...", slog.String("dir", watchPattern.dir))
 
 	watchPattern.failureCount++
 	session, err := startSession(watchPattern)
@@ -138,10 +137,10 @@ func startSession(w *watchPattern) (C.uintptr_t, error) {
 	defer C.free(unsafe.Pointer(cDir))
 	watchSession := C.start_new_watcher(cDir, C.uintptr_t(handle))
 	if watchSession != 0 {
-		logger.Debug("watching", zap.String("dir", w.dir), zap.Strings("patterns", w.patterns))
+		logger.LogAttrs(nil, slog.LevelDebug, "watching", slog.String("dir", w.dir), slog.Any("patterns", w.patterns))
 		return watchSession, nil
 	}
-	logger.Error("couldn't start watching", zap.String("dir", w.dir))
+	logger.LogAttrs(nil, slog.LevelError, "couldn't start watching", slog.String("dir", w.dir))
 
 	return watchSession, ErrUnableToStartWatching
 }
@@ -191,7 +190,7 @@ func listenForFileEvents(triggerWatcher chan string, stopWatcher chan struct{}) 
 			timer.Reset(debounceDuration)
 		case <-timer.C:
 			timer.Stop()
-			logger.Info("filesystem change detected", zap.String("file", lastChangedFile))
+			logger.LogAttrs(nil, slog.LevelInfo, "filesystem change detected", slog.String("file", lastChangedFile))
 			scheduleReload()
 		}
 	}

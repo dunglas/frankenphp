@@ -1,9 +1,8 @@
 package frankenphp
 
 import (
+	"log/slog"
 	"time"
-
-	"go.uber.org/zap"
 )
 
 // Option instances allow to configure FrankenPHP.
@@ -16,7 +15,7 @@ type opt struct {
 	numThreads  int
 	maxThreads  int
 	workers     []workerOpt
-	logger      *zap.Logger
+	logger      *slog.Logger
 	metrics     Metrics
 	phpIni      map[string]string
 	maxWaitTime time.Duration
@@ -65,7 +64,7 @@ func WithWorkers(name string, fileName string, num int, env map[string]string, w
 }
 
 // WithLogger configures the global logger to use.
-func WithLogger(l *zap.Logger) Option {
+func WithLogger(l *slog.Logger) Option {
 	return func(o *opt) error {
 		o.logger = l
 

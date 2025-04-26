@@ -2,9 +2,9 @@ package frankenphp_test
 
 import (
 	"fmt"
-	"github.com/stretchr/testify/require"
 	"io"
 	"log"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -13,9 +13,11 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/dunglas/frankenphp"
 	"github.com/stretchr/testify/assert"
-	"go.uber.org/zap"
+	"go.uber.org/zap/exp/zapslog"
 	"go.uber.org/zap/zapcore"
 	"go.uber.org/zap/zaptest/observer"
 )
@@ -96,7 +98,7 @@ func TestWorkerEnv(t *testing.T) {
 
 func TestWorkerGetOpt(t *testing.T) {
 	obs, logs := observer.New(zapcore.InfoLevel)
-	logger := zap.New(obs)
+	logger := slog.New(zapslog.NewHandler(obs))
 
 	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
 		req := httptest.NewRequest("GET", fmt.Sprintf("http://example.com/worker-getopt.php?i=%d", i), nil)

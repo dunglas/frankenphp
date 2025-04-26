@@ -249,7 +249,7 @@ jobs:
         run: |
           # shellcheck disable=SC2034
           digest=$(jq -r '."static-builder-gnu"."${{ fromJson(needs.prepare.outputs.push) && 'containerimage.digest' || 'containerimage.config.digest' }}"' <<< "${METADATA}")
-          docker create --platform=${{ matrix.platform }} --name static-builder-gnu "${{ fromJson(needs.prepare.outputs.push) && format('{0}-gnu@{1}', env.IMAGE_NAME, '${digest}') || '${digest}' }}"
+          docker create --platform=${{ matrix.platform }} --name static-builder-gnu "${{ fromJson(needs.prepare.outputs.push) && '${IMAGE_NAME}@${digest}' || '${digest}' }}"
           docker cp "static-builder-gnu:/go/src/app/dist/${BINARY}" "${BINARY}-gnu"
         env:
           METADATA: ${{ steps.build.outputs.metadata }}

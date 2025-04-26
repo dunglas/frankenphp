@@ -33,6 +33,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
@@ -43,9 +44,6 @@ import (
 	"syscall"
 	"time"
 	"unsafe"
-
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
 	// debug on Linux
 	//_ "github.com/ianlancetaylor/cgosymbolizer"
 )
@@ -66,7 +64,7 @@ var (
 	isRunning bool
 
 	loggerMu sync.RWMutex
-	logger   *zap.Logger
+	logger   *slog.Logger
 
 	metrics Metrics = nullMetrics{}
 
@@ -234,10 +232,9 @@ func Init(options ...Option) error {
 	}
 
 	if opt.logger == nil {
-		l, err := zap.NewDevelopment()
-		if err != nil {
-			return err
-		}
+		// set a default logger
+		// to disable logging, set the logger to slog.New(slog.NewTextHandler(io.Discard, nil))
+		l := slog.New(slog.NewTextHandler(os.Stdout, nil))
 
 		loggerMu.Lock()
 		logger = l
@@ -294,13 +291,9 @@ func Init(options ...Option) error {
 
 	initAutoScaling(mainThread)
 
-	if c := logger.Check(zapcore.InfoLevel, "FrankenPHP started 🐘"); c != nil {
-		c.Write(zap.String("php_version", Version().Version), zap.Int("num_threads", mainThread.numThreads), zap.Int("max_threads", mainThread.maxThreads))
-	}
+	logger.LogAttrs(nil, slog.LevelInfo, "FrankenPHP started 🐘", slog.String("php_version", Version().Version), slog.Int("num_threads", mainThread.numThreads), slog.Int("max_threads", mainThread.maxThreads))
 	if EmbeddedAppPath != "" {
-		if c := logger.Check(zapcore.InfoLevel, "embedded PHP app 📦"); c != nil {
-			c.Write(zap.String("path", EmbeddedAppPath))
-		}
+		logger.LogAttrs(nil, slog.LevelInfo, "embedded PHP app 📦", slog.String("path", EmbeddedAppPath))
 	}
 
 	return nil
@@ -434,9 +427,7 @@ func go_ub_write(threadIndex C.uintptr_t, cBuf *C.char, length C.int) (C.size_t,
 
 	i, e := writer.Write(unsafe.Slice((*byte)(unsafe.Pointer(cBuf)), length))
 	if e != nil {
-		if c := fc.logger.Check(zapcore.ErrorLevel, "write error"); c != nil {
-			c.Write(zap.Error(e))
-		}
+		fc.logger.LogAttrs(nil, slog.LevelError, "write error", slog.Any("error", e))
 	}
 
 	if fc.responseWriter == nil {
@@ -455,9 +446,7 @@ func go_apache_request_headers(threadIndex C.uintptr_t) (*C.go_string, C.size_t)
 	if fc.responseWriter == nil {
 		// worker mode, not handling a request
 
-		if c := logger.Check(zapcore.DebugLevel, "apache_request_headers() called in non-HTTP context"); c != nil {
-			c.Write(zap.String("worker", fc.scriptFilename))
-		}
+		logger.LogAttrs(nil, slog.LevelDebug, "apache_request_headers() called in non-HTTP context", slog.String("worker", fc.scriptFilename))
 
 		return nil, 0
 	}
@@ -488,9 +477,7 @@ func go_apache_request_headers(threadIndex C.uintptr_t) (*C.go_string, C.size_t)
 func addHeader(fc *frankenPHPContext, cString *C.char, length C.int) {
 	parts := strings.SplitN(C.GoStringN(cString, length), ": ", 2)
 	if len(parts) != 2 {
-		if c := fc.logger.Check(zapcore.DebugLevel, "invalid header"); c != nil {
-			c.Write(zap.String("header", parts[0]))
-		}
+		fc.logger.LogAttrs(nil, slog.LevelDebug, "invalid header", slog.String("header", parts[0]))
 
 		return
 	}
@@ -544,9 +531,7 @@ func go_sapi_flush(threadIndex C.uintptr_t) bool {
 	}
 
 	if err := http.NewResponseController(fc.responseWriter).Flush(); err != nil {
-		if c := fc.logger.Check(zapcore.ErrorLevel, "the current responseWriter is not a flusher"); c != nil {
-			c.Write(zap.Error(err))
-		}
+		logger.LogAttrs(nil, slog.LevelError, "the current responseWriter is not a flusher", slog.Any("error", err))
 	}
 
 	return false
@@ -599,24 +584,15 @@ func go_log(message *C.char, level C.int) {
 
 	switch le {
 	case emerg, alert, crit, err:
-		if c := logger.Check(zapcore.ErrorLevel, m); c != nil {
-			c.Write(zap.Stringer("syslog_level", syslogLevel(level)))
-		}
+		logger.LogAttrs(nil, slog.LevelError, m, slog.String("syslog_level", syslogLevel(level).String()))
 
 	case warning:
-		if c := logger.Check(zapcore.WarnLevel, m); c != nil {
-			c.Write(zap.Stringer("syslog_level", syslogLevel(level)))
-		}
-
+		logger.LogAttrs(nil, slog.LevelWarn, m, slog.String("syslog_level", syslogLevel(level).String()))
 	case debug:
-		if c := logger.Check(zapcore.DebugLevel, m); c != nil {
-			c.Write(zap.Stringer("syslog_level", syslogLevel(level)))
-		}
+		logger.LogAttrs(nil, slog.LevelDebug, m, slog.String("syslog_level", syslogLevel(level).String()))
 
 	default:
-		if c := logger.Check(zapcore.InfoLevel, m); c != nil {
-			c.Write(zap.Stringer("syslog_level", syslogLevel(level)))
-		}
+		logger.LogAttrs(nil, slog.LevelInfo, m, slog.String("syslog_level", syslogLevel(level).String()))
 	}
 }
 

@@ -2,6 +2,7 @@ package frankenphp
 
 import (
 	"io"
+	"log/slog"
 	"math/rand/v2"
 	"net/http/httptest"
 	"path/filepath"
@@ -13,13 +14,12 @@ import (
 
 	"github.com/dunglas/frankenphp/internal/phpheaders"
 	"github.com/stretchr/testify/assert"
-	"go.uber.org/zap"
 )
 
 var testDataPath, _ = filepath.Abs("./testdata")
 
 func TestStartAndStopTheMainThreadWithOneInactiveThread(t *testing.T) {
-	logger = zap.NewNop()               // the logger needs to not be nil
+	logger = slog.New(slog.NewTextHandler(io.Discard, nil))
 	_, err := initPHPThreads(1, 1, nil) // boot 1 thread
 	assert.NoError(t, err)
 
@@ -33,7 +33,7 @@ func TestStartAndStopTheMainThreadWithOneInactiveThread(t *testing.T) {
 
 func TestTransitionRegularThreadToWorkerThread(t *testing.T) {
 	workers = nil
-	logger = zap.NewNop()
+	logger = slog.New(slog.NewTextHandler(io.Discard, nil))
 	_, err := initPHPThreads(1, 1, nil)
 	assert.NoError(t, err)
 
@@ -58,7 +58,7 @@ func TestTransitionRegularThreadToWorkerThread(t *testing.T) {
 
 func TestTransitionAThreadBetween2DifferentWorkers(t *testing.T) {
 	workers = nil
-	logger = zap.NewNop()
+	logger = slog.New(slog.NewTextHandler(io.Discard, nil))
 	_, err := initPHPThreads(1, 1, nil)
 	assert.NoError(t, err)
 	firstWorker := getDummyWorker("transition-worker-1.php")
@@ -98,7 +98,7 @@ func TestTransitionThreadsWhileDoingRequests(t *testing.T) {
 		WithNumThreads(numThreads),
 		WithWorkers(worker1Name, worker1Path, 1, map[string]string{"ENV1": "foo"}, []string{}),
 		WithWorkers(worker2Name, worker2Path, 1, map[string]string{"ENV1": "foo"}, []string{}),
-		WithLogger(zap.NewNop()),
+		WithLogger(slog.New(slog.NewTextHandler(io.Discard, nil))),
 	))
 
 	// try all possible permutations of transition, transition every ms
@@ -159,7 +159,7 @@ func TestAllCommonHeadersAreCorrect(t *testing.T) {
 }
 func TestFinishBootingAWorkerScript(t *testing.T) {
 	workers = nil
-	logger = zap.NewNop()
+	logger = slog.New(slog.NewTextHandler(io.Discard, nil))
 	_, err := initPHPThreads(1, 1, nil)
 	assert.NoError(t, err)
 

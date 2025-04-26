@@ -2,12 +2,11 @@ package frankenphp
 
 import (
 	"context"
+	"log/slog"
 	"net/http"
 	"os"
 	"strings"
 	"time"
-
-	"go.uber.org/zap"
 )
 
 // frankenPHPContext provides contextual information about the Request to handle.
@@ -15,7 +14,7 @@ type frankenPHPContext struct {
 	documentRoot    string
 	splitPath       []string
 	env             PreparedEnv
-	logger          *zap.Logger
+	logger          *slog.Logger
 	request         *http.Request
 	originalRequest *http.Request
 

@@ -4,11 +4,10 @@ package frankenphp
 // #include "frankenphp.h"
 import "C"
 import (
+	"log/slog"
 	"runtime"
 	"sync"
 	"unsafe"
-
-	"go.uber.org/zap"
 )
 
 // representation of the actual underlying PHP thread
@@ -44,8 +43,8 @@ func newPHPThread(threadIndex int) *phpThread {
 func (thread *phpThread) boot() {
 	// thread must be in reserved state to boot
 	if !thread.state.compareAndSwap(stateReserved, stateBooting) && !thread.state.compareAndSwap(stateBootRequested, stateBooting) {
-		logger.Panic("thread is not in reserved state: " + thread.state.name())
-		return
+		logger.Error("thread is not in reserved state: " + thread.state.name())
+		panic("thread is not in reserved state: " + thread.state.name())
 	}
 
 	// boot threads as inactive
@@ -56,7 +55,8 @@ func (thread *phpThread) boot() {
 
 	// start the actual posix thread - TODO: try this with go threads instead
 	if !C.frankenphp_new_php_thread(C.uintptr_t(thread.threadIndex)) {
-		logger.Panic("unable to create thread", zap.Int("threadIndex", thread.threadIndex))
+		logger.LogAttrs(nil, slog.LevelError, "unable to create thread", slog.Int("threadIndex", thread.threadIndex))
+		panic("unable to create thread")
 	}
 
 	thread.state.waitFor(stateInactive)
