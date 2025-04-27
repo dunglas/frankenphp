@@ -69,7 +69,7 @@ func initWorkers(opt []workerOpt) error {
 
 func getWorkerKey(name string, filename string) string {
 	key := filename
-	if strings.HasPrefix(name, "🧩 ") {
+	if strings.HasPrefix(name, "m#") {
 		key = name
 	}
 	return key
