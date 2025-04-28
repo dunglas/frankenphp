@@ -320,7 +320,7 @@ jobs:
         working-directory: /tmp/metadata-gnu
         run: |
           # shellcheck disable=SC2046,SC2086
-          docker buildx imagetools create $(jq -cr '.target."static-builder-gnu".tags | map("-t " + . + "-gnu") | join(" ")' <<< "${GNU_METADATA}") \
+          docker buildx imagetools create $(jq -cr '.target."static-builder-gnu".tags | map("-t " + .) | join(" ")' <<< "${GNU_METADATA}") \
             $(printf "${IMAGE_NAME}-gnu@sha256:%s " *)
         env:
           GNU_METADATA: ${{ needs.prepare.outputs.gnu_metadata }}
