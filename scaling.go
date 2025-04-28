@@ -4,6 +4,7 @@ package frankenphp
 //#include <sys/resource.h>
 import "C"
 import (
+	"context"
 	"errors"
 	"log/slog"
 	"sync"
@@ -53,7 +54,7 @@ func initAutoScaling(mainThread *phpMainThread) {
 
 func drainAutoScaling() {
 	scalingMu.Lock()
-	logger.LogAttrs(nil, slog.LevelDebug, "shutting down autoscaling", slog.Int("autoScaledThreads", len(autoScaledThreads)))
+	logger.LogAttrs(context.Background(), slog.LevelDebug, "shutting down autoscaling", slog.Int("autoScaledThreads", len(autoScaledThreads)))
 	scalingMu.Unlock()
 }
 
@@ -93,7 +94,7 @@ func scaleWorkerThread(worker *worker) {
 
 	thread, err := addWorkerThread(worker)
 	if err != nil {
-		logger.LogAttrs(nil, slog.LevelWarn, "could not increase max_threads, consider raising this limit", slog.String("worker", worker.name), slog.Any("error", err))
+		logger.LogAttrs(context.Background(), slog.LevelWarn, "could not increase max_threads, consider raising this limit", slog.String("worker", worker.name), slog.Any("error", err))
 		return
 	}
 
@@ -116,7 +117,7 @@ func scaleRegularThread() {
 
 	thread, err := addRegularThread()
 	if err != nil {
-		logger.LogAttrs(nil, slog.LevelWarn, "could not increase max_threads, consider raising this limit", slog.Any("error", err))
+		logger.LogAttrs(context.Background(), slog.LevelWarn, "could not increase max_threads, consider raising this limit", slog.Any("error", err))
 		return
 	}
 
@@ -196,7 +197,7 @@ func deactivateThreads() {
 
 		// convert threads to inactive if they have been idle for too long
 		if thread.state.is(stateReady) && waitTime > maxThreadIdleTime.Milliseconds() {
-			logger.LogAttrs(nil, slog.LevelDebug, "auto-converting thread to inactive", slog.Int("threadIndex", thread.threadIndex))
+			logger.LogAttrs(context.Background(), slog.LevelDebug, "auto-converting thread to inactive", slog.Int("threadIndex", thread.threadIndex))
 			convertToInactiveThread(thread)
 			stoppedThreadCount++
 			autoScaledThreads = append(autoScaledThreads[:i], autoScaledThreads[i+1:]...)

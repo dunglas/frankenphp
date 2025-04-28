@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log/slog"
 	"net/http"
 	"os"
@@ -31,6 +32,6 @@ func main() {
 		port = "8080"
 	}
 
-	logger.LogAttrs(nil, slog.LevelError, "server error", slog.Any("error", http.ListenAndServe(":"+port, nil)))
+	logger.LogAttrs(context.Background(), slog.LevelError, "server error", slog.Any("error", http.ListenAndServe(":"+port, nil)))
 	os.Exit(1)
 }
