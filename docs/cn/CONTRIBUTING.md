@@ -11,9 +11,13 @@ docker build -t frankenphp-dev -f dev.Dockerfile .
 docker run --cap-add=SYS_PTRACE --security-opt seccomp=unconfined -p 8080:8080 -p 443:443 -p 443:443/udp -v $PWD:/go/src/app -it frankenphp-dev
 ```
 
-该镜像包含常用的开发工具（Go、GDB、Valgrind、Neovim等）。
+该镜像包含常用的开发工具（Go、GDB、Valgrind、Neovim等）并使用以下 php 设置位置
 
-如果 docker 版本低于 23.0，则会因为 dockerignore [pattern issue](https://github.com/moby/moby/pull/42676) 而导致构建失败。将目录添加到 `.dockerignore`。
+- php.ini: `/etc/frankenphp/php.ini` 默认提供了一个带有开发预设的 php.ini 文件。
+- 附加配置文件: `/etc/frankenphp/php.d/*.ini`
+- php 扩展: `/usr/lib/frankenphp/modules/`
+
+如果您的 docker 版本低于 23.0，则会因为 dockerignore [pattern issue](https://github.com/moby/moby/pull/42676) 而导致构建失败。将目录添加到 `.dockerignore`。
 
 ```patch
  !testdata/*.php
