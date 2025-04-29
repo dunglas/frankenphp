@@ -89,6 +89,9 @@ fpm -s dir -t rpm -n frankenphp -v "${FRANKENPHP_VERSION}" \
 glibc_version=$(ldd -v "$bin" | awk '/GLIBC_/ {gsub(/[()]/, "", $2); print $2}' | grep -v GLIBC_PRIVATE | sed 's/GLIBC_//' | sort -V | tail -n1)
 cxxabi_version=$(strings "$bin" | grep -oP 'CXXABI_\d+\.\d+(\.\d+)?' | sed 's/CXXABI_//' | sort -V | tail -n1)
 
+getent group frankenphp || groupadd -r frankenphp
+getent passwd frankenphp || useradd -r -g frankenphp frankenphp
+
 fpm -s dir -t deb -n frankenphp -v "${FRANKENPHP_VERSION}" \
 	--config-files /etc/frankenphp/Caddyfile \
 	--config-files /etc/frankenphp/php.ini \
