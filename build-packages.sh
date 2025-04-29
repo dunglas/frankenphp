@@ -57,6 +57,12 @@ if [[ ! "${FRANKENPHP_VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
 	FRANKENPHP_VERSION=0.0.0
 fi
 
+group_preexists=0
+user_preexists=0
+
+getent group frankenphp && group_preexists=1 || groupadd -r frankenphp
+getent passwd frankenphp && user_preexists=1 || useradd -r -g frankenphp frankenphp
+
 mkdir -p package/empty
 mkdir -p package/etc
 [ -f ./dist/static-php-cli/source/php-src/php.ini-production ] && cp -f ./dist/static-php-cli/source/php-src/php.ini-production ./package/etc/php.ini
@@ -89,9 +95,6 @@ fpm -s dir -t rpm -n frankenphp -v "${FRANKENPHP_VERSION}" \
 glibc_version=$(ldd -v "$bin" | awk '/GLIBC_/ {gsub(/[()]/, "", $2); print $2}' | grep -v GLIBC_PRIVATE | sed 's/GLIBC_//' | sort -V | tail -n1)
 cxxabi_version=$(strings "$bin" | grep -oP 'CXXABI_\d+\.\d+(\.\d+)?' | sed 's/CXXABI_//' | sort -V | tail -n1)
 
-getent group frankenphp || groupadd -r frankenphp
-getent passwd frankenphp || useradd -r -g frankenphp frankenphp
-
 fpm -s dir -t deb -n frankenphp -v "${FRANKENPHP_VERSION}" \
 	--config-files /etc/frankenphp/Caddyfile \
 	--config-files /etc/frankenphp/php.ini \
@@ -110,5 +113,8 @@ fpm -s dir -t deb -n frankenphp -v "${FRANKENPHP_VERSION}" \
 	"../package/empty/=/etc/frankenphp/php.d" \
 	"../package/empty/=/usr/lib/frankenphp/modules" \
 	"../package/empty/=/var/lib/frankenphp"
+
+[ "$user_preexists" -eq 0 ] && userdel frankenphp
+[ "$group_preexists" -eq 0 ] && groupdel frankenphp
 
 cd ..
