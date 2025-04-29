@@ -30,6 +30,7 @@ package frankenphp
 import "C"
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -291,9 +292,10 @@ func Init(options ...Option) error {
 
 	initAutoScaling(mainThread)
 
-	logger.LogAttrs(nil, slog.LevelInfo, "FrankenPHP started 🐘", slog.String("php_version", Version().Version), slog.Int("num_threads", mainThread.numThreads), slog.Int("max_threads", mainThread.maxThreads))
+	ctx := context.Background()
+	logger.LogAttrs(ctx, slog.LevelInfo, "FrankenPHP started 🐘", slog.String("php_version", Version().Version), slog.Int("num_threads", mainThread.numThreads), slog.Int("max_threads", mainThread.maxThreads))
 	if EmbeddedAppPath != "" {
-		logger.LogAttrs(nil, slog.LevelInfo, "embedded PHP app 📦", slog.String("path", EmbeddedAppPath))
+		logger.LogAttrs(ctx, slog.LevelInfo, "embedded PHP app 📦", slog.String("path", EmbeddedAppPath))
 	}
 
 	return nil
@@ -427,7 +429,7 @@ func go_ub_write(threadIndex C.uintptr_t, cBuf *C.char, length C.int) (C.size_t,
 
 	i, e := writer.Write(unsafe.Slice((*byte)(unsafe.Pointer(cBuf)), length))
 	if e != nil {
-		fc.logger.LogAttrs(nil, slog.LevelError, "write error", slog.Any("error", e))
+		fc.logger.LogAttrs(context.Background(), slog.LevelError, "write error", slog.Any("error", e))
 	}
 
 	if fc.responseWriter == nil {
@@ -446,7 +448,7 @@ func go_apache_request_headers(threadIndex C.uintptr_t) (*C.go_string, C.size_t)
 	if fc.responseWriter == nil {
 		// worker mode, not handling a request
 
-		logger.LogAttrs(nil, slog.LevelDebug, "apache_request_headers() called in non-HTTP context", slog.String("worker", fc.scriptFilename))
+		logger.LogAttrs(context.Background(), slog.LevelDebug, "apache_request_headers() called in non-HTTP context", slog.String("worker", fc.scriptFilename))
 
 		return nil, 0
 	}
@@ -477,7 +479,7 @@ func go_apache_request_headers(threadIndex C.uintptr_t) (*C.go_string, C.size_t)
 func addHeader(fc *frankenPHPContext, cString *C.char, length C.int) {
 	parts := strings.SplitN(C.GoStringN(cString, length), ": ", 2)
 	if len(parts) != 2 {
-		fc.logger.LogAttrs(nil, slog.LevelDebug, "invalid header", slog.String("header", parts[0]))
+		fc.logger.LogAttrs(context.Background(), slog.LevelDebug, "invalid header", slog.String("header", parts[0]))
 
 		return
 	}
@@ -531,7 +533,7 @@ func go_sapi_flush(threadIndex C.uintptr_t) bool {
 	}
 
 	if err := http.NewResponseController(fc.responseWriter).Flush(); err != nil {
-		logger.LogAttrs(nil, slog.LevelError, "the current responseWriter is not a flusher", slog.Any("error", err))
+		logger.LogAttrs(context.Background(), slog.LevelError, "the current responseWriter is not a flusher", slog.Any("error", err))
 	}
 
 	return false
@@ -584,15 +586,15 @@ func go_log(message *C.char, level C.int) {
 
 	switch le {
 	case emerg, alert, crit, err:
-		logger.LogAttrs(nil, slog.LevelError, m, slog.String("syslog_level", syslogLevel(level).String()))
+		logger.LogAttrs(context.Background(), slog.LevelError, m, slog.String("syslog_level", syslogLevel(level).String()))
 
 	case warning:
-		logger.LogAttrs(nil, slog.LevelWarn, m, slog.String("syslog_level", syslogLevel(level).String()))
+		logger.LogAttrs(context.Background(), slog.LevelWarn, m, slog.String("syslog_level", syslogLevel(level).String()))
 	case debug:
-		logger.LogAttrs(nil, slog.LevelDebug, m, slog.String("syslog_level", syslogLevel(level).String()))
+		logger.LogAttrs(context.Background(), slog.LevelDebug, m, slog.String("syslog_level", syslogLevel(level).String()))
 
 	default:
-		logger.LogAttrs(nil, slog.LevelInfo, m, slog.String("syslog_level", syslogLevel(level).String()))
+		logger.LogAttrs(context.Background(), slog.LevelInfo, m, slog.String("syslog_level", syslogLevel(level).String()))
 	}
 }
 

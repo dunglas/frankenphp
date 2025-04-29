@@ -39,11 +39,9 @@ func initWorkers(opt []workerOpt) error {
 		if err != nil {
 			return err
 		}
-		if worker.threads == nil {
-			worker.threads = make([]*phpThread, 0, o.num)
-		}
+
 		workersReady.Add(o.num)
-		for i := 0; i < o.num; i++ {
+		for i := 0; i < worker.num; i++ {
 			thread := getInactivePHPThread()
 			convertToWorkerThread(thread, worker)
 			go func() {
@@ -83,11 +81,15 @@ func newWorker(o workerOpt) (*worker, error) {
 
 	key := getWorkerKey(o.name, absFileName)
 	if _, ok := workers[key]; ok {
-		return nil, fmt.Errorf("two workers must not share the same name %q", key)
+		return nil, fmt.Errorf("two workers must not share the same key %q", key)
 	}
 
 	if o.env == nil {
 		o.env = make(PreparedEnv, 1)
+	}
+
+	if o.name == "" {
+		o.name = absFileName
 	}
 
 	o.env["FRANKENPHP_WORKER\x00"] = "1"
@@ -97,6 +99,7 @@ func newWorker(o workerOpt) (*worker, error) {
 		num:         o.num,
 		env:         o.env,
 		requestChan: make(chan *frankenPHPContext),
+		threads:     make([]*phpThread, 0, o.num),
 	}
 	workers[key] = w
 

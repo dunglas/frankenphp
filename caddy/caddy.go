@@ -310,6 +310,9 @@ func (f *FrankenPHPApp) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 				if err != nil {
 					return err
 				}
+				if frankenphp.EmbeddedAppPath != "" && filepath.IsLocal(wc.FileName) {
+					wc.FileName = filepath.Join(frankenphp.EmbeddedAppPath, wc.FileName)
+				}
 				if wc.Name == "" {
 					// let worker initialization validate if the FileName is valid or not
 					name, _ := fastabs.FastAbs(wc.FileName)
