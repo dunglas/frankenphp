@@ -58,6 +58,7 @@ if [[ ! "${FRANKENPHP_VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
 fi
 
 mkdir -p package/empty
+mkdir -p package/etc
 [ -f ./dist/static-php-cli/source/php-src/php.ini-production ] && cp -f ./dist/static-php-cli/source/php-src/php.ini-production ./package/etc/php.ini
 
 cd dist
