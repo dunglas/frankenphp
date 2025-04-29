@@ -60,8 +60,17 @@ fi
 group_preexists=0
 user_preexists=0
 
-getent group frankenphp && group_preexists=1 || groupadd -r frankenphp
-getent passwd frankenphp && user_preexists=1 || useradd -r -g frankenphp frankenphp
+if getent group frankenphp; then
+	group_preexists=1
+else
+	groupadd -r frankenphp
+fi
+
+if getent passwd frankenphp; then
+	user_preexists=1
+else
+	useradd -r -g frankenphp frankenphp
+fi
 
 mkdir -p package/empty
 mkdir -p package/etc
