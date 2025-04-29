@@ -24,12 +24,6 @@ RUN cp $PHP_INI_DIR/php.ini-production $PHP_INI_DIR/php.ini
 RUN cp $PHP_INI_DIR/php.ini-development $PHP_INI_DIR/php.ini
 ```
 
-dev.Dockerfile:
-
-- php.ini: `/etc/frankenphp/php.ini` 默认情况下提供带有开发预设的 php.ini 文件。
-- 附加配置文件: `/etc/frankenphp/php.d/*.ini`
-- php 扩展: `/usr/lib/frankenphp/modules/`
-
 FrankenPHP 安装 (.rpm 或 .deb):
 
 - php.ini: `/etc/frankenphp/php.ini` 默认情况下提供带有生产预设的 php.ini 文件。

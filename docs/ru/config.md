@@ -26,12 +26,6 @@ RUN cp $PHP_INI_DIR/php.ini-production $PHP_INI_DIR/php.ini
 RUN cp $PHP_INI_DIR/php.ini-development $PHP_INI_DIR/php.ini
 ```
 
-dev.Dockerfile:
-
-- php.ini: `/etc/frankenphp/php.ini` По умолчанию предоставляется файл php.ini с настройками для разработки.
-- дополнительные файлы конфигурации: `/etc/frankenphp/php.d/*.ini`
-- расширения php: `/usr/lib/frankenphp/modules/`
-
 Установка FrankenPHP (.rpm или .deb):
 
 - php.ini: `/etc/frankenphp/php.ini` По умолчанию предоставляется файл php.ini с производственными настройками.

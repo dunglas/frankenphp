@@ -27,12 +27,6 @@ RUN cp $PHP_INI_DIR/php.ini-production $PHP_INI_DIR/php.ini
 RUN cp $PHP_INI_DIR/php.ini-development $PHP_INI_DIR/php.ini
 ```
 
-dev.Dockerfile:
-
-- php.ini: `/etc/frankenphp/php.ini` A php.ini file with development presets is provided by default.
-- additional configuration files: `/etc/frankenphp/php.d/*.ini`
-- php extensions: `/usr/lib/frankenphp/modules/`
-
 ## RPM and Debian packages
 
 - `php.ini`: `/etc/frankenphp/php.ini` (a `php.ini` file with production presets is provided by default)
