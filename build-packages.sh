@@ -60,16 +60,22 @@ fi
 group_preexists=0
 user_preexists=0
 
-if getent group frankenphp; then
+if getent group frankenphp >/dev/null; then
 	group_preexists=1
 else
-	groupadd -r frankenphp
+	groupadd --system frankenphp
 fi
 
-if getent passwd frankenphp; then
+if getent passwd frankenphp >/dev/null; then
 	user_preexists=1
 else
-	useradd -r -g frankenphp frankenphp
+	useradd --system \
+		--gid frankenphp \
+		--create-home \
+		--home-dir /var/lib/frankenphp \
+		--shell /usr/sbin/nologin \
+		--comment "FrankenPHP web server" \
+		frankenphp
 fi
 
 mkdir -p package/empty
