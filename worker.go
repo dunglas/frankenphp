@@ -81,7 +81,12 @@ func newWorker(o workerOpt) (*worker, error) {
 
 	key := getWorkerKey(o.name, absFileName)
 	if _, ok := workers[key]; ok {
-		return nil, fmt.Errorf("two workers must not share the same key %q", key)
+		return nil, fmt.Errorf("two workers cannot use the same key %q", key)
+	}
+	for _, w := range workers {
+		if w.name == o.name {
+			return w, fmt.Errorf("two workers cannot have the same name: %q", o.name)
+		}
 	}
 
 	if o.env == nil {
