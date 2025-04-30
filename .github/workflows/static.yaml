@@ -321,7 +321,7 @@ jobs:
         run: |
           # shellcheck disable=SC2046,SC2086
           docker buildx imagetools create $(jq -cr '.target."static-builder-gnu".tags | map("-t " + .) | join(" ")' <<< "${GNU_METADATA}") \
-            $(printf "${IMAGE_NAME}-gnu@sha256:%s " *)
+            $(printf "${IMAGE_NAME}@sha256:%s " *)
         env:
           GNU_METADATA: ${{ needs.prepare.outputs.gnu_metadata }}
       - name: Inspect image
