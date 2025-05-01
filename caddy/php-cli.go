@@ -19,7 +19,7 @@ func init() {
 		Long: `
 Executes a PHP script similarly to the CLI SAPI.`,
 		CobraFunc: func(cmd *cobra.Command) {
-			cmd.Flags().StringP("code", "r", "", "Execute PHP code directly without <php ... ?> tags")
+			cmd.Flags().StringP("code", "r", "", "Execute PHP code directly without <?php ... ?> tags")
 			cmd.RunE = caddycmd.WrapCommandFuncForCobra(cmdPHPCLI)
 		},
 	})
