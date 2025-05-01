@@ -791,6 +791,19 @@ func TestExecuteScriptCLI(t *testing.T) {
 	assert.Contains(t, stdoutStderrStr, "From the CLI")
 }
 
+func TestExecuteCLICode(t *testing.T) {
+	if _, err := os.Stat("internal/testcli/testcli"); err != nil {
+		t.Skip("internal/testcli/testcli has not been compiled, run `cd internal/testcli/ && go build`")
+	}
+
+	cmd := exec.Command("internal/testcli/testcli", "-r", "echo 'Hello World';")
+	stdoutStderr, err := cmd.CombinedOutput()
+	assert.NoError(t, err)
+
+	stdoutStderrStr := string(stdoutStderr)
+	assert.Equal(t, stdoutStderrStr, `Hello World`)
+}
+
 func ExampleServeHTTP() {
 	if err := frankenphp.Init(); err != nil {
 		panic(err)
