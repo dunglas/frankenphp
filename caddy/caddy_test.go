@@ -1052,3 +1052,104 @@ func TestDisabledMetrics(t *testing.T) {
 	require.NoError(t, err, "failed to count metrics")
 	require.Zero(t, count, "metrics should be missing")
 }
+
+func TestWorkerRestart(t *testing.T) {
+	var wg sync.WaitGroup
+	tester := caddytest.NewTester(t)
+	tester.InitServer(`
+	{
+		skip_install_trust
+		admin localhost:2999
+		http_port `+testPort+`
+		https_port 9443
+
+		metrics
+		frankenphp {
+			worker {
+				name service
+				file ../testdata/worker-restart.php
+				num 1
+				# restart every 3 requests
+				env EVERY 3
+			}
+		}
+	}
+
+	localhost:`+testPort+` {
+		route {
+			php {
+				root ../testdata
+			}
+		}
+	}
+	`, "caddyfile")
+
+	ctx := caddy.ActiveContext()
+
+	resp, err := http.Get("http://localhost:2999/metrics")
+	require.NoError(t, err, "failed to fetch metrics")
+	defer resp.Body.Close()
+
+	// Read and parse metrics
+	metrics := new(bytes.Buffer)
+	_, err = metrics.ReadFrom(resp.Body)
+	require.NoError(t, err, "failed to read metrics")
+
+	// frankenphp_worker_restarts should be missing
+	count, err := testutil.GatherAndCount(
+		ctx.GetMetricsRegistry(),
+		"frankenphp_worker_restarts",
+	)
+	require.NoError(t, err, "failed to count metrics")
+	require.Zero(t, count, "metrics should be missing")
+
+	// Check metrics
+	expectedMetrics := `
+	# HELP frankenphp_ready_workers Running workers that have successfully called frankenphp_handle_request at least once
+	# TYPE frankenphp_ready_workers gauge
+	frankenphp_ready_workers{worker="service"} 1
+	# HELP frankenphp_total_workers Total number of PHP workers for this worker
+	# TYPE frankenphp_total_workers gauge
+	frankenphp_total_workers{worker="service"} 1
+	`
+
+	require.NoError(t,
+		testutil.GatherAndCompare(
+			ctx.GetMetricsRegistry(),
+			strings.NewReader(expectedMetrics),
+			"frankenphp_total_workers",
+			"frankenphp_ready_workers",
+		))
+
+	// Make some requests
+	for i := 0; i < 10; i++ {
+		wg.Add(1)
+		go func(i int) {
+			tester.AssertGetResponse(fmt.Sprintf("http://localhost:"+testPort+"/worker-restart.php?i=%d", i), http.StatusOK, fmt.Sprintf("Counter (%d)", i))
+			wg.Done()
+		}(i)
+	}
+	wg.Wait()
+
+	// frankenphp_ready_workers should be back to 1 even after worker restarts
+	expectedMetrics = `
+	# HELP frankenphp_ready_workers Running workers that have successfully called frankenphp_handle_request at least once
+	# TYPE frankenphp_ready_workers gauge
+	frankenphp_ready_workers{worker="service"} 1
+	# HELP frankenphp_total_workers Total number of PHP workers for this worker
+	# TYPE frankenphp_total_workers gauge
+	frankenphp_total_workers{worker="service"} 1
+	# HELP frankenphp_worker_restarts Number of PHP worker restarts for this worker
+	# TYPE frankenphp_worker_restarts counter
+	frankenphp_worker_restarts{worker="service"} 3
+	`
+
+	require.NoError(t,
+		testutil.GatherAndCompare(
+			ctx.GetMetricsRegistry(),
+			strings.NewReader(expectedMetrics),
+			"frankenphp_total_workers",
+			"frankenphp_ready_workers",
+			"frankenphp_worker_restarts",
+		))
+}
