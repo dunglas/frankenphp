@@ -91,10 +91,10 @@ func newWorker(o workerOpt) (*worker, error) {
 	// ensure the filename or name are not already registered
 	for _, w := range workers {
 		if w.name == o.name {
-			return w, fmt.Errorf("2 workers cannot have the same name: %q.", o.name)
+			return w, fmt.Errorf("2 workers cannot have the same name: %q", o.name)
 		}
 		if w.fileName == absFileName {
-			return w, fmt.Errorf("2 workers cannot have the same filename: %q.", absFileName)
+			return w, fmt.Errorf("2 workers cannot have the same filename: %q", absFileName)
 		}
 	}
 
