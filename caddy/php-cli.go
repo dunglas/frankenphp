@@ -19,13 +19,13 @@ func init() {
 		Long: `
 Executes a PHP script similarly to the CLI SAPI.`,
 		CobraFunc: func(cmd *cobra.Command) {
-			cmd.DisableFlagParsing = true
+			cmd.Flags().StringP("code", "r", "", "Execute PHP code directly without <?php ... ?> tags")
 			cmd.RunE = caddycmd.WrapCommandFuncForCobra(cmdPHPCLI)
 		},
 	})
 }
 
-func cmdPHPCLI(caddycmd.Flags) (int, error) {
+func cmdPHPCLI(fs caddycmd.Flags) (int, error) {
 	args := os.Args[2:]
 	if len(args) < 1 {
 		return 1, errors.New("the path to the PHP script is required")
@@ -37,7 +37,13 @@ func cmdPHPCLI(caddycmd.Flags) (int, error) {
 		}
 	}
 
-	status := frankenphp.ExecuteScriptCLI(args[0], args)
+	var status int
+	if evalCode := fs.String("code"); evalCode != "" {
+		status = frankenphp.ExecutePHPCode(evalCode)
+	} else {
+		status = frankenphp.ExecuteScriptCLI(args[0], args)
+	}
+
 	os.Exit(status)
 
 	return status, nil
