@@ -124,8 +124,8 @@ func WithRequestLogger(logger *slog.Logger) RequestOption {
 	}
 }
 
-// WithModuleWorker sets the worker that should handle the request
-func WithModuleWorker(name string) RequestOption {
+// WithWorkerName sets the worker that should handle the request
+func WithWorkerName(name string) RequestOption {
 	return func(o *frankenPHPContext) error {
 		o.workerName = name
 

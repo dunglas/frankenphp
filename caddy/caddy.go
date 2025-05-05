@@ -26,7 +26,10 @@ import (
 	"github.com/dunglas/frankenphp"
 )
 
-const defaultDocumentRoot = "public"
+const (
+	defaultDocumentRoot = "public"
+	defaultWatchPattern = "./**/*.{php,yaml,yml,twig,env}"
+)
 
 var iniError = errors.New("'php_ini' must be in the format: php_ini \"<key>\" \"<value>\"")
 
@@ -153,7 +156,7 @@ func parseWorkerConfig(d *caddyfile.Dispenser) (workerConfig, error) {
 
 	if d.NextArg() {
 		if d.Val() == "watch" {
-			wc.Watch = append(wc.Watch, "./**/*.{php,yaml,yml,twig,env}")
+			wc.Watch = append(wc.Watch, defaultWatchPattern)
 		} else {
 			v, err := strconv.ParseUint(d.Val(), 10, 32)
 			if err != nil {
@@ -204,7 +207,7 @@ func parseWorkerConfig(d *caddyfile.Dispenser) (workerConfig, error) {
 		case "watch":
 			if !d.NextArg() {
 				// the default if the watch directory is left empty:
-				wc.Watch = append(wc.Watch, "./**/*.{php,yaml,yml,twig,env}")
+				wc.Watch = append(wc.Watch, defaultWatchPattern)
 			} else {
 				wc.Watch = append(wc.Watch, d.Val())
 			}
@@ -491,7 +494,7 @@ func (f *FrankenPHPModule) ServeHTTP(w http.ResponseWriter, r *http.Request, _ c
 		frankenphp.WithRequestSplitPath(f.SplitPath),
 		frankenphp.WithRequestPreparedEnv(env),
 		frankenphp.WithOriginalRequest(&origReq),
-		frankenphp.WithModuleWorker(workerName),
+		frankenphp.WithWorkerName(workerName),
 	)
 
 	if err = frankenphp.ServeHTTP(w, fr); err != nil {
@@ -502,24 +505,22 @@ func (f *FrankenPHPModule) ServeHTTP(w http.ResponseWriter, r *http.Request, _ c
 }
 
 func generateUniqueModuleWorkerName(filepath string) string {
+	var i uint
 	name := "m#" + filepath
-	i := 0
+
+outer:
 	for {
-		nameExists := false
 		for _, wc := range moduleWorkerConfigs {
 			if wc.Name == name {
-				nameExists = true
-				break
+				name = fmt.Sprintf("m#%s_%d", filepath, i)
+				i++
+
+				continue outer
 			}
 		}
-		if !nameExists {
-			break
-		}
-		i++
-		name = fmt.Sprintf("m#%s_%d", filepath, i)
-	}
 
-	return name
+		return name
+	}
 }
 
 // UnmarshalCaddyfile implements caddyfile.Unmarshaler.
