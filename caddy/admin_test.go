@@ -1,7 +1,10 @@
 package caddy_test
 
 import (
+	"bytes"
 	"encoding/json"
+	"fmt"
+	"github.com/dunglas/frankenphp/internal/fastabs"
 	"io"
 	"net/http"
 	"sync"
@@ -212,4 +215,83 @@ func getDebugState(t *testing.T, tester *caddytest.Tester) frankenphp.FrankenPHP
 	assert.NoError(t, err)
 
 	return debugStates
+}
+
+func TestAddModuleWorkerViaAdminApi(t *testing.T) {
+	// Initialize a server with admin API enabled
+	tester := caddytest.NewTester(t)
+	tester.InitServer(`
+		{
+			skip_install_trust
+			admin localhost:2999
+			http_port `+testPort+`
+
+			frankenphp
+		}
+
+		localhost:`+testPort+` {
+			route {
+				root ../testdata
+				php
+			}
+		}
+		`, "caddyfile")
+
+	// Get initial debug state to check number of workers
+	initialDebugState := getDebugState(t, tester)
+	initialWorkerCount := 0
+	for _, thread := range initialDebugState.ThreadDebugStates {
+		if thread.Name != "" && thread.Name != "ready" {
+			initialWorkerCount++
+		}
+	}
+
+	// Create a Caddyfile configuration with a module worker
+	workerConfig := `
+	{
+		skip_install_trust
+		admin localhost:2999
+		http_port ` + testPort + `
+
+		frankenphp
+	}
+
+	localhost:` + testPort + ` {
+		route {
+			root ../testdata
+			php {
+				worker ../testdata/worker-with-counter.php 1
+			}
+		}
+	}
+	`
+
+	// Send the configuration to the admin API
+	adminUrl := "http://localhost:2999/load"
+	r, err := http.NewRequest("POST", adminUrl, bytes.NewBufferString(workerConfig))
+	assert.NoError(t, err)
+	r.Header.Set("Content-Type", "text/caddyfile")
+	resp := tester.AssertResponseCode(r, http.StatusOK)
+	defer resp.Body.Close()
+
+	// Get the updated debug state to check if the worker was added
+	updatedDebugState := getDebugState(t, tester)
+	updatedWorkerCount := 0
+	workerFound := false
+	filename, _ := fastabs.FastAbs("../testdata/worker-with-counter.php")
+	for _, thread := range updatedDebugState.ThreadDebugStates {
+		if thread.Name != "" && thread.Name != "ready" {
+			updatedWorkerCount++
+			if thread.Name == "Worker PHP Thread - "+filename {
+				workerFound = true
+			}
+		}
+	}
+
+	// Assert that the worker was added
+	assert.Greater(t, updatedWorkerCount, initialWorkerCount, "Worker count should have increased")
+	assert.True(t, workerFound, fmt.Sprintf("Worker with name %q should be found", "Worker PHP Thread - "+filename))
+
+	// Make a request to the worker to verify it's working
+	tester.AssertGetResponse("http://localhost:"+testPort+"/worker-with-counter.php", http.StatusOK, "requests:1")
 }

@@ -400,14 +400,13 @@ func ServeHTTP(responseWriter http.ResponseWriter, request *http.Request) error 
 	}
 
 	// Detect if a worker is available to handle this request
-	if worker, ok := workers[fc.scriptFilename]; ok {
+	if worker, ok := workers[getWorkerKey(fc.workerName, fc.scriptFilename)]; ok {
 		worker.handleRequest(fc)
 		return nil
 	}
 
-	// If no worker was availabe send the request to non-worker threads
+	// If no worker was available, send the request to non-worker threads
 	handleRequestWithRegularPHPThreads(fc)
-
 	return nil
 }
 

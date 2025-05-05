@@ -32,6 +32,7 @@ func TestStartAndStopTheMainThreadWithOneInactiveThread(t *testing.T) {
 }
 
 func TestTransitionRegularThreadToWorkerThread(t *testing.T) {
+	workers = nil
 	logger = slog.New(slog.NewTextHandler(io.Discard, nil))
 	_, err := initPHPThreads(1, 1, nil)
 	assert.NoError(t, err)
@@ -56,6 +57,7 @@ func TestTransitionRegularThreadToWorkerThread(t *testing.T) {
 }
 
 func TestTransitionAThreadBetween2DifferentWorkers(t *testing.T) {
+	workers = nil
 	logger = slog.New(slog.NewTextHandler(io.Discard, nil))
 	_, err := initPHPThreads(1, 1, nil)
 	assert.NoError(t, err)
@@ -156,6 +158,7 @@ func TestAllCommonHeadersAreCorrect(t *testing.T) {
 	}
 }
 func TestFinishBootingAWorkerScript(t *testing.T) {
+	workers = nil
 	logger = slog.New(slog.NewTextHandler(io.Discard, nil))
 	_, err := initPHPThreads(1, 1, nil)
 	assert.NoError(t, err)
@@ -183,16 +186,16 @@ func TestReturnAnErrorIf2WorkersHaveTheSameFileName(t *testing.T) {
 	_, err2 := newWorker(workerOpt{fileName: "filename.php"})
 
 	assert.NoError(t, err1)
-	assert.Error(t, err2, "2 workers cannot have the same filename")
+	assert.Error(t, err2, "two workers cannot have the same filename")
 }
 
-func TestReturnAnErrorIf2WorkersHaveTheSameName(t *testing.T) {
+func TestReturnAnErrorIf2ModuleWorkersHaveTheSameName(t *testing.T) {
 	workers = make(map[string]*worker)
 	_, err1 := newWorker(workerOpt{fileName: "filename.php", name: "workername"})
 	_, err2 := newWorker(workerOpt{fileName: "filename2.php", name: "workername"})
 
 	assert.NoError(t, err1)
-	assert.Error(t, err2, "2 workers cannot have the same name")
+	assert.Error(t, err2, "two workers cannot have the same name")
 }
 
 func getDummyWorker(fileName string) *worker {

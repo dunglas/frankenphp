@@ -22,6 +22,7 @@ type frankenPHPContext struct {
 	pathInfo       string
 	scriptName     string
 	scriptFilename string
+	workerName     string
 
 	// Whether the request is already closed by us
 	isDone bool
@@ -90,7 +91,6 @@ func NewRequestWithContext(r *http.Request, opts ...RequestOption) (*http.Reques
 
 	// SCRIPT_FILENAME is the absolute path of SCRIPT_NAME
 	fc.scriptFilename = sanitizedPathJoin(fc.documentRoot, fc.scriptName)
-
 	c := context.WithValue(r.Context(), contextKey, fc)
 
 	return r.WithContext(c), nil

@@ -26,9 +26,16 @@ import (
 	"github.com/dunglas/frankenphp"
 )
 
-const defaultDocumentRoot = "public"
+const (
+	defaultDocumentRoot = "public"
+	defaultWatchPattern = "./**/*.{php,yaml,yml,twig,env}"
+)
 
 var iniError = errors.New("'php_ini' must be in the format: php_ini \"<key>\" \"<value>\"")
+
+// FrankenPHPModule instances register their workers, and FrankenPHPApp reads them at Start() time.
+// FrankenPHPApp.Workers may be set by JSON config, so keep them separate.
+var moduleWorkerConfigs []workerConfig
 
 func init() {
 	caddy.RegisterModule(FrankenPHPApp{})
@@ -45,7 +52,7 @@ func init() {
 }
 
 type workerConfig struct {
-	// Name for the worker
+	// Name for the worker. Default: the filename for FrankenPHPApp workers, always prefixed with "m#" for FrankenPHPModule workers.
 	Name string `json:"name,omitempty"`
 	// FileName sets the path to the worker script.
 	FileName string `json:"file_name,omitempty"`
@@ -108,7 +115,9 @@ func (f *FrankenPHPApp) Start() error {
 		frankenphp.WithPhpIni(f.PhpIni),
 		frankenphp.WithMaxWaitTime(f.MaxWaitTime),
 	}
-	for _, w := range f.Workers {
+	// Add workers from FrankenPHPApp and FrankenPHPModule configurations
+	// f.Workers may have been set by JSON config, so keep them separate
+	for _, w := range append(f.Workers, moduleWorkerConfigs...) {
 		opts = append(opts, frankenphp.WithWorkers(w.Name, repl.ReplaceKnown(w.FileName, ""), w.Num, w.Env, w.Watch))
 	}
 
@@ -130,12 +139,93 @@ func (f *FrankenPHPApp) Stop() error {
 		frankenphp.DrainWorkers()
 	}
 
-	// reset configuration so it doesn't bleed into later tests
+	// reset the configuration so it doesn't bleed into later tests
 	f.Workers = nil
 	f.NumThreads = 0
 	f.MaxWaitTime = 0
+	moduleWorkerConfigs = nil
 
 	return nil
+}
+
+func parseWorkerConfig(d *caddyfile.Dispenser) (workerConfig, error) {
+	wc := workerConfig{}
+	if d.NextArg() {
+		wc.FileName = d.Val()
+	}
+
+	if d.NextArg() {
+		if d.Val() == "watch" {
+			wc.Watch = append(wc.Watch, defaultWatchPattern)
+		} else {
+			v, err := strconv.ParseUint(d.Val(), 10, 32)
+			if err != nil {
+				return wc, err
+			}
+
+			wc.Num = int(v)
+		}
+	}
+
+	if d.NextArg() {
+		return wc, errors.New(`FrankenPHP: too many "worker" arguments: ` + d.Val())
+	}
+
+	for d.NextBlock(1) {
+		v := d.Val()
+		switch v {
+		case "name":
+			if !d.NextArg() {
+				return wc, d.ArgErr()
+			}
+			wc.Name = d.Val()
+		case "file":
+			if !d.NextArg() {
+				return wc, d.ArgErr()
+			}
+			wc.FileName = d.Val()
+		case "num":
+			if !d.NextArg() {
+				return wc, d.ArgErr()
+			}
+
+			v, err := strconv.ParseUint(d.Val(), 10, 32)
+			if err != nil {
+				return wc, err
+			}
+
+			wc.Num = int(v)
+		case "env":
+			args := d.RemainingArgs()
+			if len(args) != 2 {
+				return wc, d.ArgErr()
+			}
+			if wc.Env == nil {
+				wc.Env = make(map[string]string)
+			}
+			wc.Env[args[0]] = args[1]
+		case "watch":
+			if !d.NextArg() {
+				// the default if the watch directory is left empty:
+				wc.Watch = append(wc.Watch, defaultWatchPattern)
+			} else {
+				wc.Watch = append(wc.Watch, d.Val())
+			}
+		default:
+			allowedDirectives := "name, file, num, env, watch"
+			return wc, wrongSubDirectiveError("worker", allowedDirectives, v)
+		}
+	}
+
+	if wc.FileName == "" {
+		return wc, errors.New(`the "file" argument must be specified`)
+	}
+
+	if frankenphp.EmbeddedAppPath != "" && filepath.IsLocal(wc.FileName) {
+		wc.FileName = filepath.Join(frankenphp.EmbeddedAppPath, wc.FileName)
+	}
+
+	return wc, nil
 }
 
 // UnmarshalCaddyfile implements caddyfile.Unmarshaler.
@@ -149,12 +239,12 @@ func (f *FrankenPHPApp) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 					return d.ArgErr()
 				}
 
-				v, err := strconv.Atoi(d.Val())
+				v, err := strconv.ParseUint(d.Val(), 10, 32)
 				if err != nil {
 					return err
 				}
 
-				f.NumThreads = v
+				f.NumThreads = int(v)
 			case "max_threads":
 				if !d.NextArg() {
 					return d.ArgErr()
@@ -219,80 +309,29 @@ func (f *FrankenPHPApp) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 				}
 
 			case "worker":
-				wc := workerConfig{}
-				if d.NextArg() {
-					wc.FileName = d.Val()
+				wc, err := parseWorkerConfig(d)
+				if err != nil {
+					return err
 				}
-
-				if d.NextArg() {
-					if d.Val() == "watch" {
-						wc.Watch = append(wc.Watch, "./**/*.{php,yaml,yml,twig,env}")
-					} else {
-						v, err := strconv.Atoi(d.Val())
-						if err != nil {
-							return err
-						}
-
-						wc.Num = v
-					}
-				}
-
-				if d.NextArg() {
-					return errors.New("FrankenPHP: too many 'worker' arguments: " + d.Val())
-				}
-
-				for d.NextBlock(1) {
-					v := d.Val()
-					switch v {
-					case "name":
-						if !d.NextArg() {
-							return d.ArgErr()
-						}
-						wc.Name = d.Val()
-					case "file":
-						if !d.NextArg() {
-							return d.ArgErr()
-						}
-						wc.FileName = d.Val()
-					case "num":
-						if !d.NextArg() {
-							return d.ArgErr()
-						}
-
-						v, err := strconv.Atoi(d.Val())
-						if err != nil {
-							return err
-						}
-
-						wc.Num = v
-					case "env":
-						args := d.RemainingArgs()
-						if len(args) != 2 {
-							return d.ArgErr()
-						}
-						if wc.Env == nil {
-							wc.Env = make(map[string]string)
-						}
-						wc.Env[args[0]] = args[1]
-					case "watch":
-						if !d.NextArg() {
-							// the default if the watch directory is left empty:
-							wc.Watch = append(wc.Watch, "./**/*.{php,yaml,yml,twig,env}")
-						} else {
-							wc.Watch = append(wc.Watch, d.Val())
-						}
-					default:
-						allowedDirectives := "name, file, num, env, watch"
-						return wrongSubDirectiveError("worker", allowedDirectives, v)
-					}
-				}
-
-				if wc.FileName == "" {
-					return errors.New(`the "file" argument must be specified`)
-				}
-
 				if frankenphp.EmbeddedAppPath != "" && filepath.IsLocal(wc.FileName) {
 					wc.FileName = filepath.Join(frankenphp.EmbeddedAppPath, wc.FileName)
+				}
+				if wc.Name == "" {
+					// let worker initialization validate if the FileName is valid or not
+					name, _ := fastabs.FastAbs(wc.FileName)
+					if name == "" {
+						name = wc.FileName
+					}
+					wc.Name = name
+				}
+				if strings.HasPrefix(wc.Name, "m#") {
+					return fmt.Errorf(`global worker names must not start with "m#": %q`, wc.Name)
+				}
+				// check for duplicate workers
+				for _, existingWorker := range f.Workers {
+					if existingWorker.FileName == wc.FileName {
+						return fmt.Errorf("global workers must not have duplicate filenames: %q", wc.FileName)
+					}
 				}
 
 				f.Workers = append(f.Workers, wc)
@@ -332,6 +371,8 @@ type FrankenPHPModule struct {
 	ResolveRootSymlink *bool `json:"resolve_root_symlink,omitempty"`
 	// Env sets an extra environment variable to the given value. Can be specified more than once for multiple environment variables.
 	Env map[string]string `json:"env,omitempty"`
+	// Workers configures the worker scripts to start.
+	Workers []workerConfig `json:"workers,omitempty"`
 
 	resolvedDocumentRoot        string
 	preparedEnv                 frankenphp.PreparedEnv
@@ -413,15 +454,21 @@ func needReplacement(s string) bool {
 
 // ServeHTTP implements caddyhttp.MiddlewareHandler.
 // TODO: Expose TLS versions as env vars, as Apache's mod_ssl: https://github.com/caddyserver/caddy/blob/master/modules/caddyhttp/reverseproxy/fastcgi/fastcgi.go#L298
-func (f FrankenPHPModule) ServeHTTP(w http.ResponseWriter, r *http.Request, _ caddyhttp.Handler) error {
+func (f *FrankenPHPModule) ServeHTTP(w http.ResponseWriter, r *http.Request, _ caddyhttp.Handler) error {
 	origReq := r.Context().Value(caddyhttp.OriginalRequestCtxKey).(http.Request)
 	repl := r.Context().Value(caddy.ReplacerCtxKey).(*caddy.Replacer)
 
 	var documentRootOption frankenphp.RequestOption
+	var documentRoot string
 	if f.resolvedDocumentRoot == "" {
-		documentRootOption = frankenphp.WithRequestDocumentRoot(repl.ReplaceKnown(f.Root, ""), *f.ResolveRootSymlink)
+		documentRoot = repl.ReplaceKnown(f.Root, "")
+		if documentRoot == "" && frankenphp.EmbeddedAppPath != "" {
+			documentRoot = frankenphp.EmbeddedAppPath
+		}
+		documentRootOption = frankenphp.WithRequestDocumentRoot(documentRoot, *f.ResolveRootSymlink)
 	} else {
-		documentRootOption = frankenphp.WithRequestResolvedDocumentRoot(f.resolvedDocumentRoot)
+		documentRoot = f.resolvedDocumentRoot
+		documentRootOption = frankenphp.WithRequestResolvedDocumentRoot(documentRoot)
 	}
 
 	env := f.preparedEnv
@@ -432,17 +479,23 @@ func (f FrankenPHPModule) ServeHTTP(w http.ResponseWriter, r *http.Request, _ ca
 		}
 	}
 
+	fullScriptPath, _ := fastabs.FastAbs(documentRoot + "/" + r.URL.Path)
+
+	workerName := ""
+	for _, w := range f.Workers {
+		if p, _ := fastabs.FastAbs(w.FileName); p == fullScriptPath {
+			workerName = w.Name
+		}
+	}
+
 	fr, err := frankenphp.NewRequestWithContext(
 		r,
 		documentRootOption,
 		frankenphp.WithRequestSplitPath(f.SplitPath),
 		frankenphp.WithRequestPreparedEnv(env),
 		frankenphp.WithOriginalRequest(&origReq),
+		frankenphp.WithWorkerName(workerName),
 	)
-
-	if err != nil {
-		return caddyhttp.Error(http.StatusInternalServerError, err)
-	}
 
 	if err = frankenphp.ServeHTTP(w, fr); err != nil {
 		return caddyhttp.Error(http.StatusInternalServerError, err)
@@ -451,9 +504,28 @@ func (f FrankenPHPModule) ServeHTTP(w http.ResponseWriter, r *http.Request, _ ca
 	return nil
 }
 
+func generateUniqueModuleWorkerName(filepath string) string {
+	var i uint
+	name := "m#" + filepath
+
+outer:
+	for {
+		for _, wc := range moduleWorkerConfigs {
+			if wc.Name == name {
+				name = fmt.Sprintf("m#%s_%d", filepath, i)
+				i++
+
+				continue outer
+			}
+		}
+
+		return name
+	}
+}
+
 // UnmarshalCaddyfile implements caddyfile.Unmarshaler.
 func (f *FrankenPHPModule) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
-	// when adding a new directive, also update the allowedDirectives error message
+	// First pass: Parse all directives except "worker"
 	for d.Next() {
 		for d.NextBlock(0) {
 			switch d.Val() {
@@ -485,7 +557,6 @@ func (f *FrankenPHPModule) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 				if !d.NextArg() {
 					continue
 				}
-
 				v, err := strconv.ParseBool(d.Val())
 				if err != nil {
 					return err
@@ -493,11 +564,72 @@ func (f *FrankenPHPModule) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 				if d.NextArg() {
 					return d.ArgErr()
 				}
-
 				f.ResolveRootSymlink = &v
+
+			case "worker":
+				for d.NextBlock(1) {
+				}
+				for d.NextArg() {
+				}
+				// Skip "worker" blocks in the first pass
+				continue
+
 			default:
-				allowedDirectives := "root, split, env, resolve_root_symlink"
+				allowedDirectives := "root, split, env, resolve_root_symlink, worker"
 				return wrongSubDirectiveError("php or php_server", allowedDirectives, d.Val())
+			}
+		}
+	}
+
+	// Second pass: Parse only "worker" blocks
+	d.Reset()
+	for d.Next() {
+		for d.NextBlock(0) {
+			if d.Val() == "worker" {
+				wc, err := parseWorkerConfig(d)
+				if err != nil {
+					return err
+				}
+
+				// Inherit environment variables from the parent php_server directive
+				if !filepath.IsAbs(wc.FileName) && f.Root != "" {
+					wc.FileName = filepath.Join(f.Root, wc.FileName)
+				}
+
+				if f.Env != nil {
+					if wc.Env == nil {
+						wc.Env = make(map[string]string)
+					}
+					for k, v := range f.Env {
+						// Only set if not already defined in the worker
+						if _, exists := wc.Env[k]; !exists {
+							wc.Env[k] = v
+						}
+					}
+				}
+
+				if wc.Name == "" {
+					wc.Name = generateUniqueModuleWorkerName(wc.FileName)
+				}
+				if !strings.HasPrefix(wc.Name, "m#") {
+					wc.Name = "m#" + wc.Name
+				}
+
+				// Check if a worker with this filename already exists in this module
+				for _, existingWorker := range f.Workers {
+					if existingWorker.FileName == wc.FileName {
+						return fmt.Errorf(`workers in a single "php_server" block must not have duplicate filenames: %q`, wc.FileName)
+					}
+				}
+				// Check if a worker with this name and a different environment or filename already exists
+				for _, existingWorker := range moduleWorkerConfigs {
+					if existingWorker.Name == wc.Name {
+						return fmt.Errorf("workers must not have duplicate names: %q", wc.Name)
+					}
+				}
+
+				f.Workers = append(f.Workers, wc)
+				moduleWorkerConfigs = append(moduleWorkerConfigs, wc)
 			}
 		}
 	}
@@ -507,7 +639,7 @@ func (f *FrankenPHPModule) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 
 // parseCaddyfile unmarshals tokens from h into a new Middleware.
 func parseCaddyfile(h httpcaddyfile.Helper) (caddyhttp.MiddlewareHandler, error) {
-	m := FrankenPHPModule{}
+	m := &FrankenPHPModule{}
 	err := m.UnmarshalCaddyfile(h.Dispenser)
 
 	return m, err
@@ -744,6 +876,7 @@ func parsePhpServer(h httpcaddyfile.Helper) ([]httpcaddyfile.ConfigValue, error)
 	// using the php directive syntax
 	dispenser.Next() // consume the directive name
 	err = phpsrv.UnmarshalCaddyfile(dispenser)
+
 	if err != nil {
 		return nil, err
 	}
