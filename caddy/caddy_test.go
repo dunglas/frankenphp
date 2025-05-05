@@ -948,8 +948,6 @@ func TestMaxWaitTime(t *testing.T) {
 		}
 		`, "caddyfile")
 
-	ctx := caddy.ActiveContext()
-
 	// send 10 requests simultaneously, at least one request should be stalled longer than 1ns
 	// since we only have 1 thread, this will cause a 504 Gateway Timeout
 	wg := sync.WaitGroup{}
@@ -967,19 +965,65 @@ func TestMaxWaitTime(t *testing.T) {
 	wg.Wait()
 
 	require.True(t, success.Load(), "At least one request should have failed with a 504 Gateway Timeout status")
-	// Check metrics
+}
+
+func TestMaxWaitTimeWorker(t *testing.T) {
+	tester := caddytest.NewTester(t)
+	tester.InitServer(`
+		{
+			skip_install_trust
+			admin localhost:2999
+		    metrics
+			http_port `+testPort+`
+
+			frankenphp {
+				max_wait_time 1ns
+				worker {
+					name service
+					num 1
+					file ../testdata/sleep.php
+				}
+			}
+		}
+
+		localhost:`+testPort+` {
+			route {
+				root ../testdata
+				php
+			}
+		}
+		`, "caddyfile")
+
+	// send 10 requests simultaneously, at least one request should be stalled longer than 1ns
+	// since we only have 1 thread, this will cause a 504 Gateway Timeout
+	wg := sync.WaitGroup{}
+	success := atomic.Bool{}
+	wg.Add(10)
+	for i := 0; i < 10; i++ {
+		go func() {
+			statusCode := getStatusCode("http://localhost:"+testPort+"/sleep.php?sleep=100", t)
+			fmt.Printf("Status code: %d\n", statusCode)
+			if statusCode == http.StatusGatewayTimeout {
+				success.Store(true)
+			}
+			wg.Done()
+		}()
+	}
+	wg.Wait()
+
+	require.True(t, success.Load(), "At least one request should have failed with a 504 Gateway Timeout status")
 	expectedMetrics := `
-	# HELP frankenphp_queue_depth Number of regular queued requests
-	# TYPE frankenphp_queue_depth gauge
-	frankenphp_queue_depth{worker="service"} 0
+	# TYPE frankenphp_worker_queue_depth gauge
+	frankenphp_worker_queue_depth{worker="service"} 0
 	`
 
+	ctx := caddy.ActiveContext()
+	fmt.Printf("Metrics: %d\n", testutil.CollectAndCount(ctx.GetMetricsRegistry(), "frankenphp_worker_queue_depth"))
 	require.NoError(t,
 		testutil.GatherAndCompare(
 			ctx.GetMetricsRegistry(),
 			strings.NewReader(expectedMetrics),
-			"frankenphp_total_workers",
-			"frankenphp_ready_workers",
+			"frankenphp_worker_queue_depth",
 		))
 }
 
