@@ -948,6 +948,8 @@ func TestMaxWaitTime(t *testing.T) {
 		}
 		`, "caddyfile")
 
+	ctx := caddy.ActiveContext()
+
 	// send 10 requests simultaneously, at least one request should be stalled longer than 1ns
 	// since we only have 1 thread, this will cause a 504 Gateway Timeout
 	wg := sync.WaitGroup{}
@@ -965,6 +967,20 @@ func TestMaxWaitTime(t *testing.T) {
 	wg.Wait()
 
 	require.True(t, success.Load(), "At least one request should have failed with a 504 Gateway Timeout status")
+	// Check metrics
+	expectedMetrics := `
+	# HELP frankenphp_queue_depth Number of regular queued requests
+	# TYPE frankenphp_queue_depth gauge
+	frankenphp_queue_depth{worker="service"} 0
+	`
+
+	require.NoError(t,
+		testutil.GatherAndCompare(
+			ctx.GetMetricsRegistry(),
+			strings.NewReader(expectedMetrics),
+			"frankenphp_total_workers",
+			"frankenphp_ready_workers",
+		))
 }
 
 func getStatusCode(url string, t *testing.T) int {
