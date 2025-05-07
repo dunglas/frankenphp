@@ -123,11 +123,9 @@ ENV COMPOSER_ALLOW_SUPERUSER=1
 
 WORKDIR /go/src/app
 COPY go.mod go.sum ./
-RUN go mod graph | awk '{if ($1 !~ "@") print $2}' | xargs go get
 
 WORKDIR /go/src/app/caddy
 COPY caddy/go.mod caddy/go.sum ./
-RUN go mod graph | awk '{if ($1 !~ "@") print $2}' | xargs go get
 
 WORKDIR /go/src/app
 COPY --link *.* ./
