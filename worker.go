@@ -225,6 +225,7 @@ func (worker *worker) handleRequest(fc *frankenPHPContext) {
 		case scaleChan <- fc:
 			// the request has triggered scaling, continue to wait for a thread
 		case <-timeoutChan(maxWaitTime):
+			// metrics.DequeuedWorkerRequest(worker.name)
 			// the request has timed out stalling
 			fc.reject(504, "Gateway Timeout")
 			return

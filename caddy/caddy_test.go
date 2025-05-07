@@ -973,14 +973,15 @@ func TestMaxWaitTimeWorker(t *testing.T) {
 		{
 			skip_install_trust
 			admin localhost:2999
-		    metrics
 			http_port `+testPort+`
+			metrics
 
 			frankenphp {
+				num_threads 2
 				max_wait_time 1ns
 				worker {
-					name service
 					num 1
+					name service
 					file ../testdata/sleep.php
 				}
 			}
@@ -1001,8 +1002,7 @@ func TestMaxWaitTimeWorker(t *testing.T) {
 	wg.Add(10)
 	for i := 0; i < 10; i++ {
 		go func() {
-			statusCode := getStatusCode("http://localhost:"+testPort+"/sleep.php?sleep=100", t)
-			fmt.Printf("Status code: %d\n", statusCode)
+			statusCode := getStatusCode("http://localhost:"+testPort+"/sleep.php?sleep=10000&iteration=1", t)
 			if statusCode == http.StatusGatewayTimeout {
 				success.Store(true)
 			}
@@ -1010,15 +1010,23 @@ func TestMaxWaitTimeWorker(t *testing.T) {
 		}()
 	}
 	wg.Wait()
-
 	require.True(t, success.Load(), "At least one request should have failed with a 504 Gateway Timeout status")
+
+	// Fetch metrics
+	resp, err := http.Get("http://localhost:2999/metrics")
+	require.NoError(t, err, "failed to fetch metrics")
+	defer resp.Body.Close()
+
+	// Read and parse metrics
+	metrics := new(bytes.Buffer)
+	_, err = metrics.ReadFrom(resp.Body)
+
 	expectedMetrics := `
 	# TYPE frankenphp_worker_queue_depth gauge
-	frankenphp_worker_queue_depth{worker="service"} 0
+	frankenphp_worker_queue_depth{worker="service"} 9
 	`
 
 	ctx := caddy.ActiveContext()
-	fmt.Printf("Metrics: %d\n", testutil.CollectAndCount(ctx.GetMetricsRegistry(), "frankenphp_worker_queue_depth"))
 	require.NoError(t,
 		testutil.GatherAndCompare(
 			ctx.GetMetricsRegistry(),
