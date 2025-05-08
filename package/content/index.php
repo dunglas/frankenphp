@@ -90,26 +90,29 @@
     <div class="content">
         <div class="content-columns">
             <div class="content-column-left">
-                <h2>If you are a visitor:</h2>
+                <h2>If you are a member of the general public:</h2>
 
-                <p>This default page means the site you tried to access is set up, but no specific content has been deployed yet.</p>
+                <p>The fact that you are seeing this page indicates that the website you just visited is either experiencing problems, or is undergoing routine maintenance.</p>
 
-                <p>If you were expecting a different site, it's possible the owner hasn't uploaded any content, or they’re currently making updates.</p>
+                <p>
+                    If you would like to let the administrators of this website know that you've seen this page instead of the page you expected, you should send them e-mail.
+                    In general, mail sent to the name "webmaster" and directed to the website's domain should reach the appropriate person.
+                </p>
 
-                <p>If you wish to notify the site administrator, try contacting "webmaster" at the domain you visited. For example: webmaster@example.com.</p>
+                <p>For example, try contacting <a href="mailto:webmaster@<?php echo $_SERVER['SERVER_NAME']; ?>">webmaster@<?php echo $_SERVER['SERVER_NAME']; ?></a>.</p>
 
                 <p>Learn more about FrankenPHP at the <a href="https://frankenphp.dev/">official website</a>.</p>
                 <hr />
             </div>
 
             <div class="content-column-right">
-                <h2>If you are the administrator:</h2>
+                <h2>If you are the website administrator:</h2>
 
-                <p>Your server is running and serving requests using FrankenPHP, integrated as a module within Caddy.</p>
+                <p>Your server is running and serving requests using FrankenPHP, powered by Caddy</p>
 
-                <p>To replace this page, simply deploy your application files to the configured web root directory in your Caddy setup. If you’re using PHP, FrankenPHP will handle it natively.</p>
+                <p>To replace this page, deploy your application files to <code><?php echo getcwd(); ?></code>.</p>
 
-                <p>Configuration is handled in your <code>Caddyfile</code>. Make sure your <code>root</code> and <code>php_server</code> directives are properly set for your site.</p>
+                <p>Configuration is handled in your <code>Caddyfile</code>.
 
                 <div class="runtime-info">
                     <strong>Served by PHP SAPI: </strong> <?php echo php_sapi_name() ?><br />
@@ -119,6 +122,7 @@
                     <a href="https://frankenphp.dev/"><img src="assets/frankenphp.svg" height="50" width="166" alt="[ Powered by FrankenPHP ]" /></a>
                     <a href="https://caddyserver.com/"><img src="assets/caddy.png" height="50" width="166" alt="[ Powered by Caddy ]" /></a>
                 </div>
+                <hr />
             </div>
         </div>
     </div>
