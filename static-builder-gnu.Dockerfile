@@ -22,7 +22,7 @@ ARG MIMALLOC=''
 ARG NO_COMPRESS=''
 
 # go version
-ENV GO_VERSION=1.24
+ENV GO_VERSION=1.24.2
 ENV GOTOOLCHAIN=local
 
 # labels, same as static-builder.Dockerfile
