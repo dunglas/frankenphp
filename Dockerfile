@@ -57,6 +57,7 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 COPY --from=golang-base /usr/local/go /usr/local/go
 
 ENV PATH=/usr/local/go/bin:$PATH
+ENV GOTOOLCHAIN=local
 
 # This is required to link the FrankenPHP binary to the PHP binary
 RUN apt-get update && \

@@ -21,6 +21,8 @@ ARG DEBUG_SYMBOLS=''
 ARG MIMALLOC=''
 ARG NO_COMPRESS=''
 
+ENV GOTOOLCHAIN=local
+
 SHELL ["/bin/ash", "-eo", "pipefail", "-c"]
 
 LABEL org.opencontainers.image.title=FrankenPHP

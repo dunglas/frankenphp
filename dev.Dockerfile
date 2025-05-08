@@ -3,6 +3,7 @@
 #checkov:skip=CKV_DOCKER_3
 FROM golang:1.24
 
+ENV GOTOOLCHAIN=lcoal
 ENV CFLAGS="-ggdb3"
 ENV PHPIZE_DEPS="\
 	autoconf \
