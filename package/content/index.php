@@ -1,23 +1,26 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
-
-<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<!DOCTYPE html>
+<html lang="en">
 <head>
-    <title>Test Page for FrankenPHP on AlmaLinux</title>
-    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-    <style type="text/css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Page for FrankenPHP</title>
+    <style>
         body {
             background-color: #FAF5F5;
             color: #000;
             font-size: 0.9em;
-            font-family: sans-serif,helvetica;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
             margin: 0;
             padding: 0;
+            line-height: 1.6;
         }
-        :link, :visited {
+        a {
             color: #0B2335;
+            text-decoration: none;
         }
         a:hover {
             color: #0069DA;
+            text-decoration: underline;
         }
         h1 {
             text-align: center;
@@ -36,60 +39,79 @@
             font-size: 1.1em;
             font-weight: bold;
         }
-        hr {
-            display: none;
-        }
         .content {
             padding: 1em 5em;
+            max-width: 1200px;
+            margin: 0 auto;
         }
         .content-columns {
-            position: relative;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 2em;
             padding-top: 1em;
         }
         .content-column-left, .content-column-right {
-            width: 47%;
-            float: left;
-            padding-bottom: 2em;
-        }
-        .content-column-left {
-            padding-right: 3%;
-        }
-        .content-column-right {
-            padding-left: 3%;
+            flex: 1;
+            min-width: 300px;
         }
         .logos {
             text-align: center;
             margin-top: 2em;
+            display: flex;
+            justify-content: center;
+            gap: 1em;
+            flex-wrap: wrap;
         }
         img {
             border: 2px solid #fff;
             padding: 2px;
             margin: 2px;
+            max-width: 100%;
+            height: auto;
         }
         a:hover img {
             border: 2px solid #f50;
         }
         .footer {
-            clear: both;
             text-align: center;
-            font-size: xx-small;
+            font-size: 0.8em;
+            padding: 1em;
+            margin-top: 2em;
+            border-top: 1px solid #eee;
         }
         .runtime-info {
             background: #efefef;
-            padding: 0.5em;
+            padding: 0.8em;
             margin-top: 1em;
             font-size: 0.85em;
             border-left: 3px solid #0B2335;
+            border-radius: 0 4px 4px 0;
+        }
+
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .content {
+                padding: 1em 2em;
+            }
+            .content-columns {
+                flex-direction: column;
+            }
+            h1 {
+                padding: 0.6em 1em 0.4em;
+                font-size: 1.5em;
+            }
         }
     </style>
 </head>
 
 <body>
-    <h1>FrankenPHP <strong>Test Page</strong></h1>
+    <header>
+        <h1>FrankenPHP <strong>Test Page</strong></h1>
+    </header>
 
-    <div class="content">
+    <main class="content">
         <div class="content-columns">
-            <div class="content-column-left">
+            <section class="content-column-left">
                 <h2>If you are a member of the general public:</h2>
 
                 <p>The fact that you are seeing this page indicates that the website you just visited is either experiencing problems, or is undergoing routine maintenance.</p>
@@ -99,35 +121,34 @@
                     In general, mail sent to the name "webmaster" and directed to the website's domain should reach the appropriate person.
                 </p>
 
-                <p>For example, try contacting <a href="mailto:webmaster@<?php echo $_SERVER['SERVER_NAME']; ?>">webmaster@<?php echo $_SERVER['SERVER_NAME']; ?></a>.</p>
+                <p>For example, try contacting <a href="mailto:webmaster@<?php echo $_SERVER['SERVER_NAME'] ?? 'example.com'; ?>">webmaster@<?php echo $_SERVER['SERVER_NAME'] ?? 'example.com'; ?></a>.</p>
 
                 <p>Learn more about FrankenPHP at the <a href="https://frankenphp.dev/">official website</a>.</p>
-                <hr />
-            </div>
+            </section>
 
-            <div class="content-column-right">
+            <section class="content-column-right">
                 <h2>If you are the website administrator:</h2>
 
                 <p>Your server is running and serving requests using FrankenPHP, powered by Caddy</p>
 
                 <p>To replace this page, deploy your application files to <code><?php echo getcwd(); ?></code>.</p>
 
-                <p>Configuration is handled in your <code>Caddyfile</code>.
+                <p>Configuration is handled in your <code>Caddyfile</code>.</p>
 
                 <div class="runtime-info">
                     <strong>Served by PHP SAPI: </strong> <?php echo php_sapi_name() ?><br />
                 </div>
 
                 <div class="logos">
-                    <a href="https://frankenphp.dev/"><img src="assets/frankenphp.svg" height="50" width="166" alt="[ Powered by FrankenPHP ]" /></a>
-                    <a href="https://caddyserver.com/"><img src="assets/caddy.png" height="50" width="166" alt="[ Powered by Caddy ]" /></a>
+                    <a href="https://frankenphp.dev/"><img src="assets/frankenphp.svg" height="50" width="166" alt="Powered by FrankenPHP" /></a>
+                    <a href="https://caddyserver.com/"><img src="assets/caddy.png" height="50" width="166" alt="Powered by Caddy" /></a>
                 </div>
-                <hr />
-            </div>
+            </section>
         </div>
-    </div>
-    <div class="footer">
-        <a href="https://frankenphp.dev">FrankenPHP</a> is an open-source web server module for PHP built on top of <a href="https://caddyserver.com">Caddy</a>.
-    </div>
+    </main>
+
+    <footer class="footer">
+        <p><a href="https://frankenphp.dev">FrankenPHP</a> is an open-source web server for PHP built on top of <a href="https://caddyserver.com">Caddy</a>.</p>
+    </footer>
 </body>
 </html>
