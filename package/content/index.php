@@ -1,8 +1,3 @@
-<?php
-$requestCount = $i ?? 0;
-$requestTime = $duration ?? 0;
-?>
-
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
 
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
@@ -93,11 +88,6 @@ $requestTime = $duration ?? 0;
     <h1>FrankenPHP <strong>Test Page</strong></h1>
 
     <div class="content">
-        <div class="content-middle">
-            <p>This page confirms that the HTTP server powered by FrankenPHP (via the Caddy web server) is operating correctly on this system.</p>
-        </div>
-        <hr />
-
         <div class="content-columns">
             <div class="content-column-left">
                 <h2>If you are a visitor:</h2>
@@ -122,12 +112,11 @@ $requestTime = $duration ?? 0;
                 <p>Configuration is handled in your <code>Caddyfile</code>. Make sure your <code>root</code> and <code>php_server</code> directives are properly set for your site.</p>
 
                 <div class="runtime-info">
-                    <strong>Requests handled:</strong> <?php echo htmlspecialchars($requestCount); ?><br />
-                    <strong>Last request time:</strong> <?php echo $requestTime; ?> microseconds
+                    <strong>Served by PHP SAPI: </strong> <?php echo php_sapi_name() ?><br />
                 </div>
 
                 <div class="logos">
-                    <a href="https://frankenphp.dev/"><img src="assets/frankenphp.png" height="50" width="166" alt="[ Powered by FrankenPHP ]" /></a>
+                    <a href="https://frankenphp.dev/"><img src="assets/frankenphp.svg" height="50" width="166" alt="[ Powered by FrankenPHP ]" /></a>
                     <a href="https://caddyserver.com/"><img src="assets/caddy.png" height="50" width="166" alt="[ Powered by Caddy ]" /></a>
                 </div>
             </div>
