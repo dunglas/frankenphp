@@ -24,3 +24,6 @@ if [ -x /usr/sbin/semanage ]; then
 	# admin endpoint
 	semanage port --add --type http_port_t --proto tcp 2019 2>/dev/null || :
 fi
+if command -v setcap >/dev/null 2>&1; then
+	setcap cap_net_bind_service=+ep /usr/bin/frankenphp || :
+fi

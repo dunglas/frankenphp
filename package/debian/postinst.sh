@@ -58,4 +58,10 @@ if [ "$1" = "configure" ] || [ "$1" = "abort-upgrade" ] || [ "$1" = "abort-decon
 	fi
 fi
 
-HOME=~frankenphp frankenphp trust
+if command -v setcap >/dev/null 2>&1; then
+	setcap cap_net_bind_service=+ep /usr/bin/frankenphp || true
+fi
+
+if [ -x /usr/bin/frankenphp ]; then
+	HOME=/var/lib/frankenphp /usr/bin/frankenphp trust || true
+fi
