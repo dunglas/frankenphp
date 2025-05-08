@@ -136,7 +136,7 @@
                 <p>Configuration is handled in your <code>Caddyfile</code>.</p>
 
                 <div class="runtime-info">
-                    <strong>Served by PHP SAPI: </strong> <?php echo php_sapi_name() ?><br />
+                    <strong>Served by PHP SAPI: </strong> <?php echo php_sapi_name(); ?><br />
                 </div>
 
                 <div class="logos">
