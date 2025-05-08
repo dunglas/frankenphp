@@ -46,10 +46,9 @@ if [ "${SPC_LIBC}" = "musl" ] && [[ "${SPC_OPT_BUILD_ARGS}" != *"--disable-opcac
 fi
 # init spc download additional args
 if [ -z "${SPC_OPT_DOWNLOAD_ARGS}" ]; then
+	SPC_OPT_DOWNLOAD_ARGS="--ignore-cache-sources=php-src --retry 5"
 	if [ "${SPC_LIBC}" = "musl" ]; then
-		SPC_OPT_DOWNLOAD_ARGS="--prefer-pre-built --ignore-cache-sources=php-src"
-	else
-		SPC_OPT_DOWNLOAD_ARGS="--ignore-cache-sources=php-src"
+		SPC_OPT_DOWNLOAD_ARGS="${SPC_OPT_DOWNLOAD_ARGS} --prefer-pre-built"
 	fi
 fi
 # if we need debug symbols, disable strip

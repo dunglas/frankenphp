@@ -54,7 +54,7 @@ func WithMetrics(m Metrics) Option {
 	}
 }
 
-// WithWorkers configures the PHP workers to start.
+// WithWorkers configures the PHP workers to start
 func WithWorkers(name string, fileName string, num int, env map[string]string, watch []string) Option {
 	return func(o *opt) error {
 		o.workers = append(o.workers, workerOpt{name, fileName, num, PrepareEnv(env), watch})

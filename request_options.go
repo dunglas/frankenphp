@@ -123,3 +123,12 @@ func WithRequestLogger(logger *slog.Logger) RequestOption {
 		return nil
 	}
 }
+
+// WithWorkerName sets the worker that should handle the request
+func WithWorkerName(name string) RequestOption {
+	return func(o *frankenPHPContext) error {
+		o.workerName = name
+
+		return nil
+	}
+}

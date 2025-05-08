@@ -43,7 +43,7 @@ You can also run command-line scripts with:
 frankenphp php-cli /path/to/your/script.php
 ```
 
-> ![WARNING]
+> [!WARNING]
 >
 > In production, prefer using [the Docker images](#docker), [the Brew package](#homebrew)
 > or [compiling FrankenPHP from sources](https://frankenphp.dev/docs/compile/).

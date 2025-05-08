@@ -88,12 +88,12 @@ func cmdPHPServer(fs caddycmd.Flags) (int, error) {
 				parts[0] = filepath.Join(frankenphp.EmbeddedAppPath, parts[0])
 			}
 
-			var num int
+			var num uint64
 			if len(parts) > 1 {
-				num, _ = strconv.Atoi(parts[1])
+				num, _ = strconv.ParseUint(parts[1], 10, 32)
 			}
 
-			workersOption = append(workersOption, workerConfig{FileName: parts[0], Num: num})
+			workersOption = append(workersOption, workerConfig{FileName: parts[0], Num: int(num)})
 		}
 		workersOption[0].Watch = watch
 	}

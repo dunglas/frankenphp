@@ -177,6 +177,7 @@ jobs:
           "${BINARY}" list-modules | grep http.handlers.mercure
           "${BINARY}" list-modules | grep http.handlers.mercure
           "${BINARY}" list-modules | grep http.handlers.vulcain
+          "${BINARY}" php-cli -r "echo 'Sanity check passed';"
         env:
           BINARY: ./frankenphp-linux-${{ matrix.platform == 'linux/amd64' && 'x86_64' || 'aarch64' }}${{ matrix.debug && '-debug' || '' }}${{ matrix.mimalloc && '-mimalloc' || '' }}
 
@@ -284,6 +285,7 @@ jobs:
           "${BINARY}" list-modules | grep http.handlers.mercure
           "${BINARY}" list-modules | grep http.handlers.mercure
           "${BINARY}" list-modules | grep http.handlers.vulcain
+          "${BINARY}" php-cli -r "echo 'Sanity check passed';"
         env:
           BINARY: ./gh-output/frankenphp-linux-${{ matrix.platform == 'linux/amd64' && 'x86_64' || 'aarch64' }}-gnu
 
@@ -327,8 +329,8 @@ jobs:
         working-directory: /tmp/metadata-gnu
         run: |
           # shellcheck disable=SC2046,SC2086
-          docker buildx imagetools create $(jq -cr '.target."static-builder-gnu".tags | map("-t " + . + "-gnu") | join(" ")' <<< "${GNU_METADATA}") \
-            $(printf "${IMAGE_NAME}-gnu@sha256:%s " *)
+          docker buildx imagetools create $(jq -cr '.target."static-builder-gnu".tags | map("-t " + .) | join(" ")' <<< "${GNU_METADATA}") \
+            $(printf "${IMAGE_NAME}@sha256:%s " *)
         env:
           GNU_METADATA: ${{ needs.prepare.outputs.gnu_metadata }}
       - name: Inspect image
@@ -400,5 +402,6 @@ jobs:
           "${BINARY}" list-modules | grep http.handlers.mercure
           "${BINARY}" list-modules | grep http.handlers.mercure
           "${BINARY}" list-modules | grep http.handlers.vulcain
+          "${BINARY}" php-cli -r "echo 'Sanity check passed';"
         env:
           BINARY: dist/frankenphp-mac-${{ matrix.platform }}

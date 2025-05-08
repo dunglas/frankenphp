@@ -4,6 +4,7 @@ package frankenphp
 import "C"
 import (
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -35,11 +36,11 @@ func initWorkers(opt []workerOpt) error {
 
 	for _, o := range opt {
 		worker, err := newWorker(o)
-		worker.threads = make([]*phpThread, 0, o.num)
-		workersReady.Add(o.num)
 		if err != nil {
 			return err
 		}
+
+		workersReady.Add(o.num)
 		for i := 0; i < worker.num; i++ {
 			thread := getInactivePHPThread()
 			convertToWorkerThread(thread, worker)
@@ -64,14 +65,36 @@ func initWorkers(opt []workerOpt) error {
 	return nil
 }
 
+func getWorkerKey(name string, filename string) string {
+	key := filename
+	if strings.HasPrefix(name, "m#") {
+		key = name
+	}
+	return key
+}
+
 func newWorker(o workerOpt) (*worker, error) {
 	absFileName, err := fastabs.FastAbs(o.fileName)
 	if err != nil {
 		return nil, fmt.Errorf("worker filename is invalid %q: %w", o.fileName, err)
 	}
 
+	key := getWorkerKey(o.name, absFileName)
+	if _, ok := workers[key]; ok {
+		return nil, fmt.Errorf("two workers cannot use the same key %q", key)
+	}
+	for _, w := range workers {
+		if w.name == o.name {
+			return w, fmt.Errorf("two workers cannot have the same name: %q", o.name)
+		}
+	}
+
 	if o.env == nil {
 		o.env = make(PreparedEnv, 1)
+	}
+
+	if o.name == "" {
+		o.name = absFileName
 	}
 
 	o.env["FRANKENPHP_WORKER\x00"] = "1"
@@ -81,8 +104,9 @@ func newWorker(o workerOpt) (*worker, error) {
 		num:         o.num,
 		env:         o.env,
 		requestChan: make(chan *frankenPHPContext),
+		threads:     make([]*phpThread, 0, o.num),
 	}
-	workers[absFileName] = w
+	workers[key] = w
 
 	return w, nil
 }
