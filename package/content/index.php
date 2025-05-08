@@ -2,25 +2,21 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Test Page for FrankenPHP</title>
     <style>
         body {
             background-color: #FAF5F5;
             color: #000;
             font-size: 0.9em;
-            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            font-family: sans-serif,helvetica;
             margin: 0;
             padding: 0;
-            line-height: 1.6;
         }
-        a {
+        :link, :visited {
             color: #0B2335;
-            text-decoration: none;
         }
         a:hover {
             color: #0069DA;
-            text-decoration: underline;
         }
         h1 {
             text-align: center;
@@ -39,67 +35,50 @@
             font-size: 1.1em;
             font-weight: bold;
         }
+        hr {
+            display: none;
+        }
         .content {
             padding: 1em 5em;
-            max-width: 1200px;
-            margin: 0 auto;
         }
         .content-columns {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 2em;
+            position: relative;
             padding-top: 1em;
         }
         .content-column-left, .content-column-right {
-            flex: 1;
-            min-width: 300px;
+            width: 47%;
+            float: left;
+            padding-bottom: 2em;
+        }
+        .content-column-left {
+            padding-right: 3%;
+        }
+        .content-column-right {
+            padding-left: 3%;
         }
         .logos {
             text-align: center;
             margin-top: 2em;
-            display: flex;
-            justify-content: center;
-            gap: 1em;
-            flex-wrap: wrap;
         }
         img {
             border: 2px solid #fff;
             padding: 2px;
             margin: 2px;
-            max-width: 100%;
-            height: auto;
         }
         a:hover img {
             border: 2px solid #f50;
         }
         .footer {
+            clear: both;
             text-align: center;
-            font-size: 0.8em;
-            padding: 1em;
-            margin-top: 2em;
-            border-top: 1px solid #eee;
+            font-size: xx-small;
         }
         .runtime-info {
             background: #efefef;
-            padding: 0.8em;
+            padding: 0.5em;
             margin-top: 1em;
             font-size: 0.85em;
             border-left: 3px solid #0B2335;
-            border-radius: 0 4px 4px 0;
-        }
-
-        /* Responsive design */
-        @media (max-width: 768px) {
-            .content {
-                padding: 1em 2em;
-            }
-            .content-columns {
-                flex-direction: column;
-            }
-            h1 {
-                padding: 0.6em 1em 0.4em;
-                font-size: 1.5em;
-            }
         }
     </style>
 </head>
