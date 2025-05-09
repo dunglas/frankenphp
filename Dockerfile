@@ -97,6 +97,7 @@ RUN go mod download
 
 WORKDIR /go/src/app/caddy
 COPY --link caddy/go.mod caddy/go.sum ./
+RUN go mod download
 
 WORKDIR /go/src/app
 COPY --link . ./
