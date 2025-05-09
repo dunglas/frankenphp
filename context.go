@@ -152,9 +152,9 @@ func (fc *frankenPHPContext) reject(statusCode int, message string) {
 	if rw != nil {
 		rw.WriteHeader(statusCode)
 		_, _ = rw.Write([]byte(message))
-		
+
 		if f, ok := rw.(http.Flusher); ok {
-    		f.Flush()
+			f.Flush()
 		}
 	}
 
