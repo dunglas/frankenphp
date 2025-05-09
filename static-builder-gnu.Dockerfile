@@ -123,6 +123,7 @@ ENV COMPOSER_ALLOW_SUPERUSER=1
 
 WORKDIR /go/src/app
 COPY go.mod go.sum ./
+RUN go mod download
 
 WORKDIR /go/src/app/caddy
 COPY caddy/go.mod caddy/go.sum ./
