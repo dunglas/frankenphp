@@ -6,7 +6,7 @@
 	frankenphp
 }
 
-http://, https:// {
+http:// {
 	root /usr/share/frankenphp/
 	encode zstd br gzip
 
