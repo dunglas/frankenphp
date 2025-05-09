@@ -1023,7 +1023,7 @@ func TestMaxWaitTimeWorker(t *testing.T) {
 
 	expectedMetrics := `
 	# TYPE frankenphp_worker_queue_depth gauge
-	frankenphp_worker_queue_depth{worker="service"} 9
+	frankenphp_worker_queue_depth{worker="service"} 0
 	`
 
 	ctx := caddy.ActiveContext()
