@@ -11,9 +11,13 @@ docker build -t frankenphp-dev -f dev.Dockerfile .
 docker run --cap-add=SYS_PTRACE --security-opt seccomp=unconfined -p 8080:8080 -p 443:443 -p 443:443/udp -v $PWD:/go/src/app -it frankenphp-dev
 ```
 
-L'image contient les outils de développement habituels (Go, GDB, Valgrind, Neovim...).
+L'image contient les outils de développement habituels (Go, GDB, Valgrind, Neovim...) et utilise les emplacements de configuration PHP suivants
 
-Si la version de Docker est inférieure à 23.0, la construction échoue à cause d'un [problème de pattern](https://github.com/moby/moby/pull/42676) dans `.dockerignore`. Ajoutez les répertoires à `.dockerignore`.
+- php.ini: `/etc/frankenphp/php.ini` Un fichier php.ini avec des préréglages de développement est fourni par défaut.
+- fichiers de configuration supplémentaires: `/etc/frankenphp/php.d/*.ini`
+- extensions php: `/usr/lib/frankenphp/modules/`
+
+Si votre version de Docker est inférieure à 23.0, la construction échouera à cause d'un [problème de pattern](https://github.com/moby/moby/pull/42676) dans `.dockerignore`. Ajoutez les répertoires à `.dockerignore`.
 
 ```patch
  !testdata/*.php

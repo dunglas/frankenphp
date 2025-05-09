@@ -11,9 +11,13 @@ docker build -t frankenphp-dev -f dev.Dockerfile .
 docker run --cap-add=SYS_PTRACE --security-opt seccomp=unconfined -p 8080:8080 -p 443:443 -p 443:443/udp -v $PWD:/go/src/app -it frankenphp-dev
 ```
 
-İmaj genel geliştirme araçlarını (Go, GDB, Valgrind, Neovim...) içerir.
+İmaj genel geliştirme araçlarını (Go, GDB, Valgrind, Neovim...) içerir ve aşağıdaki php ayar konumlarını kullanır
 
-Docker sürümü 23.0'dan düşükse, derleme dockerignore [pattern issue](https://github.com/moby/moby/pull/42676) tarafından başarısız olur. Dizinleri `.dockerignore` dosyasına ekleyin.
+- php.ini: `/etc/frankenphp/php.ini` Varsayılan olarak geliştirme ön ayarlarına sahip bir php.ini dosyası sağlanır.
+- ek yapılandırma dosyaları: `/etc/frankenphp/php.d/*.ini`
+- php uzantıları: `/usr/lib/frankenphp/modules/`
+
+Docker sürümünüz 23.0'dan düşükse, derleme dockerignore [pattern issue](https://github.com/moby/moby/pull/42676) nedeniyle başarısız olacaktır. Dizinleri `.dockerignore` dosyasına ekleyin.
 
 ```patch
  !testdata/*.php

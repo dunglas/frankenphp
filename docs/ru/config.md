@@ -2,16 +2,19 @@
 
 FrankenPHP, Caddy, а также модули Mercure и Vulcain могут быть настроены с использованием [конфигурационных форматов, поддерживаемых Caddy](https://caddyserver.com/docs/getting-started#your-first-config).
 
-В [Docker-образах](docker.md) файл `Caddyfile` находится по пути `/etc/caddy/Caddyfile`.
+В [Docker-образах](docker.md) файл `Caddyfile` находится по пути `/etc/frankenphp/Caddyfile`.
 Статический бинарный файл будет искать `Caddyfile` в директории запуска.
 
 PHP можно настроить [с помощью файла `php.ini`](https://www.php.net/manual/en/configuration.file.php).
 
-PHP из Docker-образов и статического бинарного файла по умолчанию будет искать файл `php.ini` в директории, где был запущен FrankenPHP, а также в `/usr/local/etc/php/`. Кроме того, будут загружены все файлы с расширением `.ini` из директории `/usr/local/etc/php/conf.d/`.
+PHP-интерпретатор будет искать в следующих местах:
 
-Файл `php.ini` по умолчанию отсутствует. Вы можете скопировать официальный шаблон, предоставляемый проектом PHP.
+Docker:
 
-В Docker-шаблоны включены в образы:
+- php.ini: `/usr/local/etc/php/php.ini` По умолчанию php.ini не предоставляется.
+- дополнительные файлы конфигурации: `/usr/local/etc/php/conf.d/*.ini`
+- расширения php: `/usr/local/lib/php/extensions/no-debug-zts-<YYYYMMDD>/`
+- Вы должны скопировать официальный шаблон, предоставляемый проектом PHP:
 
 ```dockerfile
 FROM dunglas/frankenphp
@@ -23,7 +26,18 @@ RUN cp $PHP_INI_DIR/php.ini-production $PHP_INI_DIR/php.ini
 RUN cp $PHP_INI_DIR/php.ini-development $PHP_INI_DIR/php.ini
 ```
 
-Если вы не используете Docker, скопируйте один из шаблонов `php.ini-production` или `php.ini-development`, предоставленных [в исходниках PHP](https://github.com/php/php-src/).
+Установка FrankenPHP (.rpm или .deb):
+
+- php.ini: `/etc/frankenphp/php.ini` По умолчанию предоставляется файл php.ini с производственными настройками.
+- дополнительные файлы конфигурации: `/etc/frankenphp/php.d/*.ini`
+- расширения php: `/usr/lib/frankenphp/modules/`
+
+Статический бинарный файл:
+
+- php.ini: Директория, в которой выполняется `frankenphp run` или `frankenphp php-server`, затем `/etc/frankenphp/php.ini`
+- дополнительные файлы конфигурации: `/etc/frankenphp/php.d/*.ini`
+- расширения php: не могут быть загружены
+- скопируйте один из шаблонов `php.ini-production` или `php.ini-development`, предоставленных [в исходниках PHP](https://github.com/php/php-src/).
 
 ## Конфигурация Caddyfile
 
