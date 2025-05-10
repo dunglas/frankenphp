@@ -17,12 +17,12 @@ type frankenPHPContext struct {
 	logger          *slog.Logger
 	request         *http.Request
 	originalRequest *http.Request
+	worker          *worker
 
 	docURI         string
 	pathInfo       string
 	scriptName     string
 	scriptFilename string
-	workerName     string
 
 	// Whether the request is already closed by us
 	isDone bool
@@ -89,8 +89,14 @@ func NewRequestWithContext(r *http.Request, opts ...RequestOption) (*http.Reques
 		}
 	}
 
-	// SCRIPT_FILENAME is the absolute path of SCRIPT_NAME
-	fc.scriptFilename = sanitizedPathJoin(fc.documentRoot, fc.scriptName)
+	if fc.worker != nil {
+		fc.scriptFilename = fc.worker.fileName
+	} else {
+		// SCRIPT_FILENAME is the absolute path of SCRIPT_NAME
+		fc.scriptFilename = sanitizedPathJoin(fc.documentRoot, fc.scriptName)
+		fc.worker = getWorkerByPath(fc.scriptFilename)
+	}
+
 	c := context.WithValue(r.Context(), contextKey, fc)
 
 	return r.WithContext(c), nil
@@ -152,9 +158,9 @@ func (fc *frankenPHPContext) reject(statusCode int, message string) {
 	if rw != nil {
 		rw.WriteHeader(statusCode)
 		_, _ = rw.Write([]byte(message))
-		
+
 		if f, ok := rw.(http.Flusher); ok {
-    		f.Flush()
+			f.Flush()
 		}
 	}
 

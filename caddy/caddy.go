@@ -373,6 +373,8 @@ type FrankenPHPModule struct {
 	Env map[string]string `json:"env,omitempty"`
 	// Workers configures the worker scripts to start.
 	Workers []workerConfig `json:"workers,omitempty"`
+	// Workers configures the worker scripts to start.
+	UseWorkerAsFallback bool `json:"use_worker_as_fallback,omitempty"`
 
 	resolvedDocumentRoot        string
 	preparedEnv                 frankenphp.PreparedEnv
@@ -432,6 +434,21 @@ func (f *FrankenPHPModule) Provision(ctx caddy.Context) error {
 		}
 	}
 
+	// copy the prepared env to all module workers
+	if f.Env != nil {
+		for _, wc := range f.Workers {
+			if wc.Env == nil {
+				wc.Env = make(map[string]string)
+			}
+			for k, v := range f.Env {
+				// Only set if not already defined in the worker
+				if _, exists := wc.Env[k]; !exists {
+					wc.Env[k] = v
+				}
+			}
+		}
+	}
+
 	if f.preparedEnv == nil {
 		f.preparedEnv = frankenphp.PrepareEnv(f.Env)
 
@@ -479,12 +496,15 @@ func (f *FrankenPHPModule) ServeHTTP(w http.ResponseWriter, r *http.Request, _ c
 		}
 	}
 
-	fullScriptPath, _ := fastabs.FastAbs(documentRoot + "/" + r.URL.Path)
-
 	workerName := ""
-	for _, w := range f.Workers {
-		if p, _ := fastabs.FastAbs(w.FileName); p == fullScriptPath {
-			workerName = w.Name
+	if f.UseWorkerAsFallback {
+		workerName = f.Workers[0].Name
+	} else if len(f.Workers) > 0 {
+		fullScriptPath, _ := fastabs.FastAbs(documentRoot + "/" + r.URL.Path)
+		for _, w := range f.Workers {
+			if p, _ := fastabs.FastAbs(w.FileName); p == fullScriptPath {
+				workerName = w.Name
+			}
 		}
 	}
 
@@ -528,7 +548,8 @@ func (f *FrankenPHPModule) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 	// First pass: Parse all directives except "worker"
 	for d.Next() {
 		for d.NextBlock(0) {
-			switch d.Val() {
+			directive := d.Val()
+			switch directive {
 			case "root":
 				if !d.NextArg() {
 					return d.ArgErr()
@@ -566,26 +587,7 @@ func (f *FrankenPHPModule) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 				}
 				f.ResolveRootSymlink = &v
 
-			case "worker":
-				for d.NextBlock(1) {
-				}
-				for d.NextArg() {
-				}
-				// Skip "worker" blocks in the first pass
-				continue
-
-			default:
-				allowedDirectives := "root, split, env, resolve_root_symlink, worker"
-				return wrongSubDirectiveError("php or php_server", allowedDirectives, d.Val())
-			}
-		}
-	}
-
-	// Second pass: Parse only "worker" blocks
-	d.Reset()
-	for d.Next() {
-		for d.NextBlock(0) {
-			if d.Val() == "worker" {
+			case "worker", "index_worker":
 				wc, err := parseWorkerConfig(d)
 				if err != nil {
 					return err
@@ -629,7 +631,12 @@ func (f *FrankenPHPModule) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 				}
 
 				f.Workers = append(f.Workers, wc)
+				f.UseWorkerAsFallback = directive == "index_worker"
 				moduleWorkerConfigs = append(moduleWorkerConfigs, wc)
+
+			default:
+				allowedDirectives := "root, split, env, resolve_root_symlink, worker"
+				return wrongSubDirectiveError("php or php_server", allowedDirectives, d.Val())
 			}
 		}
 	}

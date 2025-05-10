@@ -73,6 +73,29 @@ func getWorkerKey(name string, filename string) string {
 	return key
 }
 
+func getWorkerByName(name string) *worker {
+	if name == "" {
+		return nil
+	}
+	for _, w := range workers {
+		if w.name == name {
+			return w
+		}
+	}
+
+	return nil
+}
+
+func getWorkerByPath(path string) *worker {
+	for _, w := range workers {
+		if w.fileName == path && !strings.HasPrefix(w.name, "m#") {
+			return w
+		}
+	}
+
+	return nil
+}
+
 func newWorker(o workerOpt) (*worker, error) {
 	absFileName, err := fastabs.FastAbs(o.fileName)
 	if err != nil {
