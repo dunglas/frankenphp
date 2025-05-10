@@ -93,11 +93,11 @@ RUN curl -s https://api.github.com/repos/e-dant/watcher/releases/latest | \
 WORKDIR /go/src/app
 
 COPY --link go.mod go.sum ./
-RUN go mod graph | awk '{if ($1 !~ "@") print $2}' | xargs go get
+RUN go mod download
 
 WORKDIR /go/src/app/caddy
 COPY --link caddy/go.mod caddy/go.sum ./
-RUN go mod graph | awk '{if ($1 !~ "@") print $2}' | xargs go get
+RUN go mod download
 
 WORKDIR /go/src/app
 COPY --link . ./
