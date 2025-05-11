@@ -22,7 +22,6 @@ ARG MIMALLOC=''
 ARG NO_COMPRESS=''
 
 # go version
-ENV GO_VERSION=1.24.2
 ENV GOTOOLCHAIN=local
 
 # labels, same as static-builder.Dockerfile
@@ -98,7 +97,7 @@ RUN yum install -y \
     curl -o jq -fsSL https://github.com/jqlang/jq/releases/download/jq-1.7.1/jq-linux-${GO_ARCH} && \
     chmod +x jq && \
     mv jq /usr/local/bin/jq && \
-    curl -o go.tgz -fsSL https://go.dev/dl/go${GO_VERSION}.linux-${GO_ARCH}.tar.gz && \
+    curl -LO https://get.golang.org/$(uname)/go_installer && chmod +x go_installer && ./go_installer && rm go_installer && \
     rm -rf /usr/local/go && \
     tar -C /usr/local -xzf go.tgz && \
     rm go.tgz && \
