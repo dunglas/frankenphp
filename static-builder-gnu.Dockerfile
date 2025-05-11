@@ -23,6 +23,7 @@ ARG NO_COMPRESS=''
 
 # go version
 ENV GOTOOLCHAIN=local
+ENV GO_VERSION=1.24.1
 
 # labels, same as static-builder.Dockerfile
 LABEL org.opencontainers.image.title=FrankenPHP
@@ -94,10 +95,9 @@ RUN yum install -y \
     else \
         GO_ARCH="amd64" ; \
     fi ; \
-    curl -o jq -fsSL https://github.com/jqlang/jq/releases/download/jq-1.7.1/jq-linux-${GO_ARCH} && \
+    curl -o /usr/local/bin/jq -fsSL https://github.com/jqlang/jq/releases/download/jq-1.7.1/jq-linux-${GO_ARCH} && \
     chmod +x jq && \
-    mv jq /usr/local/bin/jq && \
-    curl -LO https://get.golang.org/$(uname)/go_installer && chmod +x go_installer && ./go_installer && rm go_installer && \
+    curl -o go.tgz -fsSL https://go.dev/dl/go${GO_VERSION}.linux-${GO_ARCH}.tar.gz &&
     rm -rf /usr/local/go && \
     tar -C /usr/local -xzf go.tgz && \
     rm go.tgz && \
