@@ -23,7 +23,7 @@ ARG NO_COMPRESS=''
 
 # go version
 ENV GOTOOLCHAIN=local
-ENV GO_VERSION=1.24.1
+ENV GO_VERSION=1.24.3
 
 # labels, same as static-builder.Dockerfile
 LABEL org.opencontainers.image.title=FrankenPHP
