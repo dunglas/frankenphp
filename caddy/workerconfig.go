@@ -35,7 +35,7 @@ type workerConfig struct {
 	IsIndex bool `json:"is_index,omitempty"`
 }
 
-func parseWorkerConfig(d *caddyfile.Dispenser) (workerConfig, error) {
+func parseWorkerConfig(d *caddyfile.Dispenser, nestingLevel int) (workerConfig, error) {
 	wc := workerConfig{}
 	if d.NextArg() {
 		wc.FileName = d.Val()
@@ -58,7 +58,7 @@ func parseWorkerConfig(d *caddyfile.Dispenser) (workerConfig, error) {
 		return wc, errors.New(`FrankenPHP: too many "worker" arguments: ` + d.Val())
 	}
 
-	for d.NextBlock(1) {
+	for d.NextBlock(nestingLevel) {
 		v := d.Val()
 		switch v {
 		case "name":

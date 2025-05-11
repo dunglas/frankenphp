@@ -246,22 +246,18 @@ func TestTwoIndexModuleWorkers(t *testing.T) {
 
 		http://localhost:`+testPort+` {
 			route {
-				php {
+				php_worker {
+					file_server off
 					root ../testdata/files
-					index worker {
-						file `+indexFileName+`
-						num 2
-					}
+					file `+indexFileName+`
+                    num 2
 				}
 			}
 		}
 
 		http://localhost:`+testPortTwo+` {
             route {
-                php {
-                    root ../testdata/files
-                    index worker `+indexFileName+` 2
-                }
+                php_worker `+indexFileName+` 2
             }
         }
 		`, "caddyfile")
@@ -281,7 +277,6 @@ func TestTwoIndexModuleWorkers(t *testing.T) {
 
 func TestIndexWorkerWithFileServer(t *testing.T) {
 	tester := caddytest.NewTester(t)
-	indexFileName, _ := fastabs.FastAbs("../testdata/index.php")
 
 	tester.InitServer(`
 		{
@@ -295,13 +290,10 @@ func TestIndexWorkerWithFileServer(t *testing.T) {
 
 		http://localhost:`+testPort+` {
 			route {
-				root ../testdata/files
-				php_server {
+				php_worker {
 					root ../testdata/files
-					index worker {
-						file `+indexFileName+`
-						num 2
-					}
+					file ../index.php
+                    num 2
 				}
 			}
 		}

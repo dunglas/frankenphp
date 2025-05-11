@@ -196,7 +196,7 @@ func (f *FrankenPHPApp) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 				}
 
 			case "worker":
-				wc, err := parseWorkerConfig(d)
+				wc, err := parseWorkerConfig(d, 1)
 				if err != nil {
 					return err
 				}
