@@ -35,12 +35,14 @@ func initWorkers(opt []workerOpt) error {
 	watcherIsEnabled = len(directoriesToWatch) > 0
 
 	for _, o := range opt {
-		worker, err := newWorker(o)
+		_, err := newWorker(o)
 		if err != nil {
 			return err
 		}
+	}
 
-		workersReady.Add(o.num)
+	for _, worker := range workers {
+		workersReady.Add(worker.num)
 		for i := 0; i < worker.num; i++ {
 			thread := getInactivePHPThread()
 			convertToWorkerThread(thread, worker)

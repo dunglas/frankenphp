@@ -62,6 +62,8 @@ type workerConfig struct {
 	Env map[string]string `json:"env,omitempty"`
 	// Directories to watch for file changes
 	Watch []string `json:"watch,omitempty"`
+	// IsIndex determines weather the worker is the first_exist_fallback
+	IsIndex bool `json:"is:index,omitempty"`
 }
 
 type FrankenPHPApp struct {
@@ -230,6 +232,7 @@ func parseWorkerConfig(d *caddyfile.Dispenser) (workerConfig, error) {
 
 // UnmarshalCaddyfile implements caddyfile.Unmarshaler.
 func (f *FrankenPHPApp) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
+	moduleWorkerConfigs = []workerConfig{}
 	for d.Next() {
 		for d.NextBlock(0) {
 			// when adding a new directive, also update the allowedDirectives error message
@@ -373,8 +376,6 @@ type FrankenPHPModule struct {
 	Env map[string]string `json:"env,omitempty"`
 	// Workers configures the worker scripts to start.
 	Workers []workerConfig `json:"workers,omitempty"`
-	// Workers configures the worker scripts to start.
-	UseWorkerAsFallback bool `json:"use_worker_as_fallback,omitempty"`
 
 	resolvedDocumentRoot        string
 	preparedEnv                 frankenphp.PreparedEnv
@@ -497,14 +498,14 @@ func (f *FrankenPHPModule) ServeHTTP(w http.ResponseWriter, r *http.Request, _ c
 	}
 
 	workerName := ""
-	if f.UseWorkerAsFallback {
-		workerName = f.Workers[0].Name
-	} else if len(f.Workers) > 0 {
-		fullScriptPath, _ := fastabs.FastAbs(documentRoot + "/" + r.URL.Path)
-		for _, w := range f.Workers {
-			if p, _ := fastabs.FastAbs(w.FileName); p == fullScriptPath {
-				workerName = w.Name
-			}
+	// check if the request should be handled by a module worker
+	for _, w := range f.Workers {
+		if w.IsIndex {
+			workerName = w.Name
+		}
+		absWorkerPath, _ := fastabs.FastAbs(w.FileName)
+		if absPath, _ := fastabs.FastAbs(documentRoot + "/" + r.URL.Path); absPath == absWorkerPath {
+			workerName = w.Name
 		}
 	}
 
@@ -545,7 +546,6 @@ outer:
 
 // UnmarshalCaddyfile implements caddyfile.Unmarshaler.
 func (f *FrankenPHPModule) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
-	// First pass: Parse all directives except "worker"
 	for d.Next() {
 		for d.NextBlock(0) {
 			directive := d.Val()
@@ -587,61 +587,96 @@ func (f *FrankenPHPModule) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 				}
 				f.ResolveRootSymlink = &v
 
-			case "worker", "index_worker":
-				wc, err := parseWorkerConfig(d)
+			// register the worker if 'index' is a worker file
+			case "index":
+				if !d.NextArg() {
+					return d.ArgErr()
+				}
+
+				if d.Val() == "worker" {
+					wc, err := parseModuleWorker(d, f)
+					if err != nil {
+						return err
+					}
+					wc.IsIndex = true
+					f.Workers = append(f.Workers, wc)
+					moduleWorkerConfigs = append(moduleWorkerConfigs, wc)
+				}
+
+			case "worker":
+				wc, err := parseModuleWorker(d, f)
 				if err != nil {
 					return err
 				}
-
-				// Inherit environment variables from the parent php_server directive
-				if !filepath.IsAbs(wc.FileName) && f.Root != "" {
-					wc.FileName = filepath.Join(f.Root, wc.FileName)
-				}
-
-				if f.Env != nil {
-					if wc.Env == nil {
-						wc.Env = make(map[string]string)
-					}
-					for k, v := range f.Env {
-						// Only set if not already defined in the worker
-						if _, exists := wc.Env[k]; !exists {
-							wc.Env[k] = v
-						}
-					}
-				}
-
-				if wc.Name == "" {
-					wc.Name = generateUniqueModuleWorkerName(wc.FileName)
-				}
-				if !strings.HasPrefix(wc.Name, "m#") {
-					wc.Name = "m#" + wc.Name
-				}
-
-				// Check if a worker with this filename already exists in this module
-				for _, existingWorker := range f.Workers {
-					if existingWorker.FileName == wc.FileName {
-						return fmt.Errorf(`workers in a single "php_server" block must not have duplicate filenames: %q`, wc.FileName)
-					}
-				}
-				// Check if a worker with this name and a different environment or filename already exists
-				for _, existingWorker := range moduleWorkerConfigs {
-					if existingWorker.Name == wc.Name {
-						return fmt.Errorf("workers must not have duplicate names: %q", wc.Name)
-					}
-				}
-
 				f.Workers = append(f.Workers, wc)
-				f.UseWorkerAsFallback = directive == "index_worker"
 				moduleWorkerConfigs = append(moduleWorkerConfigs, wc)
 
 			default:
-				allowedDirectives := "root, split, env, resolve_root_symlink, worker"
+				allowedDirectives := "root, split, env, resolve_root_symlink, worker, index"
 				return wrongSubDirectiveError("php or php_server", allowedDirectives, d.Val())
 			}
 		}
 	}
 
 	return nil
+}
+
+// parse a worker inside a php or php_server directive
+func parseModuleWorker(d *caddyfile.Dispenser, f *FrankenPHPModule) (workerConfig, error) {
+	wc, err := parseWorkerConfig(d)
+	if err != nil {
+		return wc, err
+	}
+
+	if !filepath.IsAbs(wc.FileName) && f.Root != "" {
+		wc.FileName = filepath.Join(f.Root, wc.FileName)
+	}
+	// if the worker path is relative, make it absolute
+	// either with the php_server Root or with the WD
+	if false && !filepath.IsAbs(wc.FileName) {
+		if f.Root != "" {
+			wc.FileName = filepath.Join(f.Root, wc.FileName)
+		} else {
+			wc.FileName, err = fastabs.FastAbs(wc.FileName)
+			if err != nil {
+				return wc, err
+			}
+		}
+	}
+
+	if f.Env != nil {
+		if wc.Env == nil {
+			wc.Env = make(map[string]string)
+		}
+		for k, v := range f.Env {
+			// Only set if not already defined in the worker
+			if _, exists := wc.Env[k]; !exists {
+				wc.Env[k] = v
+			}
+		}
+	}
+
+	if wc.Name == "" {
+		wc.Name = generateUniqueModuleWorkerName(wc.FileName)
+	}
+	if !strings.HasPrefix(wc.Name, "m#") {
+		wc.Name = "m#" + wc.Name
+	}
+
+	// Check if a worker with this filename already exists in this module
+	for _, existingWorker := range f.Workers {
+		if existingWorker.FileName == wc.FileName {
+			return wc, fmt.Errorf(`workers in a single "php_server" block must not have duplicate filenames: %q`, wc.FileName)
+		}
+	}
+	// Check if a worker with this name and a different environment or filename already exists
+	for _, existingWorker := range moduleWorkerConfigs {
+		if existingWorker.Name == wc.Name {
+			return wc, fmt.Errorf("workers must not have duplicate names: %q", wc.Name)
+		}
+	}
+
+	return wc, nil
 }
 
 // parseCaddyfile unmarshals tokens from h into a new Middleware.
@@ -747,9 +782,12 @@ func parsePhpServer(h httpcaddyfile.Helper) ([]httpcaddyfile.ConfigValue, error)
 
 			case "index":
 				args := dispenser.RemainingArgs()
-				dispenser.DeleteN(len(args) + 1)
 				if len(args) != 1 {
 					return nil, dispenser.ArgErr()
+				}
+				if args[0] == "worker" {
+					// if the index is a worker file, use this as default try files
+					tryFiles = []string{"{http.request.uri.path}", "worker"}
 				}
 				indexFile = args[0]
 
