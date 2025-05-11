@@ -118,6 +118,7 @@ func handleRequestWithRegularPHPThreads(fc *frankenPHPContext) {
 			// the request has triggered scaling, continue to wait for a thread
 		case <-timeoutChan(maxWaitTime):
 			// the request has timed out stalling
+			metrics.DequeuedRequest()
 			fc.reject(504, "Gateway Timeout")
 			return
 		}
