@@ -93,23 +93,24 @@ func getWorkerByPath(path string) *worker {
 
 func newWorker(o workerOpt) (*worker, error) {
 	absFileName, err := fastabs.FastAbs(o.fileName)
+	isModuleWorker := strings.HasPrefix(o.name, "m#") // module workers may not be matched by path
 	if err != nil {
 		return nil, fmt.Errorf("worker filename is invalid %q: %w", o.fileName, err)
 	}
 
+	if o.name == "" {
+		o.name = absFileName
+	}
+
+	if w := getWorkerByPath(absFileName); w != nil && !isModuleWorker {
+		return w, fmt.Errorf("two workers cannot have the same filename: %q", absFileName)
+	}
 	if w := getWorkerByName(o.name); w != nil {
 		return w, fmt.Errorf("two workers cannot have the same name: %q", o.name)
-	}
-	if w := getWorkerByPath(absFileName); w != nil {
-		return w, fmt.Errorf("two workers cannot have the same filename: %q", o.name)
 	}
 
 	if o.env == nil {
 		o.env = make(PreparedEnv, 1)
-	}
-
-	if o.name == "" {
-		o.name = absFileName
 	}
 
 	o.env["FRANKENPHP_WORKER\x00"] = "1"
@@ -120,7 +121,7 @@ func newWorker(o workerOpt) (*worker, error) {
 		env:               o.env,
 		requestChan:       make(chan *frankenPHPContext),
 		threads:           make([]*phpThread, 0, o.num),
-		allowPathMatching: !strings.HasPrefix(o.name, "m#"),
+		allowPathMatching: !isModuleWorker,
 	}
 	workers = append(workers, w)
 

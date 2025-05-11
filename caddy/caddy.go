@@ -505,7 +505,7 @@ func (f *FrankenPHPModule) ServeHTTP(w http.ResponseWriter, r *http.Request, _ c
 			workerName = w.Name
 			break
 		}
-		if absPath, _ := fastabs.FastAbs(documentRoot + "/" + r.URL.Path); w.FileName == absWorkerPath {
+		if absPath, _ := fastabs.FastAbs(documentRoot + "/" + r.URL.Path); w.FileName == absPath {
 			workerName = w.Name
 			break
 		}
@@ -635,11 +635,10 @@ func parseModuleWorker(d *caddyfile.Dispenser, f *FrankenPHPModule) (workerConfi
 	if !filepath.IsAbs(wc.FileName) {
 		if f.Root != "" {
 			wc.FileName = filepath.Join(f.Root, wc.FileName)
-		} else {
-			wc.FileName, err = fastabs.FastAbs(wc.FileName)
-			if err != nil {
-				return wc, err
-			}
+		}
+		wc.FileName, err = fastabs.FastAbs(wc.FileName)
+		if err != nil {
+			return wc, err
 		}
 	}
 
