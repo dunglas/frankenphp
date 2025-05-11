@@ -388,7 +388,6 @@ func parsePhpServerDirective(h httpcaddyfile.Helper) ([]httpcaddyfile.ConfigValu
 	// set up file server
 	fsrv := fileserver.FileServer{}
 	disableFsrv := false
-	useWorkerAsIndex := false
 
 	// set up the set of file extensions allowed to execute PHP code
 	extensions := []string{".php"}
@@ -450,9 +449,6 @@ func parsePhpServerDirective(h httpcaddyfile.Helper) ([]httpcaddyfile.ConfigValu
 					return nil, dispenser.ArgErr()
 				}
 				indexFile = args[0]
-				if args[0] == "worker" {
-					useWorkerAsIndex = true
-				}
 
 			case "try_files":
 				args := dispenser.RemainingArgs()
@@ -501,28 +497,6 @@ func parsePhpServerDirective(h httpcaddyfile.Helper) ([]httpcaddyfile.ConfigValu
 
 	if err != nil {
 		return nil, err
-	}
-
-	if useWorkerAsIndex {
-		if len(tryFiles) > 0 || len(extensions) != 1 {
-			caddy.Log().Warn("'try_files' and 'split_path' are inconsequental with index workers")
-		}
-
-		if disableFsrv {
-			return []httpcaddyfile.ConfigValue{
-				{
-					Class: "route",
-					Value: getIndexWorkerWithoutFileServer(h, phpsrv),
-				},
-			}, nil
-		}
-
-		return []httpcaddyfile.ConfigValue{
-			{
-				Class: "route",
-				Value: getIndexWorkerSubroute(h, phpsrv, fsrv),
-			},
-		}, nil
 	}
 
 	// if the index is turned off, we skip the redirect and try_files
@@ -657,6 +631,7 @@ func parsePhpServerDirective(h httpcaddyfile.Helper) ([]httpcaddyfile.ConfigValu
 	}, nil
 }
 
+// parse the 'php_worker' shorthand
 func parsePhpWorkerDirective(h httpcaddyfile.Helper) ([]httpcaddyfile.ConfigValue, error) {
 	if !h.Next() {
 		return nil, h.ArgErr()
@@ -666,15 +641,9 @@ func parsePhpWorkerDirective(h httpcaddyfile.Helper) ([]httpcaddyfile.ConfigValu
 	fsrv := fileserver.FileServer{}
 	disableFsrv := false
 
-	// make a new dispenser from the remaining tokens so that we
-	// can reset the dispenser back to this point for the
-	// php unmarshaler to read from it as well
+	// this block is similar to 'php_server'
+	// but only 'root' and 'file_server' are allowed
 	dispenser := h.NewFromNextSegment()
-
-	// read the subdirectives that we allow as overrides to
-	// the php_server shortcut
-	// NOTE: we delete the tokens as we go so that the php
-	// unmarshal doesn't see these subdirectives which it cannot handle
 	for dispenser.Next() {
 		for dispenser.NextBlock(0) {
 			// ignore any sub-subdirectives that might
@@ -704,6 +673,7 @@ func parsePhpWorkerDirective(h httpcaddyfile.Helper) ([]httpcaddyfile.ConfigValu
 		}
 	}
 
+	// fix the root for an embdedded app
 	if frankenphp.EmbeddedAppPath != "" {
 		if frankenphpModule.Root == "" {
 			frankenphpModule.Root = filepath.Join(frankenphp.EmbeddedAppPath, defaultDocumentRoot)
@@ -745,7 +715,7 @@ func parsePhpWorkerDirective(h httpcaddyfile.Helper) ([]httpcaddyfile.ConfigValu
 	}, nil
 }
 
-// get the routing logic for index workers
+// get the routing for php_worker
 // serve non-php file or fallback to index worker
 func getIndexWorkerSubroute(h httpcaddyfile.Helper, frankenphpModule FrankenPHPModule, fsrv caddy.Module) caddyhttp.Subroute {
 	return caddyhttp.Subroute{
