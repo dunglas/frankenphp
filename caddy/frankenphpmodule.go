@@ -21,7 +21,7 @@ import (
 )
 
 /*
-FrankenPHPModule represents the 'php_server' and 'php' directives in the Caddyfile
+FrankenPHPModule represents the 'php_server', 'php_worker' and 'php' directives in the Caddyfile
 they are responsible for forwarding requests to FrankenPHP via 'ServeHTTP'
 
 	example.com {
