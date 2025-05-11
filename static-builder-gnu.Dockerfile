@@ -96,7 +96,7 @@ RUN yum install -y \
         GO_ARCH="amd64" ; \
     fi ; \
     curl -o /usr/local/bin/jq -fsSL https://github.com/jqlang/jq/releases/download/jq-1.7.1/jq-linux-${GO_ARCH} && \
-    chmod +x jq && \
+    chmod +x /usr/local/bin/jq && \
     curl -o go.tgz -fsSL https://go.dev/dl/go${GO_VERSION}.linux-${GO_ARCH}.tar.gz && \
     rm -rf /usr/local/go && \
     tar -C /usr/local -xzf go.tgz && \
