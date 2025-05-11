@@ -227,7 +227,7 @@ func TestNamedModuleWorkers(t *testing.T) {
 	wg.Wait()
 }
 
-func TestTwoIndexModuleWorkers(t *testing.T) {
+func TestTwoPhpWorkerModules(t *testing.T) {
 	var wg sync.WaitGroup
 	testPortNum, _ := strconv.Atoi(testPort)
 	testPortTwo := strconv.Itoa(testPortNum + 1)
@@ -275,7 +275,7 @@ func TestTwoIndexModuleWorkers(t *testing.T) {
 	wg.Wait()
 }
 
-func TestIndexWorkerWithFileServer(t *testing.T) {
+func TestPhpWorkerWithFileServer(t *testing.T) {
 	tester := caddytest.NewTester(t)
 
 	tester.InitServer(`

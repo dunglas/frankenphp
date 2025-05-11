@@ -31,8 +31,8 @@ type workerConfig struct {
 	Env map[string]string `json:"env,omitempty"`
 	// Directories to watch for file changes
 	Watch []string `json:"watch,omitempty"`
-	// IsIndex determines weather the worker is the first_exist_fallback
-	IsIndex bool `json:"is_index,omitempty"`
+	// IsFallback determines weather to always fall back to the worker in a module
+	IsFallback bool `json:"is_fallback,omitempty"`
 }
 
 func parseWorkerConfig(d *caddyfile.Dispenser, nestingLevel int) (workerConfig, error) {

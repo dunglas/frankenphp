@@ -166,7 +166,7 @@ func (f *FrankenPHPModule) ServeHTTP(w http.ResponseWriter, r *http.Request, _ c
 	// check if the request should be handled by a module worker
 	for _, w := range f.Workers {
 		// always fall back to an index worker
-		if w.IsIndex {
+		if w.IsFallback {
 			workerName = w.Name
 			break
 		}
@@ -254,22 +254,6 @@ func (f *FrankenPHPModule) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 				}
 				f.ResolveRootSymlink = &v
 
-			// register the worker if 'index' is a worker file
-			case "index":
-				if !d.NextArg() {
-					return d.ArgErr()
-				}
-
-				if d.Val() == "worker" {
-					wc, err := parseModuleWorker(d, f, 1)
-					if err != nil {
-						return err
-					}
-					wc.IsIndex = true
-					f.Workers = append(f.Workers, wc)
-					moduleWorkerConfigs = append(moduleWorkerConfigs, wc)
-				}
-
 			case "worker":
 				wc, err := parseModuleWorker(d, f, 1)
 				if err != nil {
@@ -279,7 +263,7 @@ func (f *FrankenPHPModule) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 				moduleWorkerConfigs = append(moduleWorkerConfigs, wc)
 
 			default:
-				allowedDirectives := "root, split, env, resolve_root_symlink, worker, index"
+				allowedDirectives := "root, split, env, resolve_root_symlink, worker"
 				return wrongSubDirectiveError("php or php_server", allowedDirectives, d.Val())
 			}
 		}
@@ -690,7 +674,7 @@ func parsePhpWorkerDirective(h httpcaddyfile.Helper) ([]httpcaddyfile.ConfigValu
 	dispenser.Reset()
 	dispenser.Next()
 	wc, err := parseModuleWorker(dispenser, &frankenphpModule, 0)
-	wc.IsIndex = true
+	wc.IsFallback = true
 	frankenphpModule.Workers = append(frankenphpModule.Workers, wc)
 	moduleWorkerConfigs = append(moduleWorkerConfigs, wc)
 
@@ -702,7 +686,7 @@ func parsePhpWorkerDirective(h httpcaddyfile.Helper) ([]httpcaddyfile.ConfigValu
 		return []httpcaddyfile.ConfigValue{
 			{
 				Class: "route",
-				Value: getIndexWorkerWithoutFileServer(h, frankenphpModule),
+				Value: getIndexWorkerWithoutFileServer(frankenphpModule),
 			},
 		}, nil
 	}
@@ -751,7 +735,7 @@ func getIndexWorkerSubroute(h httpcaddyfile.Helper, frankenphpModule FrankenPHPM
 }
 
 // without file_server, all requests go to the worker
-func getIndexWorkerWithoutFileServer(h httpcaddyfile.Helper, frankenphpModule FrankenPHPModule) caddyhttp.Subroute {
+func getIndexWorkerWithoutFileServer(frankenphpModule FrankenPHPModule) caddyhttp.Subroute {
 	return caddyhttp.Subroute{
 		Routes: caddyhttp.RouteList{
 			caddyhttp.Route{

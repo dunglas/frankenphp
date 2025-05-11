@@ -268,40 +268,10 @@ func TestModuleWorkerWithCustomName(t *testing.T) {
 	// Verify that the worker was added to the module
 	require.Len(t, module.Workers, 1, "Expected one worker to be added to the module")
 	require.Equal(t, fastTestAbs("../testdata/worker-with-env.php"), module.Workers[0].FileName, "Worker should have the correct filename")
-	require.False(t, module.Workers[0].IsIndex, "module worker should not be a index worker")
+	require.False(t, module.Workers[0].IsFallback, "module worker should not be a fallback worker")
 
 	// Verify that the worker was added to moduleWorkerConfigs with the m# prefix
 	require.Equal(t, "m#custom-worker-name", module.Workers[0].Name, "Worker should have the custom name")
-
-	resetModuleWorkers()
-}
-
-func TestModuleIndexWorker(t *testing.T) {
-	// Create a test configuration with a custom worker name
-	configWithCustomName := `
-	{
-		php {
-			index worker {
-				file ../testdata/worker-with-env.php
-				num 1
-			}
-		}
-	}`
-
-	// Parse the configuration
-	d := caddyfile.NewTestDispenser(configWithCustomName)
-	module := &FrankenPHPModule{}
-
-	// Unmarshal the configuration
-	err := module.UnmarshalCaddyfile(d)
-
-	// Verify that no error was returned
-	require.NoError(t, err, "Expected no error when configuring a worker with a custom name")
-
-	// Verify that the worker was added to the module
-	require.Len(t, module.Workers, 1, "Expected one worker to be added to the module")
-	require.Len(t, moduleWorkerConfigs, 1, "Expected one worker to be added to the global workers")
-	require.True(t, module.Workers[0].IsIndex, "module worker should be index worker")
 
 	resetModuleWorkers()
 }
