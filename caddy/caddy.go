@@ -35,7 +35,7 @@ func init() {
 	httpcaddyfile.RegisterDirectiveOrder("php_server", "before", "file_server")
 
 	httpcaddyfile.RegisterDirective("php_worker", parsePhpWorkerDirective)
-    httpcaddyfile.RegisterDirectiveOrder("php_worker", "before", "file_server")
+	httpcaddyfile.RegisterDirectiveOrder("php_worker", "before", "file_server")
 }
 
 // return a nice error message
