@@ -57,6 +57,7 @@ SHELL ["/bin/ash", "-eo", "pipefail", "-c"]
 COPY --link --from=golang-base /usr/local/go /usr/local/go
 
 ENV PATH=/usr/local/go/bin:$PATH
+ENV GOTOOLCHAIN=local
 
 # hadolint ignore=SC2086
 RUN apk add --no-cache --virtual .build-deps \

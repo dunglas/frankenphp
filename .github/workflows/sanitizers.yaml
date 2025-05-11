@@ -13,6 +13,8 @@ on:
       - "docs/**"
 permissions:
   contents: read
+env:
+  GOTOOLCHAIN: local
 jobs:
   # Adapted from https://github.com/beberlei/hdrhistogram-php
   sanitizers:
