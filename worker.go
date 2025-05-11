@@ -14,22 +14,23 @@ import (
 
 // represents a worker script and can have many threads assigned to it
 type worker struct {
-	name        string
-	fileName    string
-	num         int
-	env         PreparedEnv
-	requestChan chan *frankenPHPContext
-	threads     []*phpThread
-	threadMutex sync.RWMutex
+	name              string
+	fileName          string
+	num               int
+	env               PreparedEnv
+	requestChan       chan *frankenPHPContext
+	threads           []*phpThread
+	threadMutex       sync.RWMutex
+	allowPathMatching bool // allow matching a request to a worker via path
 }
 
 var (
-	workers          map[string]*worker
+	workers          []*worker
 	watcherIsEnabled bool
 )
 
 func initWorkers(opt []workerOpt) error {
-	workers = make(map[string]*worker, len(opt))
+	workers = make([]*worker, 0, len(opt))
 	workersReady := sync.WaitGroup{}
 	directoriesToWatch := getDirectoriesToWatch(opt)
 	watcherIsEnabled = len(directoriesToWatch) > 0
@@ -67,14 +68,6 @@ func initWorkers(opt []workerOpt) error {
 	return nil
 }
 
-func getWorkerKey(name string, filename string) string {
-	key := filename
-	if strings.HasPrefix(name, "m#") {
-		key = name
-	}
-	return key
-}
-
 func getWorkerByName(name string) *worker {
 	if name == "" {
 		return nil
@@ -90,7 +83,7 @@ func getWorkerByName(name string) *worker {
 
 func getWorkerByPath(path string) *worker {
 	for _, w := range workers {
-		if w.fileName == path && !strings.HasPrefix(w.name, "m#") {
+		if w.fileName == path && w.allowPathMatching {
 			return w
 		}
 	}
@@ -104,14 +97,11 @@ func newWorker(o workerOpt) (*worker, error) {
 		return nil, fmt.Errorf("worker filename is invalid %q: %w", o.fileName, err)
 	}
 
-	key := getWorkerKey(o.name, absFileName)
-	if _, ok := workers[key]; ok {
-		return nil, fmt.Errorf("two workers cannot use the same key %q", key)
+	if w := getWorkerByName(o.name); w != nil {
+		return w, fmt.Errorf("two workers cannot have the same name: %q", o.name)
 	}
-	for _, w := range workers {
-		if w.name == o.name {
-			return w, fmt.Errorf("two workers cannot have the same name: %q", o.name)
-		}
+	if w := getWorkerByPath(absFileName); w != nil {
+		return w, fmt.Errorf("two workers cannot have the same filename: %q", o.name)
 	}
 
 	if o.env == nil {
@@ -124,14 +114,15 @@ func newWorker(o workerOpt) (*worker, error) {
 
 	o.env["FRANKENPHP_WORKER\x00"] = "1"
 	w := &worker{
-		name:        o.name,
-		fileName:    absFileName,
-		num:         o.num,
-		env:         o.env,
-		requestChan: make(chan *frankenPHPContext),
-		threads:     make([]*phpThread, 0, o.num),
+		name:              o.name,
+		fileName:          absFileName,
+		num:               o.num,
+		env:               o.env,
+		requestChan:       make(chan *frankenPHPContext),
+		threads:           make([]*phpThread, 0, o.num),
+		allowPathMatching: !strings.HasPrefix(o.name, "m#"),
 	}
-	workers[key] = w
+	workers = append(workers, w)
 
 	return w, nil
 }

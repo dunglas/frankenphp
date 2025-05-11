@@ -63,7 +63,7 @@ type workerConfig struct {
 	// Directories to watch for file changes
 	Watch []string `json:"watch,omitempty"`
 	// IsIndex determines weather the worker is the first_exist_fallback
-	IsIndex bool `json:"is:index,omitempty"`
+	IsIndex bool `json:"is_index,omitempty"`
 }
 
 type FrankenPHPApp struct {
@@ -500,12 +500,14 @@ func (f *FrankenPHPModule) ServeHTTP(w http.ResponseWriter, r *http.Request, _ c
 	workerName := ""
 	// check if the request should be handled by a module worker
 	for _, w := range f.Workers {
+		// always fall back to an index worker
 		if w.IsIndex {
 			workerName = w.Name
+			break
 		}
-		absWorkerPath, _ := fastabs.FastAbs(w.FileName)
-		if absPath, _ := fastabs.FastAbs(documentRoot + "/" + r.URL.Path); absPath == absWorkerPath {
+		if absPath, _ := fastabs.FastAbs(documentRoot + "/" + r.URL.Path); w.FileName == absWorkerPath {
 			workerName = w.Name
+			break
 		}
 	}
 
@@ -628,12 +630,9 @@ func parseModuleWorker(d *caddyfile.Dispenser, f *FrankenPHPModule) (workerConfi
 		return wc, err
 	}
 
-	if !filepath.IsAbs(wc.FileName) && f.Root != "" {
-		wc.FileName = filepath.Join(f.Root, wc.FileName)
-	}
 	// if the worker path is relative, make it absolute
 	// either with the php_server Root or with the WD
-	if false && !filepath.IsAbs(wc.FileName) {
+	if !filepath.IsAbs(wc.FileName) {
 		if f.Root != "" {
 			wc.FileName = filepath.Join(f.Root, wc.FileName)
 		} else {
@@ -725,6 +724,7 @@ func parsePhpServer(h httpcaddyfile.Helper) ([]httpcaddyfile.ConfigValue, error)
 	// set up file server
 	fsrv := fileserver.FileServer{}
 	disableFsrv := false
+	useWorkerAsIndex := false
 
 	// set up the set of file extensions allowed to execute PHP code
 	extensions := []string{".php"}
@@ -785,11 +785,10 @@ func parsePhpServer(h httpcaddyfile.Helper) ([]httpcaddyfile.ConfigValue, error)
 				if len(args) != 1 {
 					return nil, dispenser.ArgErr()
 				}
-				if args[0] == "worker" {
-					// if the index is a worker file, use this as default try files
-					tryFiles = []string{"{http.request.uri.path}", "worker"}
-				}
 				indexFile = args[0]
+				if args[0] == "worker" {
+					useWorkerAsIndex = true
+				}
 
 			case "try_files":
 				args := dispenser.RemainingArgs()
@@ -810,10 +809,6 @@ func parsePhpServer(h httpcaddyfile.Helper) ([]httpcaddyfile.ConfigValue, error)
 		}
 	}
 
-	// reset the dispenser after we're done so that the frankenphp
-	// unmarshaler can read it from the start
-	dispenser.Reset()
-
 	if frankenphp.EmbeddedAppPath != "" {
 		if phpsrv.Root == "" {
 			phpsrv.Root = filepath.Join(frankenphp.EmbeddedAppPath, defaultDocumentRoot)
@@ -831,6 +826,40 @@ func parsePhpServer(h httpcaddyfile.Helper) ([]httpcaddyfile.ConfigValue, error)
 
 	// set the list of allowed path segments on which to split
 	phpsrv.SplitPath = extensions
+
+	// reset the dispenser after we're done so that the frankenphp
+	// unmarshaler can read it from the start
+	dispenser.Reset()
+	// the rest of the config is specified by the user
+	// using the php directive syntax
+	dispenser.Next() // consume the directive name
+	err = phpsrv.UnmarshalCaddyfile(dispenser)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if useWorkerAsIndex {
+		if len(tryFiles) > 0 || len(extensions) != 1 {
+			caddy.Log().Warn("'try_files' and 'split_path' are inconsequental with index workers")
+		}
+
+		if disableFsrv {
+			return []httpcaddyfile.ConfigValue{
+				{
+					Class: "route",
+					Value: getIndexWorkerWithoutFileServer(h, phpsrv),
+				},
+			}, nil
+		}
+
+		return []httpcaddyfile.ConfigValue{
+			{
+				Class: "route",
+				Value: getIndexWorkerSubroute(h, phpsrv, fsrv),
+			},
+		}, nil
+	}
 
 	// if the index is turned off, we skip the redirect and try_files
 	if indexFile != "off" {
@@ -917,15 +946,6 @@ func parsePhpServer(h httpcaddyfile.Helper) ([]httpcaddyfile.ConfigValue, error)
 		"path": h.JSON(pathList),
 	}
 
-	// the rest of the config is specified by the user
-	// using the php directive syntax
-	dispenser.Next() // consume the directive name
-	err = phpsrv.UnmarshalCaddyfile(dispenser)
-
-	if err != nil {
-		return nil, err
-	}
-
 	// create the PHP route which is
 	// conditional on matching PHP files
 	phpRoute := caddyhttp.Route{
@@ -971,6 +991,55 @@ func parsePhpServer(h httpcaddyfile.Helper) ([]httpcaddyfile.ConfigValue, error)
 			Value: subroute,
 		},
 	}, nil
+}
+
+// get the routing logic for index workers
+// serve non-php file or fallback to index worker
+func getIndexWorkerSubroute(h httpcaddyfile.Helper, phpsrv FrankenPHPModule, fsrv caddy.Module) caddyhttp.Subroute {
+	return caddyhttp.Subroute{
+		Routes: caddyhttp.RouteList{
+			caddyhttp.Route{
+				MatcherSetsRaw: []caddy.ModuleMap{
+					caddy.ModuleMap{
+						"file": h.JSON(fileserver.MatchFile{
+							TryFiles: []string{"{http.request.uri.path}"},
+							Root:     phpsrv.Root,
+						}),
+						"not": h.JSON(caddyhttp.MatchNot{
+							MatcherSetsRaw: []caddy.ModuleMap{
+								{
+									"path": h.JSON(caddyhttp.MatchPath{"*.php"}),
+								},
+							},
+						}),
+					},
+				},
+				HandlersRaw: []json.RawMessage{
+					caddyconfig.JSONModuleObject(fsrv, "handler", "file_server", nil),
+				},
+			},
+			caddyhttp.Route{
+				MatcherSetsRaw: []caddy.ModuleMap{},
+				HandlersRaw: []json.RawMessage{
+					caddyconfig.JSONModuleObject(phpsrv, "handler", "php", nil),
+				},
+			},
+		},
+	}
+}
+
+// without file_server, all requests go to the worker
+func getIndexWorkerWithoutFileServer(h httpcaddyfile.Helper, phpsrv FrankenPHPModule) caddyhttp.Subroute {
+	return caddyhttp.Subroute{
+		Routes: caddyhttp.RouteList{
+			caddyhttp.Route{
+				MatcherSetsRaw: []caddy.ModuleMap{},
+				HandlersRaw: []json.RawMessage{
+					caddyconfig.JSONModuleObject(phpsrv, "handler", "php", nil),
+				},
+			},
+		},
+	}
 }
 
 // return a nice error message

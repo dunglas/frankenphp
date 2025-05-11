@@ -72,12 +72,12 @@ func TestShowTheCorrectThreadDebugStatus(t *testing.T) {
 
 	debugState := getDebugState(t, tester)
 
-	// assert that the correct threads are present in the thread info
-	assert.Equal(t, debugState.ThreadDebugStates[0].State, "ready")
-	assert.Contains(t, debugState.ThreadDebugStates[1].Name, "worker-with-counter.php")
-	assert.Contains(t, debugState.ThreadDebugStates[2].Name, "index.php")
-	assert.Equal(t, debugState.ReservedThreadCount, 3)
-	assert.Len(t, debugState.ThreadDebugStates, 3)
+	workerThreadNames := debugState.ThreadDebugStates[1].Name + debugState.ThreadDebugStates[2].Name
+	assert.Equal(t, debugState.ThreadDebugStates[0].State, "ready", "regular thread should be ready")
+	assert.Contains(t, workerThreadNames, "worker-with-counter.php", "first worker thread should be present")
+	assert.Contains(t, workerThreadNames, "index.php", "second worker thread should be present")
+	assert.Len(t, debugState.ThreadDebugStates, 3, "3 threads should be started")
+	assert.Equal(t, debugState.ReservedThreadCount, 3, "3 more threads should be reserved")
 }
 
 func TestAutoScaleWorkerThreads(t *testing.T) {
