@@ -250,16 +250,16 @@ func TestTwoPhpWorkerModules(t *testing.T) {
 					file_server off
 					root ../testdata/files
 					file `+indexFileName+`
-                    num 2
+					num 2
 				}
 			}
 		}
 
 		http://localhost:`+testPortTwo+` {
-            route {
-                php_worker `+indexFileName+` 2
-            }
-        }
+			route {
+				php_worker `+indexFileName+` 2
+			}
+		}
 		`, "caddyfile")
 
 	nbRequests := 10
@@ -293,7 +293,7 @@ func TestPhpWorkerWithFileServer(t *testing.T) {
 				php_worker {
 					root ../testdata/files
 					file ../index.php
-                    num 2
+					num 2
 				}
 			}
 		}
@@ -315,9 +315,9 @@ func TestPhpWorkerWithFileServer(t *testing.T) {
 
 	// should respond with the file_server
 	tester.AssertGetResponse(
-		"http://localhost:"+testPort+"/hello.json",
+		"http://localhost:"+testPort+"/hello.txt",
 		http.StatusOK,
-		"{\"Hello\": \"World\"}",
+		"Hello World",
 	)
 
 	// should always respond with the index worker on other PHP files
