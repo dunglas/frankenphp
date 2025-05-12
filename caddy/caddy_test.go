@@ -245,20 +245,16 @@ func TestTwoPhpWorkerModules(t *testing.T) {
 		}
 
 		http://localhost:`+testPort+` {
-			route {
-				php_worker {
-					file_server off
-					root ../testdata/files
-					file `+indexFileName+`
-					num 2
-				}
+			php_worker {
+				file_server off
+				root ../testdata/files
+				file `+indexFileName+`
+				num 2
 			}
 		}
 
 		http://localhost:`+testPortTwo+` {
-			route {
-				php_worker `+indexFileName+` 2
-			}
+			php_worker `+indexFileName+` 2
 		}
 		`, "caddyfile")
 
@@ -289,12 +285,10 @@ func TestPhpWorkerWithFileServer(t *testing.T) {
 		}
 
 		http://localhost:`+testPort+` {
-			route {
-				php_worker {
-					root ../testdata/files
-					file ../index.php
-					num 2
-				}
+			php_worker {
+				root ../testdata/files
+				file ../index.php
+				num 2
 			}
 		}
 		`, "caddyfile")
@@ -322,7 +316,52 @@ func TestPhpWorkerWithFileServer(t *testing.T) {
 
 	// should always respond with the index worker on other PHP files
 	tester.AssertGetResponse(
-		"http://localhost:"+testPort+"/index.php?i=3",
+		"http://localhost:"+testPort+"/hello.php",
+		http.StatusOK,
+		"I am by birth a Genevese (3)",
+	)
+}
+
+func TestPhpWorkerWithoutFileServer(t *testing.T) {
+	tester := caddytest.NewTester(t)
+
+	tester.InitServer(`
+		{
+			skip_install_trust
+			admin localhost:2999
+
+			frankenphp {
+				num_threads 3
+			}
+		}
+
+		http://localhost:`+testPort+` {
+			php_worker {
+				root ../testdata/files
+				file ../index.php
+				file_server off
+				num 2
+			}
+		}
+		`, "caddyfile")
+
+	// should respond with the index worker file on random path
+	tester.AssertGetResponse(
+		"http://localhost:"+testPort+"/test123?i=1",
+		http.StatusOK,
+		"I am by birth a Genevese (1)",
+	)
+
+	// should respond with the index worker on file path
+	tester.AssertGetResponse(
+		"http://localhost:"+testPort+"/hello.txt?i=2",
+		http.StatusOK,
+		"I am by birth a Genevese (2)",
+	)
+
+	// should always respond with the index worker on other PHP files
+	tester.AssertGetResponse(
+		"http://localhost:"+testPort+"/hello.php?i=3",
 		http.StatusOK,
 		"I am by birth a Genevese (3)",
 	)
