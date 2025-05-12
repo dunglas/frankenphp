@@ -232,7 +232,7 @@ func TestTwoPhpWorkerModules(t *testing.T) {
 	testPortNum, _ := strconv.Atoi(testPort)
 	testPortTwo := strconv.Itoa(testPortNum + 1)
 	tester := caddytest.NewTester(t)
-	indexFileName, _ := fastabs.FastAbs("../testdata/index.php")
+	indexFileName, _ := fastabs.FastAbs("../testdata/worker-with-env.php")
 
 	tester.InitServer(`
 		{
@@ -247,6 +247,7 @@ func TestTwoPhpWorkerModules(t *testing.T) {
 		http://localhost:`+testPort+` {
 			php_worker {
 				file_server off
+				env APP_ENV test
 				root ../testdata/files
 				file `+indexFileName+`
 				num 2
@@ -262,9 +263,8 @@ func TestTwoPhpWorkerModules(t *testing.T) {
 	wg.Add(nbRequests)
 	for i := 0; i < nbRequests; i++ {
 		go func(i int) {
-			num := strconv.Itoa(i)
-			tester.AssertGetResponse("http://localhost:"+testPort+"/some-path?i="+num, http.StatusOK, "I am by birth a Genevese ("+num+")")
-			tester.AssertGetResponse("http://localhost:"+testPortTwo+"/other-path?i="+num, http.StatusOK, "I am by birth a Genevese ("+num+")")
+			tester.AssertGetResponse("http://localhost:"+testPort+"/some-path", http.StatusOK, "Worker has APP_ENV=test")
+			tester.AssertGetResponse("http://localhost:"+testPortTwo+"/other-path", http.StatusOK, "Worker has APP_ENV=")
 			wg.Done()
 		}(i)
 	}
