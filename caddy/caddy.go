@@ -449,7 +449,7 @@ func (f *FrankenPHPModule) Provision(ctx caddy.Context) error {
 
 // needReplacement checks if a string contains placeholders.
 func needReplacement(s string) bool {
-	return strings.Contains(s, "{") || strings.Contains(s, "}")
+	return strings.ContainsAny(s, "{}")
 }
 
 // ServeHTTP implements caddyhttp.MiddlewareHandler.
