@@ -230,7 +230,7 @@ func (f *FrankenPHPApp) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 	}
 
 	if f.MaxThreads > 0 && f.NumThreads > 0 && f.MaxThreads < f.NumThreads {
-		return errors.New("'max_threads' must be greater than or equal to 'num_threads'")
+		return errors.New(`"max_threads"" must be greater than or equal to "num_threads"`)
 	}
 
 	return nil
