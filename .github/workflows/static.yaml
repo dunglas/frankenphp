@@ -29,6 +29,7 @@ permissions:
   attestations: write
 env:
   IMAGE_NAME: ${{ (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.version) || startsWith(github.ref, 'refs/tags/')) && 'dunglas/frankenphp' || 'dunglas/frankenphp-dev' }}
+  GOTOOLCHAIN: local
 jobs:
   prepare:
     runs-on: ubuntu-24.04
