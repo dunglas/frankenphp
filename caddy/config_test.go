@@ -1,10 +1,12 @@
-﻿package caddy
+package caddy
 
 import (
 	"testing"
 
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/stretchr/testify/require"
+
+	"github.com/dunglas/frankenphp/internal/fastabs"
 )
 
 // resetModuleWorkers resets the moduleWorkerConfigs slice for testing
@@ -109,8 +111,8 @@ func TestModuleWorkersWithDifferentFilenames(t *testing.T) {
 
 	// Verify that both workers were added to the module
 	require.Len(t, module.Workers, 2, "Expected two workers to be added to the module")
-	require.Equal(t, "../testdata/worker-with-env.php", module.Workers[0].FileName, "First worker should have the correct filename")
-	require.Equal(t, "../testdata/worker-with-counter.php", module.Workers[1].FileName, "Second worker should have the correct filename")
+	require.Equal(t, fastTestAbs("../testdata/worker-with-env.php"), module.Workers[0].FileName, "First worker should have the correct filename")
+	require.Equal(t, fastTestAbs("../testdata/worker-with-counter.php"), module.Workers[1].FileName, "Second worker should have the correct filename")
 
 	resetModuleWorkers()
 }
@@ -192,7 +194,7 @@ func TestModuleWorkerWithEnvironmentVariables(t *testing.T) {
 
 	// Verify that the worker was added to the module
 	require.Len(t, module.Workers, 1, "Expected one worker to be added to the module")
-	require.Equal(t, "../testdata/worker-with-env.php", module.Workers[0].FileName, "Worker should have the correct filename")
+	require.Equal(t, fastTestAbs("../testdata/worker-with-env.php"), module.Workers[0].FileName, "Worker should have the correct filename")
 
 	// Verify that the environment variables were set correctly
 	require.Len(t, module.Workers[0].Env, 2, "Expected two environment variables")
@@ -229,7 +231,7 @@ func TestModuleWorkerWithWatchConfiguration(t *testing.T) {
 
 	// Verify that the worker was added to the module
 	require.Len(t, module.Workers, 1, "Expected one worker to be added to the module")
-	require.Equal(t, "../testdata/worker-with-env.php", module.Workers[0].FileName, "Worker should have the correct filename")
+	require.Equal(t, fastTestAbs("../testdata/worker-with-env.php"), module.Workers[0].FileName, "Worker should have the correct filename")
 
 	// Verify that the watch directories were set correctly
 	require.Len(t, module.Workers[0].Watch, 3, "Expected three watch patterns")
@@ -265,10 +267,16 @@ func TestModuleWorkerWithCustomName(t *testing.T) {
 
 	// Verify that the worker was added to the module
 	require.Len(t, module.Workers, 1, "Expected one worker to be added to the module")
-	require.Equal(t, "../testdata/worker-with-env.php", module.Workers[0].FileName, "Worker should have the correct filename")
+	require.Equal(t, fastTestAbs("../testdata/worker-with-env.php"), module.Workers[0].FileName, "Worker should have the correct filename")
+	require.False(t, module.Workers[0].IsFallback, "module worker should not be a fallback worker")
 
 	// Verify that the worker was added to moduleWorkerConfigs with the m# prefix
 	require.Equal(t, "m#custom-worker-name", module.Workers[0].Name, "Worker should have the custom name")
 
 	resetModuleWorkers()
+}
+
+func fastTestAbs(path string) string {
+	abs, _ := fastabs.FastAbs(path)
+	return abs
 }

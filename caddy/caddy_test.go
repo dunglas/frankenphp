@@ -227,6 +227,146 @@ func TestNamedModuleWorkers(t *testing.T) {
 	wg.Wait()
 }
 
+func TestTwoPhpWorkerModules(t *testing.T) {
+	var wg sync.WaitGroup
+	testPortNum, _ := strconv.Atoi(testPort)
+	testPortTwo := strconv.Itoa(testPortNum + 1)
+	tester := caddytest.NewTester(t)
+	indexFileName, _ := fastabs.FastAbs("../testdata/worker-with-env.php")
+
+	tester.InitServer(`
+		{
+			skip_install_trust
+			admin localhost:2999
+
+			frankenphp {
+				num_threads 5
+			}
+		}
+
+		http://localhost:`+testPort+` {
+			php_worker {
+				file_server off
+				env APP_ENV test
+				root ../testdata/files
+				file `+indexFileName+`
+				num 2
+			}
+		}
+
+		http://localhost:`+testPortTwo+` {
+			php_worker `+indexFileName+` 2
+		}
+		`, "caddyfile")
+
+	nbRequests := 10
+	wg.Add(nbRequests)
+	for i := 0; i < nbRequests; i++ {
+		go func(i int) {
+			tester.AssertGetResponse("http://localhost:"+testPort+"/some-path", http.StatusOK, "Worker has APP_ENV=test")
+			tester.AssertGetResponse("http://localhost:"+testPortTwo+"/other-path", http.StatusOK, "Worker has APP_ENV=")
+			wg.Done()
+		}(i)
+	}
+	wg.Wait()
+}
+
+func TestPhpWorkerWithFileServer(t *testing.T) {
+	tester := caddytest.NewTester(t)
+
+	tester.InitServer(`
+		{
+			skip_install_trust
+			admin localhost:2999
+
+			frankenphp {
+				num_threads 3
+			}
+		}
+
+		http://localhost:`+testPort+` {
+			php_worker {
+				root ../testdata/files
+				file ../index.php
+				num 2
+			}
+		}
+		`, "caddyfile")
+
+	// should respond with the index worker file on random path
+	tester.AssertGetResponse(
+		"http://localhost:"+testPort+"/test123?i=1",
+		http.StatusOK,
+		"I am by birth a Genevese (1)",
+	)
+
+	// should respond with the index worker file on index path
+	tester.AssertGetResponse(
+		"http://localhost:"+testPort+"/index.php?i=2",
+		http.StatusOK,
+		"I am by birth a Genevese (2)",
+	)
+
+	// should respond with the file_server
+	tester.AssertGetResponse(
+		"http://localhost:"+testPort+"/hello.txt",
+		http.StatusOK,
+		"Hello World",
+	)
+
+	// should always respond with the index worker on other PHP files
+	tester.AssertGetResponse(
+		"http://localhost:"+testPort+"/hello.php?i=3",
+		http.StatusOK,
+		"I am by birth a Genevese (3)",
+	)
+}
+
+func TestPhpWorkerWithoutFileServer(t *testing.T) {
+	tester := caddytest.NewTester(t)
+
+	tester.InitServer(`
+		{
+			skip_install_trust
+			admin localhost:2999
+
+			frankenphp {
+				num_threads 3
+			}
+		}
+
+		http://localhost:`+testPort+` {
+			php_worker {
+				root ../testdata/files
+				file ../index.php
+				file_server off
+				num 2
+			}
+		}
+		`, "caddyfile")
+
+	// should respond with the index worker file on random path
+	tester.AssertGetResponse(
+		"http://localhost:"+testPort+"/test123?i=1",
+		http.StatusOK,
+		"I am by birth a Genevese (1)",
+	)
+
+	// should respond with the index worker on file path
+	tester.AssertGetResponse(
+		"http://localhost:"+testPort+"/hello.txt?i=2",
+		http.StatusOK,
+		"I am by birth a Genevese (2)",
+	)
+
+	// should always respond with the index worker on other PHP files
+	tester.AssertGetResponse(
+		"http://localhost:"+testPort+"/hello.php?i=3",
+		http.StatusOK,
+		"I am by birth a Genevese (3)",
+	)
+}
+
 func TestEnv(t *testing.T) {
 	tester := caddytest.NewTester(t)
 	tester.InitServer(`
