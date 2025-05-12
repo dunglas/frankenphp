@@ -316,7 +316,7 @@ func TestPhpWorkerWithFileServer(t *testing.T) {
 
 	// should always respond with the index worker on other PHP files
 	tester.AssertGetResponse(
-		"http://localhost:"+testPort+"/hello.php",
+		"http://localhost:"+testPort+"/hello.php?i=3",
 		http.StatusOK,
 		"I am by birth a Genevese (3)",
 	)
