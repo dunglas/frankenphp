@@ -38,7 +38,7 @@ func cmdPHPCLI(fs caddycmd.Flags) (int, error) {
 	}
 
 	var status int
-	if len(args) == 2 && args[0] == "-r" {
+	if len(args) >= 2 && args[0] == "-r" {
 		status = frankenphp.ExecutePHPCode(args[1])
 	} else {
 		status = frankenphp.ExecuteScriptCLI(args[0], args)
