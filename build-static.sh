@@ -204,7 +204,7 @@ fi
 
 SPC_BUILD_COMMAND="--build-embed"
 if [ "${INCLUDE_CLI}" ]; then
-  SPC_BUILD_COMMAND="--build-embed --build-cli"
+	SPC_BUILD_COMMAND="--build-embed --build-cli"
 fi
 
 # Build libphp if necessary
@@ -222,7 +222,7 @@ else
 fi
 
 if [ "${INCLUDE_CLI}" ]; then
-  cp "${PWD}/buildroot/bin/php" ../../caddy/frankenphp/php-cli
+	cp "${PWD}/buildroot/bin/php" ../../caddy/frankenphp/php-cli
 fi
 
 if ! type "go" >/dev/null 2>&1; then
@@ -327,7 +327,7 @@ fi
 
 INCLUDE_CLI_TAG=""
 if [ "${INCLUDE_CLI}" ]; then
-  INCLUDE_CLI_TAG=",include_php_cli,"
+	INCLUDE_CLI_TAG=",include_php_cli,"
 fi
 
 go env
