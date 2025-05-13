@@ -17,7 +17,7 @@ func main() {
 	// if the name of the current program is `php`, then call into the php-cli currently embedded
 	programName := filepath.Base(os.Args[0])
 	if programName == "php" {
-		runPhpCli() // never returns for static builds
+		runPhpCli() // never returns for static builds with INCLUDE_CLI set
 	}
 	caddycmd.Main()
 }
