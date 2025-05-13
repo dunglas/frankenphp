@@ -533,7 +533,7 @@ func go_sapi_flush(threadIndex C.uintptr_t) bool {
 	}
 
 	if err := http.NewResponseController(fc.responseWriter).Flush(); err != nil {
-		logger.LogAttrs(context.Background(), slog.LevelDebug, "the current responseWriter is not a flusher", slog.Any("error", err))
+		logger.LogAttrs(context.Background(), slog.LevelWarn, "the current responseWriter is not a flusher", slog.Any("error", err))
 	}
 
 	return false
