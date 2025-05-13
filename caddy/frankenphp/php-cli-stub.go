@@ -2,8 +2,5 @@
 
 package main
 
-import caddycmd "github.com/caddyserver/caddy/v2/cmd"
-
 func runPhpCli() {
-	caddycmd.Main()
 }
