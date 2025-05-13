@@ -97,10 +97,10 @@ RUN yum install -y \
     fi ; \
     curl -o /usr/local/bin/jq -fsSL https://github.com/jqlang/jq/releases/download/jq-1.7.1/jq-linux-${GO_ARCH} && \
     chmod +x /usr/local/bin/jq && \
-    curl -o go.tgz -fsSL https://go.dev/dl/(curl -o go.tgz -fsSL curl https://go.dev/dl/?mode=json | jq -r "first(first(.[] | select(.stable and (.version | startswith(\"go${GO_VERSION}\")))).files[] | select(.os == \"linux\" and (.kind == \"archive\") and (.arch == \"${GO_ARCH}\"))).filename") && \
+    curl -o go.tar.gz -fsSL https://go.dev/dl/$(curl -fsS https://go.dev/dl/?mode=json | jq -r "first(first(.[] | select(.stable and (.version | startswith(\"go${GO_VERSION}\")))).files[] | select(.os == \"linux\" and (.kind == \"archive\") and (.arch == \"${GO_ARCH}\"))).filename") && \
     rm -rf /usr/local/go && \
-    tar -C /usr/local -xzf go.tgz && \
-    rm go.tgz && \
+    tar -C /usr/local -xzf go.tar.gz && \
+    rm go.tar.gz && \
     /usr/local/go/bin/go install github.com/caddyserver/xcaddy/cmd/xcaddy@latest
 
 ENV PATH="/cmake/bin:/usr/local/go/bin:$PATH"
