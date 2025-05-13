@@ -163,6 +163,7 @@ target "static-builder-gnu" {
     }
     args = {
         FRANKENPHP_VERSION = VERSION
+        GO_VERSION = GO_VERSION
     }
     secret = ["id=github-token,env=GITHUB_TOKEN"]
 }
