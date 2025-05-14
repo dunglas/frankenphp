@@ -11,9 +11,13 @@ docker build -t frankenphp-dev -f dev.Dockerfile .
 docker run --cap-add=SYS_PTRACE --security-opt seccomp=unconfined -p 8080:8080 -p 443:443 -p 443:443/udp -v $PWD:/go/src/app -it frankenphp-dev
 ```
 
-该镜像包含常用的开发工具（Go、GDB、Valgrind、Neovim等）。
+该镜像包含常用的开发工具（Go、GDB、Valgrind、Neovim等）并使用以下 php 设置位置
 
-如果 docker 版本低于 23.0，则会因为 dockerignore [pattern issue](https://github.com/moby/moby/pull/42676) 而导致构建失败。将目录添加到 `.dockerignore`。
+- php.ini: `/etc/frankenphp/php.ini` 默认提供了一个带有开发预设的 php.ini 文件。
+- 附加配置文件: `/etc/frankenphp/php.d/*.ini`
+- php 扩展: `/usr/lib/frankenphp/modules/`
+
+如果您的 docker 版本低于 23.0，则会因为 dockerignore [pattern issue](https://github.com/moby/moby/pull/42676) 而导致构建失败。将目录添加到 `.dockerignore`。
 
 ```patch
  !testdata/*.php
@@ -179,20 +183,20 @@ docker buildx bake -f docker-bake.hcl --pull --no-cache --push
 
 ## 其他开发资源
 
-* [PHP 嵌入 uWSGI](https://github.com/unbit/uwsgi/blob/master/plugins/php/php_plugin.c)
-* [PHP 嵌入 NGINX Unit](https://github.com/nginx/unit/blob/master/src/nxt_php_sapi.c)
-* [PHP 嵌入 Go (go-php)](https://github.com/deuill/go-php)
-* [PHP 嵌入 Go (GoEmPHP)](https://github.com/mikespook/goemphp)
-* [PHP 嵌入 C++](https://gist.github.com/paresy/3cbd4c6a469511ac7479aa0e7c42fea7)
-* [扩展和嵌入 PHP 作者：Sara Golemon](https://books.google.fr/books?id=zMbGvK17_tYC&pg=PA254&lpg=PA254#v=onepage&q&f=false)
-* [TSRMLS_CC到底是什么？](http://blog.golemon.com/2006/06/what-heck-is-tsrmlscc-anyway.html)
-* [Mac 上的 PHP 嵌入](https://gist.github.com/jonnywang/61427ffc0e8dde74fff40f479d147db4)
-* [SDL 绑定](https://pkg.go.dev/github.com/veandco/go-sdl2@v0.4.21/sdl#Main)
+- [PHP 嵌入 uWSGI](https://github.com/unbit/uwsgi/blob/master/plugins/php/php_plugin.c)
+- [PHP 嵌入 NGINX Unit](https://github.com/nginx/unit/blob/master/src/nxt_php_sapi.c)
+- [PHP 嵌入 Go (go-php)](https://github.com/deuill/go-php)
+- [PHP 嵌入 Go (GoEmPHP)](https://github.com/mikespook/goemphp)
+- [PHP 嵌入 C++](https://gist.github.com/paresy/3cbd4c6a469511ac7479aa0e7c42fea7)
+- [扩展和嵌入 PHP 作者：Sara Golemon](https://books.google.fr/books?id=zMbGvK17_tYC&pg=PA254&lpg=PA254#v=onepage&q&f=false)
+- [TSRMLS_CC到底是什么？](http://blog.golemon.com/2006/06/what-heck-is-tsrmlscc-anyway.html)
+- [Mac 上的 PHP 嵌入](https://gist.github.com/jonnywang/61427ffc0e8dde74fff40f479d147db4)
+- [SDL 绑定](https://pkg.go.dev/github.com/veandco/go-sdl2@v0.4.21/sdl#Main)
 
 ## Docker 相关资源
 
-* [Bake 文件定义](https://docs.docker.com/build/customize/bake/file-definition/)
-* [docker buildx 构建](https://docs.docker.com/engine/reference/commandline/buildx_build/)
+- [Bake 文件定义](https://docs.docker.com/build/customize/bake/file-definition/)
+- [docker buildx 构建](https://docs.docker.com/engine/reference/commandline/buildx_build/)
 
 ## 有用的命令
 

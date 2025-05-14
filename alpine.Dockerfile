@@ -18,17 +18,17 @@ RUN set -eux; \
 		/app/public \
 		/config/caddy \
 		/data/caddy \
-		/etc/caddy; \
+		/etc/frankenphp; \
 	sed -i 's/php/frankenphp run/g' /usr/local/bin/docker-php-entrypoint; \
 	echo '<?php phpinfo();' > /app/public/index.php
 
-COPY --link caddy/frankenphp/Caddyfile /etc/caddy/Caddyfile
+COPY --link caddy/frankenphp/Caddyfile /etc/frankenphp/Caddyfile
 RUN curl -sSLf \
 		-o /usr/local/bin/install-php-extensions \
 		https://github.com/mlocati/docker-php-extension-installer/releases/latest/download/install-php-extensions && \
 	chmod +x /usr/local/bin/install-php-extensions
 
-CMD ["--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile"]
+CMD ["--config", "/etc/frankenphp/Caddyfile", "--adapter", "caddyfile"]
 HEALTHCHECK CMD curl -f http://localhost:2019/metrics || exit 1
 
 # See https://caddyserver.com/docs/conventions#file-locations for details

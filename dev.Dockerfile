@@ -53,18 +53,21 @@ WORKDIR /usr/local/src/php
 RUN git clone --branch=PHP-8.4 https://github.com/php/php-src.git . && \
 	# --enable-embed is only necessary to generate libphp.so, we don't use this SAPI directly
 	./buildconf --force && \
-	./configure \
+	EXTENSION_DIR=/usr/lib/frankenphp/modules ./configure \
 		--enable-embed \
 		--enable-zts \
 		--disable-zend-signals \
 		--enable-zend-max-execution-timers \
+		--with-config-file-path=/etc/frankenphp/php.ini \
+		--with-config-file-scan-dir=/etc/frankenphp/php.d \
 		--enable-debug && \
 	make -j"$(nproc)" && \
 	make install && \
 	ldconfig && \
-	cp php.ini-development /usr/local/lib/php.ini && \
-	echo "zend_extension=opcache.so" >> /usr/local/lib/php.ini && \
-	echo "opcache.enable=1" >> /usr/local/lib/php.ini && \
+		mkdir -p /etc/frankenphp/php.d && \
+			cp php.ini-development /etc/frankenphp/php.ini && \
+			echo "zend_extension=opcache.so" >> /etc/frankenphp/php.ini && \
+			echo "opcache.enable=1" >> /etcfrankenphp/php.ini && \
 	php --version
 
 # Install e-dant/watcher (necessary for file watching)

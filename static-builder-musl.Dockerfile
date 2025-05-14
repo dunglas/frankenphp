@@ -95,6 +95,9 @@ COPY --link . ./
 ENV SPC_DEFAULT_C_FLAGS='-fPIE -fPIC -O3'
 ENV SPC_LIBC='musl'
 ENV SPC_CMD_VAR_PHP_MAKE_EXTRA_LDFLAGS_PROGRAM='-Wl,-O3 -pie'
+ENV SPC_OPT_BUILD_ARGS='--with-config-file-path=/etc/frankenphp --with-config-file-scan-dir=/etc/frankenphp/php.d'
+ENV SPC_REL_TYPE='binary'
+ENV EXTENSION_DIR='/usr/lib/frankenphp/modules'
 
 RUN --mount=type=secret,id=github-token GITHUB_TOKEN=$(cat /run/secrets/github-token) ./build-static.sh && \
 	rm -Rf dist/static-php-cli/source/*

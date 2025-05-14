@@ -1,0 +1,19 @@
+# The Caddyfile is an easy way to configure FrankenPHP and the Caddy web server.
+#
+# https://frankenphp.dev/docs/config
+# https://caddyserver.com/docs/caddyfile
+{
+	frankenphp
+}
+
+http:// {
+	root /usr/share/frankenphp/
+	encode zstd br gzip
+
+	php_server
+}
+
+# As an alternative to editing the above site block, you can add your own site
+# block files in the Caddyfile.d directory, and they will be included as long
+# as they use the .caddyfile extension.
+import Caddyfile.d/*.caddyfile

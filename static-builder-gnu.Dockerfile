@@ -6,6 +6,8 @@ FROM centos:7
 ARG FRANKENPHP_VERSION=''
 ENV FRANKENPHP_VERSION=${FRANKENPHP_VERSION}
 
+ARG BUILD_PACKAGES=''
+
 ARG PHP_VERSION=''
 ENV PHP_VERSION=${PHP_VERSION}
 
@@ -114,12 +116,26 @@ ENV SPC_DEFAULT_C_FLAGS='-fPIE -fPIC -O3'
 ENV SPC_LIBC='glibc'
 ENV SPC_CMD_VAR_PHP_MAKE_EXTRA_LDFLAGS_PROGRAM='-Wl,-O3 -pie'
 ENV SPC_CMD_VAR_PHP_MAKE_EXTRA_LIBS='-ldl -lpthread -lm -lresolv -lutil -lrt'
-ENV SPC_OPT_DOWNLOAD_ARGS='--ignore-cache-sources=php-src'
-ENV SPC_OPT_BUILD_ARGS=''
+ENV SPC_OPT_BUILD_ARGS='--with-config-file-path=/etc/frankenphp --with-config-file-scan-dir=/etc/frankenphp/php.d'
 ENV SPC_REL_TYPE='binary'
+ENV EXTENSION_DIR='/usr/lib/frankenphp/modules'
 
 # not sure if this is needed
 ENV COMPOSER_ALLOW_SUPERUSER=1
+
+# install tools to build packages, if requested - needs gcc 10
+RUN if [ "${BUILD_PACKAGES}" != "" ]; then \
+        yum install -y make bzip2 openssl-devel libffi-devel zlib-devel libyaml libyaml-devel rpm-build && \
+        curl -o ruby.tar.gz -fsSL https://cache.ruby-lang.org/pub/ruby/3.4/ruby-3.4.2.tar.gz && \
+        tar -xzf ruby.tar.gz && \
+        cd ruby-3.4.2 && \
+        ./configure --without-baseruby && \
+        make && \
+        make install && \
+        cd .. && \
+        rm -rf ruby-3.4.2 ruby.tar.gz && \
+        gem install fpm; \
+    fi
 
 WORKDIR /go/src/app
 COPY go.mod go.sum ./
@@ -133,6 +149,10 @@ WORKDIR /go/src/app
 COPY --link *.* ./
 COPY --link caddy caddy
 COPY --link internal internal
+COPY --link package package
 
 RUN --mount=type=secret,id=github-token ./build-static.sh && \
+    if [ "${BUILD_PACKAGES}" != "" ]; then \
+        ./build-packages.sh; \
+    fi ; \
 	rm -Rf dist/static-php-cli/source/*

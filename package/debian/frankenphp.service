@@ -1,0 +1,21 @@
+[Unit]
+Description=FrankenPHP
+Documentation=https://frankenphp.dev/docs/
+After=network.target network-online.target
+Requires=network-online.target
+
+[Service]
+Type=notify
+User=frankenphp
+Group=frankenphp
+ExecStart=/usr/bin/frankenphp run --environ --config /etc/frankenphp/Caddyfile
+ExecReload=/usr/bin/frankenphp reload --config /etc/frankenphp/Caddyfile --force
+TimeoutStopSec=5s
+LimitNOFILE=1048576
+LimitNPROC=512
+PrivateTmp=true
+ProtectSystem=full
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+
+[Install]
+WantedBy=multi-user.target
