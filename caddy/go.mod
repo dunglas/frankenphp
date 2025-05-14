@@ -2,8 +2,6 @@ module github.com/dunglas/frankenphp/caddy
 
 go 1.24.0
 
-toolchain go1.24.2
-
 replace github.com/dunglas/frankenphp => ../
 
 retract v1.0.0-rc.1 // Human error

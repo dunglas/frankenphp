@@ -21,6 +21,8 @@ ARG DEBUG_SYMBOLS=''
 ARG MIMALLOC=''
 ARG NO_COMPRESS=''
 
+ENV GOTOOLCHAIN=local
+
 SHELL ["/bin/ash", "-eo", "pipefail", "-c"]
 
 LABEL org.opencontainers.image.title=FrankenPHP
@@ -81,9 +83,11 @@ COPY --from=composer/composer:2-bin /composer /usr/bin/composer
 
 WORKDIR /go/src/app
 COPY go.mod go.sum ./
+RUN go mod download
 
 WORKDIR /go/src/app/caddy
 COPY caddy/go.mod caddy/go.sum ./
+RUN go mod download
 
 WORKDIR /go/src/app
 COPY --link . ./

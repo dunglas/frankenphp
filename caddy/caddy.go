@@ -343,7 +343,7 @@ func (f *FrankenPHPApp) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 	}
 
 	if f.MaxThreads > 0 && f.NumThreads > 0 && f.MaxThreads < f.NumThreads {
-		return errors.New("'max_threads' must be greater than or equal to 'num_threads'")
+		return errors.New(`"max_threads"" must be greater than or equal to "num_threads"`)
 	}
 
 	return nil
@@ -449,7 +449,7 @@ func (f *FrankenPHPModule) Provision(ctx caddy.Context) error {
 
 // needReplacement checks if a string contains placeholders.
 func needReplacement(s string) bool {
-	return strings.Contains(s, "{") || strings.Contains(s, "}")
+	return strings.ContainsAny(s, "{}")
 }
 
 // ServeHTTP implements caddyhttp.MiddlewareHandler.

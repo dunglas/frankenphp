@@ -57,6 +57,7 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 COPY --from=golang-base /usr/local/go /usr/local/go
 
 ENV PATH=/usr/local/go/bin:$PATH
+ENV GOTOOLCHAIN=local
 
 # This is required to link the FrankenPHP binary to the PHP binary
 RUN apt-get update && \
@@ -93,9 +94,11 @@ RUN curl -s https://api.github.com/repos/e-dant/watcher/releases/latest | \
 WORKDIR /go/src/app
 
 COPY --link go.mod go.sum ./
+RUN go mod download
 
 WORKDIR /go/src/app/caddy
 COPY --link caddy/go.mod caddy/go.sum ./
+RUN go mod download
 
 WORKDIR /go/src/app
 COPY --link . ./

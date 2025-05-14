@@ -23,8 +23,9 @@ ARG DEBUG_SYMBOLS=''
 ARG MIMALLOC=''
 ARG NO_COMPRESS=''
 
-# go version
-ENV GO_VERSION=1.24.1
+# Go
+ARG GO_VERSION
+ENV GOTOOLCHAIN=local
 
 # labels, same as static-builder.Dockerfile
 LABEL org.opencontainers.image.title=FrankenPHP
@@ -96,18 +97,17 @@ RUN yum install -y \
     else \
         GO_ARCH="amd64" ; \
     fi ; \
-    curl -o jq -fsSL https://github.com/jqlang/jq/releases/download/jq-1.7.1/jq-linux-${GO_ARCH} && \
-    chmod +x jq && \
-    mv jq /usr/local/bin/jq && \
-    curl -o go.tgz -fsSL https://go.dev/dl/go${GO_VERSION}.linux-${GO_ARCH}.tar.gz && \
+    curl -o /usr/local/bin/jq -fsSL https://github.com/jqlang/jq/releases/download/jq-1.7.1/jq-linux-${GO_ARCH} && \
+    chmod +x /usr/local/bin/jq && \
+    curl -o go.tar.gz -fsSL https://go.dev/dl/$(curl -fsS https://go.dev/dl/?mode=json | jq -r "first(first(.[] | select(.stable and (.version | startswith(\"go${GO_VERSION}\")))).files[] | select(.os == \"linux\" and (.kind == \"archive\") and (.arch == \"${GO_ARCH}\"))).filename") && \
     rm -rf /usr/local/go && \
-    tar -C /usr/local -xzf go.tgz && \
-    rm go.tgz && \
+    tar -C /usr/local -xzf go.tar.gz && \
+    rm go.tar.gz && \
     /usr/local/go/bin/go install github.com/caddyserver/xcaddy/cmd/xcaddy@latest
 
 ENV PATH="/cmake/bin:/usr/local/go/bin:$PATH"
 
-# Apply gnu mode
+# Apply GNU mode
 ENV CC='/opt/rh/devtoolset-10/root/usr/bin/gcc'
 ENV CXX='/opt/rh/devtoolset-10/root/usr/bin/g++'
 ENV AR='/opt/rh/devtoolset-10/root/usr/bin/ar'
@@ -139,9 +139,11 @@ RUN if [ "${BUILD_PACKAGES}" != "" ]; then \
 
 WORKDIR /go/src/app
 COPY go.mod go.sum ./
+RUN go mod download
 
 WORKDIR /go/src/app/caddy
 COPY caddy/go.mod caddy/go.sum ./
+RUN go mod download
 
 WORKDIR /go/src/app
 COPY --link *.* ./

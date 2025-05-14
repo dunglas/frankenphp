@@ -57,6 +57,7 @@ SHELL ["/bin/ash", "-eo", "pipefail", "-c"]
 COPY --link --from=golang-base /usr/local/go /usr/local/go
 
 ENV PATH=/usr/local/go/bin:$PATH
+ENV GOTOOLCHAIN=local
 
 # hadolint ignore=SC2086
 RUN apk add --no-cache --virtual .build-deps \
@@ -98,9 +99,11 @@ RUN curl -s https://api.github.com/repos/e-dant/watcher/releases/latest | \
 WORKDIR /go/src/app
 
 COPY --link go.mod go.sum ./
+RUN go mod download
 
 WORKDIR /go/src/app/caddy
 COPY caddy/go.mod caddy/go.sum ./
+RUN go mod download
 
 WORKDIR /go/src/app
 COPY --link . ./
