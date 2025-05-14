@@ -10,7 +10,7 @@ Additionally, you can set a reasonable [write timeout in Caddy](https://caddyser
 
 Here is how to do it using environment variables:
 
-```
+```sh
 FRANKENPHP_CONFIG="max_wait_time 2m"
 
 CADDY_GLOBAL_OPTIONS="servers {
