@@ -1,4 +1,4 @@
-//go:build include_php_cli
+//go:build include_php_cli && linux
 
 package main
 
@@ -47,14 +47,14 @@ func runPhpCli() {
 	}
 
 	// now seal it so it cannot be written to or any other seals
-	_, _, errno := syscall.Syscall(syscall.SYS_FCNTL, uintptr(fd), unix.F_ADD_SEALS, unix.F_SEAL_WRITE|unix.F_SEAL_SEAL)
+	_, _, errno := syscall.Syscall(syscall.SYS_FCNTL, uintptr(fd), unix.F_ADD_SEALS, unix.F_SEAL_WRITE|unix.F_SEAL_GROW|unix.F_SEAL_SEAL)
 	if errno != 0 {
 		fmt.Fprintf(os.Stderr, "failed to seal php-cli memory from tampering: %v\n", errno)
 		os.Exit(1)
 	}
 
 	path := fmt.Sprintf("/proc/self/fd/%d", fd)
-	err = syscall.Exec(path, []string{path}, os.Environ())
+	err = syscall.Exec(path, os.Args, os.Environ())
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "failed to exec into php-cli: %v\n", err)
 		os.Exit(1)
