@@ -6,7 +6,6 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -79,14 +78,17 @@ func cmdPHPServer(fs caddycmd.Flags) (int, error) {
 		panic(err)
 	}
 
+	if frankenphp.EmbeddedAppPath != "" {
+		if err := os.Chdir(frankenphp.EmbeddedAppPath); err != nil {
+			return caddy.ExitCodeFailedStartup, err
+		}
+	}
+
 	var workersOption []workerConfig
 	if len(workers) != 0 {
 		workersOption = make([]workerConfig, 0, len(workers))
 		for _, worker := range workers {
 			parts := strings.SplitN(worker, ",", 2)
-			if frankenphp.EmbeddedAppPath != "" && filepath.IsLocal(parts[0]) {
-				parts[0] = filepath.Join(frankenphp.EmbeddedAppPath, parts[0])
-			}
 
 			var num uint64
 			if len(parts) > 1 {
@@ -99,7 +101,7 @@ func cmdPHPServer(fs caddycmd.Flags) (int, error) {
 	}
 
 	if frankenphp.EmbeddedAppPath != "" {
-		if _, err := os.Stat(filepath.Join(frankenphp.EmbeddedAppPath, "php.ini")); err == nil {
+		if _, err := os.Stat("php.ini"); err == nil {
 			iniScanDir := os.Getenv("PHP_INI_SCAN_DIR")
 
 			if err := os.Setenv("PHP_INI_SCAN_DIR", iniScanDir+":"+frankenphp.EmbeddedAppPath); err != nil {
@@ -107,8 +109,8 @@ func cmdPHPServer(fs caddycmd.Flags) (int, error) {
 			}
 		}
 
-		if _, err := os.Stat(filepath.Join(frankenphp.EmbeddedAppPath, "Caddyfile")); err == nil {
-			config, _, err := caddycmd.LoadConfig(filepath.Join(frankenphp.EmbeddedAppPath, "Caddyfile"), "")
+		if _, err := os.Stat("Caddyfile"); err == nil {
+			config, _, err := caddycmd.LoadConfig("Caddyfile", "caddyfile")
 			if err != nil {
 				return caddy.ExitCodeFailedStartup, err
 			}
@@ -121,9 +123,7 @@ func cmdPHPServer(fs caddycmd.Flags) (int, error) {
 		}
 
 		if root == "" {
-			root = filepath.Join(frankenphp.EmbeddedAppPath, defaultDocumentRoot)
-		} else if filepath.IsLocal(root) {
-			root = filepath.Join(frankenphp.EmbeddedAppPath, root)
+			root = defaultDocumentRoot
 		}
 	}
 
