@@ -63,13 +63,13 @@ user_preexists=0
 if getent group frankenphp >/dev/null; then
 	group_preexists=1
 else
-	groupadd --system frankenphp
+	sudo groupadd --system frankenphp
 fi
 
 if getent passwd frankenphp >/dev/null; then
 	user_preexists=1
 else
-	useradd --system \
+	sudo useradd --system \
 		--gid frankenphp \
 		--create-home \
 		--home-dir /var/lib/frankenphp \
@@ -129,7 +129,7 @@ fpm -s dir -t deb -n frankenphp -v "${FRANKENPHP_VERSION}" \
 	"../package/empty/=/usr/lib/frankenphp/modules" \
 	"../package/empty/=/var/lib/frankenphp"
 
-[ "$user_preexists" -eq 0 ] && userdel frankenphp
-[ "$group_preexists" -eq 0 ] && groupdel frankenphp
+[ "$user_preexists" -eq 0 ] && sudo userdel frankenphp
+[ "$group_preexists" -eq 0 ] && sudo groupdel frankenphp
 
 cd ..
