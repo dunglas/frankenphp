@@ -73,6 +73,11 @@ cd frankenphp-main/caddy/frankenphp
 CGO_CFLAGS=$(php-config --includes) CGO_LDFLAGS="$(php-config --ldflags) $(php-config --libs)" go build
 ```
 
+> [!TIP]
+>
+> Derlemenin başarılı olması için brotli ve watcher bağımlılıklarının kurulması gerekir.
+> Aksi takdirde, bunlara ihtiyacınız yoksa `nobrotli,nowatcher` etiketlerini eklediğinizden emin olun.
+
 ### Xcaddy kullanımı
 
 Alternatif olarak, FrankenPHP'yi [özel Caddy modülleri](https://caddyserver.com/docs/modules/) ile derlemek için [xcaddy](https://github.com/caddyserver/xcaddy) kullanın:

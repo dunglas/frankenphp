@@ -81,6 +81,11 @@ cd frankenphp-main/caddy/frankenphp
 CGO_CFLAGS=$(php-config --includes) CGO_LDFLAGS="$(php-config --ldflags) $(php-config --libs)" go build -tags=nobadger,nomysql,nopgx
 ```
 
+> [!TIP]
+>
+> The brotli and watcher dependencies need to be installed for compilation to succeed
+> Otherwise make sure to add the `nobrotli,nowatcher` tags if you do not need them.
+
 ### Using xcaddy
 
 Alternatively, use [xcaddy](https://github.com/caddyserver/xcaddy) to compile FrankenPHP with [custom Caddy modules](https://caddyserver.com/docs/modules/):
