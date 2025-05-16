@@ -107,3 +107,6 @@ xcaddy build \
 > To do so, change the `XCADDY_GO_BUILD_FLAGS` environment variable to something like
 > `XCADDY_GO_BUILD_FLAGS=$'-ldflags "-w -s -extldflags \'-Wl,-z,stack-size=0x80000\'"'`
 > (change the stack size value according to your app needs).
+> 
+> The brotli and watcher dependencies need to be installed for compilation to succeed 
+> Otherwise make sure to add the `nobrotli,nowatcher` tags if you do not need them.
