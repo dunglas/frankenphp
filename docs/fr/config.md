@@ -287,16 +287,19 @@ frankenphp php-server [--domain <example.com>] [--root <path>] [--listen <addr>]
 ### Exemples
 
 Démarrer un serveur avec le répertoire courant comme racine de document :
+
 ```console
 frankenphp php-server --root ./
 ```
 
 Démarrer un serveur avec HTTPS activé :
+
 ```console
 frankenphp php-server --domain example.com
 ```
 
 Démarrer un serveur avec un worker :
+
 ```console
 frankenphp php-server --worker public/index.php
 ```

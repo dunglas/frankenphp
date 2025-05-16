@@ -182,16 +182,19 @@ frankenphp php-server [--domain <example.com>] [--root <path>] [--listen <addr>]
 ### 示例
 
 使用当前目录作为文档根目录启动服务器：
+
 ```console
 frankenphp php-server --root ./
 ```
 
 启动启用 HTTPS 的服务器：
+
 ```console
 frankenphp php-server --domain example.com
 ```
 
 启动带有 worker 的服务器：
+
 ```console
 frankenphp php-server --worker public/index.php
 ```

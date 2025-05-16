@@ -257,16 +257,19 @@ frankenphp php-server [--domain <example.com>] [--root <path>] [--listen <addr>]
 ### Примеры
 
 Запуск сервера с текущей директорией в качестве корневой:
+
 ```console
 frankenphp php-server --root ./
 ```
 
 Запуск сервера с включенным HTTPS:
+
 ```console
 frankenphp php-server --domain example.com
 ```
 
 Запуск сервера с worker:
+
 ```console
 frankenphp php-server --worker public/index.php
 ```

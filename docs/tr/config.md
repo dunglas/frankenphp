@@ -189,16 +189,19 @@ frankenphp php-server [--domain <example.com>] [--root <path>] [--listen <addr>]
 ### Örnekler
 
 Geçerli dizini belge kökü olarak kullanarak bir sunucu başlatın:
+
 ```console
 frankenphp php-server --root ./
 ```
 
 HTTPS etkin bir sunucu başlatın:
+
 ```console
 frankenphp php-server --domain example.com
 ```
 
 Bir worker ile sunucu başlatın:
+
 ```console
 frankenphp php-server --worker public/index.php
 ```

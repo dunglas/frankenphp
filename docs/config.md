@@ -288,16 +288,19 @@ frankenphp php-server [--domain <example.com>] [--root <path>] [--listen <addr>]
 ### Examples
 
 Start a server with the current directory as the document root:
+
 ```console
 frankenphp php-server --root ./
 ```
 
 Start a server with HTTPS enabled:
+
 ```console
 frankenphp php-server --domain example.com
 ```
 
 Start a server with a worker:
+
 ```console
 frankenphp php-server --worker public/index.php
 ```
