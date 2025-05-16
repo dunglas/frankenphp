@@ -65,7 +65,7 @@ RUN git clone --branch=PHP-8.4 https://github.com/php/php-src.git . && \
 		mkdir -p /etc/frankenphp/php.d && \
 			cp php.ini-development /etc/frankenphp/php.ini && \
 			echo "zend_extension=opcache.so" >> /etc/frankenphp/php.ini && \
-			echo "opcache.enable=1" >> /etcfrankenphp/php.ini && \
+			echo "opcache.enable=1" >> /etc/frankenphp/php.ini && \
 	php --version
 
 # Install e-dant/watcher (necessary for file watching)
