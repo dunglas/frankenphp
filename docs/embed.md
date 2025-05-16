@@ -49,6 +49,8 @@ in the main directory of the app to be embedded (`$TMPDIR/my-prepared-app` in th
 
 If an app with a Caddyfile in the directory is embedded, it will use that Caddyfile's configuration automatically when running the binary.
 
+If you want to serve files from the embedded app directly, specify "root ./", as not specifying the root option will serve embedded_app/public by default.
+
 ## Creating a Linux Binary
 
 The easiest way to create a Linux binary is to use the Docker-based builder we provide.

@@ -50,6 +50,8 @@ dans le répertoire principal de l'application à intégrer
 (`$TMPDIR/my-prepared-app` dans l'exemple précédent).
 Si une application avec un Caddyfile dans le répertoire est intégrée, elle utilisera automatiquement la configuration de ce Caddyfile lors de l'exécution du binaire.
 
+Si vous souhaitez servir des fichiers directement depuis l'application embarquée, spécifiez « root ./ », car ne pas spécifier l'option root servira embedded_app/public par défaut.
+
 ## Créer un binaire Linux
 
 La manière la plus simple de créer un binaire Linux est d'utiliser le builder basé sur Docker que nous fournissons.
