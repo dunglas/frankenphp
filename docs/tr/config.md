@@ -141,7 +141,7 @@ php_server`ve`php` yönergeleri aşağıdaki seçeneklere sahiptir:
 
 ```caddyfile
 php_server [<matcher>] {
-	root <directory> # Sitenin kök klasörünü ayarlar. Öntanımlı: `root` yönergesi.
+	root <directory> # Sitenin kök klasörünü ayarlar. Öntanımlı: `root` yönergesi. Belirtilmezse, varsayılan olarak current_working_dir/public dizinini kullanacaktır.
 	split_path <delim...> # URI'yi iki parçaya bölmek için alt dizgeleri ayarlar. İlk eşleşen alt dizge "yol bilgisini" yoldan ayırmak için kullanılır. İlk parça eşleşen alt dizeyle sonlandırılır ve gerçek kaynak (CGI betiği) adı olarak kabul edilir. İkinci parça betiğin kullanması için PATH_INFO olarak ayarlanacaktır. Varsayılan: `.php`
 	resolve_root_symlink false # Varsa, sembolik bir bağlantıyı değerlendirerek `root` dizininin gerçek değerine çözümlenmesini devre dışı bırakır (varsayılan olarak etkindir).
 	env <key> <value> # Ek bir ortam değişkenini verilen değere ayarlar. Birden fazla ortam değişkeni için birden fazla kez belirtilebilir.
@@ -165,6 +165,43 @@ FPM ve CLI SAPI'lerinde olduğu gibi, ortam değişkenleri varsayılan olarak `$
 Ek olarak [PHP yapılandırma dosyalarını](https://www.php.net/manual/en/configuration.file.php#configuration.file.scan) yüklemek için
 `PHP_INI_SCAN_DIR` ortam değişkeni kullanılabilir.
 Ayarlandığında, PHP verilen dizinlerde bulunan `.ini` uzantılı tüm dosyaları yükleyecektir.
+
+## php-server Komutu
+
+`php-server` komutu, üretime hazır bir PHP sunucusu başlatmanın uygun bir yoludur. Özellikle hızlı dağıtımlar, demolar, geliştirme veya [gömülü bir uygulama](embed.md) çalıştırmak için kullanışlıdır.
+
+```console
+frankenphp php-server [--domain <example.com>] [--root <path>] [--listen <addr>] [--worker /path/to/worker.php<,nb-workers>] [--watch <paths...>] [--access-log] [--debug] [--no-compress] [--mercure]
+```
+
+### Seçenekler
+
+- `--domain`, `-d`: Dosyaların sunulacağı alan adı. Belirtilirse, sunucu HTTPS kullanacak ve otomatik olarak bir Let's Encrypt sertifikası alacaktır.
+- `--root`, `-r`: Sitenin kök dizininin yolu. Belirtilmezse ve gömülü bir uygulama kullanılıyorsa, varsayılan olarak embedded_app/public dizinini kullanacaktır.
+- `--listen`, `-l`: Dinleyicinin bağlanacağı adres. Varsayılan olarak `:80` veya bir alan adı belirtilmişse `:443`'tür.
+- `--worker`, `-w`: Çalıştırılacak worker betiği. Birden fazla worker için birden çok kez belirtilebilir.
+- `--watch`: Dosya değişikliklerini izlemek için dizin. Birden fazla dizin için birden çok kez belirtilebilir.
+- `--access-log`, `-a`: Erişim günlüğünü etkinleştirin.
+- `--debug`, `-v`: Ayrıntılı hata ayıklama günlüklerini etkinleştirin.
+- `--mercure`, `-m`: Yerleşik Mercure.rocks hub'ını etkinleştirin.
+- `--no-compress`: Zstandard, Brotli ve Gzip sıkıştırmasını devre dışı bırakın.
+
+### Örnekler
+
+Geçerli dizini belge kökü olarak kullanarak bir sunucu başlatın:
+```console
+frankenphp php-server --root ./
+```
+
+HTTPS etkin bir sunucu başlatın:
+```console
+frankenphp php-server --domain example.com
+```
+
+Bir worker ile sunucu başlatın:
+```console
+frankenphp php-server --worker public/index.php
+```
 
 ## Hata Ayıklama Modunu Etkinleştirin
 

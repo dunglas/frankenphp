@@ -39,6 +39,12 @@ composer install --ignore-platform-reqs --no-dev -a
 composer dump-env prod
 ```
 
+### Yapılandırmayı Özelleştirme
+
+[Yapılandırmayı](config.md) özelleştirmek için, gömülecek uygulamanın ana dizinine bir `Caddyfile` ve bir `php.ini` dosyası koyabilirsiniz
+(önceki örnekte `$TMPDIR/my-prepared-app`).
+Dizinde bir Caddyfile ile bir uygulama gömülürse, binary dosyasını çalıştırırken otomatik olarak bu Caddyfile'ın yapılandırmasını kullanacaktır.
+
 ## Linux Binary'si Oluşturma
 
 Bir Linux binary çıktısı almanın en kolay yolu, sağladığımız Docker tabanlı derleyiciyi kullanmaktır.
@@ -100,6 +106,12 @@ Web uygulamasını başlatmak için çalıştırın:
 
 ```console
 ./my-app php-server
+```
+
+Varsayılan olarak, eğer root seçeneği belirtilmezse, belge kökü olarak embedded_app/public dizinini kullanacaktır. Doğrudan gömülü uygulama dizininden sunmak istiyorsanız, root seçeneğini belirtin:
+
+```console
+./my-app php-server --root ./
 ```
 
 Uygulamanız bir [worker betiği](worker.md) içeriyorsa, worker'ı aşağıdaki gibi bir şeyle başlatın:

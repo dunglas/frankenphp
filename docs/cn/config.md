@@ -138,7 +138,7 @@ route {
 
 ```caddyfile
 php_server [<matcher>] {
-	root <directory> # 设置站点的根目录。默认值：`root` 指令。
+	root <directory> # 设置站点的根目录。默认值：`root` 指令。如果未指定，默认将使用 current_working_dir/public 目录。
 	split_path <delim...> # 设置用于将 URI 拆分为两部分的子字符串。第一个匹配的子字符串将用于从路径中拆分“路径信息”。第一个部分以匹配的子字符串为后缀，并将假定为实际资源(CGI 脚本)名称。第二部分将设置为PATH_INFO，供脚本使用。默认值：`.php`
 	resolve_root_symlink false # 禁用将 `root` 目录在符号链接时将其解析为实际值（默认启用）。
 	env <key> <value> # 设置额外的环境变量，可以设置多个环境变量。
@@ -158,6 +158,43 @@ php_server [<matcher>] {
 要加载 [其他 PHP INI 配置文件](https://www.php.net/manual/en/configuration.file.php#configuration.file.scan)，
 可以使用 `PHP_INI_SCAN_DIR` 环境变量。
 设置后，PHP 将加载给定目录中存在 `.ini` 扩展名的所有文件。
+
+## php-server 命令
+
+`php-server` 命令是启动生产就绪 PHP 服务器的便捷方式。它特别适用于快速部署、演示、开发或运行[嵌入式应用](embed.md)。
+
+```console
+frankenphp php-server [--domain <example.com>] [--root <path>] [--listen <addr>] [--worker /path/to/worker.php<,nb-workers>] [--watch <paths...>] [--access-log] [--debug] [--no-compress] [--mercure]
+```
+
+### 选项
+
+- `--domain`, `-d`: 提供文件的域名。如果指定，服务器将使用 HTTPS 并自动获取 Let's Encrypt 证书。
+- `--root`, `-r`: 站点根目录的路径。如果未指定并使用嵌入式应用，默认将使用 embedded_app/public 目录。
+- `--listen`, `-l`: 绑定监听器的地址。默认为 `:80`，如果指定了域名则为 `:443`。
+- `--worker`, `-w`: 要运行的 worker 脚本。可以多次指定以运行多个 worker。
+- `--watch`: 监视文件更改的目录。可以多次指定以监视多个目录。
+- `--access-log`, `-a`: 启用访问日志。
+- `--debug`, `-v`: 启用详细调试日志。
+- `--mercure`, `-m`: 启用内置的 Mercure.rocks hub。
+- `--no-compress`: 禁用 Zstandard、Brotli 和 Gzip 压缩。
+
+### 示例
+
+使用当前目录作为文档根目录启动服务器：
+```console
+frankenphp php-server --root ./
+```
+
+启动启用 HTTPS 的服务器：
+```console
+frankenphp php-server --domain example.com
+```
+
+启动带有 worker 的服务器：
+```console
+frankenphp php-server --worker public/index.php
+```
 
 ## 启用调试模式
 

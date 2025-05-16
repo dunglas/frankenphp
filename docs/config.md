@@ -149,7 +149,7 @@ The `php_server` and the `php` directives have the following options:
 
 ```caddyfile
 php_server [<matcher>] {
-	root <directory> # Sets the root folder to the site. Default: `root` directive.
+	root <directory> # Sets the root folder to the site. Default: `root` directive. If not specified, it will use the current_working_dir/public directory by default.
 	split_path <delim...> # Sets the substrings for splitting the URI into two parts. The first matching substring will be used to split the "path info" from the path. The first piece is suffixed with the matching substring and will be assumed as the actual resource (CGI script) name. The second piece will be set to PATH_INFO for the script to use. Default: `.php`
 	resolve_root_symlink false # Disables resolving the `root` directory to its actual value by evaluating a symbolic link, if one exists (enabled by default).
 	env <key> <value> # Sets an extra environment variable to the given value. Can be specified more than once for multiple environment variables.
@@ -263,6 +263,43 @@ You can also change the PHP configuration using the `php_ini` directive in the `
         }
     }
 }
+```
+
+## The php-server Command
+
+The `php-server` command is a convenient way to start a production-ready PHP server. It's especially useful for quick deployments, demos, development, or to run an [embedded app](embed.md).
+
+```console
+frankenphp php-server [--domain <example.com>] [--root <path>] [--listen <addr>] [--worker /path/to/worker.php<,nb-workers>] [--watch <paths...>] [--access-log] [--debug] [--no-compress] [--mercure]
+```
+
+### Options
+
+- `--domain`, `-d`: Domain name at which to serve the files. If specified, the server will use HTTPS and automatically obtain a Let's Encrypt certificate.
+- `--root`, `-r`: The path to the root of the site. If not specified and using an embedded app, it will use the embedded_app/public directory by default.
+- `--listen`, `-l`: The address to which to bind the listener. Default is `:80` or `:443` if a domain is specified.
+- `--worker`, `-w`: Worker script to run. Can be specified multiple times for multiple workers.
+- `--watch`: Directory to watch for file changes. Can be specified multiple times for multiple directories.
+- `--access-log`, `-a`: Enable the access log.
+- `--debug`, `-v`: Enable verbose debug logs.
+- `--mercure`, `-m`: Enable the built-in Mercure.rocks hub.
+- `--no-compress`: Disable Zstandard, Brotli and Gzip compression.
+
+### Examples
+
+Start a server with the current directory as the document root:
+```console
+frankenphp php-server --root ./
+```
+
+Start a server with HTTPS enabled:
+```console
+frankenphp php-server --domain example.com
+```
+
+Start a server with a worker:
+```console
+frankenphp php-server --worker public/index.php
 ```
 
 ## Enable the Debug Mode

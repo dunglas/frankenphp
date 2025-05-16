@@ -148,7 +148,7 @@ Les directives `php_server` et `php` disposent des options suivantes :
 
 ```caddyfile
 php_server [<matcher>] {
-    root <directory> # Définit le dossier racine du le site. Par défaut : valeur de la directive `root` parente.
+    root <directory> # Définit le dossier racine du le site. Par défaut : valeur de la directive `root` parente. Si non spécifié, il utilisera le répertoire current_working_dir/public par défaut.
     split_path <delim...> # Définit les sous-chaînes pour diviser l'URI en deux parties. La première sous-chaîne correspondante sera utilisée pour séparer le "path info" du chemin. La première partie est suffixée avec la sous-chaîne correspondante et sera considérée comme le nom réel de la ressource (script CGI). La seconde partie sera définie comme PATH_INFO pour utilisation par le script. Par défaut : `.php`
     resolve_root_symlink false # Désactive la résolution du répertoire `root` vers sa valeur réelle en évaluant un lien symbolique, s'il existe (activé par défaut).
     env <key> <value> # Définit une variable d'environnement supplémentaire avec la valeur donnée. Peut être spécifié plusieurs fois pour plusieurs variables d'environnement.
@@ -262,6 +262,43 @@ Vous pouvez également modifier la configuration de PHP en utilisant la directiv
         }
     }
 }
+```
+
+## La commande php-server
+
+La commande `php-server` est un moyen pratique de démarrer un serveur PHP prêt pour la production. Elle est particulièrement utile pour les déploiements rapides, les démonstrations, le développement, ou pour exécuter une [application embarquée](embed.md).
+
+```console
+frankenphp php-server [--domain <example.com>] [--root <path>] [--listen <addr>] [--worker /path/to/worker.php<,nb-workers>] [--watch <paths...>] [--access-log] [--debug] [--no-compress] [--mercure]
+```
+
+### Options
+
+- `--domain`, `-d` : Nom de domaine sur lequel servir les fichiers. Si spécifié, le serveur utilisera HTTPS et obtiendra automatiquement un certificat Let's Encrypt.
+- `--root`, `-r` : Chemin vers la racine du site. Si non spécifié et en utilisant une application embarquée, il utilisera le répertoire embedded_app/public par défaut.
+- `--listen`, `-l` : L'adresse à laquelle lier l'écouteur. Par défaut, c'est `:80` ou `:443` si un domaine est spécifié.
+- `--worker`, `-w` : Script worker à exécuter. Peut être spécifié plusieurs fois pour plusieurs workers.
+- `--watch` : Répertoire à surveiller pour les changements de fichiers. Peut être spécifié plusieurs fois pour plusieurs répertoires.
+- `--access-log`, `-a` : Activer le journal d'accès.
+- `--debug`, `-v` : Activer les journaux de débogage détaillés.
+- `--mercure`, `-m` : Activer le hub Mercure.rocks intégré.
+- `--no-compress` : Désactiver la compression Zstandard, Brotli et Gzip.
+
+### Exemples
+
+Démarrer un serveur avec le répertoire courant comme racine de document :
+```console
+frankenphp php-server --root ./
+```
+
+Démarrer un serveur avec HTTPS activé :
+```console
+frankenphp php-server --domain example.com
+```
+
+Démarrer un serveur avec un worker :
+```console
+frankenphp php-server --worker public/index.php
 ```
 
 ## Activer le mode debug
