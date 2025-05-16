@@ -179,8 +179,8 @@ frankenphp php-server [--domain <example.com>] [--root <path>] [--listen <addr>]
 - `--domain`, `-d`: Dosyaların sunulacağı alan adı. Belirtilirse, sunucu HTTPS kullanacak ve otomatik olarak bir Let's Encrypt sertifikası alacaktır.
 - `--root`, `-r`: Sitenin kök dizininin yolu. Belirtilmezse ve gömülü bir uygulama kullanılıyorsa, varsayılan olarak embedded_app/public dizinini kullanacaktır.
 - `--listen`, `-l`: Dinleyicinin bağlanacağı adres. Varsayılan olarak `:80` veya bir alan adı belirtilmişse `:443`'tür.
-- `--worker`, `-w`: Çalıştırılacak worker betiği. Birden fazla worker için birden çok kez belirtilebilir.
-- `--watch`: Dosya değişikliklerini izlemek için dizin. Birden fazla dizin için birden çok kez belirtilebilir.
+- `--worker`, `-w`: Çalıştırılacak worker betiği. Birden fazla worker için birden çOK kez belirtilebilir.
+- `--watch`: Dosya değişikliklerini izlemek için dizin. Birden fazla dizin için birden çOK kez belirtilebilir.
 - `--access-log`, `-a`: Erişim günlüğünü etkinleştirin.
 - `--debug`, `-v`: Ayrıntılı hata ayıklama günlüklerini etkinleştirin.
 - `--mercure`, `-m`: Yerleşik Mercure.rocks hub'ını etkinleştirin.
