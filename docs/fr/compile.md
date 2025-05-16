@@ -78,7 +78,7 @@ Vous pouvez maintenant compiler FrankenPHP :
 ```console
 curl -L https://github.com/dunglas/frankenphp/archive/refs/heads/main.tar.gz | tar xz
 cd frankenphp-main/caddy/frankenphp
-CGO_CFLAGS=$(php-config --includes) CGO_LDFLAGS="$(php-config --ldflags) $(php-config --libs)" go build -tags=nobadger,nomysql,nopgx,nobrotli,nowatcher
+CGO_CFLAGS=$(php-config --includes) CGO_LDFLAGS="$(php-config --ldflags) $(php-config --libs)" go build -tags=nobadger,nomysql,nopgx
 ```
 
 ### Utiliser xcaddy
@@ -87,7 +87,7 @@ Alternativement, vous pouvez utiliser [xcaddy](https://github.com/caddyserver/xc
 
 ```console
 CGO_ENABLED=1 \
-XCADDY_GO_BUILD_FLAGS="-ldflags='-w -s' -tags=nobadger,nomysql,nopgx,nobrotli,nowatcher" \
+XCADDY_GO_BUILD_FLAGS="-ldflags='-w -s' -tags=nobadger,nomysql,nopgx" \
 CGO_CFLAGS=$(php-config --includes) \
 CGO_LDFLAGS="$(php-config --ldflags) $(php-config --libs)" \
 xcaddy build \
