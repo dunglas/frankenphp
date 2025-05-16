@@ -71,6 +71,11 @@ cd frankenphp-main/caddy/frankenphp
 CGO_CFLAGS=$(php-config --includes) CGO_LDFLAGS="$(php-config --ldflags) $(php-config --libs)" go build
 ```
 
+> [!TIP]
+>
+> 要成功编译，必须安装 brotli 和 watcher 依赖项。
+> 否则，如果不需要它们，请确保添加 `nobrotli,nowatcher` 标记。
+
 ### 使用 xcaddy
 
 你可以使用 [xcaddy](https://github.com/caddyserver/xcaddy) 来编译 [自定义 Caddy 模块](https://caddyserver.com/docs/modules/) 的 FrankenPHP：
