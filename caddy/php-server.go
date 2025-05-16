@@ -104,7 +104,11 @@ func cmdPHPServer(fs caddycmd.Flags) (int, error) {
 		if _, err := os.Stat("php.ini"); err == nil {
 			iniScanDir := os.Getenv("PHP_INI_SCAN_DIR")
 
-			if err := os.Setenv("PHP_INI_SCAN_DIR", iniScanDir+":"+frankenphp.EmbeddedAppPath); err != nil {
+			newDir := frankenphp.EmbeddedAppPath
+			if iniScanDir != "" {
+				newDir = iniScanDir + ":" + newDir
+			}
+			if err := os.Setenv("PHP_INI_SCAN_DIR", newDir); err != nil {
 				return caddy.ExitCodeFailedStartup, err
 			}
 		}
@@ -123,7 +127,7 @@ func cmdPHPServer(fs caddycmd.Flags) (int, error) {
 		}
 
 		if root == "" {
-			root = defaultDocumentRoot
+			root = frankenphp.EmbeddedAppPath
 		}
 	}
 
