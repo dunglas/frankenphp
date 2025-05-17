@@ -94,13 +94,38 @@ Alternatively, you may use the one-line short form of the `worker` option:
 # ...
 ```
 
+Worker blocks can also be defined inside a `php` or `php_server` block. In this case, the worker inherits environment variables and root path from the parent directive and is only accessible by that specific domain:
+
+```caddyfile
+{
+	frankenphp
+}
+example.com {
+	root /path/to/app
+	php_server {
+		root <path>
+		worker {
+			file <path, can be relative to root>
+			num <num>
+			env <key> <value>
+			watch <path>
+			name <name>
+		}
+	}
+}
+```
+
 You can also define multiple workers if you serve multiple apps on the same server:
 
 ```caddyfile
 {
 	frankenphp {
 		worker /path/to/app/public/index.php <num>
-		worker /path/to/other/public/index.php <num>
+		worker {
+			file /path/to/other/public/index.php
+			num <num>
+			env APP_ENV dev
+		}
 	}
 }
 
@@ -111,7 +136,34 @@ app.example.com {
 
 other.example.com {
 	root /path/to/other/public
-	php_server
+	php_server {
+		env APP_ENV dev
+	}
+}
+
+# ...
+```
+
+Is equivalent to
+
+```caddyfile
+{
+	frankenphp
+}
+
+app.example.com {
+	php_server {
+		root /path/to/app/public
+		worker index.php <num>
+	}
+}
+
+other.example.com {
+	php_server {
+		root /path/to/other/public
+		env APP_ENV dev
+		worker index.php <num>
+	}
 }
 
 # ...
@@ -149,7 +201,7 @@ The `php_server` and the `php` directives have the following options:
 
 ```caddyfile
 php_server [<matcher>] {
-	root <directory> # Sets the root folder to the site. Default: `root` directive. If not specified, it will use the current_working_dir/public directory by default.
+	root <directory> # Sets the root folder to the site. Default: `root` directive.
 	split_path <delim...> # Sets the substrings for splitting the URI into two parts. The first matching substring will be used to split the "path info" from the path. The first piece is suffixed with the matching substring and will be assumed as the actual resource (CGI script) name. The second piece will be set to PATH_INFO for the script to use. Default: `.php`
 	resolve_root_symlink false # Disables resolving the `root` directory to its actual value by evaluating a symbolic link, if one exists (enabled by default).
 	env <key> <value> # Sets an extra environment variable to the given value. Can be specified more than once for multiple environment variables.
@@ -212,7 +264,7 @@ This is an opt-in configuration that needs to be added to the global options in 
 ```caddyfile
 {
   servers {
-    enable_full_duplex
+	enable_full_duplex
   }
 }
 ```
@@ -252,16 +304,16 @@ You can also change the PHP configuration using the `php_ini` directive in the `
 
 ```caddyfile
 {
-    frankenphp {
-        php_ini memory_limit 256M
+	frankenphp {
+		php_ini memory_limit 256M
 
-        # or
+		# or
 
-        php_ini {
-            memory_limit 256M
-            max_execution_time 15
-        }
-    }
+		php_ini {
+			memory_limit 256M
+			max_execution_time 15
+		}
+	}
 }
 ```
 

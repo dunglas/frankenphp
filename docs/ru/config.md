@@ -89,13 +89,37 @@ localhost {
 # ...
 ```
 
-Вы также можете определить несколько workers, если обслуживаете несколько приложений на одном сервере:
+Блоки worker также могут быть определены внутри блока `php` или `php_server`. В этом случае worker наследует переменные окружения и корневой путь от родительской директивы и доступен только для этого конкретного домена:
 
+```caddyfile
+{
+	frankenphp
+}
+example.com {
+	root /path/to/app
+	php_server {
+		root <path>
+		worker {
+			file <path, может быть относительным к root>
+			num <num>
+			env <key> <value>
+			watch <path>
+			name <name>
+		}
+	}
+}
+```
+
+Вы также можете определить несколько workers, если обслуживаете несколько приложений на одном сервере:
 ```caddyfile
 {
 	frankenphp {
 		worker /path/to/app/public/index.php <num>
-		worker /path/to/other/public/index.php <num>
+		worker {
+			file /path/to/other/public/index.php
+			num <num>
+			env APP_ENV dev
+		}
 	}
 }
 
@@ -106,9 +130,35 @@ app.example.com {
 
 other.example.com {
 	root /path/to/other/public
-	php_server
+	php_server {
+		env APP_ENV dev
+	}
 }
 
+# ...
+```
+
+Эквивалентно
+
+```caddyfile
+{
+	frankenphp
+}
+
+app.example.com {
+	php_server {
+		root /path/to/app/public
+		worker index.php <num>
+	}
+}
+
+other.example.com {
+	php_server {
+		root /path/to/other/public
+		env APP_ENV dev
+		worker index.php <num>
+	}
+}
 # ...
 ```
 
@@ -141,7 +191,7 @@ route {
 
 ```caddyfile
 php_server [<matcher>] {
-	root <directory> # Указывает корневую директорию сайта. По умолчанию: директива `root`. Если не указано, по умолчанию будет использоваться директория current_working_dir/public.
+	root <directory> # Указывает корневую директорию сайта. По умолчанию: директива `root`.
 	split_path <delim...> # Устанавливает подстроки для разделения URI на две части. Первая часть будет использована как имя ресурса (CGI-скрипта), вторая часть — как PATH_INFO. По умолчанию: `.php`.
 	resolve_root_symlink false # Отключает разрешение символьных ссылок для `root` (включено по умолчанию).
 	env <key> <value> # Устанавливает дополнительные переменные окружения. Можно указать несколько раз для разных переменных.
@@ -198,9 +248,9 @@ php_server [<matcher>] {
 
 ```caddyfile
 {
-  servers {
-    enable_full_duplex
-  }
+	servers {
+		enable_full_duplex
+	}
 }
 ```
 
@@ -230,6 +280,23 @@ CADDY_GLOBAL_OPTIONS="servers {
 Значение `S` в [директиве PHP `variables_order`](https://www.php.net/manual/en/ini.core.php#ini.variables-order) всегда эквивалентно `ES`, независимо от того, где расположена `E` в этой директиве.
 
 ## Конфигурация PHP
+
+Вы также можете изменить конфигурацию PHP, используя директиву `php_ini` в блоке `frankenphp`:
+
+```caddyfile
+{
+	frankenphp {
+		php_ini memory_limit 256M
+
+		# или
+
+		php_ini {
+			memory_limit 256M
+			max_execution_time 15
+		}
+	}
+}
+```
 
 Для загрузки [дополнительных конфигурационных файлов PHP](https://www.php.net/manual/en/configuration.file.php#configuration.file.scan) можно использовать переменную окружения `PHP_INI_SCAN_DIR`.
 Если она установлена, PHP загрузит все файлы с расширением `.ini`, находящиеся в указанных директориях.

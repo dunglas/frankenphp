@@ -88,13 +88,37 @@ Alternatif olarak, `worker` seçeneğinin tek satırlık kısa formunu kullanabi
 # ...
 ```
 
-Aynı sunucuda birden fazla uygulamaya hizmet veriyorsanız birden fazla işçi de tanımlayabilirsiniz:
+Worker blokları ayrıca bir `php` veya `php_server` bloğu içinde de tanımlanabilir. Bu durumda, worker, üst yönergenin ortam değişkenlerini ve kök yolunu devralır ve yalnızca o belirli alan tarafından erişilebilir:
 
+```caddyfile
+{
+	frankenphp
+}
+example.com {
+	root /path/to/app
+	php_server {
+		root <path>
+		worker {
+			file <path, root'a göre göreceli olabilir>
+			num <num>
+			env <key> <value>
+			watch <path>
+			name <name>
+		}
+	}
+}
+```
+
+Aynı sunucuda birden fazla uygulamaya hizmet veriyorsanız birden fazla işçi de tanımlayabilirsiniz:
 ```caddyfile
 {
 	frankenphp {
 		worker /path/to/app/public/index.php <num>
-		worker /path/to/other/public/index.php <num>
+		worker {
+			file /path/to/other/public/index.php
+			num <num>
+			env APP_ENV dev
+		}
 	}
 }
 
@@ -105,9 +129,35 @@ app.example.com {
 
 other.example.com {
 	root /path/to/other/public
-	php_server
+	php_server {
+		env APP_ENV dev
+	}
 }
 
+# ...
+```
+
+Şuna eşdeğerdir
+
+```caddyfile
+{
+	frankenphp
+}
+
+app.example.com {
+	php_server {
+		root /path/to/app/public
+		worker index.php <num>
+	}
+}
+
+other.example.com {
+	php_server {
+		root /path/to/other/public
+		env APP_ENV dev
+		worker index.php <num>
+	}
+}
 # ...
 ```
 
@@ -141,7 +191,7 @@ php_server`ve`php` yönergeleri aşağıdaki seçeneklere sahiptir:
 
 ```caddyfile
 php_server [<matcher>] {
-	root <directory> # Sitenin kök klasörünü ayarlar. Öntanımlı: `root` yönergesi. Belirtilmezse, varsayılan olarak current_working_dir/public dizinini kullanacaktır.
+	root <directory> # Sitenin kök klasörünü ayarlar. Öntanımlı: `root` yönergesi.
 	split_path <delim...> # URI'yi iki parçaya bölmek için alt dizgeleri ayarlar. İlk eşleşen alt dizge "yol bilgisini" yoldan ayırmak için kullanılır. İlk parça eşleşen alt dizeyle sonlandırılır ve gerçek kaynak (CGI betiği) adı olarak kabul edilir. İkinci parça betiğin kullanması için PATH_INFO olarak ayarlanacaktır. Varsayılan: `.php`
 	resolve_root_symlink false # Varsa, sembolik bir bağlantıyı değerlendirerek `root` dizininin gerçek değerine çözümlenmesini devre dışı bırakır (varsayılan olarak etkindir).
 	env <key> <value> # Ek bir ortam değişkenini verilen değere ayarlar. Birden fazla ortam değişkeni için birden fazla kez belirtilebilir.
@@ -161,6 +211,23 @@ FPM ve CLI SAPI'lerinde olduğu gibi, ortam değişkenleri varsayılan olarak `$
 [`variables_order`'a ait PHP yönergesinin](https://www.php.net/manual/en/ini.core.php#ini.variables-order) `S` değeri bu yönergede `E`'nin başka bir yere yerleştirilmesinden bağımsız olarak her zaman `ES` ile eş değerdir.
 
 ## PHP konfigürasyonu
+
+Ayrıca `frankenphp` bloğundaki `php_ini` yönergesini kullanarak PHP yapılandırmasını değiştirebilirsiniz:
+
+```caddyfile
+{
+	frankenphp {
+		php_ini memory_limit 256M
+
+		# veya
+
+		php_ini {
+			memory_limit 256M
+			max_execution_time 15
+		}
+	}
+}
+```
 
 Ek olarak [PHP yapılandırma dosyalarını](https://www.php.net/manual/en/configuration.file.php#configuration.file.scan) yüklemek için
 `PHP_INI_SCAN_DIR` ortam değişkeni kullanılabilir.
