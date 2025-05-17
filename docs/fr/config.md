@@ -115,6 +115,7 @@ example.com {
 ```
 
 Vous pouvez aussi définir plusieurs workers si vous servez plusieurs applications sur le même serveur :
+
 ```caddyfile
 {
 	frankenphp {
