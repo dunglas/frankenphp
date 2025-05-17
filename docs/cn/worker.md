@@ -7,7 +7,7 @@ FrankenPHP 将在几毫秒内处理传入的请求。
 
 Worker 块可以通过两种方式定义：
 
-1. 在全局 frankenphp 块中，如[配置文档](config.md#caddyfile-config)中所述：
+在全局 frankenphp 块中，如[配置文档](config.md#caddyfile-config)中所述：
 
 ```caddyfile
 {
@@ -23,7 +23,7 @@ Worker 块可以通过两种方式定义：
 }
 ```
 
-2. 在 php 或 php_server 块内：
+在 php 或 php_server 块内：
 
 ```caddyfile
 example.com {

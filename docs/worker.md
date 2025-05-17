@@ -9,7 +9,7 @@ For detailed information on how to specify workers in your configuration, see th
 
 Worker blocks can be defined in two ways:
 
-1. In the global frankenphp block, as described in the [configuration documentation](config.md#caddyfile-config):
+In the global frankenphp block, as described in the [configuration documentation](config.md#caddyfile-config):
 
 ```caddyfile
 {
@@ -25,7 +25,7 @@ Worker blocks can be defined in two ways:
 }
 ```
 
-2. Inside a php or php_server block:
+Inside a php or php_server block:
 
 ```caddyfile
 example.com {

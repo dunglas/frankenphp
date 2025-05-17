@@ -108,6 +108,7 @@ example.com {
 ```
 
 如果在同一服务器上运行多个应用，还可以定义多个 worker：
+
 ```caddyfile
 {
 	frankenphp {

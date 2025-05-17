@@ -110,6 +110,7 @@ example.com {
 ```
 
 Aynı sunucuda birden fazla uygulamaya hizmet veriyorsanız birden fazla işçi de tanımlayabilirsiniz:
+
 ```caddyfile
 {
 	frankenphp {

@@ -7,7 +7,7 @@ FrankenPHP traitera les requêtes entrantes en quelques millisecondes.
 
 Les blocs worker peuvent être définis de deux manières :
 
-1. Dans le bloc global frankenphp, comme décrit dans la [documentation de configuration](config.md#configuration-du-caddyfile) :
+Dans le bloc global frankenphp, comme décrit dans la [documentation de configuration](config.md#configuration-du-caddyfile) :
 
 ```caddyfile
 {
@@ -23,7 +23,7 @@ Les blocs worker peuvent être définis de deux manières :
 }
 ```
 
-2. À l'intérieur d'un bloc php ou php_server :
+À l'intérieur d'un bloc php ou php_server :
 
 ```caddyfile
 example.com {
