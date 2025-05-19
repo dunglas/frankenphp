@@ -46,7 +46,6 @@ func (handler *regularThread) beforeScriptExecution() string {
 	panic("unexpected state: " + handler.state.name())
 }
 
-// return true if the worker should continue to run
 func (handler *regularThread) afterScriptExecution(int) {
 	handler.afterRequest()
 }
