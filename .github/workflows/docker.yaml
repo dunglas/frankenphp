@@ -227,12 +227,16 @@ jobs:
           username: ${{ secrets.REGISTRY_USERNAME }}
           password: ${{ secrets.REGISTRY_PASSWORD }}
       - name: Create manifest list and push
-        working-directory: /tmp/metadata
-        run: |
-          set -x
-          # shellcheck disable=SC2046,SC2086
-          docker buildx imagetools create $(jq -cr '.target."${{ matrix.target }}-${{ matrix.variant }}".tags | map("-t " + .) | join(" ")' <<< ${METADATA}) \
-            $(printf "${IMAGE_NAME}@sha256:%s " *)
+        uses: nick-fields/retry@v3
+        with:
+          max_attempts: 10
+          retry_wait_seconds: 300
+          command: |
+            set -x
+            cd /tmp/metadata
+            # shellcheck disable=SC2046,SC2086
+            docker buildx imagetools create $(jq -cr '.target."${{ matrix.target }}-${{ matrix.variant }}".tags | map("-t " + .) | join(" ")' <<< ${METADATA}) \
+              $(printf "${IMAGE_NAME}@sha256:%s " *)
         env:
           METADATA: ${{ needs.prepare.outputs.metadata }}
       - name: Inspect image
