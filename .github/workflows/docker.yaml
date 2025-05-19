@@ -133,7 +133,6 @@ jobs:
         with:
           platforms: ${{ matrix.platform }}
       - name: Login to DockerHub
-        if: fromJson(needs.prepare.outputs.push)
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.REGISTRY_USERNAME }}
