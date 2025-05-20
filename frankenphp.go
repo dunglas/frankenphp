@@ -18,9 +18,10 @@ package frankenphp
 // #cgo CFLAGS: -Wall -Werror
 // #cgo CFLAGS: -I/usr/local/include -I/usr/local/include/php -I/usr/local/include/php/main -I/usr/local/include/php/TSRM -I/usr/local/include/php/Zend -I/usr/local/include/php/ext -I/usr/local/include/php/ext/date/lib
 // #cgo linux CFLAGS: -D_GNU_SOURCE
-// #cgo darwin LDFLAGS: -Wl,-rpath,/usr/local/lib -L/opt/homebrew/opt/libiconv/lib -liconv
-// #cgo linux LDFLAGS: -lresolv
+// #cgo darwin CFLAGS: -I/opt/homebrew/include
 // #cgo LDFLAGS: -L/usr/local/lib -L/usr/lib -lphp -ldl -lm -lutil
+// #cgo linux LDFLAGS: -lresolv
+// #cgo darwin LDFLAGS: -Wl,-rpath,/usr/local/lib -L/opt/homebrew/lib -L/opt/homebrew/opt/libiconv/lib -liconv
 // #include <stdlib.h>
 // #include <stdint.h>
 // #include <php_variables.h>
