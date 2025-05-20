@@ -223,15 +223,17 @@ func go_frankenphp_finish_worker_request(threadIndex C.uintptr_t) {
 	fc.closeContext()
 	thread.handler.(*workerThread).workerContext = nil
 
-	fc.logger.LogAttrs(context.Background(), slog.LevelDebug, "request handling finished", slog.String("worker", fc.scriptFilename), slog.String("url", fc.request.RequestURI))
+	fc.logger.LogAttrs(context.Background(), slog.LevelDebug, "request handling finished", slog.String("worker", fc.scriptFilename), slog.Int("thread", thread.threadIndex), slog.String("url", fc.request.RequestURI))
 }
 
 // when frankenphp_finish_request() is directly called from PHP
 //
 //export go_frankenphp_finish_php_request
 func go_frankenphp_finish_php_request(threadIndex C.uintptr_t) {
-	fc := phpThreads[threadIndex].getRequestContext()
+	thread := phpThreads[threadIndex]
+	fc := thread.getRequestContext()
+
 	fc.closeContext()
 
-	fc.logger.LogAttrs(context.Background(), slog.LevelDebug, "request handling finished", slog.String("url", fc.request.RequestURI))
+	fc.logger.LogAttrs(context.Background(), slog.LevelDebug, "request handling finished", slog.Int("thread", thread.threadIndex), slog.String("url", fc.request.RequestURI))
 }
