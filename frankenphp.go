@@ -429,7 +429,7 @@ func go_ub_write(threadIndex C.uintptr_t, cBuf *C.char, length C.int) (C.size_t,
 
 	i, e := writer.Write(unsafe.Slice((*byte)(unsafe.Pointer(cBuf)), length))
 	if e != nil {
-		fc.logger.LogAttrs(context.Background(), slog.LevelError, "write error", slog.Any("error", e))
+		fc.logger.LogAttrs(context.Background(), slog.LevelWarn, "write error", slog.Any("error", e))
 	}
 
 	if fc.responseWriter == nil {
