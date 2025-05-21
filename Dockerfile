@@ -19,7 +19,7 @@ RUN set -eux; \
 		/app/public \
 		/config/caddy \
 		/data/caddy \
-		/etc/caddy; \
+		/etc/caddy \
 		/etc/frankenphp; \
 	sed -i 's/php/frankenphp run/g' /usr/local/bin/docker-php-entrypoint; \
 	echo '<?php phpinfo();' > /app/public/index.php
