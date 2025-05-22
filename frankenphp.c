@@ -431,10 +431,12 @@ PHP_FUNCTION(frankenphp_handle_request) {
 
   /*
    * If an exception occurred, print the message to the client before
-   * closing the connection
+   * closing the connection and bailout.
    */
-  if (EG(exception)) {
+  if (EG(exception) && !zend_is_unwind_exit(EG(exception)) &&
+      !zend_is_graceful_exit(EG(exception))) {
     zend_exception_error(EG(exception), E_ERROR);
+    zend_bailout();
   }
 
   frankenphp_worker_request_shutdown();

@@ -28,7 +28,7 @@ import (
 func init() {
 	caddycmd.RegisterCommand(caddycmd.Command{
 		Name:  "php-server",
-		Usage: "[--domain <example.com>] [--root <path>] [--listen <addr>] [--worker /path/to/worker.php<,nb-workers>] [--watch[=<paths,...>]] [--access-log] [--debug] [--no-compress] [--mercure]",
+		Usage: "[--domain=<example.com>] [--root=<path>] [--listen=<addr>] [--worker=/path/to/worker.php<,nb-workers>] [--watch[=<glob-pattern>]]... [--access-log] [--debug] [--no-compress] [--mercure]",
 		Short: "Spins up a production-ready PHP server",
 		Long: `
 A simple but production-ready PHP server. Useful for quick deployments,
@@ -47,13 +47,13 @@ For more advanced use cases, see https://github.com/dunglas/frankenphp/blob/main
 			cmd.Flags().StringP("root", "r", "", "The path to the root of the site")
 			cmd.Flags().StringP("listen", "l", "", "The address to which to bind the listener")
 			cmd.Flags().StringArrayP("worker", "w", []string{}, "Worker script")
-			cmd.Flags().StringSlice("watch", []string{}, "Glob pattern of directories and files to watch for changes")
+			cmd.Flags().StringArray("watch", []string{}, "Glob pattern of directories and files to watch for changes")
 			cmd.Flags().BoolP("access-log", "a", false, "Enable the access log")
 			cmd.Flags().BoolP("debug", "v", false, "Enable verbose debug logs")
 			cmd.Flags().BoolP("mercure", "m", false, "Enable the built-in Mercure.rocks hub")
 			cmd.Flags().Bool("no-compress", false, "Disable Zstandard, Brotli and Gzip compression")
 
-			cmd.Flags().Lookup("watch").NoOptDefVal = "\"" + defaultWatchPattern + "\""
+			cmd.Flags().Lookup("watch").NoOptDefVal = defaultWatchPattern
 
 			cmd.RunE = caddycmd.WrapCommandFuncForCobra(cmdPHPServer)
 		},
@@ -76,7 +76,7 @@ func cmdPHPServer(fs caddycmd.Flags) (int, error) {
 	if err != nil {
 		panic(err)
 	}
-	watch, err := fs.GetStringSlice("watch")
+	watch, err := fs.GetStringArray("watch")
 	if err != nil {
 		panic(err)
 	}
