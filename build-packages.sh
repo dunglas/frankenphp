@@ -130,6 +130,6 @@ fpm -s dir -t deb -n frankenphp -v "${FRANKENPHP_VERSION}" \
 	"../package/empty/=/var/lib/frankenphp"
 
 [ "$user_preexists" -eq 0 ] && sudo userdel frankenphp
-[ "$group_preexists" -eq 0 ] && sudo groupdel frankenphp
+[ "$group_preexists" -eq 0 ] && (sudo groupdel frankenphp || true)
 
 cd ..
