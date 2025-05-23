@@ -16,12 +16,11 @@ if [ ! -f "$BUILDROOT_LIB/libwatcher-c.a" ] || [ ! -f "$BUILDROOT_INCLUDE/wtr/wa
   mkdir -p watcher
   cd watcher
   curl -sL https://api.github.com/repos/e-dant/watcher/releases/latest |
-    grep tarball_url |
-    awk -F '"' '{print $4}' |
-    xargs curl -sL | tar xz --strip-components=1
+	 grep tarball_url |
+	 awk -F '"' '{print $4}' |
+	 xargs curl -sL | tar xz --strip-components=1
   cd watcher-c
-  watcherCC="${CC:-cc}"
-  $watcherCC -c -o libwatcher-c.o ./src/watcher-c.cpp -I ./include -I ../include -std=c++17 -Wall -Wextra -fPIC
+  ${CC:-cc} -c -o libwatcher-c.o ./src/watcher-c.cpp -I ./include -I ../include -std=c++17 -Wall -Wextra -fPIC
   ar rcs libwatcher-c.a libwatcher-c.o
   cp libwatcher-c.a "$BUILDROOT_LIB/"
   mkdir -p "$BUILDROOT_INCLUDE/wtr"
@@ -32,10 +31,14 @@ fi
 
 # Check for Brotli static libs and headers
 if [ ! -f "$BUILDROOT_LIB/libbrotlienc.a" ] || \
-   [ ! -f "$BUILDROOT_LIB/libbrotlidec.a" ] || \
-   [ ! -f "$BUILDROOT_LIB/libbrotlicommon.a" ] || \
-   [ ! -d "$BUILDROOT_INCLUDE/brotli" ]; then
+	[ ! -f "$BUILDROOT_LIB/libbrotlidec.a" ] || \
+	[ ! -f "$BUILDROOT_LIB/libbrotlicommon.a" ] || \
+	[ ! -d "$BUILDROOT_INCLUDE/brotli" ]; then
   echo "Building Brotli..."
+  if ! command -v cmake &> /dev/null; then
+	 echo "cmake is not installed. Please install cmake to build Brotli."
+	 exit 1
+  fi
   git clone --depth 1 https://github.com/google/brotli.git brotli-source
   cd brotli-source
   mkdir out && cd out
@@ -54,15 +57,15 @@ if ! command -v xcaddy &> /dev/null; then
 
   # Determine install path
   if [ -n "${GOBIN:-}" ] && [ -x "$GOBIN/xcaddy" ]; then
-    XCADDY="$GOBIN/xcaddy"
+	 XCADDY="$GOBIN/xcaddy"
   elif [ -n "${GOPATH:-}" ] && [ -x "$GOPATH/bin/xcaddy" ]; then
-    XCADDY="$GOPATH/bin/xcaddy"
+	 XCADDY="$GOPATH/bin/xcaddy"
   elif [ -x "$HOME/go/bin/xcaddy" ]; then
-    XCADDY="$HOME/go/bin/xcaddy"
+	 XCADDY="$HOME/go/bin/xcaddy"
   else
-    echo "Error: xcaddy installed but not found in expected paths." >&2
-    echo "Ensure \$GOBIN, \$GOPATH/bin, or \$HOME/go/bin is in your PATH." >&2
-    exit 1
+	 echo "Error: xcaddy installed but not found in expected paths." >&2
+	 echo "Ensure \$GOBIN, \$GOPATH/bin, or \$HOME/go/bin is in your PATH." >&2
+	 exit 1
   fi
 
   echo "xcaddy installed at: $XCADDY"

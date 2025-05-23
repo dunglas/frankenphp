@@ -75,7 +75,7 @@ To install them, run ./install_dependencies.sh in the FrankenPHP source director
 
 ## Compile the Go App
 
-You can now build the final binary:
+You can now build the binary:
 
 ```console
 curl -L https://github.com/dunglas/frankenphp/archive/refs/heads/main.tar.gz | tar xz
@@ -84,6 +84,8 @@ CGO_CFLAGS="$(php-config --includes) -I$PWD/../../dist/dependencies/include" \
 CGO_LDFLAGS="$(php-config --ldflags) $(php-config --libs) -L$PWD/../../dist/dependencies/lib" \
 go build -tags=nobadger,nomysql,nopgx
 ```
+
+Please keep in mind that this will produce a `frankenphp` binary without mercure and vulcain. For production use, prefer to use xcaddy.
 
 ### Using xcaddy
 
