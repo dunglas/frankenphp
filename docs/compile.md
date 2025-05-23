@@ -66,6 +66,8 @@ sudo make install
 Some FrankenPHP features depend on optional system dependencies that must be installed.
 Alternatively, these features can be disabled by passing build tags to the Go compiler.
 
+To install them, run ./install_dependencies.sh in the FrankenPHP source directory.
+
 | Feature                        | Dependency                                                            | Build tag to disable it |
 | ------------------------------ | --------------------------------------------------------------------- | ----------------------- |
 | Brotli compression             | [Brotli](https://github.com/google/brotli)                            | nobrotli                |
@@ -78,7 +80,9 @@ You can now build the final binary:
 ```console
 curl -L https://github.com/dunglas/frankenphp/archive/refs/heads/main.tar.gz | tar xz
 cd frankenphp-main/caddy/frankenphp
-CGO_CFLAGS=$(php-config --includes) CGO_LDFLAGS="$(php-config --ldflags) $(php-config --libs)" go build -tags=nobadger,nomysql,nopgx
+CGO_CFLAGS="$(php-config --includes) -I$PWD/../../dist/dependencies/include" \
+CGO_LDFLAGS="$(php-config --ldflags) $(php-config --libs) -L$PWD/../../dist/dependencies/lib" \
+go build -tags=nobadger,nomysql,nopgx
 ```
 
 ### Using xcaddy
@@ -88,13 +92,14 @@ Alternatively, use [xcaddy](https://github.com/caddyserver/xcaddy) to compile Fr
 ```console
 CGO_ENABLED=1 \
 XCADDY_GO_BUILD_FLAGS="-ldflags='-w -s' -tags=nobadger,nomysql,nopgx" \
-CGO_CFLAGS=$(php-config --includes) \
-CGO_LDFLAGS="$(php-config --ldflags) $(php-config --libs)" \
+CGO_CFLAGS="$(php-config --includes) -I$PWD/../../dist/dependencies/include" \
+CGO_LDFLAGS="$(php-config --ldflags) $(php-config --libs) -L$PWD/../../dist/dependencies/lib" \
 xcaddy build \
     --output frankenphp \
     --with github.com/dunglas/frankenphp/caddy \
     --with github.com/dunglas/mercure/caddy \
-    --with github.com/dunglas/vulcain/caddy
+    --with github.com/dunglas/vulcain/caddy \
+    --with github.com/dunglas/caddy-cbrotli
     # Add extra Caddy modules here
 ```
 
@@ -107,3 +112,4 @@ xcaddy build \
 > To do so, change the `XCADDY_GO_BUILD_FLAGS` environment variable to something like
 > `XCADDY_GO_BUILD_FLAGS=$'-ldflags "-w -s -extldflags \'-Wl,-z,stack-size=0x80000\'"'`
 > (change the stack size value according to your app needs).
+> Check the build-static.sh file for more information.
