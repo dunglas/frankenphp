@@ -105,19 +105,17 @@ func (f *FrankenPHPApp) generateUniqueModuleWorkerName(filepath string) string {
 	filepath, _ = fastabs.FastAbs(filepath)
 	name := "m#" + filepath
 
-outer:
-	for {
-		for _, wc := range f.Workers {
-			if wc.Name == name {
-				name = fmt.Sprintf("m#%s_%d", filepath, i)
-				i++
+retry:
+	for _, wc := range f.Workers {
+		if wc.Name == name {
+			name = fmt.Sprintf("m#%s_%d", filepath, i)
+			i++
 
-				continue outer
-			}
+			goto retry
 		}
-
-		return name
 	}
+
+	return name
 }
 
 func (f *FrankenPHPApp) addModuleWorkers(workers ...workerConfig) ([]workerConfig, error) {
