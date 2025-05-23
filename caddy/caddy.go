@@ -398,6 +398,8 @@ func (f *FrankenPHPModule) Provision(ctx caddy.Context) error {
 		} else {
 			rrs := false
 			f.Root = filepath.Join(frankenphp.EmbeddedAppPath, defaultDocumentRoot)
+			f.logger.Warn(fmt.Sprintf("No root path specified, using default: %q", defaultDocumentRoot))
+			f.logger.Warn(`If you would like to serve from the embedded app directory, specify "root ./" `)
 			f.ResolveRootSymlink = &rrs
 		}
 	} else {
