@@ -545,7 +545,7 @@
                 <section class="administrator">
                     <h2>If you are the website administrator:</h2>
 
-                    <p>Your server is running and serving requests using FrankenPHP, powered by Caddy</p>
+                    <p>Your server is running and serving requests using FrankenPHP</p>
 
                     <p>To replace this page, deploy your application files to <code><?php echo getcwd(); ?></code>.</p>
 
@@ -558,7 +558,7 @@
                 </section>
             </div>
             <footer class="footer">
-                <p><a href="https://frankenphp.dev">FrankenPHP</a> is an open-source web server for PHP built on top
+                <p><a href="https://frankenphp.dev">FrankenPHP</a> is a free and open-source web server for PHP built on top
                     of <a href="https://caddyserver.com">Caddy</a>.</p>
                 <div class="logos">
                     <a href="https://frankenphp.dev/"><svg xmlns="http://www.w3.org/2000/svg" id="a"
