@@ -43,7 +43,7 @@ if [ ! -f "$BUILDROOT_LIB/libbrotlienc.a" ] ||
 	cd brotli-source
 	mkdir out && cd out
 	cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DBUILD_SHARED_LIBS=OFF ..
-	make -j$(nproc)
+	make -j"$(nproc)"
 	cp libbrotlienc.a libbrotlidec.a libbrotlicommon.a "$BUILDROOT_LIB/"
 	cp -R ../c/include/brotli "$BUILDROOT_INCLUDE/"
 	cd ../../
