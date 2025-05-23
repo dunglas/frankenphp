@@ -35,58 +35,6 @@ func TestModuleWorkerDuplicateFilenamesFail(t *testing.T) {
 	require.Contains(t, err.Error(), "must not have duplicate filenames", "Error message should mention duplicate filenames")
 }
 
-func TestModuleWorkersDuplicateNameFail(t *testing.T) {
-	// Create a test configuration with a worker name
-	configWithWorkerName1 := `
-	{
-		php_server {
-			worker {
-				name test-worker
-				file ../testdata/worker-with-env.php
-				num 1
-			}
-		}
-	}`
-
-	// Parse the first configuration
-	d1 := caddyfile.NewTestDispenser(configWithWorkerName1)
-	module1 := &FrankenPHPModule{}
-
-	// Unmarshal the first configuration
-	err := module1.UnmarshalCaddyfile(d1)
-	require.NoError(t, err, "First module should be configured without errors")
-
-	// Create a second test configuration with the same worker name
-	configWithWorkerName2 := `
-	{
-		php_server {
-			worker {
-				name test-worker
-				file ../testdata/worker-with-env.php
-				num 1
-			}
-		}
-	}`
-
-	// Parse the second configuration
-	d2 := caddyfile.NewTestDispenser(configWithWorkerName2)
-	module2 := &FrankenPHPModule{}
-
-	// Unmarshal the second configuration
-	err = module2.UnmarshalCaddyfile(d2)
-	require.NoError(t, err, "Second module should be configured without errors")
-
-	// Create a FrankenPHPApp and add the workers from the first module
-	app := &FrankenPHPApp{}
-	_, err = app.addModuleWorkers(module1.Workers...)
-	require.NoError(t, err, "First module workers should be added without errors")
-	_, err = app.addModuleWorkers(module2.Workers...)
-
-	// Verify that an error was returned
-	require.Error(t, err, "Expected an error when two workers have the same name")
-	require.Contains(t, err.Error(), "same name", "Error message should mention duplicate names")
-}
-
 func TestModuleWorkersWithDifferentFilenames(t *testing.T) {
 	// Create a test configuration with different worker filenames
 	configWithDifferentFilenames := `
@@ -267,7 +215,7 @@ func TestModuleWorkerWithCustomName(t *testing.T) {
 	require.Equal(t, "../testdata/worker-with-env.php", module.Workers[0].FileName, "Worker should have the correct filename")
 
 	// Verify that the worker was added to app.Workers with the m# prefix
-	_, err = app.addModuleWorkers(module.Workers...)
+	module.Workers, err = app.addModuleWorkers(module.Workers...)
 	require.NoError(t, err, "Expected no error when adding the worker to the app")
 	require.Equal(t, "m#custom-worker-name", module.Workers[0].Name, "Worker should have the custom name, prefixed with m#")
 	require.Equal(t, "m#custom-worker-name", app.Workers[0].Name, "Worker should have the custom name, prefixed with m#")

@@ -130,11 +130,6 @@ func (f *FrankenPHPApp) addModuleWorkers(workers ...workerConfig) ([]workerConfi
 		if !strings.HasPrefix(w.Name, "m#") {
 			w.Name = "m#" + w.Name
 		}
-		for _, existingWorker := range f.Workers {
-			if existingWorker.Name == w.Name {
-				return nil, fmt.Errorf("two workers cannot have the same name: %q", w.Name)
-			}
-		}
 		f.Workers = append(f.Workers, *w)
 	}
 	return workers, nil
