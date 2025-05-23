@@ -153,6 +153,7 @@ php_server [<matcher>] {
         watch <path> # Définit le chemin d'accès à surveiller pour les modifications de fichiers. Peut être spécifié plusieurs fois pour plusieurs chemins.
         env <key> <value> # Définit une variable d'environnement supplémentaire avec la valeur donnée. Peut être spécifié plusieurs fois pour plusieurs variables d'environnement. Les variables d'environnement pour ce worker sont également héritées du parent php_server, mais peuvent être écrasées ici.
     }
+    worker <other_file> <num> # Peut également utiliser la forme courte comme dans le bloc frankenphp global.
 }
 ```
 

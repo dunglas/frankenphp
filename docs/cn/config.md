@@ -143,6 +143,7 @@ php_server [<matcher>] {
 		watch <path> # 设置要监视文件更改的路径。可以为多个路径多次指定。
 		env <key> <value> # 将额外的环境变量设置为给定值。可以为多个环境变量多次指定。此 worker 的环境变量也从 php_server 父级继承，但可以在此处覆盖。
 	}
+	worker <other_file> <num> # 也可以像在全局 frankenphp 块中一样使用简短形式。
 }
 ```
 
