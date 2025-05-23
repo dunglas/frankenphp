@@ -120,7 +120,7 @@ outer:
 	}
 }
 
-func (f *FrankenPHPApp) AddModuleWorkers(workers ...workerConfig) ([]workerConfig, error) {
+func (f *FrankenPHPApp) addModuleWorkers(workers ...workerConfig) ([]workerConfig, error) {
 	for i := range workers {
 		w := &workers[i]
 		if frankenphp.EmbeddedAppPath != "" && filepath.IsLocal(w.FileName) {
@@ -432,10 +432,10 @@ func (f *FrankenPHPModule) Provision(ctx caddy.Context) error {
 	}
 	fapp, ok := app.(*FrankenPHPApp)
 	if !ok {
-		return fmt.Errorf("expected ctx.App(\"frankenphp\") to return FrankenPHPApp, got %T", app)
+		return fmt.Errorf(`expected ctx.App("frankenphp") to return FrankenPHPApp, got %T`, app)
 	}
 
-	workers, err := fapp.AddModuleWorkers(f.Workers...)
+	workers, err := fapp.addModuleWorkers(f.Workers...)
 	if err != nil {
 		return err
 	}

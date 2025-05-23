@@ -78,9 +78,9 @@ func TestModuleWorkersDuplicateNameFail(t *testing.T) {
 
 	// Create a FrankenPHPApp and add the workers from the first module
 	app := &FrankenPHPApp{}
-	_, err = app.AddModuleWorkers(module1.Workers...)
+	_, err = app.addModuleWorkers(module1.Workers...)
 	require.NoError(t, err, "First module workers should be added without errors")
-	_, err = app.AddModuleWorkers(module2.Workers...)
+	_, err = app.addModuleWorkers(module2.Workers...)
 
 	// Verify that an error was returned
 	require.Error(t, err, "Expected an error when two workers have the same name")
@@ -157,9 +157,9 @@ func TestModuleWorkersDifferentNamesSucceed(t *testing.T) {
 	// Verify that no error was returned
 	require.NoError(t, err, "Expected no error when two workers have different names")
 
-	_, err = app.AddModuleWorkers(module1.Workers...)
+	_, err = app.addModuleWorkers(module1.Workers...)
 	require.NoError(t, err, "Expected no error when adding the first module workers")
-	_, err = app.AddModuleWorkers(module2.Workers...)
+	_, err = app.addModuleWorkers(module2.Workers...)
 	require.NoError(t, err, "Expected no error when adding the second module workers")
 
 	// Verify that both workers were added
@@ -267,7 +267,7 @@ func TestModuleWorkerWithCustomName(t *testing.T) {
 	require.Equal(t, "../testdata/worker-with-env.php", module.Workers[0].FileName, "Worker should have the correct filename")
 
 	// Verify that the worker was added to app.Workers with the m# prefix
-	_, err = app.AddModuleWorkers(module.Workers...)
+	_, err = app.addModuleWorkers(module.Workers...)
 	require.NoError(t, err, "Expected no error when adding the worker to the app")
 	require.Equal(t, "m#custom-worker-name", module.Workers[0].Name, "Worker should have the custom name, prefixed with m#")
 	require.Equal(t, "m#custom-worker-name", app.Workers[0].Name, "Worker should have the custom name, prefixed with m#")
