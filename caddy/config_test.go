@@ -7,11 +7,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// resetModuleWorkers resets the moduleWorkerConfigs slice for testing
-func resetModuleWorkers() {
-	moduleWorkerConfigs = make([]workerConfig, 0)
-}
-
 func TestModuleWorkerDuplicateFilenamesFail(t *testing.T) {
 	// Create a test configuration with duplicate worker filenames
 	configWithDuplicateFilenames := `
@@ -38,7 +33,6 @@ func TestModuleWorkerDuplicateFilenamesFail(t *testing.T) {
 	// Verify that an error was returned
 	require.Error(t, err, "Expected an error when two workers in the same module have the same filename")
 	require.Contains(t, err.Error(), "must not have duplicate filenames", "Error message should mention duplicate filenames")
-	resetModuleWorkers()
 }
 
 func TestModuleWorkersDuplicateNameFail(t *testing.T) {
@@ -84,7 +78,6 @@ func TestModuleWorkersDuplicateNameFail(t *testing.T) {
 	// Verify that an error was returned
 	require.Error(t, err, "Expected an error when two workers have the same name, but different environments")
 	require.Contains(t, err.Error(), "must not have duplicate names", "Error message should mention duplicate names")
-	resetModuleWorkers()
 }
 
 func TestModuleWorkersWithDifferentFilenames(t *testing.T) {
@@ -111,8 +104,6 @@ func TestModuleWorkersWithDifferentFilenames(t *testing.T) {
 	require.Len(t, module.Workers, 2, "Expected two workers to be added to the module")
 	require.Equal(t, "../testdata/worker-with-env.php", module.Workers[0].FileName, "First worker should have the correct filename")
 	require.Equal(t, "../testdata/worker-with-counter.php", module.Workers[1].FileName, "Second worker should have the correct filename")
-
-	resetModuleWorkers()
 }
 
 func TestModuleWorkersDifferentNamesSucceed(t *testing.T) {
@@ -159,11 +150,10 @@ func TestModuleWorkersDifferentNamesSucceed(t *testing.T) {
 	require.NoError(t, err, "Expected no error when two workers have different names")
 
 	// Verify that both workers were added to moduleWorkerConfigs
-	require.Len(t, moduleWorkerConfigs, 2, "Expected two workers to be added to moduleWorkerConfigs")
-	require.Equal(t, "m#test-worker-1", moduleWorkerConfigs[0].Name, "First worker should have the correct name")
-	require.Equal(t, "m#test-worker-2", moduleWorkerConfigs[1].Name, "Second worker should have the correct name")
-
-	resetModuleWorkers()
+	require.Len(t, module1.Workers, 1, "Expected one worker in the first module")
+	require.Len(t, module2.Workers, 1, "Expected one worker in the second module")
+	require.Equal(t, "m#test-worker-1", module1.Workers[0].Name, "First worker should have the correct name")
+	require.Equal(t, "m#test-worker-2", module2.Workers[0].Name, "Second worker should have the correct name")
 }
 
 func TestModuleWorkerWithEnvironmentVariables(t *testing.T) {
@@ -198,8 +188,6 @@ func TestModuleWorkerWithEnvironmentVariables(t *testing.T) {
 	require.Len(t, module.Workers[0].Env, 2, "Expected two environment variables")
 	require.Equal(t, "production", module.Workers[0].Env["APP_ENV"], "APP_ENV should be set to production")
 	require.Equal(t, "true", module.Workers[0].Env["DEBUG"], "DEBUG should be set to true")
-
-	resetModuleWorkers()
 }
 
 func TestModuleWorkerWithWatchConfiguration(t *testing.T) {
@@ -236,8 +224,6 @@ func TestModuleWorkerWithWatchConfiguration(t *testing.T) {
 	require.Equal(t, "./**/*.{php,yaml,yml,twig,env}", module.Workers[0].Watch[0], "First watch pattern should be the default")
 	require.Equal(t, "./src/**/*.php", module.Workers[0].Watch[1], "Second watch pattern should match the configuration")
 	require.Equal(t, "./config/**/*.yaml", module.Workers[0].Watch[2], "Third watch pattern should match the configuration")
-
-	resetModuleWorkers()
 }
 
 func TestModuleWorkerWithCustomName(t *testing.T) {
@@ -269,6 +255,4 @@ func TestModuleWorkerWithCustomName(t *testing.T) {
 
 	// Verify that the worker was added to moduleWorkerConfigs with the m# prefix
 	require.Equal(t, "m#custom-worker-name", module.Workers[0].Name, "Worker should have the custom name")
-
-	resetModuleWorkers()
 }
