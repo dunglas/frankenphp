@@ -74,10 +74,17 @@ func TestModuleWorkersDuplicateNameFail(t *testing.T) {
 
 	// Unmarshal the second configuration
 	err = module2.UnmarshalCaddyfile(d2)
+	require.NoError(t, err, "Second module should be configured without errors")
+
+	// Create a FrankenPHPApp and add the workers from the first module
+	app := &FrankenPHPApp{}
+	_, err = app.AddModuleWorkers(module1.Workers...)
+	require.NoError(t, err, "First module workers should be added without errors")
+	_, err = app.AddModuleWorkers(module2.Workers...)
 
 	// Verify that an error was returned
-	require.Error(t, err, "Expected an error when two workers have the same name, but different environments")
-	require.Contains(t, err.Error(), "must not have duplicate names", "Error message should mention duplicate names")
+	require.Error(t, err, "Expected an error when two workers have the same name")
+	require.Contains(t, err.Error(), "same name", "Error message should mention duplicate names")
 }
 
 func TestModuleWorkersWithDifferentFilenames(t *testing.T) {
@@ -121,6 +128,7 @@ func TestModuleWorkersDifferentNamesSucceed(t *testing.T) {
 
 	// Parse the first configuration
 	d1 := caddyfile.NewTestDispenser(configWithWorkerName1)
+	app := &FrankenPHPApp{}
 	module1 := &FrankenPHPModule{}
 
 	// Unmarshal the first configuration
@@ -149,11 +157,15 @@ func TestModuleWorkersDifferentNamesSucceed(t *testing.T) {
 	// Verify that no error was returned
 	require.NoError(t, err, "Expected no error when two workers have different names")
 
-	// Verify that both workers were added to moduleWorkerConfigs
-	require.Len(t, module1.Workers, 1, "Expected one worker in the first module")
-	require.Len(t, module2.Workers, 1, "Expected one worker in the second module")
-	require.Equal(t, "m#test-worker-1", module1.Workers[0].Name, "First worker should have the correct name")
-	require.Equal(t, "m#test-worker-2", module2.Workers[0].Name, "Second worker should have the correct name")
+	_, err = app.AddModuleWorkers(module1.Workers...)
+	require.NoError(t, err, "Expected no error when adding the first module workers")
+	_, err = app.AddModuleWorkers(module2.Workers...)
+	require.NoError(t, err, "Expected no error when adding the second module workers")
+
+	// Verify that both workers were added
+	require.Len(t, app.Workers, 2, "Expected two workers in the app")
+	require.Equal(t, "m#test-worker-1", app.Workers[0].Name, "First worker should have the correct name")
+	require.Equal(t, "m#test-worker-2", app.Workers[1].Name, "Second worker should have the correct name")
 }
 
 func TestModuleWorkerWithEnvironmentVariables(t *testing.T) {
@@ -242,6 +254,7 @@ func TestModuleWorkerWithCustomName(t *testing.T) {
 	// Parse the configuration
 	d := caddyfile.NewTestDispenser(configWithCustomName)
 	module := &FrankenPHPModule{}
+	app := &FrankenPHPApp{}
 
 	// Unmarshal the configuration
 	err := module.UnmarshalCaddyfile(d)
@@ -253,6 +266,9 @@ func TestModuleWorkerWithCustomName(t *testing.T) {
 	require.Len(t, module.Workers, 1, "Expected one worker to be added to the module")
 	require.Equal(t, "../testdata/worker-with-env.php", module.Workers[0].FileName, "Worker should have the correct filename")
 
-	// Verify that the worker was added to moduleWorkerConfigs with the m# prefix
-	require.Equal(t, "m#custom-worker-name", module.Workers[0].Name, "Worker should have the custom name")
+	// Verify that the worker was added to app.Workers with the m# prefix
+	_, err = app.AddModuleWorkers(module.Workers...)
+	require.NoError(t, err, "Expected no error when adding the worker to the app")
+	require.Equal(t, "m#custom-worker-name", module.Workers[0].Name, "Worker should have the custom name, prefixed with m#")
+	require.Equal(t, "m#custom-worker-name", app.Workers[0].Name, "Worker should have the custom name, prefixed with m#")
 }

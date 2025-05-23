@@ -102,6 +102,7 @@ func (f *FrankenPHPApp) Provision(ctx caddy.Context) error {
 
 func (f *FrankenPHPApp) generateUniqueModuleWorkerName(filepath string) string {
 	var i uint
+	filepath, _ = fastabs.FastAbs(filepath)
 	name := "m#" + filepath
 
 outer:
@@ -119,8 +120,9 @@ outer:
 	}
 }
 
-func (f *FrankenPHPApp) AddModuleWorkers(workers ...workerConfig) {
-	for _, w := range workers {
+func (f *FrankenPHPApp) AddModuleWorkers(workers ...workerConfig) ([]workerConfig, error) {
+	for i := range workers {
+		w := &workers[i]
 		if frankenphp.EmbeddedAppPath != "" && filepath.IsLocal(w.FileName) {
 			w.FileName = filepath.Join(frankenphp.EmbeddedAppPath, w.FileName)
 		}
@@ -130,8 +132,14 @@ func (f *FrankenPHPApp) AddModuleWorkers(workers ...workerConfig) {
 		if !strings.HasPrefix(w.Name, "m#") {
 			w.Name = "m#" + w.Name
 		}
-		f.Workers = append(f.Workers, w)
+		for _, existingWorker := range f.Workers {
+			if existingWorker.Name == w.Name {
+				return nil, fmt.Errorf("two workers cannot have the same name: %q", w.Name)
+			}
+		}
+		f.Workers = append(f.Workers, *w)
 	}
+	return workers, nil
 }
 
 func (f *FrankenPHPApp) Start() error {
@@ -427,7 +435,11 @@ func (f *FrankenPHPModule) Provision(ctx caddy.Context) error {
 		return fmt.Errorf("expected ctx.App(\"frankenphp\") to return FrankenPHPApp, got %T", app)
 	}
 
-	fapp.AddModuleWorkers(f.Workers...)
+	workers, err := fapp.AddModuleWorkers(f.Workers...)
+	if err != nil {
+		return err
+	}
+	f.Workers = workers
 
 	if f.Root == "" {
 		if frankenphp.EmbeddedAppPath == "" {
