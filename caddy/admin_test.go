@@ -225,8 +225,6 @@ func TestAddModuleWorkerViaAdminApi(t *testing.T) {
 			skip_install_trust
 			admin localhost:2999
 			http_port `+testPort+`
-
-			frankenphp
 		}
 
 		localhost:`+testPort+` {
@@ -252,8 +250,6 @@ func TestAddModuleWorkerViaAdminApi(t *testing.T) {
 		skip_install_trust
 		admin localhost:2999
 		http_port ` + testPort + `
-
-		frankenphp
 	}
 
 	localhost:` + testPort + ` {
