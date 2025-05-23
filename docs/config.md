@@ -154,6 +154,7 @@ php_server [<matcher>] {
 		watch <path> # Sets the path to watch for file changes. Can be specified more than once for multiple paths.
 		env <key> <value> # Sets an extra environment variable to the given value. Can be specified more than once for multiple environment variables. Environment variables for this worker are also inherited from the php_server parent, but can be overwritten here.
 	}
+	worker <other_file> <num> # Can also use the short form like in the global frankenphp block.
 }
 ```
 
