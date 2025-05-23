@@ -391,6 +391,10 @@ func (FrankenPHPModule) CaddyModule() caddy.ModuleInfo {
 // Provision sets up the module.
 func (f *FrankenPHPModule) Provision(ctx caddy.Context) error {
 	f.logger = ctx.Slogger()
+	_, err := ctx.App("frankenphp")
+	if err != nil {
+		return err
+	}
 
 	if f.Root == "" {
 		if frankenphp.EmbeddedAppPath == "" {
