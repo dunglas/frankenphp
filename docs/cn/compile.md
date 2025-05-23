@@ -61,15 +61,31 @@ make -j"$(getconf _NPROCESSORS_ONLN)"
 sudo make install
 ```
 
+## 安装可选依赖项
+
+FrankenPHP 的某些功能需要安装可选依赖项。
+这些功能也可以通过向 Go 编译器传递编译标签来禁用。
+
+| 功能                                                  | 依赖项                                                              | 禁用的编译标签 |
+| ----------------------------------------------------- | ------------------------------------------------------------------- | -------------- |
+| Brotli 压缩                                           | [Brotli](https://github.com/google/brotli)                          | nobrotli       |
+| 文件更改时重启工作进程                                | [Watcher C](https://github.com/e-dant/watcher/tree/release/watcher-c) | nowatcher      |
+
 ## 编译 Go 应用
 
 您现在可以使用 Go 库并编译我们的 Caddy 构建：
 
 ```console
 curl -L https://github.com/dunglas/frankenphp/archive/refs/heads/main.tar.gz | tar xz
-cd frankenphp-main/caddy/frankenphp
-CGO_CFLAGS=$(php-config --includes) CGO_LDFLAGS="$(php-config --ldflags) $(php-config --libs)" go build
+cd frankenphp-main
+./install_dependencies.sh
+cd caddy/frankenphp
+CGO_CFLAGS="$(php-config --includes) -I$PWD/../../dist/dependencies/include" \
+CGO_LDFLAGS="$(php-config --ldflags) $(php-config --libs) -L$PWD/../../dist/dependencies/lib" \
+go build -tags=nobadger,nomysql,nopgx
 ```
+
+请注意，这将生成一个没有 Mercure 或 Vulcain 的 `frankenphp` 二进制文件。对于生产用途，最好使用 xcaddy。
 
 ### 使用 xcaddy
 
@@ -77,13 +93,15 @@ CGO_CFLAGS=$(php-config --includes) CGO_LDFLAGS="$(php-config --ldflags) $(php-c
 
 ```console
 CGO_ENABLED=1 \
-XCADDY_GO_BUILD_FLAGS="-ldflags '-w -s'" \
+XCADDY_GO_BUILD_FLAGS="-ldflags='-w -s' -tags=nobadger,nomysql,nopgx" \
+CGO_CFLAGS="$(php-config --includes) -I$PWD/../../dist/dependencies/include" \
+CGO_LDFLAGS="$(php-config --ldflags) $(php-config --libs) -L$PWD/../../dist/dependencies/lib" \
 xcaddy build \
     --output frankenphp \
     --with github.com/dunglas/frankenphp/caddy \
-    --with github.com/dunglas/caddy-cbrotli \
     --with github.com/dunglas/mercure/caddy \
-    --with github.com/dunglas/vulcain/caddy
+    --with github.com/dunglas/vulcain/caddy \
+    --with github.com/dunglas/caddy-cbrotli
     # Add extra Caddy modules here
 ```
 
@@ -96,3 +114,4 @@ xcaddy build \
 > 请将 `XCADDY_GO_BUILD_FLAGS` 环境变量更改为如下类似的值
 > `XCADDY_GO_BUILD_FLAGS=$'-ldflags "-w -s -extldflags \'-Wl,-z,stack-size=0x80000\'"'`
 > （根据您的应用需求更改堆栈大小）。
+> 有关更多信息，请查看 build-static.sh 文件。

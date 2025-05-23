@@ -77,9 +77,15 @@ sudo make install
 
 ```console
 curl -L https://github.com/dunglas/frankenphp/archive/refs/heads/main.tar.gz | tar xz
-cd frankenphp-main/caddy/frankenphp
-CGO_CFLAGS=$(php-config --includes) CGO_LDFLAGS="$(php-config --ldflags) $(php-config --libs)" go build -tags=nobadger,nomysql,nopgx
+cd frankenphp-main
+./install_dependencies.sh
+cd caddy/frankenphp
+CGO_CFLAGS="$(php-config --includes) -I$PWD/../../dist/dependencies/include" \
+CGO_LDFLAGS="$(php-config --ldflags) $(php-config --libs) -L$PWD/../../dist/dependencies/lib" \
+go build -tags=nobadger,nomysql,nopgx
 ```
+
+Обратите внимание, что это создаст бинарный файл `frankenphp` без Mercure и Vulcain. Для производственного использования лучше использовать xcaddy.
 
 ### Использование xcaddy
 
@@ -88,13 +94,14 @@ CGO_CFLAGS=$(php-config --includes) CGO_LDFLAGS="$(php-config --ldflags) $(php-c
 ```console
 CGO_ENABLED=1 \
 XCADDY_GO_BUILD_FLAGS="-ldflags='-w -s' -tags=nobadger,nomysql,nopgx" \
-CGO_CFLAGS=$(php-config --includes) \
-CGO_LDFLAGS="$(php-config --ldflags) $(php-config --libs)" \
+CGO_CFLAGS="$(php-config --includes) -I$PWD/../../dist/dependencies/include" \
+CGO_LDFLAGS="$(php-config --ldflags) $(php-config --libs) -L$PWD/../../dist/dependencies/lib" \
 xcaddy build \
     --output frankenphp \
     --with github.com/dunglas/frankenphp/caddy \
     --with github.com/dunglas/mercure/caddy \
-    --with github.com/dunglas/vulcain/caddy
+    --with github.com/dunglas/vulcain/caddy \
+    --with github.com/dunglas/caddy-cbrotli
     # Добавьте дополнительные модули Caddy здесь
 ```
 
@@ -108,3 +115,4 @@ xcaddy build \
 > Для этого измените значение переменной окружения `XCADDY_GO_BUILD_FLAGS`, например:
 > `XCADDY_GO_BUILD_FLAGS=$'-ldflags "-w -s -extldflags \'-Wl,-z,stack-size=0x80000\'"'`  
 > (измените значение размера стека в зависимости от требований вашего приложения).
+> Для получения дополнительной информации ознакомьтесь с файлом build-static.sh.
