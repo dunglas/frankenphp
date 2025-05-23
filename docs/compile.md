@@ -79,7 +79,9 @@ You can now build the binary:
 
 ```console
 curl -L https://github.com/dunglas/frankenphp/archive/refs/heads/main.tar.gz | tar xz
-cd frankenphp-main/caddy/frankenphp
+cd frankenphp-main
+./install_dependencies.sh
+cd caddy/frankenphp
 CGO_CFLAGS="$(php-config --includes) -I$PWD/../../dist/dependencies/include" \
 CGO_LDFLAGS="$(php-config --ldflags) $(php-config --libs) -L$PWD/../../dist/dependencies/lib" \
 go build -tags=nobadger,nomysql,nopgx
