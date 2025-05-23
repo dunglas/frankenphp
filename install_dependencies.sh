@@ -30,12 +30,12 @@ if [ ! -f "$BUILDROOT_LIB/libwatcher-c.a" ] || [ ! -f "$BUILDROOT_INCLUDE/wtr/wa
 fi
 
 # Check for Brotli static libs and headers
-if [ ! -f "$BUILDROOT_LIB/libbrotlienc.a" ] || \
-	[ ! -f "$BUILDROOT_LIB/libbrotlidec.a" ] || \
-	[ ! -f "$BUILDROOT_LIB/libbrotlicommon.a" ] || \
+if [ ! -f "$BUILDROOT_LIB/libbrotlienc.a" ] ||
+	[ ! -f "$BUILDROOT_LIB/libbrotlidec.a" ] ||
+	[ ! -f "$BUILDROOT_LIB/libbrotlicommon.a" ] ||
 	[ ! -d "$BUILDROOT_INCLUDE/brotli" ]; then
 	echo "Building Brotli..."
-	if ! command -v cmake &> /dev/null; then
+	if ! command -v cmake &>/dev/null; then
 		echo "cmake is not installed. Please install cmake to build Brotli."
 		exit 1
 	fi
@@ -50,7 +50,7 @@ if [ ! -f "$BUILDROOT_LIB/libbrotlienc.a" ] || \
 	rm -rf brotli-source
 fi
 
-if ! command -v xcaddy &> /dev/null; then
+if ! command -v xcaddy &>/dev/null; then
 	echo "Installing xcaddy..."
 
 	go install github.com/caddyserver/xcaddy/cmd/xcaddy@latest
@@ -63,9 +63,9 @@ if ! command -v xcaddy &> /dev/null; then
 	elif [ -x "$HOME/go/bin/xcaddy" ]; then
 		XCADDY="$HOME/go/bin/xcaddy"
 	else
-	 echo "Error: xcaddy installed but not found in expected paths." >&2
-	 echo "Ensure \$GOBIN, \$GOPATH/bin, or \$HOME/go/bin is in your PATH." >&2
-	 exit 1
+		echo "Error: xcaddy installed but not found in expected paths." >&2
+		echo "Ensure \$GOBIN, \$GOPATH/bin, or \$HOME/go/bin exists and contains xcaddy." >&2
+		exit 1
 	fi
 
 	echo "xcaddy installed at: $XCADDY"
