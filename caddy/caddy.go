@@ -316,14 +316,6 @@ func (f *FrankenPHPApp) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 				if frankenphp.EmbeddedAppPath != "" && filepath.IsLocal(wc.FileName) {
 					wc.FileName = filepath.Join(frankenphp.EmbeddedAppPath, wc.FileName)
 				}
-				if wc.Name == "" {
-					// let worker initialization validate if the FileName is valid or not
-					name, _ := fastabs.FastAbs(wc.FileName)
-					if name == "" {
-						name = wc.FileName
-					}
-					wc.Name = name
-				}
 				if strings.HasPrefix(wc.Name, "m#") {
 					return fmt.Errorf(`global worker names must not start with "m#": %q`, wc.Name)
 				}
