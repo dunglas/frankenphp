@@ -425,7 +425,10 @@ func (f *FrankenPHPModule) Provision(ctx caddy.Context) error {
 	}
 	fapp, ok := app.(*FrankenPHPApp)
 	if !ok {
-		return fmt.Errorf(`expected ctx.App("frankenphp") to return FrankenPHPApp, got %T`, app)
+		return fmt.Errorf(`expected ctx.App("frankenphp") to return *FrankenPHPApp, got %T`, app)
+	}
+	if fapp == nil {
+		return fmt.Errorf(`expected ctx.App("frankenphp") to return *FrankenPHPApp, got nil`)
 	}
 
 	workers, err := fapp.addModuleWorkers(f.Workers...)
