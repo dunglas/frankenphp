@@ -126,8 +126,7 @@ func (f *FrankenPHPApp) addModuleWorkers(workers ...workerConfig) ([]workerConfi
 		}
 		if w.Name == "" {
 			w.Name = f.generateUniqueModuleWorkerName(w.FileName)
-		}
-		if !strings.HasPrefix(w.Name, "m#") {
+		} else if !strings.HasPrefix(w.Name, "m#") {
 			w.Name = "m#" + w.Name
 		}
 		f.Workers = append(f.Workers, *w)
