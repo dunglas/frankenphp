@@ -19,7 +19,5 @@ For worker metrics, the `[worker_name]` placeholder is replaced by the worker na
 Here is how to enable the metrics using environment variables:
 
 ```sh
-CADDY_GLOBAL_OPTIONS="
-  metrics
-"
+CADDY_GLOBAL_OPTIONS="metrics"
 ```
