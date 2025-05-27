@@ -4,10 +4,11 @@
 # https://caddyserver.com/docs/caddyfile
 
 {
+	skip_install_trust
+
 	{$CADDY_GLOBAL_OPTIONS}
 
 	frankenphp {
-		#worker /path/to/your/worker.php
 		{$FRANKENPHP_CONFIG}
 	}
 }
@@ -46,7 +47,9 @@
 
 	{$CADDY_SERVER_EXTRA_DIRECTIVES}
 
-	php_server
+	php_server {
+		#worker /path/to/your/worker.php
+	}
 }
 
 # As an alternative to editing the above site block, you can add your own site
