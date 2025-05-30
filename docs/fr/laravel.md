@@ -74,7 +74,7 @@ La commande `octane:frankenphp` peut prendre les options suivantes :
 - `--log-level` : Enregistrer les messages au niveau de journalisation spécifié ou au-dessus, en utilisant le logger natif de Caddy
 
 > [!TIP]
-> Pour obtenir des logs structurés en JSON logs (utile quand vous utilisez des solutions d'analyse de logs), passez explicitement l'otpion `--log-level`.
+> Pour obtenir des logs structurés en JSON logs (utile quand vous utilisez des solutions d'analyse de logs), passez explicitement l'option `--log-level`.
 
 En savoir plus sur Laravel Octane [dans sa documentation officielle](https://laravel.com/docs/octane).
 
