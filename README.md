@@ -43,12 +43,6 @@ You can also run command-line scripts with:
 frankenphp php-cli /path/to/your/script.php
 ```
 
-> [!WARNING]
->
-> In production, prefer using [the Docker images](#docker), [the Brew package](#homebrew)
-> or [compiling FrankenPHP from sources](https://frankenphp.dev/docs/compile/).
-> The standalone binary is provided for development and testing purposes.
-
 ### Docker
 
 Alternatively, [Docker images](https://frankenphp.dev/docs/docker/) are available:
