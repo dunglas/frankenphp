@@ -133,4 +133,3 @@ CGO_CFLAGS="$(php-config --includes) -I$PWD/../../dist/dependencies/include" \
 CGO_LDFLAGS="$(php-config --ldflags) $(php-config --libs) -L$PWD/../../dist/dependencies/lib" \
 go build -tags=nobadger,nomysql,nopgx
 ```
-
