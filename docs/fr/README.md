@@ -42,12 +42,6 @@ Vous pouvez également exécuter des scripts en ligne de commande avec :
 frankenphp php-cli /path/to/your/script.php
 ```
 
-> [!WARNING]
->
-> En production, préférez utiliser [les images Docker](#docker), [le paquet Brew](#homebrew)
-> ou [compiler FrankenPHP à partir des sources](https://frankenphp.dev/docs/fr/compile/).
-> Le binaire autonome est fourni à des fins de développement et de test.
-
 ### Docker
 
 Des [images Docker](https://frankenphp.dev/docs/fr/docker/) sont également disponibles :
