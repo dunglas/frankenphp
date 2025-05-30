@@ -32,7 +32,7 @@ frankenphp php-server --worker /path/to/your/worker/script.php
 Следующая команда выполнит перезапуск, если будет изменён любой файл с расширением `.php` в директории `/path/to/your/app/` или её поддиректориях:
 
 ```console
-frankenphp php-server --worker /path/to/your/worker/script.php --watch "/path/to/your/app/**/*.php"
+frankenphp php-server --worker /path/to/your/worker/script.php --watch="/path/to/your/app/**/*.php"
 ```
 
 ## Symfony Runtime
