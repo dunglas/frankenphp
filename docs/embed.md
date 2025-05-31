@@ -47,6 +47,10 @@ composer dump-env prod
 To customize [the configuration](config.md), you can put a `Caddyfile` as well as a `php.ini` file
 in the main directory of the app to be embedded (`$TMPDIR/my-prepared-app` in the previous example).
 
+If an app with a Caddyfile in the directory is embedded, it will use that Caddyfile's configuration automatically when running the binary.
+
+If you want to serve files from the embedded app directly, specify "root ./", as not specifying the root option will serve embedded_app/public by default.
+
 ## Creating a Linux Binary
 
 The easiest way to create a Linux binary is to use the Docker-based builder we provide.
@@ -104,6 +108,12 @@ To start the web app run:
 
 ```console
 ./my-app php-server
+```
+
+By default, if no root option is specified, it will use the embedded_app/public directory as the document root. If you want to serve directly from the embedded app directory, specify the root option:
+
+```console
+./my-app php-server --root ./
 ```
 
 If your app contains a [worker script](worker.md), start the worker with something like:

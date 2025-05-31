@@ -47,15 +47,15 @@ Exemple minimal :
 
 ```caddyfile
 {
-    # Activer FrankenPHP
-    frankenphp
+	# Activer FrankenPHP
+	frankenphp
 }
 
 localhost {
-    # Activer la compression (optionnel)
-    encode zstd br gzip
-    # Exécuter les fichiers PHP dans le répertoire courant et servir les assets
-    php_server
+	# Activer la compression (optionnel)
+	encode zstd br gzip
+	# Exécuter les fichiers PHP dans le répertoire courant et servir les assets
+	php_server
 }
 ```
 
@@ -63,19 +63,19 @@ En option, le nombre de threads à créer et les [workers](worker.md) à démarr
 
 ```caddyfile
 {
-    frankenphp {
-        num_threads <num_threads> # Définit le nombre de threads PHP à démarrer. Par défaut : 2x le nombre de CPUs disponibles.
-        max_threads <num_threads> # Limite le nombre de threads PHP supplémentaires qui peuvent être démarrés au moment de l'exécution. Valeur par défaut : num_threads. Peut être mis à 'auto'.
+	frankenphp {
+		num_threads <num_threads> # Définit le nombre de threads PHP à démarrer. Par défaut : 2x le nombre de CPUs disponibles.
+		max_threads <num_threads> # Limite le nombre de threads PHP supplémentaires qui peuvent être démarrés au moment de l'exécution. Valeur par défaut : num_threads. Peut être mis à 'auto'.
 		max_wait_time <duration> # Définit le temps maximum pendant lequel une requête peut attendre un thread PHP libre avant d'être interrompue. Valeur par défaut : désactivé.
-        php_ini <key> <value> Définit une directive php.ini. Peut être utilisé plusieurs fois pour définir plusieurs directives.
-        worker {
-            file <path> # Définit le chemin vers le script worker.
-            num <num> # Définit le nombre de threads PHP à démarrer, par défaut 2x le nombre de CPUs disponibles.
-            env <key> <value> # Définit une variable d'environnement supplémentaire avec la valeur donnée. Peut être spécifié plusieurs fois pour régler plusieurs variables d'environnement.
-            watch <path> # Définit le chemin d'accès à surveiller pour les modifications de fichiers. Peut être spécifié plusieurs fois pour plusieurs chemins.
-            name <name> # Définit le nom du worker, utilisé dans les journaux et les métriques. Défaut : chemin absolu du fichier du worker
-        }
-    }
+		php_ini <key> <value> Définit une directive php.ini. Peut être utilisé plusieurs fois pour définir plusieurs directives.
+		worker {
+			file <path> # Définit le chemin vers le script worker.
+			num <num> # Définit le nombre de threads PHP à démarrer, par défaut 2x le nombre de CPUs disponibles.
+			env <key> <value> # Définit une variable d'environnement supplémentaire avec la valeur donnée. Peut être spécifié plusieurs fois pour régler plusieurs variables d'environnement.
+			watch <path> # Définit le chemin d'accès à surveiller pour les modifications de fichiers. Peut être spécifié plusieurs fois pour plusieurs chemins.
+			name <name> # Définit le nom du worker, utilisé dans les journaux et les métriques. Défaut : chemin absolu du fichier du worker
+		}
+	}
 }
 
 # ...
@@ -85,34 +85,85 @@ Vous pouvez également utiliser la forme courte de l'option worker en une seule 
 
 ```caddyfile
 {
-    frankenphp {
-        worker <file> <num>
-    }
+	frankenphp {
+		worker <file> <num>
+	}
 }
 
 # ...
+```
+
+Les blocs worker peuvent également être définis à l'intérieur d'un bloc `php` ou `php_server`. Dans ce cas, le worker hérite des variables d'environnement et du chemin racine de la directive parente et n'est accessible que par ce domaine spécifique :
+
+```caddyfile
+{
+	frankenphp
+}
+example.com {
+	root /path/to/app
+	php_server {
+		root <path>
+		worker {
+			file <path, peut être relatif à root>
+			num <num>
+			env <key> <value>
+			watch <path>
+			name <name>
+		}
+	}
+}
 ```
 
 Vous pouvez aussi définir plusieurs workers si vous servez plusieurs applications sur le même serveur :
 
 ```caddyfile
 {
-    frankenphp {
-        worker /path/to/app/public/index.php <num>
-        worker /path/to/other/public/index.php <num>
-    }
+	frankenphp {
+		worker /path/to/app/public/index.php <num>
+		worker {
+			file /path/to/other/public/index.php
+			num <num>
+			env APP_ENV dev
+		}
+	}
 }
 
 app.example.com {
-    root /path/to/app/public
-    php_server
+	root /path/to/app/public
+	php_server
 }
 
 other.example.com {
-    root /path/to/other/public
-    php_server
+	root /path/to/other/public
+	php_server {
+		env APP_ENV dev
+	}
 }
 
+# ...
+```
+
+Est équivalent à
+
+```caddyfile
+{
+	frankenphp
+}
+
+app.example.com {
+	php_server {
+		root /path/to/app/public
+		worker index.php <num>
+	}
+}
+
+other.example.com {
+	php_server {
+		root /path/to/other/public
+		env APP_ENV dev
+		worker index.php <num>
+	}
+}
 # ...
 ```
 
@@ -125,22 +176,22 @@ Utiliser la directive `php_server` est équivalent à cette configuration :
 
 ```caddyfile
 route {
-    # Ajoute un slash final pour les requêtes de répertoire
-    @canonicalPath {
-        file {path}/index.php
-        not path */
-    }
-    redir @canonicalPath {path}/ 308
-    # Si le fichier demandé n'existe pas, essayer les fichiers index
-    @indexFiles file {
-        try_files {path} {path}/index.php index.php
-        split_path .php
-    }
-    rewrite @indexFiles {http.matchers.file.relative}
-    # FrankenPHP!
-    @phpFiles path *.php
-    php @phpFiles
-    file_server
+	# Ajoute un slash final pour les requêtes de répertoire
+	@canonicalPath {
+		file {path}/index.php
+		not path */
+	}
+	redir @canonicalPath {path}/ 308
+	# Si le fichier demandé n'existe pas, essayer les fichiers index
+	@indexFiles file {
+		try_files {path} {path}/index.php index.php
+		split_path .php
+	}
+	rewrite @indexFiles {http.matchers.file.relative}
+	# FrankenPHP!
+	@phpFiles path *.php
+	php @phpFiles
+	file_server
 }
 ```
 
@@ -148,11 +199,11 @@ Les directives `php_server` et `php` disposent des options suivantes :
 
 ```caddyfile
 php_server [<matcher>] {
-    root <directory> # Définit le dossier racine du le site. Par défaut : valeur de la directive `root` parente.
-    split_path <delim...> # Définit les sous-chaînes pour diviser l'URI en deux parties. La première sous-chaîne correspondante sera utilisée pour séparer le "path info" du chemin. La première partie est suffixée avec la sous-chaîne correspondante et sera considérée comme le nom réel de la ressource (script CGI). La seconde partie sera définie comme PATH_INFO pour utilisation par le script. Par défaut : `.php`
-    resolve_root_symlink false # Désactive la résolution du répertoire `root` vers sa valeur réelle en évaluant un lien symbolique, s'il existe (activé par défaut).
-    env <key> <value> # Définit une variable d'environnement supplémentaire avec la valeur donnée. Peut être spécifié plusieurs fois pour plusieurs variables d'environnement.
-    file_server off # Désactive la directive file_server intégrée.
+	root <directory> # Définit le dossier racine du le site. Par défaut : valeur de la directive `root` parente.
+	split_path <delim...> # Définit les sous-chaînes pour diviser l'URI en deux parties. La première sous-chaîne correspondante sera utilisée pour séparer le "path info" du chemin. La première partie est suffixée avec la sous-chaîne correspondante et sera considérée comme le nom réel de la ressource (script CGI). La seconde partie sera définie comme PATH_INFO pour utilisation par le script. Par défaut : `.php`
+	resolve_root_symlink false # Désactive la résolution du répertoire `root` vers sa valeur réelle en évaluant un lien symbolique, s'il existe (activé par défaut).
+	env <key> <value> # Définit une variable d'environnement supplémentaire avec la valeur donnée. Peut être spécifié plusieurs fois pour plusieurs variables d'environnement.
+	file_server off # Désactive la directive file_server intégrée.
 }
 ```
 
@@ -210,9 +261,9 @@ Il s'agit d'une configuration optionnelle qui doit être ajoutée aux options gl
 
 ```caddyfile
 {
-    servers {
-        enable_full_duplex
-    }
+	servers {
+		enable_full_duplex
+	}
 }
 ```
 
@@ -251,17 +302,57 @@ Vous pouvez également modifier la configuration de PHP en utilisant la directiv
 
 ```caddyfile
 {
-    frankenphp {
-        php_ini memory_limit 256M
+	frankenphp {
+		php_ini memory_limit 256M
 
-        # or
+		# or
 
-        php_ini {
-            memory_limit 256M
-            max_execution_time 15
-        }
-    }
+		php_ini {
+			memory_limit 256M
+			max_execution_time 15
+		}
+	}
 }
+```
+
+## La commande php-server
+
+La commande `php-server` est un moyen pratique de démarrer un serveur PHP prêt pour la production. Elle est particulièrement utile pour les déploiements rapides, les démonstrations, le développement, ou pour exécuter une [application embarquée](embed.md).
+
+```console
+frankenphp php-server [--domain <example.com>] [--root <path>] [--listen <addr>] [--worker /path/to/worker.php<,nb-workers>] [--watch <paths...>] [--access-log] [--debug] [--no-compress] [--mercure]
+```
+
+### Options
+
+- `--domain`, `-d` : Nom de domaine sur lequel servir les fichiers. Si spécifié, le serveur utilisera HTTPS et obtiendra automatiquement un certificat Let's Encrypt.
+- `--root`, `-r` : Chemin vers la racine du site. Si non spécifié et en utilisant une application embarquée, il utilisera le répertoire embedded_app/public par défaut.
+- `--listen`, `-l` : L'adresse à laquelle lier l'écouteur. Par défaut, c'est `:80` ou `:443` si un domaine est spécifié.
+- `--worker`, `-w` : Script worker à exécuter. Peut être spécifié plusieurs fois pour plusieurs workers.
+- `--watch` : Répertoire à surveiller pour les changements de fichiers. Peut être spécifié plusieurs fois pour plusieurs répertoires.
+- `--access-log`, `-a` : Activer le journal d'accès.
+- `--debug`, `-v` : Activer les journaux de débogage détaillés.
+- `--mercure`, `-m` : Activer le hub Mercure.rocks intégré.
+- `--no-compress` : Désactiver la compression Zstandard, Brotli et Gzip.
+
+### Exemples
+
+Démarrer un serveur avec le répertoire courant comme racine de document :
+
+```console
+frankenphp php-server --root ./
+```
+
+Démarrer un serveur avec HTTPS activé :
+
+```console
+frankenphp php-server --domain example.com
+```
+
+Démarrer un serveur avec un worker :
+
+```console
+frankenphp php-server --worker public/index.php
 ```
 
 ## Activer le mode debug
