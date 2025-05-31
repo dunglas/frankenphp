@@ -31,30 +31,13 @@ if [ ! -f "dist/$bin" ]; then
 	exit 1
 fi
 
-if [ -z "${FRANKENPHP_VERSION}" ]; then
-	FRANKENPHP_VERSION="$(git rev-parse --verify HEAD)"
-	export FRANKENPHP_VERSION
-elif [ -d ".git/" ]; then
-	CURRENT_REF="$(git rev-parse --abbrev-ref HEAD)"
-	export CURRENT_REF
+version_output="$(dist/"$bin" version)"
+frankenphp_version=$(echo "$version_output" | grep -oP 'FrankenPHP\s+\K[^ ]+' || true)
 
-	if echo "${FRANKENPHP_VERSION}" | grep -F -q "."; then
-		# Tag
-
-		# Trim "v" prefix if any
-		FRANKENPHP_VERSION=${FRANKENPHP_VERSION#v}
-		export FRANKENPHP_VERSION
-
-		git checkout "v${FRANKENPHP_VERSION}"
-	else
-		git checkout "${FRANKENPHP_VERSION}"
-	fi
-fi
-
-if [[ ! "${FRANKENPHP_VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-	echo "Warning: FRANKENPHP_VERSION must be set to X.Y.Z (e.g. 1.5.1), got '${FRANKENPHP_VERSION}'"
+if [[ ! "${frankenphp_version}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+	echo "Warning: frankenphp_version must be set to X.Y.Z (e.g. 1.5.1), got '${frankenphp_version}'"
 	echo "Falling back to non-release version 0.0.0"
-	FRANKENPHP_VERSION=0.0.0
+	frankenphp_version=0.0.0
 fi
 
 group_preexists=0
@@ -87,7 +70,7 @@ iteration=1
 glibc_version=$(ldd -v "$bin" | awk '/GLIBC_/ {gsub(/[()]/, "", $2); print $2}' | grep -v GLIBC_PRIVATE | sort -V | tail -n1)
 cxxabi_version=$(strings "$bin" | grep -oP 'CXXABI_\d+\.\d+(\.\d+)?' | sort -V | tail -n1)
 
-fpm -s dir -t rpm -n frankenphp -v "${FRANKENPHP_VERSION}" \
+fpm -s dir -t rpm -n frankenphp -v "${frankenphp_version}" \
 	--config-files /etc/frankenphp/Caddyfile \
 	--config-files /etc/frankenphp/php.ini \
 	--depends "libc.so.6(${glibc_version})(64bit)" \
@@ -110,7 +93,7 @@ fpm -s dir -t rpm -n frankenphp -v "${FRANKENPHP_VERSION}" \
 glibc_version=$(ldd -v "$bin" | awk '/GLIBC_/ {gsub(/[()]/, "", $2); print $2}' | grep -v GLIBC_PRIVATE | sed 's/GLIBC_//' | sort -V | tail -n1)
 cxxabi_version=$(strings "$bin" | grep -oP 'CXXABI_\d+\.\d+(\.\d+)?' | sed 's/CXXABI_//' | sort -V | tail -n1)
 
-fpm -s dir -t deb -n frankenphp -v "${FRANKENPHP_VERSION}" \
+fpm -s dir -t deb -n frankenphp -v "${frankenphp_version}" \
 	--config-files /etc/frankenphp/Caddyfile \
 	--config-files /etc/frankenphp/php.ini \
 	--depends "libc6 (>= ${glibc_version})" \
