@@ -15,6 +15,7 @@ permissions:
   contents: read
 env:
   GOTOOLCHAIN: local
+  GOEXPERIMENT: cgocheck2
 jobs:
   tests-linux:
     name: Tests (Linux, PHP ${{ matrix.php-versions }})
@@ -24,7 +25,6 @@ jobs:
       matrix:
         php-versions: ["8.2", "8.3", "8.4"]
     env:
-      GOEXPERIMENT: cgocheck2
       GOMAXPROCS: 10
       LIBRARY_PATH: ${{ github.workspace }}/watcher/target/lib
     steps:
@@ -46,7 +46,7 @@ jobs:
           debug: true
       - name: Install e-dant/watcher
         uses: ./.github/actions/watcher
-      - name: Set Set CGO flags
+      - name: Set CGO flags
         run: echo "CGO_CFLAGS=-I${PWD}/watcher/target/include $(php-config --includes)" >> "${GITHUB_ENV}"
       - name: Build
         run: go build
@@ -78,7 +78,6 @@ jobs:
     name: Tests (macOS, PHP 8.4)
     runs-on: macos-latest
     env:
-      GOEXPERIMENT: cgocheck2
       HOMEBREW_NO_AUTO_UPDATE: 1
     steps:
       - uses: actions/checkout@v4

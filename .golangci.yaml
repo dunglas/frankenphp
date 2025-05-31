@@ -1,0 +1,7 @@
+---
+version: "2"
+run:
+  build-tags:
+    - nobadger
+    - nomysql
+    - nopgx
