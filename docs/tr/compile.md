@@ -63,15 +63,31 @@ make -j"$(getconf _NPROCESSORS_ONLN)"
 sudo make install
 ```
 
+## İsteğe Bağlı Bağımlılıkları Yükleyin
+
+FrankenPHP'nin bazı özellikleri, yüklenmesi gereken isteğe bağlı bağımlılıklara ihtiyaç duyar.
+Bu özellikler, Go derleyicisine derleme etiketleri geçirilerek de devre dışı bırakılabilir.
+
+| Özellik                                                | Bağımlılık                                                           | Devre dışı bırakmak için derleme etiketi |
+| ------------------------------------------------------ | -------------------------------------------------------------------- | ---------------------------------------- |
+| Brotli sıkıştırma                                      | [Brotli](https://github.com/google/brotli)                           | nobrotli                                 |
+| Dosya değişikliğinde işçileri yeniden başlatma         | [Watcher C](https://github.com/e-dant/watcher/tree/release/watcher-c) | nowatcher                                |
+
 ## Go Uygulamasını Derleyin
 
 Artık Go kütüphanesini kullanabilir ve Caddy yapımızı derleyebilirsiniz:
 
 ```console
 curl -L https://github.com/dunglas/frankenphp/archive/refs/heads/main.tar.gz | tar xz
-cd frankenphp-main/caddy/frankenphp
-CGO_CFLAGS=$(php-config --includes) CGO_LDFLAGS="$(php-config --ldflags) $(php-config --libs)" go build
+cd frankenphp-main
+./install_dependencies.sh
+cd caddy/frankenphp
+CGO_CFLAGS="$(php-config --includes) -I$PWD/../../dist/dependencies/include" \
+CGO_LDFLAGS="$(php-config --ldflags) $(php-config --libs) -L$PWD/../../dist/dependencies/lib" \
+go build -tags=nobadger,nomysql,nopgx
 ```
+
+Bu, Mercure veya Vulcain olmadan bir `frankenphp` ikili dosyası oluşturacaktır. Üretim kullanımı için xcaddy kullanmak daha iyidir.
 
 ### Xcaddy kullanımı
 
@@ -79,13 +95,15 @@ Alternatif olarak, FrankenPHP'yi [özel Caddy modülleri](https://caddyserver.co
 
 ```console
 CGO_ENABLED=1 \
-XCADDY_GO_BUILD_FLAGS="-ldflags '-w -s'" \
+XCADDY_GO_BUILD_FLAGS="-ldflags='-w -s' -tags=nobadger,nomysql,nopgx" \
+CGO_CFLAGS="$(php-config --includes) -I$PWD/../../dist/dependencies/include" \
+CGO_LDFLAGS="$(php-config --ldflags) $(php-config --libs) -L$PWD/../../dist/dependencies/lib" \
 xcaddy build \
     --output frankenphp \
     --with github.com/dunglas/frankenphp/caddy \
-    --with github.com/dunglas/caddy-cbrotli \
     --with github.com/dunglas/mercure/caddy \
-    --with github.com/dunglas/vulcain/caddy
+    --with github.com/dunglas/vulcain/caddy \
+    --with github.com/dunglas/caddy-cbrotli
     # Add extra Caddy modules here
 ```
 
@@ -98,3 +116,4 @@ xcaddy build \
 > Bunu yapmak için, `XCADDY_GO_BUILD_FLAGS` ortam değişkenini bu şekilde değiştirin
 > `XCADDY_GO_BUILD_FLAGS=$'-ldflags "-w -s -extldflags \'-Wl,-z,stack-size=0x80000\'"'`
 > (yığın boyutunun değerini uygulamanızın ihtiyaçlarına göre değiştirin).
+> Daha fazla bilgi için build-static.sh dosyasını kontrol edin.
