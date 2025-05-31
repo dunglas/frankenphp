@@ -1023,6 +1023,22 @@ func testRejectInvalidHeaders(t *testing.T, opts *testOptions) {
 	}
 }
 
+func TestFlushEmptyResponse_module(t *testing.T) { testFlushEmptyResponse(t, &testOptions{}) }
+func TestFlushEmptyRespnse_worker(t *testing.T) {
+	testFlushEmptyResponse(t, &testOptions{workerScript: "only-headers.php"})
+}
+
+func testFlushEmptyResponse(t *testing.T, opts *testOptions) {
+	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, _ int) {
+		req := httptest.NewRequest("GET", "http://example.com/only-headers.php", nil)
+		w := httptest.NewRecorder()
+		handler(w, req)
+
+		resp := w.Result()
+		assert.Equal(t, 204, resp.StatusCode)
+	}, opts)
+}
+
 // Worker mode will clean up unreferenced streams between requests
 // Make sure referenced streams are not cleaned up
 func TestFileStreamInWorkerMode(t *testing.T) {

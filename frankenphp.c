@@ -588,6 +588,7 @@ static int frankenphp_send_headers(sapi_headers_struct *sapi_headers) {
 }
 
 static void frankenphp_sapi_flush(void *server_context) {
+  sapi_send_headers();
   if (go_sapi_flush(thread_index)) {
     php_handle_aborted_connection();
   }
