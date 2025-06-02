@@ -79,7 +79,7 @@ sudo make install
 Some FrankenPHP features depend on optional system dependencies that must be installed.
 Alternatively, these features can be disabled by passing build tags to the Go compiler.
 
-To install them, run ./install_dependencies.sh in the FrankenPHP source directory.
+To install them, run ./install-dependencies.sh in the FrankenPHP source directory.
 
 | Feature                        | Dependency                                                            | Build tag to disable it |
 |--------------------------------|-----------------------------------------------------------------------|-------------------------|
@@ -118,7 +118,7 @@ xcaddy build \
 > To do so, change the `XCADDY_GO_BUILD_FLAGS` environment variable to something like
 > `XCADDY_GO_BUILD_FLAGS=$'-ldflags "-w -s -extldflags \'-Wl,-z,stack-size=0x80000\'"'`
 > (change the stack size value according to your app needs).
-> Check the build-static.sh file for more information.
+> Check the `build-static.sh` file for more information.
 
 ### Without xcaddy
 
@@ -127,7 +127,7 @@ Alternatively, it's possible to compile FrankenPHP without `xcaddy` by using the
 ```console
 curl -L https://github.com/dunglas/frankenphp/archive/refs/heads/main.tar.gz | tar xz
 cd frankenphp-main
-./install_dependencies.sh
+./install-dependencies.sh
 cd caddy/frankenphp
 CGO_CFLAGS="$(php-config --includes) -I$PWD/../../dist/dependencies/include" \
 CGO_LDFLAGS="$(php-config --ldflags) $(php-config --libs) -L$PWD/../../dist/dependencies/lib" \

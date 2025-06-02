@@ -78,7 +78,7 @@ FrankenPHP 的某些功能需要安装可选依赖项。
 ```console
 curl -L https://github.com/dunglas/frankenphp/archive/refs/heads/main.tar.gz | tar xz
 cd frankenphp-main
-./install_dependencies.sh
+./install-dependencies.sh
 cd caddy/frankenphp
 CGO_CFLAGS="$(php-config --includes) -I$PWD/../../dist/dependencies/include" \
 CGO_LDFLAGS="$(php-config --ldflags) $(php-config --libs) -L$PWD/../../dist/dependencies/lib" \
