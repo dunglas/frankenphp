@@ -106,7 +106,7 @@ xcaddy build \
     --with github.com/dunglas/mercure/caddy \
     --with github.com/dunglas/vulcain/caddy \
     --with github.com/dunglas/caddy-cbrotli
-    # Add extra Caddy modules here
+    # Add extra Caddy modules and FrankenPHP extensions here
 ```
 
 > [!TIP]
