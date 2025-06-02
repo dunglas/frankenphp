@@ -2,7 +2,6 @@ package caddy
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"log/slog"
 	"net/http"
@@ -132,8 +131,6 @@ func cmdPHPServer(fs caddycmd.Flags) (int, error) {
 
 		if root == "" {
 			root = defaultDocumentRoot
-			caddy.Log().Warn(fmt.Sprintf("No root path specified, using default: %q", defaultDocumentRoot))
-			caddy.Log().Warn(`If you would like to serve from the embedded app directory, specify "root ./" `)
 		}
 	}
 
