@@ -9,7 +9,7 @@ retract v1.0.0-rc.1 // Human error
 require (
 	github.com/caddyserver/caddy/v2 v2.10.0
 	github.com/caddyserver/certmagic v0.23.0
-	github.com/dunglas/caddy-cbrotli v1.0.0
+	github.com/dunglas/caddy-cbrotli v1.0.1
 	github.com/dunglas/frankenphp v1.6.2
 	github.com/dunglas/mercure/caddy v0.19.2
 	github.com/dunglas/vulcain/caddy v1.2.0
@@ -80,7 +80,7 @@ require (
 	github.com/golang-jwt/jwt/v5 v5.2.2 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/golang/snappy v1.0.0 // indirect
-	github.com/google/brotli/go/cbrotli v0.0.0-20241111155135-4303850b01d6 // indirect
+	github.com/google/brotli/go/cbrotli v1.1.0 // indirect
 	github.com/google/cel-go v0.25.0 // indirect
 	github.com/google/certificate-transparency-go v1.3.1 // indirect
 	github.com/google/go-tpm v0.9.5 // indirect
