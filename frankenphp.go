@@ -492,6 +492,10 @@ func addHeader(fc *frankenPHPContext, cString *C.char, length C.int) {
 func go_write_headers(threadIndex C.uintptr_t, status C.int, headers *C.zend_llist) C.bool {
 	fc := phpThreads[threadIndex].getRequestContext()
 
+	if fc == nil {
+		return C.bool(false)
+	}
+
 	if fc.isDone {
 		return C.bool(false)
 	}

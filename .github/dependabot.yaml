@@ -17,11 +17,6 @@ updates:
       interval: weekly
     commit-message:
       prefix: chore(caddy)
-    # These packages must be in sync with versions
-    # used by github.com/caddyserver/caddy/v2
-    ignore:
-      - dependency-name: github.com/google/cel-go
-      - dependency-name: github.com/quic-go/*
     groups:
       go-modules:
         patterns:

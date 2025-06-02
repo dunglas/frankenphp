@@ -33,10 +33,6 @@ const (
 
 var iniError = errors.New("'php_ini' must be in the format: php_ini \"<key>\" \"<value>\"")
 
-// FrankenPHPModule instances register their workers, and FrankenPHPApp reads them at Start() time.
-// FrankenPHPApp.Workers may be set by JSON config, so keep them separate.
-var moduleWorkerConfigs []workerConfig
-
 func init() {
 	caddy.RegisterModule(FrankenPHPApp{})
 	caddy.RegisterModule(FrankenPHPModule{})
@@ -104,6 +100,40 @@ func (f *FrankenPHPApp) Provision(ctx caddy.Context) error {
 	return nil
 }
 
+func (f *FrankenPHPApp) generateUniqueModuleWorkerName(filepath string) string {
+	var i uint
+	filepath, _ = fastabs.FastAbs(filepath)
+	name := "m#" + filepath
+
+retry:
+	for _, wc := range f.Workers {
+		if wc.Name == name {
+			name = fmt.Sprintf("m#%s_%d", filepath, i)
+			i++
+
+			goto retry
+		}
+	}
+
+	return name
+}
+
+func (f *FrankenPHPApp) addModuleWorkers(workers ...workerConfig) ([]workerConfig, error) {
+	for i := range workers {
+		w := &workers[i]
+		if frankenphp.EmbeddedAppPath != "" && filepath.IsLocal(w.FileName) {
+			w.FileName = filepath.Join(frankenphp.EmbeddedAppPath, w.FileName)
+		}
+		if w.Name == "" {
+			w.Name = f.generateUniqueModuleWorkerName(w.FileName)
+		} else if !strings.HasPrefix(w.Name, "m#") {
+			w.Name = "m#" + w.Name
+		}
+		f.Workers = append(f.Workers, *w)
+	}
+	return workers, nil
+}
+
 func (f *FrankenPHPApp) Start() error {
 	repl := caddy.NewReplacer()
 
@@ -115,9 +145,7 @@ func (f *FrankenPHPApp) Start() error {
 		frankenphp.WithPhpIni(f.PhpIni),
 		frankenphp.WithMaxWaitTime(f.MaxWaitTime),
 	}
-	// Add workers from FrankenPHPApp and FrankenPHPModule configurations
-	// f.Workers may have been set by JSON config, so keep them separate
-	for _, w := range append(f.Workers, moduleWorkerConfigs...) {
+	for _, w := range append(f.Workers) {
 		opts = append(opts, frankenphp.WithWorkers(w.Name, repl.ReplaceKnown(w.FileName, ""), w.Num, w.Env, w.Watch))
 	}
 
@@ -143,7 +171,6 @@ func (f *FrankenPHPApp) Stop() error {
 	f.Workers = nil
 	f.NumThreads = 0
 	f.MaxWaitTime = 0
-	moduleWorkerConfigs = nil
 
 	return nil
 }
@@ -316,14 +343,6 @@ func (f *FrankenPHPApp) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 				if frankenphp.EmbeddedAppPath != "" && filepath.IsLocal(wc.FileName) {
 					wc.FileName = filepath.Join(frankenphp.EmbeddedAppPath, wc.FileName)
 				}
-				if wc.Name == "" {
-					// let worker initialization validate if the FileName is valid or not
-					name, _ := fastabs.FastAbs(wc.FileName)
-					if name == "" {
-						name = wc.FileName
-					}
-					wc.Name = name
-				}
 				if strings.HasPrefix(wc.Name, "m#") {
 					return fmt.Errorf(`global worker names must not start with "m#": %q`, wc.Name)
 				}
@@ -391,6 +410,23 @@ func (FrankenPHPModule) CaddyModule() caddy.ModuleInfo {
 // Provision sets up the module.
 func (f *FrankenPHPModule) Provision(ctx caddy.Context) error {
 	f.logger = ctx.Slogger()
+	app, err := ctx.App("frankenphp")
+	if err != nil {
+		return err
+	}
+	fapp, ok := app.(*FrankenPHPApp)
+	if !ok {
+		return fmt.Errorf(`expected ctx.App("frankenphp") to return *FrankenPHPApp, got %T`, app)
+	}
+	if fapp == nil {
+		return fmt.Errorf(`expected ctx.App("frankenphp") to return *FrankenPHPApp, got nil`)
+	}
+
+	workers, err := fapp.addModuleWorkers(f.Workers...)
+	if err != nil {
+		return err
+	}
+	f.Workers = workers
 
 	if f.Root == "" {
 		if frankenphp.EmbeddedAppPath == "" {
@@ -504,25 +540,6 @@ func (f *FrankenPHPModule) ServeHTTP(w http.ResponseWriter, r *http.Request, _ c
 	return nil
 }
 
-func generateUniqueModuleWorkerName(filepath string) string {
-	var i uint
-	name := "m#" + filepath
-
-outer:
-	for {
-		for _, wc := range moduleWorkerConfigs {
-			if wc.Name == name {
-				name = fmt.Sprintf("m#%s_%d", filepath, i)
-				i++
-
-				continue outer
-			}
-		}
-
-		return name
-	}
-}
-
 // UnmarshalCaddyfile implements caddyfile.Unmarshaler.
 func (f *FrankenPHPModule) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 	// First pass: Parse all directives except "worker"
@@ -608,28 +625,14 @@ func (f *FrankenPHPModule) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 					}
 				}
 
-				if wc.Name == "" {
-					wc.Name = generateUniqueModuleWorkerName(wc.FileName)
-				}
-				if !strings.HasPrefix(wc.Name, "m#") {
-					wc.Name = "m#" + wc.Name
-				}
-
 				// Check if a worker with this filename already exists in this module
 				for _, existingWorker := range f.Workers {
 					if existingWorker.FileName == wc.FileName {
 						return fmt.Errorf(`workers in a single "php_server" block must not have duplicate filenames: %q`, wc.FileName)
 					}
 				}
-				// Check if a worker with this name and a different environment or filename already exists
-				for _, existingWorker := range moduleWorkerConfigs {
-					if existingWorker.Name == wc.Name {
-						return fmt.Errorf("workers must not have duplicate names: %q", wc.Name)
-					}
-				}
 
 				f.Workers = append(f.Workers, wc)
-				moduleWorkerConfigs = append(moduleWorkerConfigs, wc)
 			}
 		}
 	}
