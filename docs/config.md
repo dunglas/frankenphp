@@ -42,16 +42,11 @@ RUN cp $PHP_INI_DIR/php.ini-development $PHP_INI_DIR/php.ini
 
 ## Caddyfile Config
 
-To register the FrankenPHP executor, the `frankenphp` [global option](https://caddyserver.com/docs/caddyfile/concepts#global-options) must be set, then the `php_server` or the `php` [HTTP directives](https://caddyserver.com/docs/caddyfile/concepts#directives) may be used within the site blocks to serve your PHP app.
+The `php_server` or the `php` [HTTP directives](https://caddyserver.com/docs/caddyfile/concepts#directives) may be used within the site blocks to serve your PHP app.
 
 Minimal example:
 
 ```caddyfile
-{
-	# Enable FrankenPHP
-	frankenphp
-}
-
 localhost {
 	# Enable compression (optional)
 	encode zstd br gzip
@@ -60,7 +55,8 @@ localhost {
 }
 ```
 
-Optionally, the number of threads to create and [worker scripts](worker.md) to start with the server can be specified under the global option.
+You can also explicitly configure FrankenPHP using the global option:
+The `frankenphp` [global option](https://caddyserver.com/docs/caddyfile/concepts#global-options) can be used to configure FrankenPHP.
 
 ```caddyfile
 {
@@ -118,39 +114,6 @@ example.com {
 You can also define multiple workers if you serve multiple apps on the same server:
 
 ```caddyfile
-{
-	frankenphp {
-		worker /path/to/app/public/index.php <num>
-		worker {
-			file /path/to/other/public/index.php
-			num <num>
-			env APP_ENV dev
-		}
-	}
-}
-
-app.example.com {
-	root /path/to/app/public
-	php_server
-}
-
-other.example.com {
-	root /path/to/other/public
-	php_server {
-		env APP_ENV dev
-	}
-}
-
-# ...
-```
-
-Is equivalent to
-
-```caddyfile
-{
-	frankenphp
-}
-
 app.example.com {
 	php_server {
 		root /path/to/app/public
@@ -161,7 +124,6 @@ app.example.com {
 other.example.com {
 	php_server {
 		root /path/to/other/public
-		env APP_ENV dev
 		worker index.php <num>
 	}
 }
@@ -206,6 +168,14 @@ php_server [<matcher>] {
 	resolve_root_symlink false # Disables resolving the `root` directory to its actual value by evaluating a symbolic link, if one exists (enabled by default).
 	env <key> <value> # Sets an extra environment variable to the given value. Can be specified more than once for multiple environment variables.
 	file_server off # Disables the built-in file_server directive.
+	worker { # Creates a worker specific to this server. Can be specified more than once for multiple workers.
+		file <path> # Sets the path to the worker script, can be relative to the php_server root
+		num <num> # Sets the number of PHP threads to start, defaults to 2x the number of available
+		name <name> # Sets the name for the worker, used in logs and metrics. Default: absolute path of worker file. Always starts with m# when defined in a php_server block.
+		watch <path> # Sets the path to watch for file changes. Can be specified more than once for multiple paths.
+		env <key> <value> # Sets an extra environment variable to the given value. Can be specified more than once for multiple environment variables. Environment variables for this worker are also inherited from the php_server parent, but can be overwritten here.
+	}
+	worker <other_file> <num> # Can also use the short form like in the global frankenphp block.
 }
 ```
 

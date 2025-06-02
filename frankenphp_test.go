@@ -330,7 +330,7 @@ func TestMalformedCookie(t *testing.T) {
 	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
 		req := httptest.NewRequest("GET", "http://example.com/cookies.php", nil)
 		req.Header.Add("Cookie", "foo =bar; ===;;==;  .dot.=val  ;\x00 ; PHPSESSID=1234")
-		// Muliple Cookie header should be joined https://www.rfc-editor.org/rfc/rfc7540#section-8.1.2.5
+		// Multiple Cookie header should be joined https://www.rfc-editor.org/rfc/rfc7540#section-8.1.2.5
 		req.Header.Add("Cookie", "secondCookie=test; secondCookie=overwritten")
 		w := httptest.NewRecorder()
 		handler(w, req)
@@ -1021,6 +1021,22 @@ func testRejectInvalidHeaders(t *testing.T, opts *testOptions) {
 			assert.Contains(t, string(body), "invalid")
 		}, opts)
 	}
+}
+
+func TestFlushEmptyResponse_module(t *testing.T) { testFlushEmptyResponse(t, &testOptions{}) }
+func TestFlushEmptyRespnse_worker(t *testing.T) {
+	testFlushEmptyResponse(t, &testOptions{workerScript: "only-headers.php"})
+}
+
+func testFlushEmptyResponse(t *testing.T, opts *testOptions) {
+	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, _ int) {
+		req := httptest.NewRequest("GET", "http://example.com/only-headers.php", nil)
+		w := httptest.NewRecorder()
+		handler(w, req)
+
+		resp := w.Result()
+		assert.Equal(t, 204, resp.StatusCode)
+	}, opts)
 }
 
 // Worker mode will clean up unreferenced streams between requests

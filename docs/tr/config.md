@@ -1,4 +1,4 @@
-# Konfigürasyon
+﻿# Konfigürasyon
 
 FrankenPHP, Caddy'nin yanı sıra Mercure ve Vulcain modülleri [Caddy tarafından desteklenen formatlar](https://caddyserver.com/docs/getting-started#your-first-config) kullanılarak yapılandırılabilir.
 
@@ -41,16 +41,11 @@ Statik ikili:
 
 ## Caddyfile Konfigürasyonu
 
-FrankenPHP yürütücüsünü kaydetmek için `frankenphp` [global seçenek](https://caddyserver.com/docs/caddyfile/concepts#global-options) ayarlanmalıdır, ardından PHP uygulamanızı sunmak için site blokları içinde `php_server` veya `php` [HTTP yönergeleri](https://caddyserver.com/docs/caddyfile/concepts#directives) kullanılabilir.
+PHP uygulamanızı sunmak için site blokları içinde `php_server` veya `php` [HTTP yönergeleri](https://caddyserver.com/docs/caddyfile/concepts#directives) kullanılabilir.
 
 Minimal örnek:
 
 ```caddyfile
-{
-	# FrankenPHP'yi aktif et
-	frankenphp
-}
-
 localhost {
 	# Sıkıştırmayı etkinleştir (isteğe bağlı)
 	encode zstd br gzip
@@ -59,7 +54,8 @@ localhost {
 }
 ```
 
-İsteğe bağlı olarak, oluşturulacak iş parçacığı sayısı ve sunucuyla birlikte başlatılacak [işçi betikleri] (worker.md) global seçenek altında belirtilebilir.
+FrankenPHP'yi global seçenek kullanarak açıkça yapılandırabilirsiniz:
+`frankenphp` [global seçenek](https://caddyserver.com/docs/caddyfile/concepts#global-options) FrankenPHP'yi yapılandırmak için kullanılabilir.
 
 ```caddyfile
 {
@@ -112,39 +108,6 @@ example.com {
 Aynı sunucuda birden fazla uygulamaya hizmet veriyorsanız birden fazla işçi de tanımlayabilirsiniz:
 
 ```caddyfile
-{
-	frankenphp {
-		worker /path/to/app/public/index.php <num>
-		worker {
-			file /path/to/other/public/index.php
-			num <num>
-			env APP_ENV dev
-		}
-	}
-}
-
-app.example.com {
-	root /path/to/app/public
-	php_server
-}
-
-other.example.com {
-	root /path/to/other/public
-	php_server {
-		env APP_ENV dev
-	}
-}
-
-# ...
-```
-
-Şuna eşdeğerdir
-
-```caddyfile
-{
-	frankenphp
-}
-
 app.example.com {
 	php_server {
 		root /path/to/app/public
@@ -155,10 +118,10 @@ app.example.com {
 other.example.com {
 	php_server {
 		root /path/to/other/public
-		env APP_ENV dev
 		worker index.php <num>
 	}
 }
+
 # ...
 ```
 
@@ -196,6 +159,15 @@ php_server [<matcher>] {
 	split_path <delim...> # URI'yi iki parçaya bölmek için alt dizgeleri ayarlar. İlk eşleşen alt dizge "yol bilgisini" yoldan ayırmak için kullanılır. İlk parça eşleşen alt dizeyle sonlandırılır ve gerçek kaynak (CGI betiği) adı olarak kabul edilir. İkinci parça betiğin kullanması için PATH_INFO olarak ayarlanacaktır. Varsayılan: `.php`
 	resolve_root_symlink false # Varsa, sembolik bir bağlantıyı değerlendirerek `root` dizininin gerçek değerine çözümlenmesini devre dışı bırakır (varsayılan olarak etkindir).
 	env <key> <value> # Ek bir ortam değişkenini verilen değere ayarlar. Birden fazla ortam değişkeni için birden fazla kez belirtilebilir.
+	file_server off # Yerleşik file_server yönergesini devre dışı bırakır.
+	worker { # Bu sunucuya özgü bir worker oluşturur. Birden fazla worker için birden fazla kez belirtilebilir.
+		file <path> # Worker betiğinin yolunu ayarlar, php_server köküne göre göreceli olabilir
+		num <num> # Başlatılacak PHP iş parçacığı sayısını ayarlar, varsayılan değer mevcut CPU çekirdek sayısının 2 katıdır
+		name <name> # Worker için günlüklerde ve metriklerde kullanılan bir ad ayarlar. Varsayılan: worker dosyasının mutlak yolu. Bir php_server bloğunda tanımlandığında her zaman m# ile başlar.
+		watch <path> # Dosya değişikliklerini izlemek için yolu ayarlar. Birden fazla yol için birden fazla kez belirtilebilir.
+		env <key> <value> # Ek bir ortam değişkenini verilen değere ayarlar. Birden fazla ortam değişkeni için birden fazla kez belirtilebilir. Bu worker için ortam değişkenleri ayrıca php_server üst öğesinden devralınır, ancak burada geçersiz kılınabilir.
+	}
+	worker <other_file> <num> # Global frankenphp bloğundaki gibi kısa formu da kullanabilirsiniz.
 }
 ```
 

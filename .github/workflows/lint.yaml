@@ -21,10 +21,8 @@ jobs:
         with:
           fetch-depth: 0
       - name: Lint Code Base
-        uses: super-linter/super-linter/slim@v7.3.0
+        uses: super-linter/super-linter/slim@v7.4.0
         env:
-          VALIDATE_ALL_CODEBASE: true
-          DEFAULT_BRANCH: main
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           LINTER_RULES_PATH: /
           MARKDOWN_CONFIG_FILE: .markdown-lint.yaml

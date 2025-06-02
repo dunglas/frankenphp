@@ -1,4 +1,4 @@
-# 配置
+﻿# 配置
 
 FrankenPHP，Caddy 以及 Mercure 和 Vulcain 模块可以使用 [Caddy 支持的格式](https://caddyserver.com/docs/getting-started#your-first-config) 进行配置。
 
@@ -39,16 +39,11 @@ FrankenPHP 安装 (.rpm 或 .deb):
 
 ## Caddyfile 配置
 
-要注册 FrankenPHP 执行器，必须设置 `frankenphp` [全局选项](https://caddyserver.com/docs/caddyfile/concepts#global-options)，然后可以在站点块中使用 `php_server` 或 `php` [HTTP 指令](https://caddyserver.com/docs/caddyfile/concepts#directives) 来为您的 PHP 应用程序提供服务。
+可以在站点块中使用 `php_server` 或 `php` [HTTP 指令](https://caddyserver.com/docs/caddyfile/concepts#directives) 来为您的 PHP 应用程序提供服务。
 
 最小示例：
 
 ```caddyfile
-{
-	# 启用 FrankenPHP
-	frankenphp
-}
-
 localhost {
 	# 启用压缩（可选）
 	encode zstd br gzip
@@ -57,7 +52,8 @@ localhost {
 }
 ```
 
-或者，可以在全局选项下指定要创建的线程数和要从服务器启动的 [worker 脚本](worker.md)。
+您也可以使用全局选项显式配置 FrankenPHP：
+`frankenphp` [全局选项](https://caddyserver.com/docs/caddyfile/concepts#global-options) 可用于配置 FrankenPHP。
 
 ```caddyfile
 {
@@ -110,39 +106,6 @@ example.com {
 如果在同一服务器上运行多个应用，还可以定义多个 worker：
 
 ```caddyfile
-{
-	frankenphp {
-		worker /path/to/app/public/index.php <num>
-		worker {
-			file /path/to/other/public/index.php
-			num <num>
-			env APP_ENV dev
-		}
-	}
-}
-
-app.example.com {
-	root /path/to/app/public
-	php_server
-}
-
-other.example.com {
-	root /path/to/other/public
-	php_server {
-		env APP_ENV dev
-	}
-}
-
-# ...
-```
-
-等效于
-
-```caddyfile
-{
-	frankenphp
-}
-
 app.example.com {
 	php_server {
 		root /path/to/app/public
@@ -153,10 +116,10 @@ app.example.com {
 other.example.com {
 	php_server {
 		root /path/to/other/public
-		env APP_ENV dev
 		worker index.php <num>
 	}
 }
+
 # ...
 ```
 
@@ -194,6 +157,15 @@ php_server [<matcher>] {
 	split_path <delim...> # 设置用于将 URI 拆分为两部分的子字符串。第一个匹配的子字符串将用于从路径中拆分“路径信息”。第一个部分以匹配的子字符串为后缀，并将假定为实际资源(CGI 脚本)名称。第二部分将设置为PATH_INFO，供脚本使用。默认值：`.php`
 	resolve_root_symlink false # 禁用将 `root` 目录在符号链接时将其解析为实际值（默认启用）。
 	env <key> <value> # 设置额外的环境变量，可以设置多个环境变量。
+	file_server off # 禁用内置的 file_server 指令。
+	worker { # 创建特定于此服务器的 worker。可以为多个 worker 多次指定。
+		file <path> # 设置 worker 脚本的路径，可以相对于 php_server 根目录
+		num <num> # 设置要启动的 PHP 线程数，默认为可用 CPU 数的 2 倍
+		name <name> # 为 worker 设置名称，用于日志和指标。默认值：worker 文件的绝对路径。在 php_server 块中定义时始终以 m# 开头。
+		watch <path> # 设置要监视文件更改的路径。可以为多个路径多次指定。
+		env <key> <value> # 将额外的环境变量设置为给定值。可以为多个环境变量多次指定。此 worker 的环境变量也从 php_server 父级继承，但可以在此处覆盖。
+	}
+	worker <other_file> <num> # 也可以像在全局 frankenphp 块中一样使用简短形式。
 }
 ```
 

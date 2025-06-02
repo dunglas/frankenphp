@@ -73,7 +73,7 @@ It's also possible to [restart the worker on file changes](config.md#watching-fo
 The following command will trigger a restart if any file ending in `.php` in the `/path/to/your/app/` directory or subdirectories is modified:
 
 ```console
-frankenphp php-server --worker /path/to/your/worker/script.php --watch "/path/to/your/app/**/*.php"
+frankenphp php-server --worker /path/to/your/worker/script.php --watch="/path/to/your/app/**/*.php"
 ```
 
 ## Symfony Runtime

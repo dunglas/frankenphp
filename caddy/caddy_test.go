@@ -31,8 +31,6 @@ func TestPHP(t *testing.T) {
 			admin localhost:2999
 			http_port `+testPort+`
 			https_port 9443
-
-			frankenphp
 		}
 
 		localhost:`+testPort+` {
@@ -63,8 +61,6 @@ func TestLargeRequest(t *testing.T) {
 			admin localhost:2999
 			http_port `+testPort+`
 			https_port 9443
-
-			frankenphp
 		}
 
 		localhost:`+testPort+` {
@@ -182,8 +178,6 @@ func TestNamedModuleWorkers(t *testing.T) {
 		{
 			skip_install_trust
 			admin localhost:2999
-
-			frankenphp
 		}
 
 		http://localhost:`+testPort+` {
@@ -383,8 +377,6 @@ func TestPHPServerDirective(t *testing.T) {
 			admin localhost:2999
 			http_port `+testPort+`
 			https_port 9443
-
-			frankenphp
 		}
 
 		localhost:`+testPort+` {
@@ -406,8 +398,6 @@ func TestPHPServerDirectiveDisableFileServer(t *testing.T) {
 			admin localhost:2999
 			http_port `+testPort+`
 			https_port 9443
-
-			frankenphp
 			order php_server before respond
 		}
 
@@ -434,8 +424,6 @@ func TestMetrics(t *testing.T) {
 		http_port `+testPort+`
 		https_port 9443
 		metrics
-
-		frankenphp
 	}
 
 	localhost:`+testPort+` {
@@ -800,7 +788,6 @@ func TestAllDefinedServerVars(t *testing.T) {
 			skip_install_trust
 			admin localhost:2999
 			http_port `+testPort+`
-			frankenphp
 		}
 		localhost:`+testPort+` {
 			route {

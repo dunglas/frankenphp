@@ -1,4 +1,4 @@
-# Configuration
+﻿# Configuration
 
 FrankenPHP, Caddy ainsi que les modules Mercure et Vulcain peuvent être configurés en utilisant [les formats pris en charge par Caddy](https://caddyserver.com/docs/getting-started#your-first-config).
 
@@ -41,16 +41,11 @@ Binaire statique :
 
 ## Configuration du Caddyfile
 
-Pour enregistrer l'exécutable de FrankenPHP, l'[option globale](https://caddyserver.com/docs/caddyfile/concepts#global-options) `frankenphp` doit être définie, puis les [directives HTTP](https://caddyserver.com/docs/caddyfile/concepts#directives) `php_server` ou `php` peuvent être utilisées dans les blocs de site pour servir votre application PHP.
+Les [directives HTTP](https://caddyserver.com/docs/caddyfile/concepts#directives) `php_server` ou `php` peuvent être utilisées dans les blocs de site pour servir votre application PHP.
 
 Exemple minimal :
 
 ```caddyfile
-{
-	# Activer FrankenPHP
-	frankenphp
-}
-
 localhost {
 	# Activer la compression (optionnel)
 	encode zstd br gzip
@@ -59,23 +54,24 @@ localhost {
 }
 ```
 
-En option, le nombre de threads à créer et les [workers](worker.md) à démarrer avec le serveur peuvent être spécifiés sous l'option globale.
+Vous pouvez également configurer explicitement FrankenPHP en utilisant l'option globale :
+L'[option globale](https://caddyserver.com/docs/caddyfile/concepts#global-options) `frankenphp` peut être utilisée pour configurer FrankenPHP.
 
 ```caddyfile
 {
-	frankenphp {
-		num_threads <num_threads> # Définit le nombre de threads PHP à démarrer. Par défaut : 2x le nombre de CPUs disponibles.
-		max_threads <num_threads> # Limite le nombre de threads PHP supplémentaires qui peuvent être démarrés au moment de l'exécution. Valeur par défaut : num_threads. Peut être mis à 'auto'.
-		max_wait_time <duration> # Définit le temps maximum pendant lequel une requête peut attendre un thread PHP libre avant d'être interrompue. Valeur par défaut : désactivé.
-		php_ini <key> <value> Définit une directive php.ini. Peut être utilisé plusieurs fois pour définir plusieurs directives.
-		worker {
-			file <path> # Définit le chemin vers le script worker.
-			num <num> # Définit le nombre de threads PHP à démarrer, par défaut 2x le nombre de CPUs disponibles.
-			env <key> <value> # Définit une variable d'environnement supplémentaire avec la valeur donnée. Peut être spécifié plusieurs fois pour régler plusieurs variables d'environnement.
-			watch <path> # Définit le chemin d'accès à surveiller pour les modifications de fichiers. Peut être spécifié plusieurs fois pour plusieurs chemins.
-			name <name> # Définit le nom du worker, utilisé dans les journaux et les métriques. Défaut : chemin absolu du fichier du worker
-		}
-	}
+    frankenphp {
+        num_threads <num_threads> # Définit le nombre de threads PHP à démarrer. Par défaut : 2x le nombre de CPUs disponibles.
+        max_threads <num_threads> # Limite le nombre de threads PHP supplémentaires qui peuvent être démarrés au moment de l'exécution. Valeur par défaut : num_threads. Peut être mis à 'auto'.
+        max_wait_time <duration> # Définit le temps maximum pendant lequel une requête peut attendre un thread PHP libre avant d'être interrompue. Valeur par défaut : désactivé.
+        php_ini <key> <value> Définit une directive php.ini. Peut être utilisé plusieurs fois pour définir plusieurs directives.
+        worker {
+            file <path> # Définit le chemin vers le script worker.
+            num <num> # Définit le nombre de threads PHP à démarrer, par défaut 2x le nombre de CPUs disponibles.
+            env <key> <value> # Définit une variable d'environnement supplémentaire avec la valeur donnée. Peut être spécifié plusieurs fois pour régler plusieurs variables d'environnement.
+            watch <path> # Définit le chemin d'accès à surveiller pour les modifications de fichiers. Peut être spécifié plusieurs fois pour plusieurs chemins.
+            name <name> # Définit le nom du worker, utilisé dans les journaux et les métriques. Défaut : chemin absolu du fichier du worker
+        }
+    }
 }
 
 # ...
@@ -117,53 +113,20 @@ example.com {
 Vous pouvez aussi définir plusieurs workers si vous servez plusieurs applications sur le même serveur :
 
 ```caddyfile
-{
-	frankenphp {
-		worker /path/to/app/public/index.php <num>
-		worker {
-			file /path/to/other/public/index.php
-			num <num>
-			env APP_ENV dev
-		}
-	}
-}
-
 app.example.com {
-	root /path/to/app/public
-	php_server
+    php_server {
+        root /path/to/app/public
+        worker index.php <num>
+    }
 }
 
 other.example.com {
-	root /path/to/other/public
-	php_server {
-		env APP_ENV dev
-	}
+    php_server {
+        root /path/to/other/public
+        worker index.php <num>
+    }
 }
 
-# ...
-```
-
-Est équivalent à
-
-```caddyfile
-{
-	frankenphp
-}
-
-app.example.com {
-	php_server {
-		root /path/to/app/public
-		worker index.php <num>
-	}
-}
-
-other.example.com {
-	php_server {
-		root /path/to/other/public
-		env APP_ENV dev
-		worker index.php <num>
-	}
-}
 # ...
 ```
 
@@ -199,11 +162,19 @@ Les directives `php_server` et `php` disposent des options suivantes :
 
 ```caddyfile
 php_server [<matcher>] {
-	root <directory> # Définit le dossier racine du le site. Par défaut : valeur de la directive `root` parente.
-	split_path <delim...> # Définit les sous-chaînes pour diviser l'URI en deux parties. La première sous-chaîne correspondante sera utilisée pour séparer le "path info" du chemin. La première partie est suffixée avec la sous-chaîne correspondante et sera considérée comme le nom réel de la ressource (script CGI). La seconde partie sera définie comme PATH_INFO pour utilisation par le script. Par défaut : `.php`
-	resolve_root_symlink false # Désactive la résolution du répertoire `root` vers sa valeur réelle en évaluant un lien symbolique, s'il existe (activé par défaut).
-	env <key> <value> # Définit une variable d'environnement supplémentaire avec la valeur donnée. Peut être spécifié plusieurs fois pour plusieurs variables d'environnement.
-	file_server off # Désactive la directive file_server intégrée.
+    root <directory> # Définit le dossier racine du le site. Par défaut : valeur de la directive `root` parente.
+    split_path <delim...> # Définit les sous-chaînes pour diviser l'URI en deux parties. La première sous-chaîne correspondante sera utilisée pour séparer le "path info" du chemin. La première partie est suffixée avec la sous-chaîne correspondante et sera considérée comme le nom réel de la ressource (script CGI). La seconde partie sera définie comme PATH_INFO pour utilisation par le script. Par défaut : `.php`
+    resolve_root_symlink false # Désactive la résolution du répertoire `root` vers sa valeur réelle en évaluant un lien symbolique, s'il existe (activé par défaut).
+    env <key> <value> # Définit une variable d'environnement supplémentaire avec la valeur donnée. Peut être spécifié plusieurs fois pour plusieurs variables d'environnement.
+    file_server off # Désactive la directive file_server intégrée.
+    worker { # Crée un worker spécifique à ce serveur. Peut être spécifié plusieurs fois pour plusieurs workers.
+        file <path> # Définit le chemin vers le script worker, peut être relatif à la racine du php_server
+        num <num> # Définit le nombre de threads PHP à démarrer, par défaut 2x le nombre de CPUs disponibles
+        name <name> # Définit le nom du worker, utilisé dans les journaux et les métriques. Défaut : chemin absolu du fichier du worker. Commence toujours par m# lorsqu'il est défini dans un bloc php_server.
+        watch <path> # Définit le chemin d'accès à surveiller pour les modifications de fichiers. Peut être spécifié plusieurs fois pour plusieurs chemins.
+        env <key> <value> # Définit une variable d'environnement supplémentaire avec la valeur donnée. Peut être spécifié plusieurs fois pour plusieurs variables d'environnement. Les variables d'environnement pour ce worker sont également héritées du parent php_server, mais peuvent être écrasées ici.
+    }
+    worker <other_file> <num> # Peut également utiliser la forme courte comme dans le bloc frankenphp global.
 }
 ```
 

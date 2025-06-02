@@ -71,7 +71,7 @@ Il est également possible de [redémarrer le worker en cas de changement de fic
 La commande suivante déclenchera un redémarrage si un fichier se terminant par `.php` dans le répertoire `/path/to/your/app/` ou ses sous-répertoires est modifié :
 
 ```console
-frankenphp php-server --worker /path/to/your/worker/script.php --watch "/path/to/your/app/**/*.php"
+frankenphp php-server --worker /path/to/your/worker/script.php --watch="/path/to/your/app/**/*.php"
 ```
 
 ## Runtime Symfony
