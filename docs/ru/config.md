@@ -1,4 +1,4 @@
-# Конфигурация
+﻿# Конфигурация
 
 FrankenPHP, Caddy, а также модули Mercure и Vulcain могут быть настроены с использованием [конфигурационных форматов, поддерживаемых Caddy](https://caddyserver.com/docs/getting-started#your-first-config).
 
@@ -41,16 +41,11 @@ RUN cp $PHP_INI_DIR/php.ini-development $PHP_INI_DIR/php.ini
 
 ## Конфигурация Caddyfile
 
-Для настройки FrankenPHP установите [глобальную опцию](https://caddyserver.com/docs/caddyfile/concepts#global-options) frankenphp. После этого можно использовать [HTTP-директивы](https://caddyserver.com/docs/caddyfile/concepts#directives) `php_server` или `php` для обработки вашего PHP-приложения.
+[HTTP-директивы](https://caddyserver.com/docs/caddyfile/concepts#directives) `php_server` или `php` могут быть использованы в блоках сайта для обработки вашего PHP-приложения.
 
 Минимальный пример:
 
 ```caddyfile
-{
-	# Включить FrankenPHP
-	frankenphp
-}
-
 localhost {
 	# Включить сжатие (опционально)
 	encode zstd br gzip
@@ -59,7 +54,8 @@ localhost {
 }
 ```
 
-Опционально можно указать количество потоков и [worker-скриптов](worker.md), которые запускаются вместе с сервером:
+Вы также можете явно настроить FrankenPHP с помощью глобальной опции:
+[Глобальная опция](https://caddyserver.com/docs/caddyfile/concepts#global-options) `frankenphp` может быть использована для настройки FrankenPHP.
 
 ```caddyfile
 {
@@ -92,21 +88,18 @@ localhost {
 Вы также можете определить несколько workers, если обслуживаете несколько приложений на одном сервере:
 
 ```caddyfile
-{
-	frankenphp {
-		worker /path/to/app/public/index.php <num>
-		worker /path/to/other/public/index.php <num>
+app.example.com {
+	php_server {
+		root /path/to/app/public
+		worker index.php <num>
 	}
 }
 
-app.example.com {
-	root /path/to/app/public
-	php_server
-}
-
 other.example.com {
-	root /path/to/other/public
-	php_server
+	php_server {
+		root /path/to/other/public
+		worker index.php <num>
+	}
 }
 
 # ...
@@ -146,6 +139,14 @@ php_server [<matcher>] {
 	resolve_root_symlink false # Отключает разрешение символьных ссылок для `root` (включено по умолчанию).
 	env <key> <value> # Устанавливает дополнительные переменные окружения. Можно указать несколько раз для разных переменных.
 	file_server off # Отключает встроенную директиву file_server.
+	worker { # Создает worker, специфичный для этого сервера. Можно указать несколько раз для разных workers.
+		file <path> # Указывает путь к worker-скрипту, может быть относительным к корню php_server
+		num <num> # Указывает количество потоков PHP. По умолчанию: 2x от числа доступных CPU.
+		name <name> # Устанавливает имя для worker, используемое в логах и метриках. По умолчанию: абсолютный путь к файлу worker. Всегда начинается с m# при определении в блоке php_server.
+		watch <path> # Указывает путь для отслеживания изменений файлов. Можно указать несколько раз для разных путей.
+		env <key> <value> # Устанавливает дополнительную переменную окружения. Можно указать несколько раз для разных переменных. Переменные окружения для этого worker также наследуются от родительского php_server, но могут быть переопределены здесь.
+	}
+	worker <other_file> <num> # Также можно использовать краткую форму как в глобальном блоке frankenphp.
 }
 ```
 
