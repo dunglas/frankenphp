@@ -34,7 +34,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/caddyserver/caddy/v2"
 	"io"
 	"log/slog"
 	"net/http"
@@ -227,7 +226,6 @@ func Init(options ...Option) error {
 	// Docker/Moby has a similar hack: https://github.com/moby/moby/blob/d828b032a87606ae34267e349bf7f7ccb1f6495a/cmd/dockerd/docker.go#L87-L90
 	signal.Ignore(syscall.SIGPIPE)
 
-	caddy.Log().Error("register...")
 	registerExtensions()
 
 	opt := &opt{}
