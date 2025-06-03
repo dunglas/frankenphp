@@ -1194,9 +1194,9 @@ PHPAPI int register_internal_extensions(void) {
   }
 
   for (int i = 0; i < modules_len; i++) {
-	if (zend_register_internal_module(&modules[i]) == NULL) {
-	  return FAILURE;
-	}
+    if (zend_register_internal_module(&modules[i]) == NULL) {
+      return FAILURE;
+    }
   }
 
   modules = NULL;
