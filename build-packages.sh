@@ -33,6 +33,7 @@ fi
 
 version_output="$(dist/"$bin" version)"
 frankenphp_version=$(echo "$version_output" | grep -oP 'FrankenPHP\s+\K[^ ]+' || true)
+frankenphp_version=${frankenphp_version#v}
 
 if [[ ! "${frankenphp_version}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
 	echo "Warning: frankenphp_version must be set to X.Y.Z (e.g. 1.5.1), got '${frankenphp_version}'"
