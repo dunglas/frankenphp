@@ -1,0 +1,364 @@
+package extgen
+
+import (
+	"bufio"
+	"fmt"
+	"go/ast"
+	"go/parser"
+	"go/token"
+	"os"
+	"regexp"
+	"strings"
+)
+
+var phpClassRegex = regexp.MustCompile(`//\s*export_php:class\s+(\w+)`)
+var phpMethodRegex = regexp.MustCompile(`//\s*export_php:method\s+(\w+)::([^{}\n]+)(?:\s*{\s*})?`)
+var methodSignatureRegex = regexp.MustCompile(`(\w+)\s*\(([^)]*)\)\s*:\s*(\??[\w|]+)`)
+var methodParamTypeNameRegex = regexp.MustCompile(`(\??[\w|]+)\s+\$?(\w+)`)
+
+type ExportDirective struct {
+	Line      int
+	ClassName string
+}
+
+type ClassParser struct{}
+
+func (cp *ClassParser) Parse(filename string) ([]PHPClass, error) {
+	return cp.parse(filename)
+}
+
+func (cp *ClassParser) parse(filename string) ([]PHPClass, error) {
+	fset := token.NewFileSet()
+	node, err := parser.ParseFile(fset, filename, nil, parser.ParseComments)
+	if err != nil {
+		return nil, fmt.Errorf("parsing file: %w", err)
+	}
+
+	var classes []PHPClass
+	validator := Validator{}
+
+	exportDirectives := cp.collectExportDirectives(node, fset)
+	methods, err := cp.parseMethods(filename)
+	if err != nil {
+		return nil, fmt.Errorf("parsing methods: %w", err)
+	}
+
+	// match structs to directives
+	matchedDirectives := make(map[int]bool)
+
+	var genDecl *ast.GenDecl
+	var ok bool
+	for _, decl := range node.Decls {
+		if genDecl, ok = decl.(*ast.GenDecl); !ok || genDecl.Tok != token.TYPE {
+			continue
+		}
+
+		for _, spec := range genDecl.Specs {
+			var typeSpec *ast.TypeSpec
+			if typeSpec, ok = spec.(*ast.TypeSpec); !ok {
+				continue
+			}
+
+			var structType *ast.StructType
+			if structType, ok = typeSpec.Type.(*ast.StructType); !ok {
+				continue
+			}
+
+			var phpClass string
+			var directiveLine int
+			if phpClass, directiveLine = cp.extractPHPClassCommentWithLine(genDecl.Doc, fset); phpClass == "" {
+				continue
+			}
+
+			matchedDirectives[directiveLine] = true
+
+			class := PHPClass{
+				Name:     phpClass,
+				GoStruct: typeSpec.Name.Name,
+			}
+
+			class.Properties = cp.parseStructFields(structType.Fields.List)
+
+			// associate methods with this class
+			for _, method := range methods {
+				if method.ClassName == phpClass {
+					class.Methods = append(class.Methods, method)
+				}
+			}
+
+			if err := validator.validateClass(class); err != nil {
+				fmt.Printf("Warning: Invalid class '%s': %v\n", class.Name, err)
+				continue
+			}
+
+			classes = append(classes, class)
+		}
+	}
+
+	for _, directive := range exportDirectives {
+		if !matchedDirectives[directive.Line] {
+			return nil, fmt.Errorf("//export_php class directive at line %d is not followed by a struct declaration", directive.Line)
+		}
+	}
+
+	return classes, nil
+}
+
+func (cp *ClassParser) collectExportDirectives(node *ast.File, fset *token.FileSet) []ExportDirective {
+	var directives []ExportDirective
+
+	for _, commentGroup := range node.Comments {
+		for _, comment := range commentGroup.List {
+			if matches := phpClassRegex.FindStringSubmatch(comment.Text); matches != nil {
+				pos := fset.Position(comment.Pos())
+				directives = append(directives, ExportDirective{
+					Line:      pos.Line,
+					ClassName: matches[1],
+				})
+			}
+		}
+	}
+
+	return directives
+}
+
+func (cp *ClassParser) extractPHPClassCommentWithLine(commentGroup *ast.CommentGroup, fset *token.FileSet) (string, int) {
+	if commentGroup == nil {
+		return "", 0
+	}
+
+	for _, comment := range commentGroup.List {
+		if matches := phpClassRegex.FindStringSubmatch(comment.Text); matches != nil {
+			pos := fset.Position(comment.Pos())
+			return matches[1], pos.Line
+		}
+	}
+
+	return "", 0
+}
+
+func (cp *ClassParser) extractPHPClassComment(commentGroup *ast.CommentGroup) string {
+	if commentGroup == nil {
+		return ""
+	}
+
+	for _, comment := range commentGroup.List {
+		if matches := phpClassRegex.FindStringSubmatch(comment.Text); matches != nil {
+			return matches[1]
+		}
+	}
+
+	return ""
+}
+
+func (cp *ClassParser) parseStructFields(fields []*ast.Field) []ClassProperty {
+	var properties []ClassProperty
+
+	for _, field := range fields {
+		for _, name := range field.Names {
+			prop := cp.parseStructField(name.Name, field)
+			properties = append(properties, prop)
+		}
+	}
+
+	return properties
+}
+
+func (cp *ClassParser) parseStructField(fieldName string, field *ast.Field) ClassProperty {
+	prop := ClassProperty{Name: fieldName}
+
+	// check if field is a pointer (nullable)
+	if starExpr, isPointer := field.Type.(*ast.StarExpr); isPointer {
+		prop.IsNullable = true
+		prop.GoType = cp.typeToString(starExpr.X)
+	} else {
+		prop.IsNullable = false
+		prop.GoType = cp.typeToString(field.Type)
+	}
+
+	prop.Type = cp.goTypeToPHPType(prop.GoType)
+	return prop
+}
+
+func (cp *ClassParser) typeToString(expr ast.Expr) string {
+	switch t := expr.(type) {
+	case *ast.Ident:
+		return t.Name
+	case *ast.StarExpr:
+		return "*" + cp.typeToString(t.X)
+	case *ast.ArrayType:
+		return "[]" + cp.typeToString(t.Elt)
+	case *ast.MapType:
+		return "map[" + cp.typeToString(t.Key) + "]" + cp.typeToString(t.Value)
+	default:
+		return "interface{}"
+	}
+}
+
+func (cp *ClassParser) goTypeToPHPType(goType string) string {
+	goType = strings.TrimPrefix(goType, "*")
+
+	typeMap := map[string]string{
+		"string": "string",
+		"int":    "int", "int64": "int", "int32": "int", "int16": "int", "int8": "int",
+		"uint": "int", "uint64": "int", "uint32": "int", "uint16": "int", "uint8": "int",
+		"float64": "float", "float32": "float",
+		"bool": "bool",
+	}
+
+	if phpType, exists := typeMap[goType]; exists {
+		return phpType
+	}
+
+	if strings.HasPrefix(goType, "[]") || strings.HasPrefix(goType, "map[") {
+		return "array"
+	}
+
+	return "mixed"
+}
+
+func (cp *ClassParser) parseMethods(filename string) ([]ClassMethod, error) {
+	file, err := os.Open(filename)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	var methods []ClassMethod
+	scanner := bufio.NewScanner(file)
+	var currentMethod *ClassMethod
+
+	lineNumber := 0
+	for scanner.Scan() {
+		lineNumber++
+		line := strings.TrimSpace(scanner.Text())
+
+		if matches := phpMethodRegex.FindStringSubmatch(line); matches != nil {
+			className := strings.TrimSpace(matches[1])
+			signature := strings.TrimSpace(matches[2])
+
+			method, err := cp.parseMethodSignature(className, signature)
+			if err != nil {
+				fmt.Printf("Warning: Error parsing method signature '%s': %v\n", signature, err)
+				continue
+			}
+
+			method.LineNumber = lineNumber
+			currentMethod = method
+		}
+
+		if currentMethod != nil && strings.HasPrefix(line, "func ") {
+			goFunc, err := cp.extractGoMethodFunction(scanner, line)
+			if err != nil {
+				return nil, fmt.Errorf("extracting Go method function: %w", err)
+			}
+			currentMethod.GoFunction = goFunc
+			methods = append(methods, *currentMethod)
+			currentMethod = nil
+		}
+	}
+
+	if currentMethod != nil {
+		return nil, fmt.Errorf("//export_php:method directive at line %d is not followed by a function declaration", currentMethod.LineNumber)
+	}
+
+	return methods, scanner.Err()
+}
+
+func (cp *ClassParser) parseMethodSignature(className, signature string) (*ClassMethod, error) {
+	matches := methodSignatureRegex.FindStringSubmatch(signature)
+
+	if len(matches) != 4 {
+		return nil, fmt.Errorf("invalid method signature format")
+	}
+
+	methodName := matches[1]
+	paramsStr := strings.TrimSpace(matches[2])
+	returnTypeStr := strings.TrimSpace(matches[3])
+
+	isReturnNullable := strings.HasPrefix(returnTypeStr, "?")
+	returnType := strings.TrimPrefix(returnTypeStr, "?")
+
+	var params []Parameter
+	if paramsStr != "" {
+		paramParts := strings.Split(paramsStr, ",")
+		for _, part := range paramParts {
+			param, err := cp.parseMethodParameter(strings.TrimSpace(part))
+			if err != nil {
+				return nil, fmt.Errorf("parsing parameter '%s': %w", part, err)
+			}
+			params = append(params, param)
+		}
+	}
+
+	return &ClassMethod{
+		Name:             methodName,
+		PHPName:          methodName,
+		ClassName:        className,
+		Signature:        signature,
+		Params:           params,
+		ReturnType:       returnType,
+		IsReturnNullable: isReturnNullable,
+	}, nil
+}
+
+func (cp *ClassParser) parseMethodParameter(paramStr string) (Parameter, error) {
+	parts := strings.Split(paramStr, "=")
+	typePart := strings.TrimSpace(parts[0])
+
+	param := Parameter{HasDefault: len(parts) > 1}
+
+	if param.HasDefault {
+		param.DefaultValue = cp.sanitizeDefaultValue(strings.TrimSpace(parts[1]))
+	}
+
+	matches := methodParamTypeNameRegex.FindStringSubmatch(typePart)
+
+	if len(matches) < 3 {
+		return Parameter{}, fmt.Errorf("invalid parameter format: %s", paramStr)
+	}
+
+	typeStr := strings.TrimSpace(matches[1])
+	param.Name = strings.TrimSpace(matches[2])
+	param.IsNullable = strings.HasPrefix(typeStr, "?")
+	param.Type = strings.TrimPrefix(typeStr, "?")
+
+	return param, nil
+}
+
+func (cp *ClassParser) sanitizeDefaultValue(value string) string {
+	if strings.HasPrefix(value, "[") && strings.HasSuffix(value, "]") {
+		return value
+	}
+
+	if strings.ToLower(value) == "null" {
+		return "null"
+	}
+
+	return strings.Trim(value, "'\"")
+}
+
+func (cp *ClassParser) extractGoMethodFunction(scanner *bufio.Scanner, firstLine string) (string, error) {
+	goFunc := firstLine + "\n"
+	braceCount := 1
+
+	for scanner.Scan() {
+		line := scanner.Text()
+		goFunc += line + "\n"
+
+		for _, char := range line {
+			switch char {
+			case '{':
+				braceCount++
+			case '}':
+				braceCount--
+			}
+		}
+
+		if braceCount == 0 {
+			break
+		}
+	}
+
+	return goFunc, nil
+}
