@@ -2,7 +2,7 @@
 #define _FRANKENPPHP_H
 
 #include <Zend/zend_types.h>
-#include <php.h>
+#include <Zend/zend_modules.h>
 #include <stdbool.h>
 #include <stdint.h>
 
