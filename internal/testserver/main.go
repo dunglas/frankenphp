@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/dunglas/frankenphp"
+	"frankenphp.dev"
 )
 
 func main() {

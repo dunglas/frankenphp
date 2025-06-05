@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/dunglas/frankenphp/internal/cpu"
+	"frankenphp.dev/internal/cpu"
 )
 
 const (

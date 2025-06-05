@@ -8,8 +8,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/dunglas/frankenphp/internal/fastabs"
-	"github.com/dunglas/frankenphp/internal/watcher"
+	"frankenphp.dev/internal/fastabs"
+	"frankenphp.dev/internal/watcher"
 )
 
 // represents a worker script and can have many threads assigned to it

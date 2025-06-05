@@ -94,7 +94,7 @@ frankenphp php-server
 - [Laravel integration](https://frankenphp.dev/docs/laravel/)
 - [Known issues](https://frankenphp.dev/docs/known-issues/)
 - [Demo app (Symfony) and benchmarks](https://github.com/dunglas/frankenphp-demo)
-- [Go library documentation](https://pkg.go.dev/github.com/dunglas/frankenphp)
+- [Go library documentation](https://pkg.go.dev/frankenphp.dev)
 - [Contributing and debugging](https://frankenphp.dev/docs/contributing/)
 
 ## Examples and Skeletons

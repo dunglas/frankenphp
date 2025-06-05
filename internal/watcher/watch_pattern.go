@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/dunglas/frankenphp/internal/fastabs"
+	"frankenphp.dev/internal/fastabs"
 )
 
 type watchPattern struct {

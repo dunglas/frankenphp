@@ -18,7 +18,7 @@ import (
 	"strings"
 	"unsafe"
 
-	"github.com/dunglas/frankenphp/internal/phpheaders"
+	"frankenphp.dev/internal/phpheaders"
 )
 
 var knownServerKeys = []string{

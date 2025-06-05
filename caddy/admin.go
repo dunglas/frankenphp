@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/caddyserver/caddy/v2"
-	"github.com/dunglas/frankenphp"
+	"frankenphp.dev"
 	"net/http"
 )
 

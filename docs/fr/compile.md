@@ -100,7 +100,7 @@ CGO_CFLAGS=$(php-config --includes) \
 CGO_LDFLAGS="$(php-config --ldflags) $(php-config --libs)" \
 xcaddy build \
     --output frankenphp \
-    --with github.com/dunglas/frankenphp/caddy \
+    --with frankenphp.dev/caddy \
     --with github.com/dunglas/caddy-cbrotli \
     --with github.com/dunglas/mercure/caddy \
     --with github.com/dunglas/vulcain/caddy

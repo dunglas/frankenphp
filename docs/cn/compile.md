@@ -80,7 +80,7 @@ CGO_ENABLED=1 \
 XCADDY_GO_BUILD_FLAGS="-ldflags '-w -s'" \
 xcaddy build \
     --output frankenphp \
-    --with github.com/dunglas/frankenphp/caddy \
+    --with frankenphp.dev/caddy \
     --with github.com/dunglas/caddy-cbrotli \
     --with github.com/dunglas/mercure/caddy \
     --with github.com/dunglas/vulcain/caddy

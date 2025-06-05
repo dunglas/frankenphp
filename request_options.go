@@ -7,7 +7,7 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/dunglas/frankenphp/internal/fastabs"
+	"frankenphp.dev/internal/fastabs"
 )
 
 // RequestOption instances allow to configure a FrankenPHP Request.
