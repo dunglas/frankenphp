@@ -330,8 +330,8 @@ CGO_ENABLED=1 \
 	${XCADDY_COMMAND} build \
 	--output "../dist/${bin}" \
 	${XCADDY_ARGS} \
-	--with github.com/dunglas/frankenphp=.. \
-	--with github.com/dunglas/frankenphp/caddy=.
+	--with frankenphp.dev=.. \
+	--with frankenphp.dev/caddy=.
 cd ..
 
 if [ -d "${EMBED}" ]; then

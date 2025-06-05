@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 
 	caddycmd "github.com/caddyserver/caddy/v2/cmd"
-	"github.com/dunglas/frankenphp"
+	"frankenphp.dev"
 
 	"github.com/spf13/cobra"
 )

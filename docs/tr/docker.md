@@ -58,8 +58,8 @@ RUN CGO_ENABLED=1 \
     CGO_LDFLAGS="$(php-config --ldflags) $(php-config --libs)" \
     xcaddy build \
         --output /usr/local/bin/frankenphp \
-        --with github.com/dunglas/frankenphp=./ \
-        --with github.com/dunglas/frankenphp/caddy=./caddy/ \
+        --with frankenphp.dev=./ \
+        --with frankenphp.dev/caddy=./caddy/ \
         --with github.com/dunglas/caddy-cbrotli \
         # Mercure ve Vulcain resmi yapıya dahil edilmiştir, ancak bunları kaldırmaktan çekinmeyin
         --with github.com/dunglas/mercure/caddy \

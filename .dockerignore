@@ -6,6 +6,6 @@
 .idea/
 .vscode/
 __debug_bin
-frankenphp.test
+frankenphp.dev.test
 caddy/frankenphp/Build
 *.log

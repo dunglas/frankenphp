@@ -1,8 +1,8 @@
-module github.com/dunglas/frankenphp/caddy
+module frankenphp.dev/caddy
 
 go 1.24.0
 
-replace github.com/dunglas/frankenphp => ../
+replace frankenphp.dev => ../
 
 retract v1.0.0-rc.1 // Human error
 
@@ -10,7 +10,7 @@ require (
 	github.com/caddyserver/caddy/v2 v2.10.0
 	github.com/caddyserver/certmagic v0.23.0
 	github.com/dunglas/caddy-cbrotli v1.0.0
-	github.com/dunglas/frankenphp v1.7.0
+	frankenphp.dev v1.7.0
 	github.com/dunglas/mercure/caddy v0.19.2
 	github.com/dunglas/vulcain/caddy v1.2.0
 	github.com/prometheus/client_golang v1.22.0

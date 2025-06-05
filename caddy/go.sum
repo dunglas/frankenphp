@@ -167,6 +167,7 @@ github.com/dolthub/maphash v0.1.0 h1:bsQ7JsF4FkkWyrP3oCnFJgrCUAFbFf3kOl4L/QxPDyQ
 github.com/dolthub/maphash v0.1.0/go.mod h1:gkg4Ch4CdCDu5h6PMriVLawB7koZ+5ijb9puGMV50a4=
 github.com/dunglas/caddy-cbrotli v1.0.0 h1:+WNqXBkWyMcIpXB2rVZ3nwcElUbuAzf0kPxNXU4D+u0=
 github.com/dunglas/caddy-cbrotli v1.0.0/go.mod h1:KZsUu3fnQBgO0o3YDoQuO3Z61dFgUncr1F8rg8acwQw=
+github.com/dunglas/frankenphp v1.7.0/go.mod h1:BaPr7WO5PmAkMtJvRUhRcmdWNAuEIK1zWLC++c8GhE0=
 github.com/dunglas/httpsfv v1.1.0 h1:Jw76nAyKWKZKFrpMMcL76y35tOpYHqQPzHQiwDvpe54=
 github.com/dunglas/httpsfv v1.1.0/go.mod h1:zID2mqw9mFsnt7YC3vYQ9/cjq30q41W+1AnDwH8TiMg=
 github.com/dunglas/mercure v0.19.2 h1:eBMQhxvzJTenIffL+jlqtWO+TPevCjOQ+DQJb8iB6+s=

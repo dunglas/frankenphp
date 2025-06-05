@@ -14,7 +14,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/dunglas/frankenphp/internal/fastabs"
+	"frankenphp.dev/internal/fastabs"
 
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig"
@@ -23,7 +23,7 @@ import (
 	"github.com/caddyserver/caddy/v2/modules/caddyhttp"
 	"github.com/caddyserver/caddy/v2/modules/caddyhttp/fileserver"
 	"github.com/caddyserver/caddy/v2/modules/caddyhttp/rewrite"
-	"github.com/dunglas/frankenphp"
+	"frankenphp.dev"
 )
 
 const (

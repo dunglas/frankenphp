@@ -13,8 +13,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/dunglas/frankenphp/internal/memory"
-	"github.com/dunglas/frankenphp/internal/phpheaders"
+	"frankenphp.dev/internal/memory"
+	"frankenphp.dev/internal/phpheaders"
 )
 
 // represents the main PHP thread

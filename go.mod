@@ -1,4 +1,4 @@
-module github.com/dunglas/frankenphp
+module frankenphp.dev
 
 go 1.24.0
 

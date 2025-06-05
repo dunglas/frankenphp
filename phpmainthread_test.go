@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dunglas/frankenphp/internal/phpheaders"
+	"frankenphp.dev/internal/phpheaders"
 	"github.com/stretchr/testify/assert"
 )
 

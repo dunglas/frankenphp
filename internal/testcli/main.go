@@ -4,7 +4,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/dunglas/frankenphp"
+	"frankenphp.dev"
 )
 
 func main() {

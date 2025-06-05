@@ -177,7 +177,7 @@ docker buildx bake -f docker-bake.hcl --pull --no-cache --push
 
    ```console
    go test -tags watcher -c -ldflags=-w
-   gdb --args frankenphp.test -test.run ^MyTest$
+   gdb --args frankenphp.dev.test -test.run ^MyTest$
    ```
 
 9. Quand le bug est corrigé, annulez tous les changements.

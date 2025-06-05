@@ -101,4 +101,4 @@ jobs:
       - name: Compile tests
         run: go test  ${{ matrix.sanitizer == 'msan' && '-tags=nowatcher' || '' }} -${{ matrix.sanitizer }} -v -x -c
       - name: Run tests
-        run: ./frankenphp.test -test.v
+        run: ./frankenphp.dev.test -test.v

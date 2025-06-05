@@ -20,8 +20,7 @@ import (
 	"github.com/caddyserver/caddy/v2/modules/caddyhttp/fileserver"
 	"github.com/caddyserver/caddy/v2/modules/caddyhttp/rewrite"
 	"github.com/caddyserver/certmagic"
-	"github.com/dunglas/frankenphp"
-
+	"frankenphp.dev"
 	"github.com/spf13/cobra"
 )
 
