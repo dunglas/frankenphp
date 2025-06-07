@@ -113,7 +113,7 @@ other.example.com {
 Using the `php_server` directive is generally what you need,
 but if you need full control, you can use the lower-level `php` directive.
 The `php` directive passes all input to PHP, instead of first checking whether
-it's a PHP file or not. Read more about it in the [performance page](performance.md).
+it's a PHP file or not. Read more about it in the [performance page](performance.md#try_files).
 
 Using the `php_server` directive is equivalent to this configuration:
 
