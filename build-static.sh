@@ -56,6 +56,10 @@ fi
 if [ -n "${DEBUG_SYMBOLS}" ]; then
 	SPC_OPT_BUILD_ARGS="${SPC_OPT_BUILD_ARGS} --no-strip"
 fi
+# build php-cli for embedding it
+if [ -n "${INCLUDE_CLI}" ]; then
+	SPC_OPT_BUILD_ARGS="${SPC_OPT_BUILD_ARGS} --build-cli"
+fi
 # php version to build
 if [ -z "${PHP_VERSION}" ]; then
 	get_latest_php_version() {
@@ -202,11 +206,6 @@ if [ -n "${MIMALLOC}" ]; then
 	fi
 fi
 
-SPC_BUILD_COMMAND="--build-embed"
-if [ "${INCLUDE_CLI}" ]; then
-	SPC_BUILD_COMMAND="--build-embed --build-cli"
-fi
-
 # Build libphp if necessary
 cache_key="${PHP_VERSION}-${PHP_EXTENSIONS}-${PHP_EXTENSION_LIBS}"
 if [ -f ../cache_key ] && [ "$(cat ../cache_key)" = "${cache_key}" ] && [ -f "buildroot/lib/libphp.a" ]; then
@@ -216,7 +215,7 @@ else
 	# shellcheck disable=SC2086
 	${spcCommand} download --with-php="${PHP_VERSION}" --for-extensions="${PHP_EXTENSIONS}" --for-libs="${PHP_EXTENSION_LIBS}" ${SPC_OPT_DOWNLOAD_ARGS}
 	# shellcheck disable=SC2086
-	${spcCommand} build --enable-zts ${SPC_BUILD_COMMAND} ${SPC_OPT_BUILD_ARGS} "${PHP_EXTENSIONS}" --with-libs="${PHP_EXTENSION_LIBS}"
+	${spcCommand} build --enable-zts --build-embed ${SPC_OPT_BUILD_ARGS} "${PHP_EXTENSIONS}" --with-libs="${PHP_EXTENSION_LIBS}"
 
 	echo -n "${cache_key}" >../cache_key
 fi
