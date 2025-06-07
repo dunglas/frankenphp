@@ -73,11 +73,8 @@ if [ -z "${PHP_VERSION}" ]; then
 	export PHP_VERSION
 fi
 # default extension set
-defaultExtensions="apcu,bcmath,bz2,calendar,ctype,curl,dba,dom,exif,fileinfo,filter,ftp,gd,gmp,gettext,iconv,igbinary,imagick,intl,ldap,mbregex,mbstring,mysqli,mysqlnd,opcache,openssl,parallel,pcntl,pdo,pdo_mysql,pdo_pgsql,pdo_sqlite,pgsql,phar,posix,protobuf,readline,redis,session,shmop,simplexml,soap,sockets,sodium,sqlite3,ssh2,sysvmsg,sysvsem,sysvshm,tidy,tokenizer,xlswriter,xml,xmlreader,xmlwriter,zip,zlib,yaml,zstd"
-# if [ "${os}" != "linux" ] || [ "${SPC_LIBC}" = "glibc" ]; then
-# 	defaultExtensions="${defaultExtensions},ffi"
-# fi
-defaultExtensionLibs="bzip2,freetype,libavif,libjpeg,liblz4,libwebp,libzip,nghttp2"
+defaultExtensions="amqp,apcu,ast,bcmath,bz2,calendar,ctype,curl,dba,dom,exif,fileinfo,filter,ftp,gd,gmp,gettext,iconv,igbinary,imagick,intl,ldap,lz4,mbregex,mbstring,mysqli,mysqlnd,opcache,openssl,parallel,pcntl,pdo,pdo_mysql,pdo_pgsql,pdo_sqlite,pgsql,phar,posix,protobuf,readline,redis,session,shmop,simplexml,soap,sockets,sodium,sqlite3,ssh2,sysvmsg,sysvsem,sysvshm,tidy,tokenizer,xlswriter,xml,xmlreader,xmlwriter,zip,zlib,yaml,zstd"
+defaultExtensionLibs="libavif,nghttp2,nghttp3,ngtcp2"
 
 md5binary="md5sum"
 if [ "${os}" = "darwin" ]; then
