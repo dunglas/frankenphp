@@ -7,6 +7,7 @@ import (
 
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/dunglas/frankenphp"
+	"github.com/dunglas/frankenphp/internal/fastabs"
 )
 
 // workerConfig represents the "worker" directive in the Caddyfile
@@ -29,6 +30,8 @@ type workerConfig struct {
 	Env map[string]string `json:"env,omitempty"`
 	// Directories to watch for file changes
 	Watch []string `json:"watch,omitempty"`
+	// The path to match against the worker
+	Match string `json:"match,omitempty"`
 }
 
 func parseWorkerConfig(d *caddyfile.Dispenser) (workerConfig, error) {
@@ -94,8 +97,13 @@ func parseWorkerConfig(d *caddyfile.Dispenser) (workerConfig, error) {
 			} else {
 				wc.Watch = append(wc.Watch, d.Val())
 			}
+		case "match":
+			if !d.NextArg() {
+				return wc, d.ArgErr()
+			}
+			wc.Match = d.Val()
 		default:
-			allowedDirectives := "name, file, num, env, watch"
+			allowedDirectives := "name, file, num, env, watch, match"
 			return wc, wrongSubDirectiveError("worker", allowedDirectives, v)
 		}
 	}
@@ -109,4 +117,14 @@ func parseWorkerConfig(d *caddyfile.Dispenser) (workerConfig, error) {
 	}
 
 	return wc, nil
+}
+
+func (wc workerConfig) matchesPath(path string, documentRoot string) bool {
+	if wc.Match != "" {
+		return wc.Match == "*" || wc.Match == path
+	}
+
+	fullScriptPath, _ := fastabs.FastAbs(documentRoot + "/" + path)
+	absFileName, _ := fastabs.FastAbs(wc.FileName)
+	return fullScriptPath == absFileName
 }
