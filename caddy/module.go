@@ -161,12 +161,11 @@ func (f *FrankenPHPModule) ServeHTTP(w http.ResponseWriter, r *http.Request, _ c
 		}
 	}
 
-	fullScriptPath, _ := fastabs.FastAbs(documentRoot + "/" + r.URL.Path)
-
 	workerName := ""
 	for _, w := range f.Workers {
-		if p, _ := fastabs.FastAbs(w.FileName); p == fullScriptPath {
+		if w.matchesPath(r.URL.Path, documentRoot) {
 			workerName = w.Name
+			break
 		}
 	}
 
