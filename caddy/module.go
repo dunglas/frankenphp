@@ -69,6 +69,34 @@ func (f *FrankenPHPModule) Provision(ctx caddy.Context) error {
 		return fmt.Errorf(`expected ctx.App("frankenphp") to return *FrankenPHPApp, got nil`)
 	}
 
+	for i, wc := range f.Workers {
+		// Inherit environment variables from the parent php_server directive
+        if !filepath.IsAbs(wc.FileName) && f.Root != "" {
+            wc.FileName = filepath.Join(f.Root, wc.FileName)
+        }
+
+        if f.Env != nil {
+            if wc.Env == nil {
+                wc.Env = make(map[string]string)
+            }
+            for k, v := range f.Env {
+                // Only set if not already defined in the worker
+                if _, exists := wc.Env[k]; !exists {
+                    wc.Env[k] = v
+                }
+            }
+        }
+
+		f.Workers[i] = wc
+
+        // Check if a worker with this filename already exists in this module
+        for j, existingWorker := range f.Workers {
+            if i != j && existingWorker.FileName == wc.FileName {
+                return fmt.Errorf(`workers in a single "php_server" block must not have duplicate filenames: %q`, wc.FileName)
+            }
+        }
+	}
+
 	workers, err := fapp.addModuleWorkers(f.Workers...)
 	if err != nil {
 		return err
@@ -230,55 +258,15 @@ func (f *FrankenPHPModule) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 				f.ResolveRootSymlink = &v
 
 			case "worker":
-				for d.NextBlock(1) {
-				}
-				for d.NextArg() {
-				}
-				// Skip "worker" blocks in the first pass
-				continue
+				wc, err := parseWorkerConfig(d)
+                if err != nil {
+                    return err
+                }
+				f.Workers = append(f.Workers, wc)
 
 			default:
 				allowedDirectives := "root, split, env, resolve_root_symlink, worker"
 				return wrongSubDirectiveError("php or php_server", allowedDirectives, d.Val())
-			}
-		}
-	}
-
-	// Second pass: Parse only "worker" blocks
-	d.Reset()
-	for d.Next() {
-		for d.NextBlock(0) {
-			if d.Val() == "worker" {
-				wc, err := parseWorkerConfig(d)
-				if err != nil {
-					return err
-				}
-
-				// Inherit environment variables from the parent php_server directive
-				if !filepath.IsAbs(wc.FileName) && f.Root != "" {
-					wc.FileName = filepath.Join(f.Root, wc.FileName)
-				}
-
-				if f.Env != nil {
-					if wc.Env == nil {
-						wc.Env = make(map[string]string)
-					}
-					for k, v := range f.Env {
-						// Only set if not already defined in the worker
-						if _, exists := wc.Env[k]; !exists {
-							wc.Env[k] = v
-						}
-					}
-				}
-
-				// Check if a worker with this filename already exists in this module
-				for _, existingWorker := range f.Workers {
-					if existingWorker.FileName == wc.FileName {
-						return fmt.Errorf(`workers in a single "php_server" block must not have duplicate filenames: %q`, wc.FileName)
-					}
-				}
-
-				f.Workers = append(f.Workers, wc)
 			}
 		}
 	}
@@ -418,6 +406,16 @@ func parsePhpServer(h httpcaddyfile.Helper) ([]httpcaddyfile.ConfigValue, error)
 	// unmarshaler can read it from the start
 	dispenser.Reset()
 
+	// the rest of the config is specified by the user
+    // using the php directive syntax
+    dispenser.Next() // consume the directive name
+    err = phpsrv.UnmarshalCaddyfile(dispenser)
+    if err != nil {
+        return nil, err
+    }
+
+	return routesForWorkerServer(h, phpsrv, fsrv)
+
 	if frankenphp.EmbeddedAppPath != "" {
 		if phpsrv.Root == "" {
 			phpsrv.Root = filepath.Join(frankenphp.EmbeddedAppPath, defaultDocumentRoot)
@@ -521,15 +519,6 @@ func parsePhpServer(h httpcaddyfile.Helper) ([]httpcaddyfile.ConfigValue, error)
 		"path": h.JSON(pathList),
 	}
 
-	// the rest of the config is specified by the user
-	// using the php directive syntax
-	dispenser.Next() // consume the directive name
-	err = phpsrv.UnmarshalCaddyfile(dispenser)
-
-	if err != nil {
-		return nil, err
-	}
-
 	// create the PHP route which is
 	// conditional on matching PHP files
 	phpRoute := caddyhttp.Route{
@@ -575,4 +564,64 @@ func parsePhpServer(h httpcaddyfile.Helper) ([]httpcaddyfile.ConfigValue, error)
 			Value: subroute,
 		},
 	}, nil
+}
+
+func routesForWorkerServer(h httpcaddyfile.Helper, frankenphpModule FrankenPHPModule, fsrv caddy.Module) ([]httpcaddyfile.ConfigValue, error) {
+	return []httpcaddyfile.ConfigValue{
+        {
+            Class: "route",
+            Value: workerSubroute(h, frankenphpModule, fsrv),
+        },
+    }, nil
+}
+
+// get the routing for php_worker
+// serve non-php file or fallback to index worker
+func workerSubroute(h httpcaddyfile.Helper, frankenphpModule FrankenPHPModule, fsrv caddy.Module) caddyhttp.Subroute {
+	matchers := caddyhttp.MatchPath{"*.php"}
+	for _, w := range frankenphpModule.Workers {
+		if w.Match != "" {
+			matchers = append(matchers, w.Match)
+		}
+	}
+
+	subRoute := caddyhttp.Subroute{
+		Routes: caddyhttp.RouteList{
+			caddyhttp.Route{
+				MatcherSetsRaw: []caddy.ModuleMap{
+					caddy.ModuleMap{
+						"file": h.JSON(fileserver.MatchFile{
+							TryFiles: []string{"{http.request.uri.path}"},
+							Root:     frankenphpModule.Root,
+						}),
+						"not": h.JSON(caddyhttp.MatchNot{
+							MatcherSetsRaw: []caddy.ModuleMap{
+								{
+									"path": h.JSON(matchers),
+								},
+							},
+						}),
+					},
+				},
+				HandlersRaw: []json.RawMessage{
+					caddyconfig.JSONModuleObject(fsrv, "handler", "file_server", nil),
+				},
+			},
+		},
+	}
+
+    for _, pattern := range matchers {
+        subRoute.Routes = append(subRoute.Routes, caddyhttp.Route{
+            MatcherSetsRaw: []caddy.ModuleMap{
+                caddy.ModuleMap{
+                    "path": h.JSON(caddyhttp.MatchPath{ pattern }),
+                },
+            },
+            HandlersRaw: []json.RawMessage{
+                caddyconfig.JSONModuleObject(frankenphpModule, "handler", "php", nil),
+            },
+        })
+    }
+
+	return subRoute
 }

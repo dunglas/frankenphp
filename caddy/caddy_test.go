@@ -1216,6 +1216,32 @@ func TestDisabledMetrics(t *testing.T) {
 	require.Zero(t, count, "metrics should be missing")
 }
 
+func TestWorkerMatchDirective(t *testing.T) {
+	tester := caddytest.NewTester(t)
+	tester.InitServer(`
+		{
+			skip_install_trust
+			admin localhost:2999
+		}
+
+		http://localhost:`+testPort+` {
+			php_server {
+				root ../testdata/files
+				try_files {path} index.php
+				worker {
+				    match index.php
+					file ../worker-with-counter.php
+					num 1
+				}
+			}
+		}
+		`, "caddyfile")
+
+	tester.AssertGetResponse("http://localhost:"+testPort+"/any-path", http.StatusOK, "requests:1")
+	tester.AssertGetResponse("http://localhost:"+testPort+"/static.txt", http.StatusOK, "Hello from file")
+	tester.AssertGetResponse("http://localhost:"+testPort+"/worker-path", http.StatusOK, "requests:1")
+}
+
 func TestWorkerRestart(t *testing.T) {
 	var wg sync.WaitGroup
 	tester := caddytest.NewTester(t)
