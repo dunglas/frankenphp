@@ -2,10 +2,12 @@ package caddy
 
 import (
 	"errors"
+	"net/http"
 	"path/filepath"
 	"strconv"
 
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
+	"github.com/caddyserver/caddy/v2/modules/caddyhttp"
 	"github.com/dunglas/frankenphp"
 	"github.com/dunglas/frankenphp/internal/fastabs"
 )
@@ -32,7 +34,20 @@ type workerConfig struct {
 	Watch []string `json:"watch,omitempty"`
 	// The path to match against the worker
 	Match string `json:"match,omitempty"`
+
+	matchStrategy matchStrategy
 }
+
+type matchStrategy int
+
+const (
+	matchNone matchStrategy = iota
+	matchAll
+	matchPrefix
+	matchSuffix
+	matchExactly
+	matchWildcard
+)
 
 func parseWorkerConfig(d *caddyfile.Dispenser) (workerConfig, error) {
 	wc := workerConfig{}
@@ -102,6 +117,7 @@ func parseWorkerConfig(d *caddyfile.Dispenser) (workerConfig, error) {
 				return wc, d.ArgErr()
 			}
 			wc.Match = d.Val()
+
 		default:
 			allowedDirectives := "name, file, num, env, watch, match"
 			return wc, wrongSubDirectiveError("worker", allowedDirectives, v)
@@ -119,12 +135,13 @@ func parseWorkerConfig(d *caddyfile.Dispenser) (workerConfig, error) {
 	return wc, nil
 }
 
-func (wc workerConfig) matchesPath(path string, documentRoot string) bool {
+func (wc workerConfig) matchesPath(r *http.Request, documentRoot string) bool {
 	if wc.Match != "" {
-		return wc.Match == "*" || wc.Match == path
+		matches, _ := caddyhttp.MatchPath{wc.Match}.MatchWithError(r)
+		return matches
 	}
 
-	fullScriptPath, _ := fastabs.FastAbs(documentRoot + "/" + path)
+	fullScriptPath, _ := fastabs.FastAbs(documentRoot + "/" + r.URL.Path)
 	absFileName, _ := fastabs.FastAbs(wc.FileName)
 	return fullScriptPath == absFileName
 }
