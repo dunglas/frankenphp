@@ -1218,6 +1218,7 @@ func TestDisabledMetrics(t *testing.T) {
 
 func TestWorkerMatchDirective(t *testing.T) {
 	tester := caddytest.NewTester(t)
+	testport2 := "3000"
 	tester.InitServer(`
 		{
 			skip_install_trust
@@ -1227,19 +1228,56 @@ func TestWorkerMatchDirective(t *testing.T) {
 		http://localhost:`+testPort+` {
 			php_server {
 				root ../testdata/files
-				try_files {path} index.php
 				worker {
-				    match index.php
+				    match /matched-path*
 					file ../worker-with-counter.php
 					num 1
 				}
 			}
 		}
+		http://localhost:`+testport2+` {
+            php_server {
+                root ../testdata
+                worker {
+                    match /counter*
+                    file worker-with-counter.php
+                    num 1
+                }
+				worker {
+                    match /index*
+                    file index.php
+                    num 1
+                }
+            }
+        }
 		`, "caddyfile")
 
-	tester.AssertGetResponse("http://localhost:"+testPort+"/any-path", http.StatusOK, "requests:1")
+	// the first php_server with root in testdata/files
+	// Forward request that match * to the worker
+	tester.AssertGetResponse("http://localhost:"+testPort+"/matched-path", http.StatusOK, "requests:1")
+	tester.AssertGetResponse("http://localhost:"+testPort+"/matched-path/anywhere", http.StatusOK, "requests:2")
+
+	// 404 on not matching paths
+	r, _ := http.NewRequest("GET", "http://localhost:"+testPort+"/not-matched-path", nil)
+	tester.AssertResponseCode(r, http.StatusNotFound)
+
+	// forward files to fileserver
 	tester.AssertGetResponse("http://localhost:"+testPort+"/static.txt", http.StatusOK, "Hello from file")
-	tester.AssertGetResponse("http://localhost:"+testPort+"/worker-path", http.StatusOK, "requests:1")
+
+	// the second php_server has root in testdata and has 2 different workers
+	tester.AssertGetResponse("http://localhost:"+testport2+"/counter/sub-path", http.StatusOK, "requests:1")
+	tester.AssertGetResponse("http://localhost:"+testport2+"/index/sub-path", http.StatusOK, "I am by birth a Genevese (i not set)")
+
+	// 404 on not matching path
+	r, _ = http.NewRequest("GET", "http://localhost:"+testPort+"/other", nil)
+	tester.AssertResponseCode(r, http.StatusNotFound)
+
+	// forward files to fileserver
+	tester.AssertGetResponse("http://localhost:"+testPort+"/static.txt", http.StatusOK, "Hello from file")
+
+	// never serve PHP files directly
+	r, _ = http.NewRequest("GET", "http://localhost:"+testPort+"/index.php", nil)
+	tester.AssertResponseCode(r, http.StatusNotFound)
 }
 
 func TestWorkerRestart(t *testing.T) {
