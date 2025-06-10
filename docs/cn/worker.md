@@ -3,6 +3,45 @@
 启动应用程序一次并将其保存在内存中。
 FrankenPHP 将在几毫秒内处理传入的请求。
 
+## Caddyfile 配置
+
+Worker 块可以通过两种方式定义：
+
+在全局 frankenphp 块中，如[配置文档](config.md#caddyfile-config)中所述：
+
+```caddyfile
+{
+	frankenphp {
+		worker {
+			file <路径>
+			num <数量>
+			env <键> <值>
+			watch <路径>
+			name <名称>
+		}
+	}
+}
+```
+
+在 php 或 php_server 块内：
+
+```caddyfile
+example.com {
+	root /path/to/app
+	php_server {
+		worker {
+			file <路径>
+			num <数量>
+			env <键> <值>
+			watch <路径>
+			name <名称>
+		}
+	}
+}
+```
+
+当在 php 或 php_server 块内定义时，worker 会继承父指令的环境变量和根路径，并且只能由该特定的 php 或 php_server 访问。
+
 ## 启动 Worker 脚本
 
 ### Docker

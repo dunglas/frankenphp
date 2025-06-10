@@ -39,6 +39,13 @@ composer install --ignore-platform-reqs --no-dev -a
 composer dump-env prod
 ```
 
+### 自定义配置
+
+要自定义[配置](config.md)，您可以在要嵌入的应用程序的主目录中放置 `Caddyfile` 和 `php.ini` 文件。
+如果嵌入了带有 Caddyfile 的应用程序，运行二进制文件时将自动使用该 Caddyfile 的配置。
+
+如果您想直接从嵌入式应用程序目录提供文件，请指定 "root ./"，因为不指定 root 选项将默认使用 embedded_app/public。
+
 ## 创建 Linux 二进制文件
 
 创建 Linux 二进制文件的最简单方法是使用我们提供的基于 Docker 的构建器。
@@ -100,6 +107,12 @@ EMBED=/path/to/your/app \
 
 ```console
 ./my-app php-server
+```
+
+默认情况下，如果未指定 root 选项，它将使用 embedded_app/public 目录作为文档根目录。如果您想直接从嵌入式应用程序目录提供服务，请指定 root 选项：
+
+```console
+./my-app php-server --root ./
 ```
 
 如果您的应用包含 [worker 脚本](worker.md)，请使用如下命令启动 worker：
