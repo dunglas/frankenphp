@@ -2,6 +2,7 @@
 #define _FRANKENPPHP_H
 
 #include <Zend/zend_types.h>
+#include <Zend/zend_modules.h>
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -91,5 +92,7 @@ void frankenphp_register_bulk(
     ht_key_value_pair server_software, ht_key_value_pair http_host,
     ht_key_value_pair auth_type, ht_key_value_pair remote_ident,
     ht_key_value_pair request_uri);
+
+void register_extensions(zend_module_entry *m, int len);
 
 #endif
