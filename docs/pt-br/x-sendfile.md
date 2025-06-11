@@ -1,44 +1,50 @@
-# Efficiently Serving Large Static Files (`X-Sendfile`/`X-Accel-Redirect`)
+# Servindo arquivos estáticos grandes com eficiência (`X-Sendfile`/`X-Accel-Redirect`)
 
-Usually, static files can be served directly by the web server,
-but sometimes it's necessary to execute some PHP code before sending them:
-access control, statistics, custom HTTP headers...
+Normalmente, arquivos estáticos podem ser servidos diretamente pelo servidor
+web, mas às vezes é necessário executar algum código PHP antes de enviá-los:
+controle de acesso, estatísticas, cabeçalhos HTTP personalizados...
 
-Unfortunately, using PHP to serve large static files is inefficient compared to
-direct use of the web server (memory overload, reduced performance...).
+Infelizmente, usar PHP para servir arquivos estáticos grandes é ineficiente em
+comparação com o uso direto do servidor web (sobrecarga de memória, desempenho
+reduzido...).
 
-FrankenPHP lets you delegate the sending of static files to the web server
-**after** executing customized PHP code.
+O FrankenPHP permite delegar o envio de arquivos estáticos ao servidor web
+**após** a execução de código PHP personalizado.
 
-To do this, your PHP application simply needs to define a custom HTTP header
-containing the path of the file to be served. FrankenPHP takes care of the rest.
+Para fazer isso, sua aplicação PHP precisa simplesmente definir um cabeçalho
+HTTP personalizado contendo o caminho do arquivo a ser servido.
+O FrankenPHP cuida do resto.
 
-This feature is known as **`X-Sendfile`** for Apache, and **`X-Accel-Redirect`** for NGINX.
+Esse recurso é conhecido como **`X-Sendfile`** para Apache e
+**`X-Accel-Redirect`** para NGINX.
 
-In the following examples, we assume that the document root of the project is the `public/` directory.
-and that we want to use PHP to serve files stored outside the `public/` directory,
-from a directory named `private-files/`.
+Nos exemplos a seguir, assumimos que o diretório raiz do projeto é o diretório
+`public/` e que queremos usar PHP para servir arquivos armazenados fora do
+diretório `public/`, de um diretório chamado `arquivos-privados/`.
 
-## Configuration
+## Configuração
 
-First, add the following configuration to your `Caddyfile` to enable this feature:
+Primeiro, adicione a seguinte configuração ao seu `Caddyfile` para habilitar
+este recurso:
 
 ```patch
 	root public/
 	# ...
 
-+	# Needed for Symfony, Laravel and other projects using the Symfony HttpFoundation component
++	# Necessário para Symfony, Laravel e outros projetos que usam o componente
++	# Symfony HttpFoundation
 +	request_header X-Sendfile-Type x-accel-redirect
-+	request_header X-Accel-Mapping ../private-files=/private-files
++	request_header X-Accel-Mapping ../arquivos-privados=/arquivos-privados
 +
 +	intercept {
 +		@accel header X-Accel-Redirect *
 +		handle_response @accel {
-+			root private-files/
++			root arquivos-privados/
 +			rewrite * {resp.header.X-Accel-Redirect}
 +			method * GET
 +
-+			# Remove the X-Accel-Redirect header set by PHP for increased security
++			# Remove o cabeçalho X-Accel-Redirect definido pelo PHP para maior
++			# segurança
 +			header -X-Accel-Redirect
 +
 +			file_server
@@ -48,24 +54,27 @@ First, add the following configuration to your `Caddyfile` to enable this featur
 	php_server
 ```
 
-## Plain PHP
+## PHP simples
 
-Set the relative file path (from `private-files/`) as the value of the `X-Accel-Redirect` header:
+Defina o caminho relativo do arquivo (de `arquivos-privados/`) como o valor do
+cabeçalho `X-Accel-Redirect`:
 
 ```php
-header('X-Accel-Redirect: file.txt');
+header('X-Accel-Redirect: arquivo.txt');
 ```
 
-## Projects using the Symfony HttpFoundation component (Symfony, Laravel, Drupal...)
+## Projetos que utilizam o componente Symfony HttpFoundation (Symfony, Laravel, Drupal...)
 
-Symfony HttpFoundation [natively supports this feature](https://symfony.com/doc/current/components/http_foundation.html#serving-files).
-It will automatically determine the correct value for the `X-Accel-Redirect` header and add it to the response.
+Symfony HttpFoundation
+[suporta nativamente este recurso](https://symfony.com/doc/current/components/http_foundation.html#serving-files).
+Ele determinará automaticamente o valor correto para o cabeçalho
+`X-Accel-Redirect` e o adicionará à resposta.
 
 ```php
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 BinaryFileResponse::trustXSendfileTypeHeader();
-$response = new BinaryFileResponse(__DIR__.'/../private-files/file.txt');
+$response = new BinaryFileResponse(__DIR__.'/../arquivos-privados/arquivo.txt');
 
 // ...
 ```
