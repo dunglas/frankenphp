@@ -1338,11 +1338,11 @@ func TestWorkerMatchDirectiveWithFileServer(t *testing.T) {
 		http://localhost:`+testport2+` {
             php_server {
                 root ../testdata
-                match /counter* worker {
+                match /counter/* worker {
                     file worker-with-counter.php
                     num 1
                 }
-				match /index* worker {
+				match /index/* worker {
                     file index.php
                     num 1
                 }
@@ -1350,31 +1350,30 @@ func TestWorkerMatchDirectiveWithFileServer(t *testing.T) {
         }
 		`, "caddyfile")
 
-	// the first php_server with root in testdata/files
-	// Forward request that match * to the worker
+	// worker is outside of public directory, match anyways
 	tester.AssertGetResponse("http://localhost:"+testPort+"/matched-path", http.StatusOK, "requests:1")
 	tester.AssertGetResponse("http://localhost:"+testPort+"/matched-path/anywhere", http.StatusOK, "requests:2")
 
-	// 404 on not matching paths
+	// 404 on no matching paths
 	r, _ := http.NewRequest("GET", "http://localhost:"+testPort+"/not-matched-path", nil)
 	tester.AssertResponseCode(r, http.StatusNotFound)
 
-	// forward files to fileserver
+	// static file will be served by fileserver
 	tester.AssertGetResponse("http://localhost:"+testPort+"/static.txt2", http.StatusOK, "Hello from file")
 
-	// the second php_server has root in testdata and has 2 different workers
+	// the second php_server 2 different workers in the public path
 	tester.AssertGetResponse("http://localhost:"+testport2+"/counter/sub-path", http.StatusOK, "requests:1")
 	tester.AssertGetResponse("http://localhost:"+testport2+"/index/sub-path", http.StatusOK, "I am by birth a Genevese (i not set)")
 
-	// 404 on not matching path
-	r, _ = http.NewRequest("GET", "http://localhost:"+testPort+"/other", nil)
+	// 404 on no matching paths
+	r, _ = http.NewRequest("GET", "http://localhost:"+testport2+"/other", nil)
 	tester.AssertResponseCode(r, http.StatusNotFound)
 
-	// forward files to fileserver
-	tester.AssertGetResponse("http://localhost:"+testPort+"/static.txt2", http.StatusOK, "Hello from file")
+	// static file will be served by fileserver
+	tester.AssertGetResponse("http://localhost:"+testport2+"/files/static.txt2", http.StatusOK, "Hello from file")
 
 	// never serve PHP files directly
-	r, _ = http.NewRequest("GET", "http://localhost:"+testPort+"/index.php", nil)
+	r, _ = http.NewRequest("GET", "http://localhost:"+testport2+"/index.php", nil)
 	tester.AssertResponseCode(r, http.StatusNotFound)
 }
 
