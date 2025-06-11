@@ -86,15 +86,7 @@ func (f *FrankenPHPModule) Provision(ctx caddy.Context) error {
 				}
 			}
 		}
-
 		f.Workers[i] = wc
-
-		// Check if a worker with this filename already exists in this module
-		for j, existingWorker := range f.Workers {
-			if i != j && existingWorker.FileName == wc.FileName {
-				return fmt.Errorf(`workers in a single "php_server" block must not have duplicate filenames: %q`, wc.FileName)
-			}
-		}
 	}
 
 	workers, err := fapp.addModuleWorkers(f.Workers...)
@@ -270,6 +262,15 @@ func (f *FrankenPHPModule) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 		}
 	}
 
+	// Check if a worker with this filename already exists in this module
+	for j, w1 := range f.Workers {
+		for i, w2 := range f.Workers {
+			if i != j && w1.FileName == w2.FileName {
+				return fmt.Errorf(`workers in a single "php_server" block must not have duplicate filenames: %q`, w1.FileName)
+			}
+		}
+	}
+
 	return nil
 }
 
@@ -413,8 +414,6 @@ func parsePhpServer(h httpcaddyfile.Helper) ([]httpcaddyfile.ConfigValue, error)
 		return nil, err
 	}
 
-	return routesForWorkerServer(h, phpsrv, fsrv)
-
 	if frankenphp.EmbeddedAppPath != "" {
 		if phpsrv.Root == "" {
 			phpsrv.Root = filepath.Join(frankenphp.EmbeddedAppPath, defaultDocumentRoot)
@@ -424,6 +423,13 @@ func parsePhpServer(h httpcaddyfile.Helper) ([]httpcaddyfile.ConfigValue, error)
 		} else if filepath.IsLocal(fsrv.Root) {
 			phpsrv.Root = filepath.Join(frankenphp.EmbeddedAppPath, phpsrv.Root)
 			fsrv.Root = phpsrv.Root
+		}
+	}
+
+	// if any worker has 'match' specified, use an alternate routing approach
+	for _, w := range phpsrv.Workers {
+		if w.Match != "" {
+			return pureWorkerRoute(h, phpsrv, fsrv, disableFsrv), nil
 		}
 	}
 
@@ -565,69 +571,67 @@ func parsePhpServer(h httpcaddyfile.Helper) ([]httpcaddyfile.ConfigValue, error)
 	}, nil
 }
 
-func routesForWorkerServer(h httpcaddyfile.Helper, frankenphpModule FrankenPHPModule, fsrv caddy.Module) ([]httpcaddyfile.ConfigValue, error) {
-	return []httpcaddyfile.ConfigValue{
-		{
-			Class: "route",
-			Value: workerSubroute(h, frankenphpModule, fsrv),
-		},
-	}, nil
-}
-
-// get the routing for php_worker
-// serve non-php file or fallback to index worker
-func workerSubroute(h httpcaddyfile.Helper, frankenphpModule FrankenPHPModule, fsrv caddy.Module) caddyhttp.Subroute {
+// if any worker under php_server has a match pattern,
+// routes have to be created differently
+// first, we will try to match against the file system,
+// then we will try to match aganist each worker
+func pureWorkerRoute(h httpcaddyfile.Helper, f FrankenPHPModule, fsrv caddy.Module, disableFsrv bool) []httpcaddyfile.ConfigValue {
+	f.SplitPath = []string{}
 	matchers := caddyhttp.MatchPath{}
-	for _, w := range frankenphpModule.Workers {
+	for _, w := range f.Workers {
 		if w.Match != "" {
 			matchers = append(matchers, w.Match)
 		}
 	}
 
-	subRoute := caddyhttp.Subroute{
-		Routes: caddyhttp.RouteList{
-			caddyhttp.Route{
-				MatcherSetsRaw: []caddy.ModuleMap{
-					caddy.ModuleMap{
-						"file": h.JSON(fileserver.MatchFile{
-							TryFiles: []string{"{http.request.uri.path}"},
-							Root:     frankenphpModule.Root,
-						}),
-						"not": h.JSON(caddyhttp.MatchNot{
-							MatcherSetsRaw: []caddy.ModuleMap{
-								{
-									"path": h.JSON(caddyhttp.MatchPath{"*.php"}),
-								},
-							},
-						}),
-					},
-				},
-				HandlersRaw: []json.RawMessage{
-					caddyconfig.JSONModuleObject(fsrv, "handler", "file_server", nil),
+	subRoute := caddyhttp.Subroute{Routes: caddyhttp.RouteList{}}
+
+	if !disableFsrv {
+		subRoute.Routes = append(subRoute.Routes, caddyhttp.Route{
+			MatcherSetsRaw: []caddy.ModuleMap{
+				caddy.ModuleMap{
+					"file": h.JSON(fileserver.MatchFile{
+						TryFiles: []string{"{http.request.uri.path}"},
+						Root:     f.Root,
+					}),
+					"not": h.JSON(caddyhttp.MatchNot{
+						MatcherSetsRaw: []caddy.ModuleMap{
+							{"path": h.JSON(caddyhttp.MatchPath{"*.php"})},
+						},
+					}),
 				},
 			},
-		},
+			HandlersRaw: []json.RawMessage{
+				caddyconfig.JSONModuleObject(fsrv, "handler", "file_server", nil),
+			},
+		})
 	}
 
 	for _, pattern := range matchers {
 		subRoute.Routes = append(subRoute.Routes, caddyhttp.Route{
 			MatcherSetsRaw: []caddy.ModuleMap{
-				caddy.ModuleMap{
-					"path": h.JSON(caddyhttp.MatchPath{pattern}),
-				},
+				caddy.ModuleMap{"path": h.JSON(caddyhttp.MatchPath{pattern})},
 			},
 			HandlersRaw: []json.RawMessage{
-				caddyconfig.JSONModuleObject(frankenphpModule, "handler", "php", nil),
+				caddyconfig.JSONModuleObject(f, "handler", "php", nil),
 			},
 		})
 	}
 
+	notFoundHandler := caddyhttp.StaticResponse{
+		StatusCode: caddyhttp.WeakString(strconv.Itoa(http.StatusNotFound)),
+	}
 	subRoute.Routes = append(subRoute.Routes, caddyhttp.Route{
 		MatcherSetsRaw: []caddy.ModuleMap{},
 		HandlersRaw: []json.RawMessage{
-			caddyconfig.JSONModuleObject(fsrv, "handler", "file_server", nil),
+			caddyconfig.JSONModuleObject(notFoundHandler, "handler", "static_response", nil),
 		},
 	})
 
-	return subRoute
+	return []httpcaddyfile.ConfigValue{
+		{
+			Class: "route",
+			Value: subRoute,
+		},
+	}
 }
