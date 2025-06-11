@@ -1336,18 +1336,18 @@ func TestWorkerMatchDirectiveWithFileServer(t *testing.T) {
 			}
 		}
 		http://localhost:`+testport2+` {
-            php_server {
-                root ../testdata
-                match /counter/* worker {
-                    file worker-with-counter.php
-                    num 1
-                }
+			php_server {
+				root ../testdata
+				match /counter/* worker {
+					file worker-with-counter.php
+					num 1
+				}
 				match /index/* worker {
-                    file index.php
-                    num 1
-                }
-            }
-        }
+					file index.php
+					num 1
+				}
+			}
+		}
 		`, "caddyfile")
 
 	// worker is outside of public directory, match anyways
@@ -1358,10 +1358,10 @@ func TestWorkerMatchDirectiveWithFileServer(t *testing.T) {
 	r, _ := http.NewRequest("GET", "http://localhost:"+testPort+"/not-matched-path", nil)
 	tester.AssertResponseCode(r, http.StatusNotFound)
 
-	// static file will be served by fileserver
+	// static file will be served by the fileserver
 	tester.AssertGetResponse("http://localhost:"+testPort+"/static.txt2", http.StatusOK, "Hello from file")
 
-	// the second php_server 2 different workers in the public path
+	// the second php_server has 2 different workers in the public path
 	tester.AssertGetResponse("http://localhost:"+testport2+"/counter/sub-path", http.StatusOK, "requests:1")
 	tester.AssertGetResponse("http://localhost:"+testport2+"/index/sub-path", http.StatusOK, "I am by birth a Genevese (i not set)")
 
@@ -1369,10 +1369,10 @@ func TestWorkerMatchDirectiveWithFileServer(t *testing.T) {
 	r, _ = http.NewRequest("GET", "http://localhost:"+testport2+"/other", nil)
 	tester.AssertResponseCode(r, http.StatusNotFound)
 
-	// static file will be served by fileserver
+	// static file will be served by the fileserver
 	tester.AssertGetResponse("http://localhost:"+testport2+"/files/static.txt2", http.StatusOK, "Hello from file")
 
-	// never serve PHP files directly
+	// 404 on PHP files
 	r, _ = http.NewRequest("GET", "http://localhost:"+testport2+"/index.php", nil)
 	tester.AssertResponseCode(r, http.StatusNotFound)
 }
