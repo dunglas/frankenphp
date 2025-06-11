@@ -1,11 +1,27 @@
-# Using Classic Mode
+# Usando o modo clássico
 
-Without any additional configuration, FrankenPHP operates in classic mode. In this mode, FrankenPHP functions like a traditional PHP server, directly serving PHP files. This makes it a seamless drop-in replacement for PHP-FPM or Apache with mod_php.
+Sem nenhuma configuração adicional, o FrankenPHP opera no modo clássico.
+Neste modo, o FrankenPHP funciona como um servidor PHP tradicional, servindo
+diretamente arquivos PHP.
+Isso o torna um substituto perfeito para PHP-FPM ou Apache com mod_php.
 
-Similar to Caddy, FrankenPHP accepts an unlimited number of connections and uses a [fixed number of threads](config.md#caddyfile-config) to serve them. The number of accepted and queued connections is limited only by the available system resources.
-The PHP thread pool operates with a fixed number of threads initialized at startup, comparable to the static mode of PHP-FPM. It's also possible to let threads [scale automatically at runtime](performance.md#max_threads), similar to the dynamic mode of PHP-FPM.
+Semelhante ao Caddy, o FrankenPHP aceita um número ilimitado de conexões e usa
+um [número fixo de threads](config.md#caddyfile-config) para servi-las.
+O número de conexões aceitas e enfileiradas é limitado apenas pelos recursos
+disponíveis no sistema.
+O pool de threads do PHP opera com um número fixo de threads inicializadas na
+inicialização, comparável ao modo estático do PHP-FPM.
+Também é possível permitir que as threads
+[escalem automaticamente em tempo de execução](performance.md#max_threads),
+semelhante ao modo dinâmico do PHP-FPM.
 
-Queued connections will wait indefinitely until a PHP thread is available to serve them. To prevent that, you can use the `max_wait_time` [configuration](config.md#caddyfile-config) to limit how long a request may wait for a free PHP thread before being rejected.
-Additionally, you can set a reasonable [write timeout in Caddy](https://caddyserver.com/docs/caddyfile/options#timeouts).
+As conexões enfileiradas aguardarão indefinidamente até que uma thread PHP
+esteja disponível para servi-las.
+Para evitar isso, você pode usar a [configuração](config.md#caddyfile-config)
+`max_wait_time` para limitar o tempo que uma requisição pode esperar por uma
+thread PHP livre antes de ser rejeitada.
+Além disso, você pode definir um
+[tempo limite de escrita razoável no Caddy](https://caddyserver.com/docs/caddyfile/options#timeouts).
 
-Each Caddy instance will only spin up one FrankenPHP thread pool, which will be shared across all `php_server` blocks.
+Cada instância do Caddy ativará apenas um pool de threads do FrankenPHP, que
+será compartilhado entre todos os blocos `php_server`.
