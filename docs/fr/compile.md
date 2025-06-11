@@ -91,19 +91,19 @@ Ces fonctionnalités peuvent également être désactivées en passant des tags 
 ### Utiliser xcaddy
 
 La méthode recommandée consiste à utiliser [xcaddy](https://github.com/caddyserver/xcaddy) pour compiler FrankenPHP.
-`xcaddy` permet également d'ajouter facilement des [modules Caddy personnalisés](https://caddyserver.com/docs/modules/) et des extensions FrankenPHP :
+`xcaddy` permet également d'ajouter facilement des [modules Caddy personnalisés](https://caddyserver.com/docs/modules/) :
 
 ```console
 CGO_ENABLED=1 \
 XCADDY_GO_BUILD_FLAGS="-ldflags='-w -s' -tags=nobadger,nomysql,nopgx" \
-CGO_CFLAGS=$(php-config --includes) \
-CGO_LDFLAGS="$(php-config --ldflags) $(php-config --libs)" \
+CGO_CFLAGS="$(php-config --includes) -I$PWD/../../dist/dependencies/include" \
+CGO_LDFLAGS="$(php-config --ldflags) $(php-config --libs) -L$PWD/../../dist/dependencies/lib" \
 xcaddy build \
     --output frankenphp \
     --with github.com/dunglas/frankenphp/caddy \
-    --with github.com/dunglas/caddy-cbrotli \
     --with github.com/dunglas/mercure/caddy \
-    --with github.com/dunglas/vulcain/caddy
+    --with github.com/dunglas/vulcain/caddy \
+    --with github.com/dunglas/caddy-cbrotli
     # Ajoutez les modules Caddy supplémentaires et les extensions FrankenPHP ici
 ```
 
@@ -116,13 +116,18 @@ xcaddy build \
 > Pour ce faire, modifiez la variable d'environnement `XCADDY_GO_BUILD_FLAGS` en quelque chose comme
 > `XCADDY_GO_BUILD_FLAGS=$'-ldflags "-w -s -extldflags \'-Wl,-z,stack-size=0x80000\'"'`
 > (modifiez la valeur de la taille de la pile selon les besoins de votre application).
+> Consultez le fichier build-static.sh pour plus d’informations.
 
 ### Sans xcaddy
 
-Il est également possible de compiler FrankenPHP sans `xcaddy` en utilisant directement la commande `go` :
+Il est également possible de compiler FrankenPHP sans xcaddy en utilisant directement la commande go :
 
 ```console
 curl -L https://github.com/dunglas/frankenphp/archive/refs/heads/main.tar.gz | tar xz
-cd frankenphp-main/caddy/frankenphp
-CGO_CFLAGS=$(php-config --includes) CGO_LDFLAGS="$(php-config --ldflags) $(php-config --libs)" go build -tags=nobadger,nomysql,nopgx
+cd frankenphp-main
+./install-dependencies.sh
+cd caddy/frankenphp
+CGO_CFLAGS="$(php-config --includes) -I$PWD/../../dist/dependencies/include" \
+CGO_LDFLAGS="$(php-config --ldflags) $(php-config --libs) -L$PWD/../../dist/dependencies/lib" \
+go build -tags=nobadger,nomysql,nopgx
 ```
