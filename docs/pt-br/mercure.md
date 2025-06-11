@@ -1,15 +1,21 @@
-# Real-time
+# Tempo real
 
-FrankenPHP comes with a built-in [Mercure](https://mercure.rocks) hub!
-Mercure allows you to push real-time events to all the connected devices: they will receive a JavaScript event instantly.
+O FrankenPHP vem com um hub [Mercure](https://mercure.rocks) integrado!
+O Mercure permite que você envie eventos em tempo real para todos os
+dispositivos conectados: eles receberão um evento JavaScript instantaneamente.
 
-No JS library or SDK is required!
+Não é necessária nenhuma biblioteca JS ou SDK!
 
 ![Mercure](mercure-hub.png)
 
-To enable the Mercure hub, update the `Caddyfile` as described [on Mercure's site](https://mercure.rocks/docs/hub/config).
+Para habilitar o hub Mercure, atualize o `Caddyfile` conforme descrito
+[no site do Mercure](https://mercure.rocks/docs/hub/config).
 
-The path of the Mercure hub is `/.well-known/mercure`.
-When running FrankenPHP inside Docker, the full send URL would look like `http://php/.well-known/mercure` (with `php` being the container's name running FrankenPHP).
+O caminho do hub Mercure é `/.well-known/mercure`.
+Ao executar o FrankenPHP dentro do Docker, a URL de envio completa seria
+`http://php/.well-known/mercure` (com `php` sendo o nome do contêiner que
+executa o FrankenPHP).
 
-To push Mercure updates from your code, we recommend the [Symfony Mercure Component](https://symfony.com/components/Mercure) (you don't need the Symfony full-stack framework to use it).
+Para enviar atualizações do Mercure do seu código, recomendamos o
+[Componente Symfony Mercure](https://symfony.com/components/Mercure) (você não
+precisa do framework full-stack do Symfony para usá-lo).
