@@ -112,14 +112,9 @@ func parseWorkerConfig(d *caddyfile.Dispenser) (workerConfig, error) {
 			} else {
 				wc.Watch = append(wc.Watch, d.Val())
 			}
-		case "match":
-			if !d.NextArg() {
-				return wc, d.ArgErr()
-			}
-			wc.Match = d.Val()
 
 		default:
-			allowedDirectives := "name, file, num, env, watch, match"
+			allowedDirectives := "name, file, num, env, watch"
 			return wc, wrongSubDirectiveError("worker", allowedDirectives, v)
 		}
 	}
