@@ -254,9 +254,26 @@ func (f *FrankenPHPModule) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 					return err
 				}
 				f.Workers = append(f.Workers, wc)
+			case "match":
+				if !d.NextArg() {
+					return d.ArgErr()
+				}
+				match := "*"
+				if d.Val() != "worker" {
+					match = d.Val()
+					if !d.NextArg() || d.Val() != "worker" {
+						return d.ArgErr()
+					}
+				}
+				wc, err := parseWorkerConfig(d)
+				if err != nil {
+					return err
+				}
+				wc.Match = match
+				f.Workers = append(f.Workers, wc)
 
 			default:
-				allowedDirectives := "root, split, env, resolve_root_symlink, worker"
+				allowedDirectives := "root, split, env, resolve_root_symlink, worker, match"
 				return wrongSubDirectiveError("php or php_server", allowedDirectives, d.Val())
 			}
 		}

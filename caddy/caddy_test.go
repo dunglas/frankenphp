@@ -1329,8 +1329,7 @@ func TestWorkerMatchDirectiveWithFileServer(t *testing.T) {
 		http://localhost:`+testPort+` {
 			php_server {
 				root ../testdata/files
-				worker {
-				    match /matched-path*
+				match /matched-path* worker {
 					file ../worker-with-counter.php
 					num 1
 				}
@@ -1339,13 +1338,11 @@ func TestWorkerMatchDirectiveWithFileServer(t *testing.T) {
 		http://localhost:`+testport2+` {
             php_server {
                 root ../testdata
-                worker {
-                    match /counter*
+                match /counter* worker {
                     file worker-with-counter.php
                     num 1
                 }
-				worker {
-                    match /index*
+				match /index* worker {
                     file index.php
                     num 1
                 }
@@ -1393,8 +1390,7 @@ func TestWorkerMatchDirectiveWithoutFileServer(t *testing.T) {
 			php_server {
 				file_server off
 				root ../testdata/files
-				worker {
-				    match /some-path
+				match /some-path worker {
 					file ../worker-with-counter.php
 					num 1
 				}
