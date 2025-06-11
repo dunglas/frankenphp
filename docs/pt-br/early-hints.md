@@ -1,7 +1,9 @@
 # Early Hints
 
-FrankenPHP natively supports the [103 Early Hints status code](https://developer.chrome.com/blog/early-hints/).
-Using Early Hints can improve the load time of your web pages by 30%.
+O FrankenPHP suporta nativamente o
+[código de status 103 Early Hints](https://developer.chrome.com/blog/early-hints/).
+Usar Early Hints pode melhorar o tempo de carregamento das suas páginas web em
+30%.
 
 ```php
 <?php
@@ -9,13 +11,14 @@ Using Early Hints can improve the load time of your web pages by 30%.
 header('Link: </style.css>; rel=preload; as=style');
 headers_send(103);
 
-// your slow algorithms and SQL queries 🤪
+// seus algoritmos e consultas SQL lentos 🤪
 
 echo <<<'HTML'
 <!DOCTYPE html>
-<title>Hello FrankenPHP</title>
+<title>Olá FrankenPHP</title>
 <link rel="stylesheet" href="style.css">
 HTML;
 ```
 
-Early Hints are supported both by the normal and the [worker](worker.md) modes.
+As Early Hints são suportadas tanto pelo modo normal quanto pelo modo
+[worker](worker.md).
