@@ -38,8 +38,8 @@ docker run -it --rm --name minha-app-rodando minha-app-php
 
 ## Como instalar mais extensões PHP
 
-O script [
-`docker-php-extension-installer`](https://github.com/mlocati/docker-php-extension-installer)
+O script
+[`docker-php-extension-installer`](https://github.com/mlocati/docker-php-extension-installer)
 é fornecido na imagem base.
 Adicionar extensões PHP adicionais é simples:
 
@@ -95,7 +95,7 @@ COPY --from=builder /usr/local/bin/frankenphp /usr/local/bin/frankenphp
 
 A imagem `builder` fornecida pelo FrankenPHP contém uma versão compilada de
 `libphp`.
-[Imagens de builders](https://hub.docker.com/r/dunglas/frankenphp/tags?name=builder)
+[Imagens de builder](https://hub.docker.com/r/dunglas/frankenphp/tags?name=builder)
 são fornecidas para todas as versões do FrankenPHP e PHP, tanto para Debian
 quanto para Alpine.
 
@@ -217,7 +217,7 @@ Exemplo: `:8000`
 
 As imagens do Docker são compiladas:
 
-- quando é criada uma tag de uma nova versão
+- quando uma tag de uma nova versão é criada
 - diariamente às 4h UTC, se novas versões das imagens oficiais do PHP estiverem
   disponíveis
 
@@ -225,7 +225,7 @@ As imagens do Docker são compiladas:
 
 As versões de desenvolvimento estão disponíveis no repositório Docker
 [`dunglas/frankenphp-dev`](https://hub.docker.com/repository/docker/dunglas/frankenphp-dev).
-Uma nova compilação é acionada sempre que um commit é enviado para a branch
+Uma nova compilação é acionada sempre que um commit é enviado para o branch
 principal do repositório do GitHub.
 
 As tags `latest*` apontam para o HEAD do branch `main`.
