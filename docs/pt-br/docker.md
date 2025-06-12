@@ -217,9 +217,9 @@ Exemplo: `:8000`
 
 As imagens do Docker são compiladas:
 
-- quando uma tag de uma nova versão é criada
+- quando uma tag de uma nova versão é criada.
 - diariamente às 4h UTC, se novas versões das imagens oficiais do PHP estiverem
-  disponíveis
+  disponíveis.
 
 ## Versões de desenvolvimento
 

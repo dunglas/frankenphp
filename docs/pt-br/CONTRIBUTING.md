@@ -14,10 +14,11 @@ docker run --cap-add=SYS_PTRACE --security-opt seccomp=unconfined -p 8080:8080 -
 A imagem contém as ferramentas de desenvolvimento usuais (Go, GDB, Valgrind,
 Neovim...) e usa os seguintes locais de configuração do PHP:
 
-- php.ini: `/etc/frankenphp/php.ini`. Um arquivo `php.ini` com configurações de
-  desenvolvimento é fornecido por padrão.
-- Arquivos de configuração adicionais: `/etc/frankenphp/php.d/*.ini`
-- Extensões PHP: `/usr/lib/frankenphp/modules/`
+- php.ini: `/etc/frankenphp/php.ini`.
+  Um arquivo `php.ini` com configurações de desenvolvimento é fornecido por
+  padrão.
+- Arquivos de configuração adicionais: `/etc/frankenphp/php.d/*.ini`.
+- Extensões PHP: `/usr/lib/frankenphp/modules/`.
 
 Se a sua versão do Docker for anterior à 23.0, a compilação falhará devido ao
 [problema de padrão do `.dockerignore`](https://github.com/moby/moby/pull/42676).
@@ -133,24 +134,24 @@ docker buildx bake -f docker-bake.hcl --pull --no-cache --push
    ```
 
 2. Substitua sua versão atual do `frankenphp` pelo executável de depuração do
-   FrankenPHP
+   FrankenPHP.
 3. Inicie o FrankenPHP normalmente (alternativamente, você pode iniciar o
-   FrankenPHP diretamente com o GDB: `gdb --args frankenphp run`)
+   FrankenPHP diretamente com o GDB: `gdb --args frankenphp run`).
 4. Anexe ao processo com o GDB:
 
    ```console
    gdb -p `pidof frankenphp`
    ```
 
-5. Se necessário, digite `continue` no shell do GDB
-6. Faça o FrankenPHP travar
-7. Digite `bt` no shell do GDB
-8. Copie a saída
+5. Se necessário, digite `continue` no shell do GDB.
+6. Faça o FrankenPHP travar.
+7. Digite `bt` no shell do GDB.
+8. Copie a saída.
 
 ## Depurando falhas de segmentação no GitHub Actions
 
-1. Abra `.github/workflows/tests.yml`
-2. Habilite os símbolos de depuração do PHP
+1. Abra o arquivo `.github/workflows/tests.yml`.
+2. Habilite os símbolos de depuração do PHP:
 
    ```patch
        - uses: shivammathur/setup-php@v2
@@ -160,7 +161,7 @@ docker buildx bake -f docker-bake.hcl --pull --no-cache --push
    +       debug: true
    ```
 
-3. Habilite `tmate` para se conectar ao contêiner
+3. Habilite o `tmate` para se conectar ao contêiner:
 
    ```patch
        - name: Set CGO flags
@@ -172,16 +173,16 @@ docker buildx bake -f docker-bake.hcl --pull --no-cache --push
    +   - uses: mxschmitt/action-tmate@v3
    ```
 
-4. Conecte-se ao contêiner
-5. Abra o `frankenphp.go`
-6. Habilite o `cgosymbolizer`
+4. Conecte-se ao contêiner.
+5. Abra o `frankenphp.go`.
+6. Habilite o `cgosymbolizer`:
 
    ```patch
    -	//_ "github.com/ianlancetaylor/cgosymbolizer"
    +	_ "github.com/ianlancetaylor/cgosymbolizer"
    ```
 
-7. Baixe o módulo: `go get`
+7. Baixe o módulo: `go get`.
 8. No contêiner, você pode usar o GDB e similares:
 
    ```console
@@ -189,7 +190,7 @@ docker buildx bake -f docker-bake.hcl --pull --no-cache --push
    gdb --args frankenphp.test -test.run ^MyTest$
    ```
 
-9. Quando a falha for corrigida, reverta todas essas alterações
+9. Quando a falha for corrigida, reverta todas essas alterações.
 
 ## Recursos diversos de desenvolvimento
 
