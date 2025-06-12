@@ -10,7 +10,7 @@ func (p *SourceParser) ParseFunctions(filename string) ([]phpFunction, error) {
 
 // EXPERIMENTAL
 func (p *SourceParser) ParseClasses(filename string) ([]phpClass, error) {
-	classParser := ClassParser{}
+	classParser := classParser{}
 	return classParser.parse(filename)
 }
 

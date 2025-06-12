@@ -12,10 +12,10 @@ import (
 
 func TestCFileGenerator_Generate(t *testing.T) {
 	tmpDir, err := os.MkdirTemp("", "c_file_generator_test")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(tmpDir)
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		os.RemoveAll(tmpDir)
+	})
 
 	generator := &Generator{
 		BaseName: "test_extension",

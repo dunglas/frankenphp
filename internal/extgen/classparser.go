@@ -16,18 +16,18 @@ var phpMethodRegex = regexp.MustCompile(`//\s*export_php:method\s+(\w+)::([^{}\n
 var methodSignatureRegex = regexp.MustCompile(`(\w+)\s*\(([^)]*)\)\s*:\s*(\??[\w|]+)`)
 var methodParamTypeNameRegex = regexp.MustCompile(`(\??[\w|]+)\s+\$?(\w+)`)
 
-type ExportDirective struct {
-	Line      int
-	ClassName string
+type exportDirective struct {
+	line      int
+	className string
 }
 
-type ClassParser struct{}
+type classParser struct{}
 
-func (cp *ClassParser) Parse(filename string) ([]phpClass, error) {
+func (cp *classParser) Parse(filename string) ([]phpClass, error) {
 	return cp.parse(filename)
 }
 
-func (cp *ClassParser) parse(filename string) ([]phpClass, error) {
+func (cp *classParser) parse(filename string) ([]phpClass, error) {
 	fset := token.NewFileSet()
 	node, err := parser.ParseFile(fset, filename, nil, parser.ParseComments)
 	if err != nil {
@@ -96,24 +96,24 @@ func (cp *ClassParser) parse(filename string) ([]phpClass, error) {
 	}
 
 	for _, directive := range exportDirectives {
-		if !matchedDirectives[directive.Line] {
-			return nil, fmt.Errorf("//export_php class directive at line %d is not followed by a struct declaration", directive.Line)
+		if !matchedDirectives[directive.line] {
+			return nil, fmt.Errorf("//export_php class directive at line %d is not followed by a struct declaration", directive.line)
 		}
 	}
 
 	return classes, nil
 }
 
-func (cp *ClassParser) collectExportDirectives(node *ast.File, fset *token.FileSet) []ExportDirective {
-	var directives []ExportDirective
+func (cp *classParser) collectExportDirectives(node *ast.File, fset *token.FileSet) []exportDirective {
+	var directives []exportDirective
 
 	for _, commentGroup := range node.Comments {
 		for _, comment := range commentGroup.List {
 			if matches := phpClassRegex.FindStringSubmatch(comment.Text); matches != nil {
 				pos := fset.Position(comment.Pos())
-				directives = append(directives, ExportDirective{
-					Line:      pos.Line,
-					ClassName: matches[1],
+				directives = append(directives, exportDirective{
+					line:      pos.Line,
+					className: matches[1],
 				})
 			}
 		}
@@ -122,7 +122,7 @@ func (cp *ClassParser) collectExportDirectives(node *ast.File, fset *token.FileS
 	return directives
 }
 
-func (cp *ClassParser) extractPHPClassCommentWithLine(commentGroup *ast.CommentGroup, fset *token.FileSet) (string, int) {
+func (cp *classParser) extractPHPClassCommentWithLine(commentGroup *ast.CommentGroup, fset *token.FileSet) (string, int) {
 	if commentGroup == nil {
 		return "", 0
 	}
@@ -137,7 +137,7 @@ func (cp *ClassParser) extractPHPClassCommentWithLine(commentGroup *ast.CommentG
 	return "", 0
 }
 
-func (cp *ClassParser) extractPHPClassComment(commentGroup *ast.CommentGroup) string {
+func (cp *classParser) extractPHPClassComment(commentGroup *ast.CommentGroup) string {
 	if commentGroup == nil {
 		return ""
 	}
@@ -151,7 +151,7 @@ func (cp *ClassParser) extractPHPClassComment(commentGroup *ast.CommentGroup) st
 	return ""
 }
 
-func (cp *ClassParser) parseStructFields(fields []*ast.Field) []phpClassProperty {
+func (cp *classParser) parseStructFields(fields []*ast.Field) []phpClassProperty {
 	var properties []phpClassProperty
 
 	for _, field := range fields {
@@ -164,7 +164,7 @@ func (cp *ClassParser) parseStructFields(fields []*ast.Field) []phpClassProperty
 	return properties
 }
 
-func (cp *ClassParser) parseStructField(fieldName string, field *ast.Field) phpClassProperty {
+func (cp *classParser) parseStructField(fieldName string, field *ast.Field) phpClassProperty {
 	prop := phpClassProperty{name: fieldName}
 
 	// check if field is a pointer (nullable)
@@ -180,7 +180,7 @@ func (cp *ClassParser) parseStructField(fieldName string, field *ast.Field) phpC
 	return prop
 }
 
-func (cp *ClassParser) typeToString(expr ast.Expr) string {
+func (cp *classParser) typeToString(expr ast.Expr) string {
 	switch t := expr.(type) {
 	case *ast.Ident:
 		return t.Name
@@ -195,7 +195,7 @@ func (cp *ClassParser) typeToString(expr ast.Expr) string {
 	}
 }
 
-func (cp *ClassParser) goTypeToPHPType(goType string) string {
+func (cp *classParser) goTypeToPHPType(goType string) string {
 	goType = strings.TrimPrefix(goType, "*")
 
 	typeMap := map[string]string{
@@ -217,7 +217,7 @@ func (cp *ClassParser) goTypeToPHPType(goType string) string {
 	return "mixed"
 }
 
-func (cp *ClassParser) parseMethods(filename string) ([]phpClassMethod, error) {
+func (cp *classParser) parseMethods(filename string) ([]phpClassMethod, error) {
 	file, err := os.Open(filename)
 	if err != nil {
 		return nil, err
@@ -265,7 +265,7 @@ func (cp *ClassParser) parseMethods(filename string) ([]phpClassMethod, error) {
 	return methods, scanner.Err()
 }
 
-func (cp *ClassParser) parseMethodSignature(className, signature string) (*phpClassMethod, error) {
+func (cp *classParser) parseMethodSignature(className, signature string) (*phpClassMethod, error) {
 	matches := methodSignatureRegex.FindStringSubmatch(signature)
 
 	if len(matches) != 4 {
@@ -302,7 +302,7 @@ func (cp *ClassParser) parseMethodSignature(className, signature string) (*phpCl
 	}, nil
 }
 
-func (cp *ClassParser) parseMethodParameter(paramStr string) (phpParameter, error) {
+func (cp *classParser) parseMethodParameter(paramStr string) (phpParameter, error) {
 	parts := strings.Split(paramStr, "=")
 	typePart := strings.TrimSpace(parts[0])
 
@@ -326,7 +326,7 @@ func (cp *ClassParser) parseMethodParameter(paramStr string) (phpParameter, erro
 	return param, nil
 }
 
-func (cp *ClassParser) sanitizeDefaultValue(value string) string {
+func (cp *classParser) sanitizeDefaultValue(value string) string {
 	if strings.HasPrefix(value, "[") && strings.HasSuffix(value, "]") {
 		return value
 	}
@@ -338,7 +338,7 @@ func (cp *ClassParser) sanitizeDefaultValue(value string) string {
 	return strings.Trim(value, "'\"")
 }
 
-func (cp *ClassParser) extractGoMethodFunction(scanner *bufio.Scanner, firstLine string) (string, error) {
+func (cp *classParser) extractGoMethodFunction(scanner *bufio.Scanner, firstLine string) (string, error) {
 	goFunc := firstLine + "\n"
 	braceCount := 1
 

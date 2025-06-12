@@ -98,7 +98,7 @@ func SetUserAge(u *UserStruct, age int) {
 			}
 			tmpfile.Close()
 
-			parser := ClassParser{}
+			parser := classParser{}
 			classes, err := parser.parse(tmpfile.Name())
 			if err != nil {
 				t.Fatalf("parse() error = %v", err)
@@ -160,7 +160,7 @@ func GetUserInfo(u UserStruct, prefix string) string {
 	}
 	tmpfile.Close()
 
-	parser := ClassParser{}
+	parser := classParser{}
 	classes, err := parser.parse(tmpfile.Name())
 	if err != nil {
 		t.Fatalf("parse() error = %v", err)
@@ -268,7 +268,7 @@ func TestMethodParameterParsing(t *testing.T) {
 		},
 	}
 
-	parser := ClassParser{}
+	parser := classParser{}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			param, err := parser.parseMethodParameter(tt.paramStr)
@@ -313,7 +313,7 @@ func TestGoTypeToPHPType(t *testing.T) {
 		{"CustomType", "mixed"},
 	}
 
-	parser := ClassParser{}
+	parser := classParser{}
 	for _, tt := range tests {
 		t.Run(tt.goType, func(t *testing.T) {
 			result := parser.goTypeToPHPType(tt.goType)
@@ -381,7 +381,7 @@ type CollectionStruct struct {
 			}
 			tmpfile.Close()
 
-			parser := ClassParser{}
+			parser := classParser{}
 			classes, err := parser.parse(tmpfile.Name())
 			if err != nil {
 				t.Fatalf("parse() error = %v", err)
