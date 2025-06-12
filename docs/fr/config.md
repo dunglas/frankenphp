@@ -112,7 +112,7 @@ other.example.com {
 L'utilisation de la directive `php_server` est généralement suffisante,
 mais si vous avez besoin d'un contrôle total, vous pouvez utiliser la directive `php`, qui permet un plus grand niveau de finesse dans la configuration.
 La directive `php` transmet toutes les entrées à PHP, au lieu de vérifier d'abord si
-c'est un fichier PHP ou pas. En savoir plus à ce sujet dans la [page performances](performance.md).
+c'est un fichier PHP ou pas. En savoir plus à ce sujet dans la [page performances](performance.md#try_files).
 
 Utiliser la directive `php_server` est équivalent à cette configuration :
 
