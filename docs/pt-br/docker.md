@@ -1,19 +1,27 @@
-# Building Custom Docker Image
+# Construindo uma imagem Docker personalizada
 
-[FrankenPHP Docker images](https://hub.docker.com/r/dunglas/frankenphp) are based on [official PHP images](https://hub.docker.com/_/php/). Debian and Alpine Linux variants are provided for popular architectures. Debian variants are recommended.
+[As imagens Docker do FrankenPHP](https://hub.docker.com/r/dunglas/frankenphp)
+são baseadas em [imagens oficiais do PHP](https://hub.docker.com/_/php/).
+Variantes do Debian e do Alpine Linux são fornecidas para arquiteturas
+populares.
+Variantes do Debian são recomendadas.
 
-Variants for PHP 8.2, 8.3 and 8.4 are provided.
+Variantes para PHP 8.2, 8.3 e 8.4 são fornecidas.
 
-The tags follow this pattern: `dunglas/frankenphp:<frankenphp-version>-php<php-version>-<os>`
+As tags seguem este padrão:
+`dunglas/frankenphp:<versao-do-frankenphp>-php<versao-do-php>-<so>`.
 
-- `<frankenphp-version>` and `<php-version>` are version numbers of FrankenPHP and PHP respectively, ranging from major (e.g. `1`), minor (e.g. `1.2`) to patch versions (e.g. `1.2.3`).
-- `<os>` is either `bookworm` (for Debian Bookworm) or `alpine` (for the latest stable version of Alpine).
+- `<versao-do-frankenphp>` e `<versao-do-php>` são números de versão do
+  FrankenPHP e do PHP, respectivamente, variando de maior (ex.: `1`), menor
+  (ex.: `1.2`) a versões de patch (ex.: `1.2.3`).
+- `<so>` é `bookworm` (para Debian Bookworm) ou `alpine` (para a versão estável
+  mais recente do Alpine).
 
-[Browse tags](https://hub.docker.com/r/dunglas/frankenphp/tags).
+[Navegue pelas tags](https://hub.docker.com/r/dunglas/frankenphp/tags).
 
-## How to Use The Images
+## Como usar as imagens
 
-Create a `Dockerfile` in your project:
+Crie um `Dockerfile` no seu projeto:
 
 ```dockerfile
 FROM dunglas/frankenphp
@@ -21,22 +29,24 @@ FROM dunglas/frankenphp
 COPY . /app/public
 ```
 
-Then, run these commands to build and run the Docker image:
+Em seguida, execute estes comandos para compilar e executar a imagem do Docker:
 
 ```console
-docker build -t my-php-app .
-docker run -it --rm --name my-running-app my-php-app
+docker build -t minha-app-php .
+docker run -it --rm --name minha-app-rodando minha-app-php
 ```
 
-## How to Install More PHP Extensions
+## Como instalar mais extensões PHP
 
-The [`docker-php-extension-installer`](https://github.com/mlocati/docker-php-extension-installer) script is provided in the base image.
-Adding additional PHP extensions is straightforward:
+O script [
+`docker-php-extension-installer`](https://github.com/mlocati/docker-php-extension-installer)
+é fornecido na imagem base.
+Adicionar extensões PHP adicionais é simples:
 
 ```dockerfile
 FROM dunglas/frankenphp
 
-# add additional extensions here:
+# adicione extensões adicionais aqui:
 RUN install-php-extensions \
 	pdo_mysql \
 	gd \
@@ -45,19 +55,22 @@ RUN install-php-extensions \
 	opcache
 ```
 
-## How to Install More Caddy Modules
+## Como instalar mais módulos do Caddy
 
-FrankenPHP is built on top of Caddy, and all [Caddy modules](https://caddyserver.com/docs/modules/) can be used with FrankenPHP.
+O FrankenPHP é construído sobre o Caddy, e todos os
+[módulos do Caddy](https://caddyserver.com/docs/modules/) podem ser usados com o
+FrankenPHP.
 
-The easiest way to install custom Caddy modules is to use [xcaddy](https://github.com/caddyserver/xcaddy):
+A maneira mais fácil de instalar módulos personalizados do Caddy é usar o
+[xcaddy](https://github.com/caddyserver/xcaddy):
 
 ```dockerfile
 FROM dunglas/frankenphp:builder AS builder
 
-# Copy xcaddy in the builder image
+# Copia o xcaddy para a imagem do builder
 COPY --from=caddy:builder /usr/bin/xcaddy /usr/bin/xcaddy
 
-# CGO must be enabled to build FrankenPHP
+# O CGO precisa estar habilitado para compilar o FrankenPHP
 RUN CGO_ENABLED=1 \
     XCADDY_SETCAP=1 \
     XCADDY_GO_BUILD_FLAGS="-ldflags='-w -s' -tags=nobadger,nomysql,nopgx" \
@@ -68,28 +81,33 @@ RUN CGO_ENABLED=1 \
         --with github.com/dunglas/frankenphp=./ \
         --with github.com/dunglas/frankenphp/caddy=./caddy/ \
         --with github.com/dunglas/caddy-cbrotli \
-        # Mercure and Vulcain are included in the official build, but feel free to remove them
+        # Mercure e Vulcain estão incluídos na compilação oficial, mas sinta-se
+        # à vontade para removê-los
         --with github.com/dunglas/mercure/caddy \
         --with github.com/dunglas/vulcain/caddy
-        # Add extra Caddy modules here
+        # Adicione módulos Caddy extras aqui
 
 FROM dunglas/frankenphp AS runner
 
-# Replace the official binary by the one contained your custom modules
+# Substitui o binário oficial pelo que contém seus módulos personalizados
 COPY --from=builder /usr/local/bin/frankenphp /usr/local/bin/frankenphp
 ```
 
-The `builder` image provided by FrankenPHP contains a compiled version of `libphp`.
-[Builders images](https://hub.docker.com/r/dunglas/frankenphp/tags?name=builder) are provided for all versions of FrankenPHP and PHP, both for Debian and Alpine.
+A imagem `builder` fornecida pelo FrankenPHP contém uma versão compilada de
+`libphp`.
+[Imagens de builders](https://hub.docker.com/r/dunglas/frankenphp/tags?name=builder)
+são fornecidas para todas as versões do FrankenPHP e PHP, tanto para Debian
+quanto para Alpine.
 
 > [!TIP]
 >
-> If you're using Alpine Linux and Symfony,
-> you may need to [increase the default stack size](compile.md#using-xcaddy).
+> Se você estiver usando Alpine Linux e Symfony, pode ser necessário
+> [aumentar o tamanho padrão da pilha](compile.md#using-xcaddy).
 
-## Enabling the Worker Mode by Default
+## Habilitando o modo worker por padrão
 
-Set the `FRANKENPHP_CONFIG` environment variable to start FrankenPHP with a worker script:
+Defina a variável de ambiente `FRANKENPHP_CONFIG` para iniciar o FrankenPHP com
+um worker script:
 
 ```dockerfile
 FROM dunglas/frankenphp
@@ -99,19 +117,20 @@ FROM dunglas/frankenphp
 ENV FRANKENPHP_CONFIG="worker ./public/index.php"
 ```
 
-## Using a Volume in Development
+## Usando um volume em desenvolvimento
 
-To develop easily with FrankenPHP, mount the directory from your host containing the source code of the app as a volume in the Docker container:
+Para desenvolver facilmente com o FrankenPHP, monte o diretório do seu host que
+contém o código-fonte da aplicação como um volume no contêiner Docker:
 
 ```console
-docker run -v $PWD:/app/public -p 80:80 -p 443:443 -p 443:443/udp --tty my-php-app
+docker run -v $PWD:/app/public -p 80:80 -p 443:443 -p 443:443/udp --tty minha-app-php
 ```
 
 > [!TIP]
 >
-> The `--tty` option allows to have nice human-readable logs instead of JSON logs.
+> A opção `--tty` permite ter logs legíveis por humanos em vez de logs JSON.
 
-With Docker Compose:
+Com o Docker Compose:
 
 ```yaml
 # compose.yaml
@@ -119,9 +138,10 @@ With Docker Compose:
 services:
   php:
     image: dunglas/frankenphp
-    # uncomment the following line if you want to use a custom Dockerfile
+    # Descomente a linha a seguir se quiser usar um Dockerfile personalizado
     #build: .
-    # uncomment the following line if you want to run this in a production environment
+    # Descomente a linha a seguir se quiser executar isso em um ambiente de
+    # produção
     # restart: always
     ports:
       - "80:80" # HTTP
@@ -131,20 +151,21 @@ services:
       - ./:/app/public
       - caddy_data:/data
       - caddy_config:/config
-    # comment the following line in production, it allows to have nice human-readable logs in dev
+    # Comente a linha a seguir em produção, isso permite ter logs legíveis em
+    # desenvolvimento
     tty: true
 
-# Volumes needed for Caddy certificates and configuration
+# Volumes necessários para certificados e configuração do Caddy
 volumes:
   caddy_data:
   caddy_config:
 ```
 
-## Running as a Non-Root User
+## Executando como um usuário não root
 
-FrankenPHP can run as non-root user in Docker.
+O FrankenPHP pode ser executado como um usuário não root no Docker.
 
-Here is a sample `Dockerfile` doing this:
+Aqui está um exemplo de `Dockerfile` fazendo isso:
 
 ```dockerfile
 FROM dunglas/frankenphp
@@ -152,23 +173,25 @@ FROM dunglas/frankenphp
 ARG USER=appuser
 
 RUN \
-	# Use "adduser -D ${USER}" for alpine based distros
+	# Use "adduser -D ${USER}" para distribuições baseadas em Alpine
 	useradd ${USER}; \
-	# Add additional capability to bind to port 80 and 443
+	# Adiciona capacidade adicional para vincular às portas 80 e 443
 	setcap CAP_NET_BIND_SERVICE=+eip /usr/local/bin/frankenphp; \
-	# Give write access to /data/caddy and /config/caddy
+	# Concede acesso de escrita a /data/caddy e /config/caddy
 	chown -R ${USER}:${USER} /data/caddy && chown -R ${USER}:${USER} /config/caddy
 
 USER ${USER}
 ```
 
-### Running With No Capabilities
+### Executando sem capacidades adicionais
 
-Even when running rootless, FrankenPHP needs the `CAP_NET_BIND_SERVICE` capability to bind the
-web server on privileged ports (80 and 443).
+Mesmo executando sem root, o FrankenPHP precisa do recurso
+`CAP_NET_BIND_SERVICE` para vincular o servidor web em portas privilegiadas (80
+e 443).
 
-If you expose FrankenPHP on a non-privileged port (1024 and above), it's possible to run
-the webserver as a non-root user, and without the need for any capability:
+Se você expor o FrankenPHP em uma porta não privilegiada (1024 e acima), é
+possível executar o servidor web como um usuário não root e sem a necessidade de
+nenhuma capacidade adicional:
 
 ```dockerfile
 FROM dunglas/frankenphp
@@ -176,30 +199,34 @@ FROM dunglas/frankenphp
 ARG USER=appuser
 
 RUN \
-	# Use "adduser -D ${USER}" for alpine based distros
+	# Use "adduser -D ${USER}" para distribuições baseadas em Alpine
 	useradd ${USER}; \
-	# Remove default capability
+	# Remove a capacidade padrão
 	setcap -r /usr/local/bin/frankenphp; \
-	# Give write access to /data/caddy and /config/caddy
+	# Concede acesso de escrita a /data/caddy e /config/caddy
 	chown -R ${USER}:${USER} /data/caddy && chown -R ${USER}:${USER} /config/caddy
 
 USER ${USER}
 ```
 
-Next, set the `SERVER_NAME` environment variable to use an unprivileged port.
-Example: `:8000`
+Em seguida, defina a variável de ambiente `SERVER_NAME` para usar uma porta sem
+privilégios.
+Exemplo: `:8000`
 
-## Updates
+## Atualizações
 
-The Docker images are built:
+As imagens do Docker são compiladas:
 
-- when a new release is tagged
-- daily at 4 am UTC, if new versions of the official PHP images are available
+- quando é criada uma tag de uma nova versão
+- diariamente às 4h UTC, se novas versões das imagens oficiais do PHP estiverem
+  disponíveis
 
-## Development Versions
+## Versões de desenvolvimento
 
-Development versions are available in the [`dunglas/frankenphp-dev`](https://hub.docker.com/repository/docker/dunglas/frankenphp-dev) Docker repository.
-A new build is triggered every time a commit is pushed to the main branch of the GitHub repository.
+As versões de desenvolvimento estão disponíveis no repositório Docker
+[`dunglas/frankenphp-dev`](https://hub.docker.com/repository/docker/dunglas/frankenphp-dev).
+Uma nova compilação é acionada sempre que um commit é enviado para a branch
+principal do repositório do GitHub.
 
-The `latest*` tags point to the head of the `main` branch.
-Tags of the form `sha-<git-commit-hash>` are also available.
+As tags `latest*` apontam para o HEAD do branch `main`.
+Tags no formato `sha-<git-commit-hash>` também estão disponíveis.
