@@ -1,143 +1,166 @@
-# PHP Apps As Standalone Binaries
+# Aplicações PHP como binários independentes
 
-FrankenPHP has the ability to embed the source code and assets of PHP applications in a static, self-contained binary.
+O FrankenPHP tem a capacidade de incorporar o código-fonte e os recursos de
+aplicações PHP em um binário estático e independente.
 
-Thanks to this feature, PHP applications can be distributed as standalone binaries that include the application itself, the PHP interpreter, and Caddy, a production-level web server.
+Graças a esse recurso, aplicações PHP podem ser distribuídas como binários
+independentes que incluem a própria aplicação, o interpretador PHP e o Caddy, um
+servidor web de nível de produção.
 
-Learn more about this feature [in the presentation made by Kévin at SymfonyCon 2023](https://dunglas.dev/2023/12/php-and-symfony-apps-as-standalone-binaries/).
+Saiba mais sobre esse recurso
+[na apresentação feita por Kévin na SymfonyCon 2023](https://dunglas.dev/2023/12/php-and-symfony-apps-as-standalone-binaries/).
 
-For embedding Laravel applications, [read this specific documentation entry](laravel.md#laravel-apps-as-standalone-binaries).
+Para incorporar aplicações Laravel,
+[leia esta entrada específica na documentação](laravel.md#laravel-apps-as-standalone-binaries).
 
-## Preparing Your App
+## Preparando sua aplicação
 
-Before creating the self-contained binary be sure that your app is ready for embedding.
+Antes de criar o binário independente, certifique-se de que sua aplicação esteja
+pronta para ser incorporada.
 
-For instance, you likely want to:
+Por exemplo, você provavelmente deseja:
 
-- Install the production dependencies of the app
-- Dump the autoloader
-- Enable the production mode of your application (if any)
-- Strip unneeded files such as `.git` or tests to reduce the size of your final binary
+- Instalar as dependências de produção da aplicação.
+- Fazer o dump do carregador automático.
+- Habilitar o modo de produção da sua aplicação (se houver).
+- Remover arquivos desnecessários, como `.git` ou testes, para reduzir o tamanho
+  do seu binário final.
 
-For instance, for a Symfony app, you can use the following commands:
+Por exemplo, para uma aplicação Symfony, você pode usar os seguintes comandos:
 
 ```console
-# Export the project to get rid of .git/, etc
-mkdir $TMPDIR/my-prepared-app
-git archive HEAD | tar -x -C $TMPDIR/my-prepared-app
-cd $TMPDIR/my-prepared-app
+# Exporta o projeto para se livrar de .git/, etc.
+mkdir $TMPDIR/minha-aplicacao-preparada
+git archive HEAD | tar -x -C $TMPDIR/minha-aplicacao-preparada
+cd $TMPDIR/minha-aplicacao-preparada
 
-# Set proper environment variables
+# Define as variáveis de ambiente adequadas
 echo APP_ENV=prod > .env.local
 echo APP_DEBUG=0 >> .env.local
 
-# Remove the tests and other unneeded files to save space
-# Alternatively, add these files with the export-ignore attribute in your .gitattributes file
+# Remove os testes e outros arquivos desnecessários para economizar espaço.
+# Como alternativa, adicione esses arquivos com o atributo export-ignore no seu
+# arquivo .gitattributes.
 rm -Rf tests/
 
-# Install the dependencies
+# Instala as dependências
 composer install --ignore-platform-reqs --no-dev -a
 
-# Optimize .env
+# Otimiza o arquivo .env
 composer dump-env prod
 ```
 
-### Customizing the Configuration
+### Personalizando a configuração
 
-To customize [the configuration](config.md), you can put a `Caddyfile` as well as a `php.ini` file
-in the main directory of the app to be embedded (`$TMPDIR/my-prepared-app` in the previous example).
+Para personalizar
+[a configuração](config.md), você pode colocar um arquivo `Caddyfile` e um
+arquivo `php.ini` no diretório principal da aplicação a ser incorporada
+(`$TMPDIR/minha-aplicacao-preparada` no exemplo anterior).
 
-## Creating a Linux Binary
+## Criando um binário do Linux
 
-The easiest way to create a Linux binary is to use the Docker-based builder we provide.
+A maneira mais fácil de criar um binário do Linux é usar o builder baseado em
+Docker que fornecemos.
 
-1. Create a file named `static-build.Dockerfile` in the repository of your app:
+1. Crie um arquivo chamado `static-build.Dockerfile` no repositório da sua
+   aplicação:
 
    ```dockerfile
    FROM --platform=linux/amd64 dunglas/frankenphp:static-builder
 
-   # Copy your app
+   # Copia sua aplicação
    WORKDIR /go/src/app/dist/app
    COPY . .
 
-   # Build the static binary
+   # Compilar o binário estático
    WORKDIR /go/src/app/
    RUN EMBED=dist/app/ ./build-static.sh
    ```
 
    > [!CAUTION]
    >
-   > Some `.dockerignore` files (e.g. default [Symfony Docker `.dockerignore`](https://github.com/dunglas/symfony-docker/blob/main/.dockerignore))
-   > will ignore the `vendor/` directory and `.env` files. Be sure to adjust or remove the `.dockerignore` file before the build.
+   > Alguns arquivos `.dockerignore` (por exemplo, o
+   > [`.dockerignore` padrão do Docker do Symfony](https://github.com/dunglas/symfony-docker/blob/main/.dockerignore))
+   > ignorarão o diretório `vendor/` e os arquivos `.env`.
+   > Certifique-se de ajustar ou remover o arquivo `.dockerignore` antes da
+   > compilação.
 
-2. Build:
-
-   ```console
-   docker build -t static-app -f static-build.Dockerfile .
-   ```
-
-3. Extract the binary:
+4. Construa:
 
    ```console
-   docker cp $(docker create --name static-app-tmp static-app):/go/src/app/dist/frankenphp-linux-x86_64 my-app ; docker rm static-app-tmp
+   docker build -t aplicacao-estatica -f static-build.Dockerfile .
    ```
 
-The resulting binary is the file named `my-app` in the current directory.
+3. Extraia o binário:
 
-## Creating a Binary for Other OSes
+   ```console
+   docker cp $(docker create --name aplicacao-estatica-tmp aplicacao-estatica):/go/src/app/dist/frankenphp-linux-x86_64 minha-aplicacao ; docker rm aplicacao-estatica-tmp
+   ```
 
-If you don't want to use Docker, or want to build a macOS binary, use the shell script we provide:
+O binário resultante é o arquivo `minha-aplicacao` no diretório atual.
+
+## Criando um binário para outros sistemas operacionais
+
+Se você não quiser usar o Docker ou quiser compilar um binário para macOS, use o
+script de shell que fornecemos:
 
 ```console
 git clone https://github.com/dunglas/frankenphp
 cd frankenphp
-EMBED=/path/to/your/app ./build-static.sh
+EMBED=/caminho/para/sua/aplicacao ./build-static.sh
 ```
 
-The resulting binary is the file named `frankenphp-<os>-<arch>` in the `dist/` directory.
+O binário resultante é o arquivo `frankenphp-<os>-<arch>` no diretório `dist/`.
 
-## Using The Binary
+## Usando o binário
 
-This is it! The `my-app` file (or `dist/frankenphp-<os>-<arch>` on other OSes) contains your self-contained app!
+É isso! O arquivo `minha-aplicacao` (ou `dist/frankenphp-<os>-<arch>` em outros
+sistemas operacionais) contém sua aplicação independente!
 
-To start the web app run:
+Para iniciar a aplicação web, execute:
 
 ```console
-./my-app php-server
+./minha-aplicacao php-server
 ```
 
-If your app contains a [worker script](worker.md), start the worker with something like:
+Se a sua aplicação contiver um [worker script](worker.md), inicie o worker com
+algo como:
 
 ```console
-./my-app php-server --worker public/index.php
+./minha-aplicacao php-server --worker public/index.php
 ```
 
-To enable HTTPS (a Let's Encrypt certificate is automatically created), HTTP/2, and HTTP/3, specify the domain name to use:
+Para habilitar HTTPS (um certificado Let's Encrypt é criado automaticamente),
+HTTP/2 e HTTP/3, especifique o nome de domínio a ser usado:
 
 ```console
-./my-app php-server --domain localhost
+./minha-aplicacao php-server --domain localhost
 ```
 
-You can also run the PHP CLI scripts embedded in your binary:
+Você também pode executar os scripts PHP CLI incorporados ao seu binário:
 
 ```console
-./my-app php-cli bin/console
+./minha-aplicacao php-cli bin/console
 ```
 
-## PHP Extensions
+## Extensões PHP
 
-By default, the script will build extensions required by the `composer.json` file of your project, if any.
-If the `composer.json` file doesn't exist, the default extensions are built, as documented in [the static builds entry](static.md).
+Por padrão, o script criará as extensões necessárias para o arquivo
+`composer.json` do seu projeto, se houver.
+Se o arquivo `composer.json` não existir, as extensões padrão serão compiladas,
+conforme documentado na [entrada de compilações estáticas](static.md).
 
-To customize the extensions, use the `PHP_EXTENSIONS` environment variable.
+Para personalizar as extensões, use a variável de ambiente `PHP_EXTENSIONS`.
 
-## Customizing The Build
+## Personalizando a compilação
 
-[Read the static build documentation](static.md) to see how to customize the binary (extensions, PHP version...).
+[Leia a documentação da compilação estática](static.md) para ver como
+personalizar o binário (extensões, versão do PHP...).
 
-## Distributing The Binary
+## Distribuindo o binário
 
-On Linux, the created binary is compressed using [UPX](https://upx.github.io).
+No Linux, o binário criado é compactado usando [UPX](https://upx.github.io).
 
-On Mac, to reduce the size of the file before sending it, you can compress it.
-We recommend `xz`.
+No Mac, para reduzir o tamanho do arquivo antes de enviá-lo, você pode
+compactá-lo.
+Recomendamos usar `xz`.
