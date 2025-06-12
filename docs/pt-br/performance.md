@@ -1,73 +1,111 @@
-# Performance
+# Desempenho
 
-By default, FrankenPHP tries to offer a good compromise between performance and ease of use.
-However, it is possible to substantially improve performance using an appropriate configuration.
+Por padrão, o FrankenPHP tenta oferecer um bom equilíbrio entre desempenho e
+facilidade de uso.
+No entanto, é possível melhorar substancialmente o desempenho usando uma
+configuração apropriada.
 
-## Number of Threads and Workers
+## Número de threads e workers
 
-By default, FrankenPHP starts 2 times more threads and workers (in worker mode) than the available numbers of CPU.
+Por padrão, o FrankenPHP inicia 2 vezes mais threads e workers (no modo worker)
+do que a quantidade de CPU disponível.
 
-The appropriate values depend heavily on how your application is written, what it does and your hardware.
-We strongly recommend changing these values. For best system stability, it is recommended to have `num_threads` x `memory_limit` < `available_memory`.
+Os valores apropriados dependem muito de como sua aplicação foi escrita, do que
+ela faz e do seu hardware.
+Recomendamos fortemente alterar esses valores.
+Para melhor estabilidade do sistema, recomenda-se ter `num_threads` x
+`memory_limit` < `available_memory`.
 
-To find the right values, it's best to run load tests simulating real traffic.
-[k6](https://k6.io) and [Gatling](https://gatling.io) are good tools for this.
+Para encontrar os valores corretos, é melhor executar testes de carga simulando
+tráfego real.
+[k6](https://k6.io) e [Gatling](https://gatling.io) são boas ferramentas para
+isso.
 
-To configure the number of threads, use the `num_threads` option of the `php_server` and `php` directives.
-To change the number of workers, use the `num` option of the `worker` section of the `frankenphp` directive.
+Para configurar o número de threads, use a opção `num_threads` das diretivas
+`php_server` e `php`.
+Para alterar o número de workers, use a opção `num` da seção `worker` da
+diretiva `frankenphp`.
 
 ### `max_threads`
 
-While it's always better to know exactly what your traffic will look like, real-life applications tend to be more
-unpredictable. The `max_threads` [configuration](config.md#caddyfile-config) allows FrankenPHP to automatically spawn additional threads at runtime up to the specified limit.
-`max_threads` can help you figure out how many threads you need to handle your traffic and can make the server more resilient to latency spikes.
-If set to `auto`, the limit will be estimated based on the `memory_limit` in your `php.ini`. If not able to do so,
-`auto` will instead default to 2x `num_threads`. Keep in mind that `auto` might strongly underestimate the number of threads needed.
-`max_threads` is similar to PHP FPM's [pm.max_children](https://www.php.net/manual/en/install.fpm.configuration.php#pm.max-children). The main difference is that FrankenPHP uses threads instead of
-processes and automatically delegates them across different worker scripts and 'classic mode' as needed.
+Embora seja sempre melhor saber exatamente como será o seu tráfego, aplicações
+reais tendem a ser mais imprevisíveis.
+A [configuração](config.md#caddyfile-config) `max_threads` permite que o
+FrankenPHP gere threads adicionais automaticamente em tempo de execução até o
+limite especificado.
+`max_threads` pode ajudar você a descobrir quantas threads são necessárias para
+lidar com seu tráfego e pode tornar o servidor mais resiliente a picos de
+latência.
+Se definido como `auto`, o limite será estimado com base no `memory_limit` em
+seu `php.ini`.
+Caso contrário, `auto` assumirá como padrão o valor 2x `num_threads`.
+Lembre-se de que `auto` pode subestimar bastante o número de threads
+necessárias.
+`max_threads` é semelhante ao
+[pm.max_children](https://www.php.net/manual/pt_BR/install.fpm.configuration.php#pm.max-children)
+do PHP FPM.
+A principal diferença é que o FrankenPHP usa threads em vez de processos e os
+delega automaticamente entre diferentes worker scripts e o modo clássico,
+conforme necessário.
 
-## Worker Mode
+## Modo worker
 
-Enabling [the worker mode](worker.md) dramatically improves performance,
-but your app must be adapted to be compatible with this mode:
-you need to create a worker script and to be sure that the app is not leaking memory.
+Habilitar [o modo worker](worker.md) melhora drasticamente o desempenho, mas sua
+aplicação precisa ser adaptada para ser compatível com este modo: você precisa
+criar um script worker e garantir que a aplicação não esteja com vazamento de
+memória.
 
-## Don't Use musl
+## Não use `musl`
 
-The Alpine Linux variant of the official Docker images and the default binaries we provide are using [the musl libc](https://musl.libc.org).
+A variante Alpine Linux das imagens oficiais do Docker e os binários padrão que
+fornecemos usam [a biblioteca C `musl`](https://musl.libc.org).
 
-PHP is known to be [slower](https://gitlab.alpinelinux.org/alpine/aports/-/issues/14381) when using this alternative C library instead of the traditional GNU library,
-especially when compiled in ZTS mode (thread-safe), which is required for FrankenPHP. The difference can be significant in a heavily threaded environment.
+O PHP é conhecido por ser
+[mais lento](https://gitlab.alpinelinux.org/alpine/aports/-/issues/14381)
+ao usar esta biblioteca C alternativa em vez da biblioteca GNU tradicional,
+especialmente quando compilado no modo ZTS (thread-safe), necessário para o
+FrankenPHP.
+A diferença pode ser significativa em um ambiente com muitas threads.
 
-Also, [some bugs only happen when using musl](https://github.com/php/php-src/issues?q=sort%3Aupdated-desc+is%3Aissue+is%3Aopen+label%3ABug+musl).
+Além disso,
+[alguns bugs só acontecem ao usar `musl`](https://github.com/php/php-src/issues?q=sort%3Aupdated-desc+is%3Aissue+is%3Aopen+label%3ABug+musl).
 
-In production environments, we recommend using FrankenPHP linked against glibc.
+Em ambientes de produção, recomendamos o uso do FrankenPHP vinculado à `glibc`.
 
-This can be achieved by using the Debian Docker images (the default), downloading the -gnu suffix binary from our [Releases](https://github.com/dunglas/frankenphp/releases), or by [compiling FrankenPHP from sources](compile.md).
+Isso pode ser feito usando as imagens Docker do Debian (o padrão), baixando o
+binário com sufixo -gnu de nossos
+[Lançamentos](https://github.com/dunglas/frankenphp/releases) ou
+[compilando o FrankenPHP a partir dos fontes](compile.md).
 
-Alternatively, we provide static musl binaries compiled with [the mimalloc allocator](https://github.com/microsoft/mimalloc), which alleviates the problems in threaded scenarios.
+Como alternativa, fornecemos binários `musl` estáticos compilados com
+[o alocador `mimalloc`](https://github.com/microsoft/mimalloc), o que alivia os
+problemas em cenários com threads.
 
-## Go Runtime Configuration
+## Configuração de Tempo de Execução do Go
 
-FrankenPHP is written in Go.
+O FrankenPHP é escrito em Go.
 
-In general, the Go runtime doesn't require any special configuration, but in certain circumstances,
-specific configuration improves performance.
+Em geral, o tempo de execução do Go não requer nenhuma configuração especial,
+mas em certas circunstâncias, configurações específicas melhoram o desempenho.
 
-You likely want to set the `GODEBUG` environment variable to `cgocheck=0` (the default in the FrankenPHP Docker images).
+Você provavelmente deseja definir a variável de ambiente `GODEBUG` como
+`cgocheck=0` (o padrão nas imagens Docker do FrankenPHP).
 
-If you run FrankenPHP in containers (Docker, Kubernetes, LXC...) and limit the memory available for the containers,
-set the `GOMEMLIMIT` environment variable to the available amount of memory.
+Se você executa o FrankenPHP em contêineres (Docker, Kubernetes, LXC...) e
+limita a memória disponível para os contêineres, defina a variável de ambiente
+`GOMEMLIMIT` para a quantidade de memória disponível.
 
-For more details, [the Go documentation page dedicated to this subject](https://pkg.go.dev/runtime#hdr-Environment_Variables) is a must-read to get the most out of the runtime.
+Para mais detalhes,
+[a página de documentação do Go dedicada a este assunto](https://pkg.go.dev/runtime#hdr-Environment_Variables)
+é uma leitura obrigatória para aproveitar ao máximo o tempo de execução.
 
 ## `file_server`
 
-By default, the `php_server` directive automatically sets up a file server to
-serve static files (assets) stored in the root directory.
+Por padrão, a diretiva `php_server` configura automaticamente um servidor de
+arquivos para servir arquivos estáticos (assets) armazenados no diretório raiz.
 
-This feature is convenient, but comes with a cost.
-To disable it, use the following config:
+Este recurso é conveniente, mas tem um custo.
+Para desativá-lo, use a seguinte configuração:
 
 ```caddyfile
 php_server {
@@ -77,22 +115,29 @@ php_server {
 
 ## `try_files`
 
-Besides static files and PHP files, `php_server` will also try to serve your application's index
-and directory index files (`/path/` -> `/path/index.php`). If you don't need directory indices,
-you can disable them by explicitly defining `try_files` like this:
+Além de arquivos estáticos e arquivos PHP, `php_server` também tentará servir o
+arquivo index da sua aplicação e os arquivos index de diretório (`/path/` ->
+`/path/index.php`).
+Se você não precisa de arquivos index de diretório, pode desativá-los definindo
+explicitamente `try_files` assim:
 
 ```caddyfile
 php_server {
     try_files {path} index.php
-    root /root/to/your/app # explicitly adding the root here allows for better caching
+    root /raiz/da/sua/aplicacao # adicionar explicitamente a raiz aqui permite um
+                                # melhor armazenamento em cache
 }
 ```
 
-This can significantly reduce the number of unnecessary file operations.
+Isso pode reduzir significativamente o número de operações desnecessárias com
+arquivos.
 
-An alternate approach with 0 unnecessary file system operations would be to instead use the `php` directive and split
-files from PHP by path. This approach works well if your entire application is served by one entry file.
-An example [configuration](config.md#caddyfile-config) that serves static files behind an `/assets` folder could look like this:
+Uma abordagem alternativa com 0 operações desnecessárias no sistema de arquivos
+seria usar a diretiva `php` e dividir os arquivos do PHP por caminho.
+Essa abordagem funciona bem se toda a sua aplicação for servida por um arquivo
+de entrada.
+Um exemplo de [configuração](config.md#caddyfile-config) que serve arquivos
+estáticos a partir de de uma pasta `/assets` poderia ser assim:
 
 ```caddyfile
 route {
@@ -100,30 +145,37 @@ route {
         path /assets/*
     }
 
-    # everything behind /assets is handled by the file server
+    # tudo a partir de /assets é gerenciado pelo servidor de arquivos
     file_server @assets {
-        root /root/to/your/app
+        root /raiz/da/sua/aplicacao
     }
 
-    # everything that is not in /assets is handled by your index or worker PHP file
+    # tudo o que não está em /assets é gerenciado pelo seu arquivo index ou
+    # worker PHP
     rewrite index.php
     php {
-        root /root/to/your/app # explicitly adding the root here allows for better caching
+        root /raiz/da/sua/aplicacao # adicionar explicitamente a raiz aqui
+                                    # permite um melhor armazenamento em cache
     }
 }
 ```
 
 ## Placeholders
 
-You can use [placeholders](https://caddyserver.com/docs/conventions#placeholders) in the `root` and `env` directives.
-However, this prevents caching these values, and comes with a significant performance cost.
+Você pode usar
+[placeholders](https://caddyserver.com/docs/conventions#placeholders) nas
+diretivas `root` e `env`.
+No entanto, isso impede o armazenamento em cache desses valores e acarreta um
+custo significativo de desempenho.
 
-If possible, avoid placeholders in these directives.
+Se possível, evite placeholders nessas diretivas.
 
 ## `resolve_root_symlink`
 
-By default, if the document root is a symbolic link, it is automatically resolved by FrankenPHP (this is necessary for PHP to work properly).
-If the document root is not a symlink, you can disable this feature.
+Por padrão, se o diretório raiz for um link simbólico, ele será resolvido
+automaticamente pelo FrankenPHP (isso é necessário para o funcionamento correto
+do PHP).
+Se o diretório raiz não for um link simbólico, você pode desativar esse recurso.
 
 ```caddyfile
 php_server {
@@ -131,27 +183,35 @@ php_server {
 }
 ```
 
-This will improve performance if the `root` directive contains [placeholders](https://caddyserver.com/docs/conventions#placeholders).
-The gain will be negligible in other cases.
+Isso melhorará o desempenho se a diretiva `root` contiver
+[placeholders](https://caddyserver.com/docs/conventions#placeholders).
+O ganho será insignificante em outros casos.
 
 ## Logs
 
-Logging is obviously very useful, but, by definition,
-it requires I/O operations and memory allocations, which considerably reduces performance.
-Make sure you [set the logging level](https://caddyserver.com/docs/caddyfile/options#log) correctly,
-and only log what's necessary.
+O logging é obviamente muito útil, mas, por definição, requer operações de E/S e
+alocações de memória, o que reduz consideravelmente o desempenho.
+Certifique-se de
+[definir o nível de logging](https://caddyserver.com/docs/caddyfile/options#log)
+corretamente e registrar em log apenas o necessário.
 
-## PHP Performance
+## Desempenho do PHP
 
-FrankenPHP uses the official PHP interpreter.
-All usual PHP-related performance optimizations apply with FrankenPHP.
+O FrankenPHP usa o interpretador PHP oficial.
+Todas as otimizações de desempenho usuais relacionadas ao PHP se aplicam ao
+FrankenPHP.
 
-In particular:
+Em particular:
 
-- check that [OPcache](https://www.php.net/manual/en/book.opcache.php) is installed, enabled and properly configured
-- enable [Composer autoloader optimizations](https://getcomposer.org/doc/articles/autoloader-optimization.md)
-- ensure that the `realpath` cache is big enough for the needs of your application
-- use [preloading](https://www.php.net/manual/en/opcache.preloading.php)
+- verifique se o [OPcache](https://www.php.net/manual/pt_BR/book.opcache.php)
+  está instalado, habilitado e configurado corretamente.
+- habilite as
+  [otimizações do carregador automático do Composer](https://getcomposer.org/doc/articles/autoloader-optimization.md).
+- certifique-se de que o cache do `realpath` seja grande o suficiente para as
+  necessidades da sua aplicação.
+- use
+  [pré-carregamento](https://www.php.net/manual/pt_BR/opcache.preloading.php).
 
-For more details, read [the dedicated Symfony documentation entry](https://symfony.com/doc/current/performance.html)
-(most tips are useful even if you don't use Symfony).
+Para mais detalhes, leia
+[a entrada dedicada na documentação do Symfony](https://symfony.com/doc/current/performance.html)
+(a maioria das dicas é útil mesmo se você não usar o Symfony).
