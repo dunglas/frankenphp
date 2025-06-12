@@ -32,7 +32,7 @@ adicionar um `Caddyfile` personalizado no diretório raiz da aplicação.
 Ele será usado automaticamente.
 
 Também é possível
-[reiniciar o worker em caso de alterações no arquivo](config.md#watching-for-file-changes)
+[reiniciar o worker em caso de alterações no arquivo](config.md#monitorando-alteracoes-em-arquivos)
 com a opção `--watch`.
 O comando a seguir acionará uma reinicialização se qualquer arquivo terminado em
 `.php` no diretório `/caminho/para/sua/aplicacao/` ou subdiretórios for
@@ -150,12 +150,12 @@ requisições a serem processadas, definindo uma variável de ambiente chamada
 ### Reiniciar os workers manualmente
 
 Embora seja possível reiniciar os workers
-[em alterações de arquivo](config.md#watching-for-file-changes), também é
-possível reiniciar todos os workers normalmente por meio da
+[em alterações de arquivo](config.md#monitorando-alteracoes-em-arquivos), também
+é possível reiniciar todos os workers normalmente por meio da
 [API de administração do Caddy](https://caddyserver.com/docs/api).
 Se o administrador estiver habilitado no seu
-[Caddyfile](config.md#caddyfile-config), você pode executar ping no endpoint de
-reinicialização com uma simples requisição POST como esta:
+[Caddyfile](config.md#configuracao-do-caddyfile), você pode executar ping no
+endpoint de reinicialização com uma simples requisição POST como esta:
 
 ```console
 curl -X POST http://localhost:2019/frankenphp/workers/restart

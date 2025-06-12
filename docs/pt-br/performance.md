@@ -30,8 +30,8 @@ diretiva `frankenphp`.
 
 Embora seja sempre melhor saber exatamente como será o seu tráfego, aplicações
 reais tendem a ser mais imprevisíveis.
-A [configuração](config.md#caddyfile-config) `max_threads` permite que o
-FrankenPHP gere threads adicionais automaticamente em tempo de execução até o
+A [configuração](config.md#configuracao-do-caddyfile) `max_threads` permite que
+o FrankenPHP gere threads adicionais automaticamente em tempo de execução até o
 limite especificado.
 `max_threads` pode ajudar você a descobrir quantas threads são necessárias para
 lidar com seu tráfego e pode tornar o servidor mais resiliente a picos de
@@ -136,8 +136,8 @@ Uma abordagem alternativa com 0 operações desnecessárias no sistema de arquiv
 seria usar a diretiva `php` e dividir os arquivos do PHP por caminho.
 Essa abordagem funciona bem se toda a sua aplicação for servida por um arquivo
 de entrada.
-Um exemplo de [configuração](config.md#caddyfile-config) que serve arquivos
-estáticos a partir de de uma pasta `/assets` poderia ser assim:
+Um exemplo de [configuração](config.md#configuracao-do-caddyfile) que serve
+arquivos estáticos a partir de uma pasta `/assets` poderia ser assim:
 
 ```caddyfile
 route {

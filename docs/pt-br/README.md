@@ -71,7 +71,7 @@ Acesse `https://localhost` e divirta-se!
 > Não tente usar `https://127.0.0.1`.
 > Use `https://localhost` e aceite o certificado autoassinado.
 > Use a
-> [variável de ambiente `SERVER_NAME`](docs/config.md#environment-variables)
+> [variável de ambiente `SERVER_NAME`](config.md#variaveis-de-ambiente)
 > para alterar o domínio a ser usado.
 
 ### Homebrew
