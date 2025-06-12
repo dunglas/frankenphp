@@ -1,6 +1,7 @@
 package extgen
 
 import (
+	"github.com/stretchr/testify/require"
 	"os"
 	"path/filepath"
 	"strings"
@@ -50,19 +51,14 @@ func TestCFileGenerator_Generate(t *testing.T) {
 	}
 
 	cGen := cFileGenerator{generator}
-	err = cGen.generate()
-	if err != nil {
-		t.Fatalf("generate() failed: %v", err)
-	}
+	require.NoError(t, cGen.generate())
 
 	expectedFile := filepath.Join(tmpDir, "test_extension.c")
 	_, err = os.Stat(expectedFile)
 	assert.False(t, os.IsNotExist(err), "Expected C file was not created: %s", expectedFile)
 
 	content, err := ReadFile(expectedFile)
-	if err != nil {
-		t.Fatalf("Failed to read generated C file: %v", err)
-	}
+	require.NoError(t, err)
 
 	testCFileBasicStructure(t, content, "test_extension")
 	testCFileFunctions(t, content, generator.functions)
@@ -202,9 +198,7 @@ func TestCFileGenerator_GetTemplateContent(t *testing.T) {
 			}
 			cGen := cFileGenerator{generator}
 			content, err := cGen.getTemplateContent()
-			if err != nil {
-				t.Fatalf("getTemplateContent() failed: %v", err)
-			}
+			require.NoError(t, err)
 
 			for _, expected := range tt.contains {
 				assert.Contains(t, content, expected, "Template content should contain '%s'", expected)
@@ -219,10 +213,11 @@ func TestCFileGenerator_GetTemplateContent(t *testing.T) {
 
 func TestCFileIntegrationWithGenerators(t *testing.T) {
 	tmpDir, err := os.MkdirTemp("", "c_integration_test")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(tmpDir)
+	require.NoError(t, err)
+
+	t.Cleanup(func() {
+		os.RemoveAll(tmpDir)
+	})
 
 	functions := []phpFunction{
 		{
@@ -274,15 +269,10 @@ func TestCFileIntegrationWithGenerators(t *testing.T) {
 	}
 
 	cGen := cFileGenerator{generator}
-	err = cGen.generate()
-	if err != nil {
-		t.Fatalf("generate() failed: %v", err)
-	}
+	require.NoError(t, cGen.generate())
 
 	content, err := ReadFile(filepath.Join(tmpDir, "integration_test.c"))
-	if err != nil {
-		t.Fatalf("Failed to read generated file: %v", err)
-	}
+	require.NoError(t, err)
 
 	for _, fn := range functions {
 		expectedFunc := "PHP_FUNCTION(" + fn.name + ")"
@@ -295,7 +285,6 @@ func TestCFileIntegrationWithGenerators(t *testing.T) {
 	}
 
 	assert.Contains(t, content, "register_all_classes()", "Generated C file should contain class registration call")
-
 	assert.Contains(t, content, "integration_test_module_entry", "Generated C file should contain integration_test_module_entry")
 }
 
@@ -376,7 +365,6 @@ func testCFileClasses(t *testing.T, content string, classes []phpClass) {
 	}
 
 	assert.Contains(t, content, "void register_all_classes() {", "C file should contain register_all_classes function")
-
 	assert.Contains(t, content, "register_all_classes();", "C file should contain register_all_classes call in MINIT")
 
 	for _, class := range classes {
@@ -407,9 +395,7 @@ func TestCFileContentValidation(t *testing.T) {
 
 	cGen := cFileGenerator{generator}
 	content, err := cGen.buildContent()
-	if err != nil {
-		t.Fatalf("buildContent() failed: %v", err)
-	}
+	require.NoError(t, err)
 
 	syntaxElements := []string{
 		"{", "}", "(", ")", ";",
@@ -423,10 +409,9 @@ func TestCFileContentValidation(t *testing.T) {
 
 	openBraces := strings.Count(content, "{")
 	closeBraces := strings.Count(content, "}")
+
 	assert.Equal(t, openBraces, closeBraces, "Unbalanced braces in generated C code: %d open, %d close", openBraces, closeBraces)
-
 	assert.False(t, strings.Contains(content, ";;"), "Generated C code contains double semicolons")
-
 	assert.False(t, strings.Contains(content, "{{") || strings.Contains(content, "}}"), "Generated C code contains unresolved template syntax")
 }
 
