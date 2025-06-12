@@ -17,42 +17,42 @@ func TestStubGenerator_Generate(t *testing.T) {
 	generator := &Generator{
 		BaseName: "test_extension",
 		BuildDir: tmpDir,
-		Functions: []PHPFunction{
+		functions: []phpFunction{
 			{
-				Name:      "greet",
-				Signature: "greet(string $name): string",
-				Params: []Parameter{
-					{Name: "name", Type: "string"},
+				name:      "greet",
+				signature: "greet(string $name): string",
+				params: []phpParameter{
+					{name: "name", phpType: "string"},
 				},
-				ReturnType: "string",
+				returnType: "string",
 			},
 			{
-				Name:      "calculate",
-				Signature: "calculate(int $a, int $b): int",
-				Params: []Parameter{
-					{Name: "a", Type: "int"},
-					{Name: "b", Type: "int"},
+				name:      "calculate",
+				signature: "calculate(int $a, int $b): int",
+				params: []phpParameter{
+					{name: "a", phpType: "int"},
+					{name: "b", phpType: "int"},
 				},
-				ReturnType: "int",
+				returnType: "int",
 			},
 		},
-		Classes: []PHPClass{
+		classes: []phpClass{
 			{
-				Name:     "User",
-				GoStruct: "UserStruct",
+				name:     "User",
+				goStruct: "UserStruct",
 			},
 		},
-		Constants: []PHPConstant{
+		constants: []phpConstant{
 			{
-				Name:  "GLOBAL_CONST",
-				Value: "42",
-				Type:  "int",
+				name:    "GLOBAL_CONST",
+				value:   "42",
+				phpType: "int",
 			},
 			{
-				Name:      "USER_STATUS_ACTIVE",
-				Value:     "1",
-				Type:      "int",
-				ClassName: "User",
+				name:      "USER_STATUS_ACTIVE",
+				value:     "1",
+				phpType:   "int",
+				className: "User",
 			},
 		},
 	}
@@ -69,24 +69,24 @@ func TestStubGenerator_Generate(t *testing.T) {
 	assert.NoError(t, err, "Failed to read generated stub file")
 
 	testStubBasicStructure(t, content)
-	testStubFunctions(t, content, generator.Functions)
-	testStubClasses(t, content, generator.Classes)
-	testStubConstants(t, content, generator.Constants)
+	testStubFunctions(t, content, generator.functions)
+	testStubClasses(t, content, generator.classes)
+	testStubConstants(t, content, generator.constants)
 }
 
 func TestStubGenerator_BuildContent(t *testing.T) {
 	tests := []struct {
 		name      string
-		functions []PHPFunction
-		classes   []PHPClass
-		constants []PHPConstant
+		functions []phpFunction
+		classes   []phpClass
+		constants []phpConstant
 		contains  []string
 	}{
 		{
 			name:      "empty extension",
-			functions: []PHPFunction{},
-			classes:   []PHPClass{},
-			constants: []PHPConstant{},
+			functions: []phpFunction{},
+			classes:   []phpClass{},
+			constants: []phpConstant{},
 			contains: []string{
 				"<?php",
 				"/** @generate-class-entries */",
@@ -94,14 +94,14 @@ func TestStubGenerator_BuildContent(t *testing.T) {
 		},
 		{
 			name: "functions only",
-			functions: []PHPFunction{
+			functions: []phpFunction{
 				{
-					Name:      "testFunc",
-					Signature: "testFunc(string $param): bool",
+					name:      "testFunc",
+					signature: "testFunc(string $param): bool",
 				},
 			},
-			classes:   []PHPClass{},
-			constants: []PHPConstant{},
+			classes:   []phpClass{},
+			constants: []phpConstant{},
 			contains: []string{
 				"<?php",
 				"/** @generate-class-entries */",
@@ -110,13 +110,13 @@ func TestStubGenerator_BuildContent(t *testing.T) {
 		},
 		{
 			name:      "classes only",
-			functions: []PHPFunction{},
-			classes: []PHPClass{
+			functions: []phpFunction{},
+			classes: []phpClass{
 				{
-					Name: "TestClass",
+					name: "TestClass",
 				},
 			},
-			constants: []PHPConstant{},
+			constants: []phpConstant{},
 			contains: []string{
 				"<?php",
 				"/** @generate-class-entries */",
@@ -127,13 +127,13 @@ func TestStubGenerator_BuildContent(t *testing.T) {
 		},
 		{
 			name:      "constants only",
-			functions: []PHPFunction{},
-			classes:   []PHPClass{},
-			constants: []PHPConstant{
+			functions: []phpFunction{},
+			classes:   []phpClass{},
+			constants: []phpConstant{
 				{
-					Name:  "GLOBAL_CONST",
-					Value: "\"test\"",
-					Type:  "string",
+					name:    "GLOBAL_CONST",
+					value:   "\"test\"",
+					phpType: "string",
 				},
 			},
 			contains: []string{
@@ -144,18 +144,18 @@ func TestStubGenerator_BuildContent(t *testing.T) {
 		},
 		{
 			name: "functions and classes",
-			functions: []PHPFunction{
+			functions: []phpFunction{
 				{
-					Name:      "process",
-					Signature: "process(array $data): array",
+					name:      "process",
+					signature: "process(array $data): array",
 				},
 			},
-			classes: []PHPClass{
+			classes: []phpClass{
 				{
-					Name: "Result",
+					name: "Result",
 				},
 			},
-			constants: []PHPConstant{},
+			constants: []phpConstant{},
 			contains: []string{
 				"function process(array $data): array {}",
 				"class Result {",
@@ -167,9 +167,9 @@ func TestStubGenerator_BuildContent(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			generator := &Generator{
-				Functions: tt.functions,
-				Classes:   tt.classes,
-				Constants: tt.constants,
+				functions: tt.functions,
+				classes:   tt.classes,
+				constants: tt.constants,
 			}
 
 			stubGen := StubGenerator{generator}
@@ -186,38 +186,38 @@ func TestStubGenerator_BuildContent(t *testing.T) {
 func TestStubGenerator_FunctionSignatures(t *testing.T) {
 	tests := []struct {
 		name     string
-		function PHPFunction
+		function phpFunction
 		expected string
 	}{
 		{
 			name: "simple function",
-			function: PHPFunction{
-				Name:      "test",
-				Signature: "test(): void",
+			function: phpFunction{
+				name:      "test",
+				signature: "test(): void",
 			},
 			expected: "function test(): void {}",
 		},
 		{
 			name: "function with parameters",
-			function: PHPFunction{
-				Name:      "greet",
-				Signature: "greet(string $name): string",
+			function: phpFunction{
+				name:      "greet",
+				signature: "greet(string $name): string",
 			},
 			expected: "function greet(string $name): string {}",
 		},
 		{
 			name: "function with nullable return",
-			function: PHPFunction{
-				Name:      "findUser",
-				Signature: "findUser(int $id): ?object",
+			function: phpFunction{
+				name:      "findUser",
+				signature: "findUser(int $id): ?object",
 			},
 			expected: "function findUser(int $id): ?object {}",
 		},
 		{
 			name: "complex function signature",
-			function: PHPFunction{
-				Name:      "process",
-				Signature: "process(array $data, ?string $prefix = null, bool $strict = false): ?array",
+			function: phpFunction{
+				name:      "process",
+				signature: "process(array $data, ?string $prefix = null, bool $strict = false): ?array",
 			},
 			expected: "function process(array $data, ?string $prefix = null, bool $strict = false): ?array {}",
 		},
@@ -226,7 +226,7 @@ func TestStubGenerator_FunctionSignatures(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			generator := &Generator{
-				Functions: []PHPFunction{tt.function},
+				functions: []phpFunction{tt.function},
 			}
 
 			stubGen := StubGenerator{generator}
@@ -240,13 +240,13 @@ func TestStubGenerator_FunctionSignatures(t *testing.T) {
 func TestStubGenerator_ClassGeneration(t *testing.T) {
 	tests := []struct {
 		name     string
-		class    PHPClass
+		class    phpClass
 		contains []string
 	}{
 		{
 			name: "simple class",
-			class: PHPClass{
-				Name: "SimpleClass",
+			class: phpClass{
+				name: "SimpleClass",
 			},
 			contains: []string{
 				"class SimpleClass {",
@@ -256,8 +256,8 @@ func TestStubGenerator_ClassGeneration(t *testing.T) {
 		},
 		{
 			name: "class with no properties",
-			class: PHPClass{
-				Name: "EmptyClass",
+			class: phpClass{
+				name: "EmptyClass",
 			},
 			contains: []string{
 				"class EmptyClass {",
@@ -270,7 +270,7 @@ func TestStubGenerator_ClassGeneration(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			generator := &Generator{
-				Classes: []PHPClass{tt.class},
+				classes: []phpClass{tt.class},
 			}
 
 			stubGen := StubGenerator{generator}
@@ -285,33 +285,33 @@ func TestStubGenerator_ClassGeneration(t *testing.T) {
 }
 
 func TestStubGenerator_MultipleItems(t *testing.T) {
-	functions := []PHPFunction{
+	functions := []phpFunction{
 		{
-			Name:      "func1",
-			Signature: "func1(): void",
+			name:      "func1",
+			signature: "func1(): void",
 		},
 		{
-			Name:      "func2",
-			Signature: "func2(string $param): bool",
+			name:      "func2",
+			signature: "func2(string $param): bool",
 		},
 		{
-			Name:      "func3",
-			Signature: "func3(int $a, int $b): int",
+			name:      "func3",
+			signature: "func3(int $a, int $b): int",
 		},
 	}
 
-	classes := []PHPClass{
+	classes := []phpClass{
 		{
-			Name: "Class1",
+			name: "Class1",
 		},
 		{
-			Name: "Class2",
+			name: "Class2",
 		},
 	}
 
 	generator := &Generator{
-		Functions: functions,
-		Classes:   classes,
+		functions: functions,
+		classes:   classes,
 	}
 
 	stubGen := StubGenerator{generator}
@@ -319,29 +319,29 @@ func TestStubGenerator_MultipleItems(t *testing.T) {
 	assert.NoError(t, err, "buildContent() failed")
 
 	for _, fn := range functions {
-		expectedFunc := "function " + fn.Name
+		expectedFunc := "function " + fn.name
 		assert.Contains(t, content, expectedFunc, "Should contain function: %s", expectedFunc)
 	}
 
 	for _, class := range classes {
-		expectedClass := "class " + class.Name
+		expectedClass := "class " + class.name
 		assert.Contains(t, content, expectedClass, "Should contain class: %s", expectedClass)
 	}
 
 	funcPos := strings.Index(content, "function func1")
 	classPos := strings.Index(content, "class Class1")
 
-	assert.NotEqual(t, -1, funcPos, "Functions should be present")
-	assert.NotEqual(t, -1, classPos, "Classes should be present")
-	assert.Less(t, funcPos, classPos, "Functions should appear before classes in the stub file")
+	assert.NotEqual(t, -1, funcPos, "functions should be present")
+	assert.NotEqual(t, -1, classPos, "classes should be present")
+	assert.Less(t, funcPos, classPos, "functions should appear before classes in the stub file")
 }
 
 func TestStubGenerator_ErrorHandling(t *testing.T) {
 	generator := &Generator{
 		BaseName: "test",
 		BuildDir: "/invalid/readonly/path",
-		Functions: []PHPFunction{
-			{Name: "test", Signature: "test(): void"},
+		functions: []phpFunction{
+			{name: "test", signature: "test(): void"},
 		},
 	}
 
@@ -352,8 +352,8 @@ func TestStubGenerator_ErrorHandling(t *testing.T) {
 
 func TestStubGenerator_EmptyContent(t *testing.T) {
 	generator := &Generator{
-		Functions: []PHPFunction{},
-		Classes:   []PHPClass{},
+		functions: []phpFunction{},
+		classes:   []phpClass{},
 	}
 
 	stubGen := StubGenerator{generator}
@@ -374,22 +374,22 @@ func TestStubGenerator_EmptyContent(t *testing.T) {
 }
 
 func TestStubGenerator_PHPSyntaxValidation(t *testing.T) {
-	functions := []PHPFunction{
+	functions := []phpFunction{
 		{
-			Name:      "complexFunc",
-			Signature: "complexFunc(?string $name = null, array $options = [], bool $strict = false): ?object",
+			name:      "complexFunc",
+			signature: "complexFunc(?string $name = null, array $options = [], bool $strict = false): ?object",
 		},
 	}
 
-	classes := []PHPClass{
+	classes := []phpClass{
 		{
-			Name: "ComplexClass",
+			name: "ComplexClass",
 		},
 	}
 
 	generator := &Generator{
-		Functions: functions,
-		Classes:   classes,
+		functions: functions,
+		classes:   classes,
 	}
 
 	stubGen := StubGenerator{generator}
@@ -422,27 +422,27 @@ func TestStubGenerator_PHPSyntaxValidation(t *testing.T) {
 func TestStubGenerator_ClassConstants(t *testing.T) {
 	tests := []struct {
 		name      string
-		classes   []PHPClass
-		constants []PHPConstant
+		classes   []phpClass
+		constants []phpConstant
 		contains  []string
 	}{
 		{
 			name: "class with constants",
-			classes: []PHPClass{
-				{Name: "MyClass"},
+			classes: []phpClass{
+				{name: "MyClass"},
 			},
-			constants: []PHPConstant{
+			constants: []phpConstant{
 				{
-					Name:      "STATUS_ACTIVE",
-					Value:     "1",
-					Type:      "int",
-					ClassName: "MyClass",
+					name:      "STATUS_ACTIVE",
+					value:     "1",
+					phpType:   "int",
+					className: "MyClass",
 				},
 				{
-					Name:      "STATUS_INACTIVE",
-					Value:     "0",
-					Type:      "int",
-					ClassName: "MyClass",
+					name:      "STATUS_INACTIVE",
+					value:     "0",
+					phpType:   "int",
+					className: "MyClass",
 				},
 			},
 			contains: []string{
@@ -454,23 +454,23 @@ func TestStubGenerator_ClassConstants(t *testing.T) {
 		},
 		{
 			name: "class with iota constants",
-			classes: []PHPClass{
-				{Name: "StatusClass"},
+			classes: []phpClass{
+				{name: "StatusClass"},
 			},
-			constants: []PHPConstant{
+			constants: []phpConstant{
 				{
-					Name:      "FIRST",
-					Value:     "0",
-					Type:      "int",
-					IsIota:    true,
-					ClassName: "StatusClass",
+					name:      "FIRST",
+					value:     "0",
+					phpType:   "int",
+					isIota:    true,
+					className: "StatusClass",
 				},
 				{
-					Name:      "SECOND",
-					Value:     "1",
-					Type:      "int",
-					IsIota:    true,
-					ClassName: "StatusClass",
+					name:      "SECOND",
+					value:     "1",
+					phpType:   "int",
+					isIota:    true,
+					className: "StatusClass",
 				},
 			},
 			contains: []string{
@@ -483,20 +483,20 @@ func TestStubGenerator_ClassConstants(t *testing.T) {
 		},
 		{
 			name: "global and class constants",
-			classes: []PHPClass{
-				{Name: "TestClass"},
+			classes: []phpClass{
+				{name: "TestClass"},
 			},
-			constants: []PHPConstant{
+			constants: []phpConstant{
 				{
-					Name:  "GLOBAL_CONST",
-					Value: "\"global\"",
-					Type:  "string",
+					name:    "GLOBAL_CONST",
+					value:   "\"global\"",
+					phpType: "string",
 				},
 				{
-					Name:      "CLASS_CONST",
-					Value:     "42",
-					Type:      "int",
-					ClassName: "TestClass",
+					name:      "CLASS_CONST",
+					value:     "42",
+					phpType:   "int",
+					className: "TestClass",
 				},
 			},
 			contains: []string{
@@ -510,8 +510,8 @@ func TestStubGenerator_ClassConstants(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			generator := &Generator{
-				Classes:   tt.classes,
-				Constants: tt.constants,
+				classes:   tt.classes,
+				constants: tt.constants,
 			}
 
 			stubGen := StubGenerator{generator}
@@ -527,12 +527,12 @@ func TestStubGenerator_ClassConstants(t *testing.T) {
 
 func TestStubGenerator_FileStructure(t *testing.T) {
 	generator := &Generator{
-		Functions: []PHPFunction{
-			{Name: "testFunc", Signature: "testFunc(): void"},
+		functions: []phpFunction{
+			{name: "testFunc", signature: "testFunc(): void"},
 		},
-		Classes: []PHPClass{
+		classes: []phpClass{
 			{
-				Name: "TestClass",
+				name: "TestClass",
 			},
 		},
 	}
@@ -574,41 +574,41 @@ func testStubBasicStructure(t *testing.T, content string) {
 	}
 }
 
-func testStubFunctions(t *testing.T, content string, functions []PHPFunction) {
+func testStubFunctions(t *testing.T, content string, functions []phpFunction) {
 	for _, fn := range functions {
-		expectedFunc := "function " + fn.Signature + " {}"
+		expectedFunc := "function " + fn.signature + " {}"
 		assert.Contains(t, content, expectedFunc, "Stub should contain function: %s", expectedFunc)
 	}
 }
 
-func testStubClasses(t *testing.T, content string, classes []PHPClass) {
+func testStubClasses(t *testing.T, content string, classes []phpClass) {
 	for _, class := range classes {
-		expectedClass := "class " + class.Name + " {"
+		expectedClass := "class " + class.name + " {"
 		assert.Contains(t, content, expectedClass, "Stub should contain class: %s", expectedClass)
 
 		expectedConstructor := "public function __construct() {}"
-		assert.Contains(t, content, expectedConstructor, "Class %s should have constructor", class.Name)
+		assert.Contains(t, content, expectedConstructor, "Class %s should have constructor", class.name)
 
-		assert.Contains(t, content, "}", "Class %s should be properly closed", class.Name)
+		assert.Contains(t, content, "}", "Class %s should be properly closed", class.name)
 	}
 }
 
-func testStubConstants(t *testing.T, content string, constants []PHPConstant) {
+func testStubConstants(t *testing.T, content string, constants []phpConstant) {
 	for _, constant := range constants {
-		if constant.ClassName == "" {
-			if constant.IsIota {
-				expectedConst := "const " + constant.Name + " = UNKNOWN;"
+		if constant.className == "" {
+			if constant.isIota {
+				expectedConst := "const " + constant.name + " = UNKNOWN;"
 				assert.Contains(t, content, expectedConst, "Stub should contain iota constant: %s", expectedConst)
 			} else {
-				expectedConst := "const " + constant.Name + " = " + constant.Value + ";"
+				expectedConst := "const " + constant.name + " = " + constant.value + ";"
 				assert.Contains(t, content, expectedConst, "Stub should contain constant: %s", expectedConst)
 			}
 		} else {
-			if constant.IsIota {
-				expectedConst := "public const " + constant.Name + " = UNKNOWN;"
+			if constant.isIota {
+				expectedConst := "public const " + constant.name + " = UNKNOWN;"
 				assert.Contains(t, content, expectedConst, "Stub should contain class iota constant: %s", expectedConst)
 			} else {
-				expectedConst := "public const " + constant.Name + " = " + constant.Value + ";"
+				expectedConst := "public const " + constant.name + " = " + constant.value + ";"
 				assert.Contains(t, content, expectedConst, "Stub should contain class constant: %s", expectedConst)
 			}
 		}

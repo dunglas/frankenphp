@@ -22,16 +22,16 @@ func NewFuncParserDefRegex() *FuncParser {
 	}
 }
 
-func (fp *FuncParser) parse(filename string) ([]PHPFunction, error) {
+func (fp *FuncParser) parse(filename string) ([]phpFunction, error) {
 	file, err := os.Open(filename)
 	if err != nil {
 		return nil, err
 	}
 	defer file.Close()
 
-	var functions []PHPFunction
+	var functions []phpFunction
 	scanner := bufio.NewScanner(file)
-	var currentPHPFunc *PHPFunction
+	var currentPHPFunc *phpFunction
 	validator := Validator{}
 
 	lineNumber := 0
@@ -48,11 +48,11 @@ func (fp *FuncParser) parse(filename string) ([]PHPFunction, error) {
 			}
 
 			if err := validator.validateFunction(*phpFunc); err != nil {
-				fmt.Printf("Warning: Invalid function '%s': %v\n", phpFunc.Name, err)
+				fmt.Printf("Warning: Invalid function '%s': %v\n", phpFunc.name, err)
 				continue
 			}
 
-			phpFunc.LineNumber = lineNumber
+			phpFunc.lineNumber = lineNumber
 			currentPHPFunc = phpFunc
 		}
 
@@ -61,14 +61,14 @@ func (fp *FuncParser) parse(filename string) ([]PHPFunction, error) {
 			if err != nil {
 				return nil, fmt.Errorf("extracting Go function: %w", err)
 			}
-			currentPHPFunc.GoFunction = goFunc
+			currentPHPFunc.goFunction = goFunc
 			functions = append(functions, *currentPHPFunc)
 			currentPHPFunc = nil
 		}
 	}
 
 	if currentPHPFunc != nil {
-		return nil, fmt.Errorf("//export_php function directive at line %d is not followed by a function declaration", currentPHPFunc.LineNumber)
+		return nil, fmt.Errorf("//export_php function directive at line %d is not followed by a function declaration", currentPHPFunc.lineNumber)
 	}
 
 	return functions, scanner.Err()
@@ -99,7 +99,7 @@ func (fp *FuncParser) extractGoFunction(scanner *bufio.Scanner, firstLine string
 	return goFunc, nil
 }
 
-func (fp *FuncParser) parseSignature(signature string) (*PHPFunction, error) {
+func (fp *FuncParser) parseSignature(signature string) (*phpFunction, error) {
 	matches := signatureRegex.FindStringSubmatch(signature)
 
 	if len(matches) != 4 {
@@ -113,7 +113,7 @@ func (fp *FuncParser) parseSignature(signature string) (*PHPFunction, error) {
 	isReturnNullable := strings.HasPrefix(returnTypeStr, "?")
 	returnType := strings.TrimPrefix(returnTypeStr, "?")
 
-	var params []Parameter
+	var params []phpParameter
 	if paramsStr != "" {
 		paramParts := strings.Split(paramsStr, ",")
 		for _, part := range paramParts {
@@ -125,35 +125,35 @@ func (fp *FuncParser) parseSignature(signature string) (*PHPFunction, error) {
 		}
 	}
 
-	return &PHPFunction{
-		Name:             name,
-		Signature:        signature,
-		Params:           params,
-		ReturnType:       returnType,
-		IsReturnNullable: isReturnNullable,
+	return &phpFunction{
+		name:             name,
+		signature:        signature,
+		params:           params,
+		returnType:       returnType,
+		isReturnNullable: isReturnNullable,
 	}, nil
 }
 
-func (fp *FuncParser) parseParameter(paramStr string) (Parameter, error) {
+func (fp *FuncParser) parseParameter(paramStr string) (phpParameter, error) {
 	parts := strings.Split(paramStr, "=")
 	typePart := strings.TrimSpace(parts[0])
 
-	param := Parameter{HasDefault: len(parts) > 1}
+	param := phpParameter{hasDefault: len(parts) > 1}
 
-	if param.HasDefault {
-		param.DefaultValue = fp.sanitizeDefaultValue(strings.TrimSpace(parts[1]))
+	if param.hasDefault {
+		param.defaultValue = fp.sanitizeDefaultValue(strings.TrimSpace(parts[1]))
 	}
 
 	matches := typeNameRegex.FindStringSubmatch(typePart)
 
 	if len(matches) < 3 {
-		return Parameter{}, fmt.Errorf("invalid parameter format: %s", paramStr)
+		return phpParameter{}, fmt.Errorf("invalid parameter format: %s", paramStr)
 	}
 
 	typeStr := strings.TrimSpace(matches[1])
-	param.Name = strings.TrimSpace(matches[2])
-	param.IsNullable = strings.HasPrefix(typeStr, "?")
-	param.Type = strings.TrimPrefix(typeStr, "?")
+	param.name = strings.TrimSpace(matches[2])
+	param.isNullable = strings.HasPrefix(typeStr, "?")
+	param.phpType = strings.TrimPrefix(typeStr, "?")
 
 	return param, nil
 }

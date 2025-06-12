@@ -11,9 +11,9 @@ type Generator struct {
 	BaseName   string
 	SourceFile string
 	BuildDir   string
-	Functions  []PHPFunction
-	Classes    []PHPClass
-	Constants  []PHPConstant
+	functions  []phpFunction
+	classes    []phpClass
+	constants  []phpConstant
 }
 
 // EXPERIMENTAL
@@ -25,7 +25,7 @@ func (g *Generator) Generate() error {
 		return fmt.Errorf("parse source: %w", err)
 	}
 
-	if len(g.Functions) == 0 && len(g.Classes) == 0 && len(g.Constants) == 0 {
+	if len(g.functions) == 0 && len(g.classes) == 0 && len(g.constants) == 0 {
 		return fmt.Errorf("no PHP functions, classes, or constants found in source file")
 	}
 
@@ -64,19 +64,19 @@ func (g *Generator) parseSource() error {
 	if err != nil {
 		return fmt.Errorf("parsing functions: %w", err)
 	}
-	g.Functions = functions
+	g.functions = functions
 
 	classes, err := parser.ParseClasses(g.SourceFile)
 	if err != nil {
 		return fmt.Errorf("parsing classes: %w", err)
 	}
-	g.Classes = classes
+	g.classes = classes
 
 	constants, err := parser.ParseConstants(g.SourceFile)
 	if err != nil {
 		return fmt.Errorf("parsing constants: %w", err)
 	}
-	g.Constants = constants
+	g.constants = constants
 
 	return nil
 }
@@ -90,7 +90,7 @@ func (g *Generator) generateStubFile() error {
 }
 
 func (g *Generator) generateArginfo() error {
-	generator := ArginfoGenerator{generator: g}
+	generator := arginfoGenerator{generator: g}
 	if err := generator.generate(); err != nil {
 		return &GeneratorError{"arginfo generation", "failed to generate arginfo", err}
 	}

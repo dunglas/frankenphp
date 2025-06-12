@@ -116,19 +116,19 @@ func someOtherGoName(num long) *go_value {
 
 			if tt.name == "single function" && len(functions) > 0 {
 				fn := functions[0]
-				assert.Equal(t, "testFunc", fn.Name, "Expected function name 'testFunc'")
-				assert.Equal(t, "string", fn.ReturnType, "Expected return type 'string'")
-				assert.Len(t, fn.Params, 1, "Expected 1 parameter")
-				if len(fn.Params) > 0 {
-					assert.Equal(t, "name", fn.Params[0].Name, "Expected parameter name 'name'")
+				assert.Equal(t, "testFunc", fn.name, "Expected function name 'testFunc'")
+				assert.Equal(t, "string", fn.returnType, "Expected return type 'string'")
+				assert.Len(t, fn.params, 1, "Expected 1 parameter")
+				if len(fn.params) > 0 {
+					assert.Equal(t, "name", fn.params[0].name, "Expected parameter name 'name'")
 				}
 			}
 
 			if tt.name == "decoupled function names" && len(functions) >= 2 {
 				fn1 := functions[0]
-				assert.Equal(t, "my_php_function", fn1.Name, "Expected PHP function name 'my_php_function'")
+				assert.Equal(t, "my_php_function", fn1.name, "Expected PHP function name 'my_php_function'")
 				fn2 := functions[1]
-				assert.Equal(t, "another_php_func", fn2.Name, "Expected PHP function name 'another_php_func'")
+				assert.Equal(t, "another_php_func", fn2.name, "Expected PHP function name 'another_php_func'")
 			}
 		})
 	}
@@ -207,15 +207,15 @@ func TestSignatureParsing(t *testing.T) {
 			}
 
 			assert.NoError(t, err, "parseSignature() unexpected error")
-			assert.Equal(t, tt.funcName, fn.Name, "parseSignature() name mismatch")
-			assert.Len(t, fn.Params, tt.paramCount, "parseSignature() param count mismatch")
-			assert.Equal(t, tt.returnType, fn.ReturnType, "parseSignature() return type mismatch")
-			assert.Equal(t, tt.nullable, fn.IsReturnNullable, "parseSignature() nullable mismatch")
+			assert.Equal(t, tt.funcName, fn.name, "parseSignature() name mismatch")
+			assert.Len(t, fn.params, tt.paramCount, "parseSignature() param count mismatch")
+			assert.Equal(t, tt.returnType, fn.returnType, "parseSignature() return type mismatch")
+			assert.Equal(t, tt.nullable, fn.isReturnNullable, "parseSignature() nullable mismatch")
 
 			if tt.name == "nullable parameters" {
-				if len(fn.Params) >= 2 {
-					assert.True(t, fn.Params[0].IsNullable, "First parameter should be nullable")
-					assert.True(t, fn.Params[1].IsNullable, "Second parameter should be nullable")
+				if len(fn.params) >= 2 {
+					assert.True(t, fn.params[0].isNullable, "First parameter should be nullable")
+					assert.True(t, fn.params[1].isNullable, "Second parameter should be nullable")
 				}
 			}
 		})
@@ -289,13 +289,13 @@ func TestParameterParsing(t *testing.T) {
 			}
 
 			assert.NoError(t, err, "parseParameter() unexpected error")
-			assert.Equal(t, tt.expectedName, param.Name, "parseParameter() name mismatch")
-			assert.Equal(t, tt.expectedType, param.Type, "parseParameter() type mismatch")
-			assert.Equal(t, tt.expectedNullable, param.IsNullable, "parseParameter() nullable mismatch")
-			assert.Equal(t, tt.hasDefault, param.HasDefault, "parseParameter() hasDefault mismatch")
+			assert.Equal(t, tt.expectedName, param.name, "parseParameter() name mismatch")
+			assert.Equal(t, tt.expectedType, param.phpType, "parseParameter() type mismatch")
+			assert.Equal(t, tt.expectedNullable, param.isNullable, "parseParameter() nullable mismatch")
+			assert.Equal(t, tt.hasDefault, param.hasDefault, "parseParameter() hasDefault mismatch")
 
 			if tt.hasDefault {
-				assert.Equal(t, tt.expectedDefault, param.DefaultValue, "parseParameter() defaultValue mismatch")
+				assert.Equal(t, tt.expectedDefault, param.defaultValue, "parseParameter() defaultValue mismatch")
 			}
 		})
 	}

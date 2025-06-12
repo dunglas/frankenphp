@@ -16,8 +16,8 @@ type DocumentationGenerator struct {
 
 type DocTemplateData struct {
 	BaseName  string
-	Functions []PHPFunction
-	Classes   []PHPClass
+	Functions []phpFunction
+	Classes   []phpClass
 }
 
 func (dg *DocumentationGenerator) generate() error {
@@ -37,8 +37,8 @@ func (dg *DocumentationGenerator) generateMarkdown() (string, error) {
 
 	data := DocTemplateData{
 		BaseName:  dg.generator.BaseName,
-		Functions: dg.generator.Functions,
-		Classes:   dg.generator.Classes,
+		Functions: dg.generator.functions,
+		Classes:   dg.generator.classes,
 	}
 
 	var buf bytes.Buffer

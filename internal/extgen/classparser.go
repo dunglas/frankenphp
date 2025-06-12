@@ -23,18 +23,18 @@ type ExportDirective struct {
 
 type ClassParser struct{}
 
-func (cp *ClassParser) Parse(filename string) ([]PHPClass, error) {
+func (cp *ClassParser) Parse(filename string) ([]phpClass, error) {
 	return cp.parse(filename)
 }
 
-func (cp *ClassParser) parse(filename string) ([]PHPClass, error) {
+func (cp *ClassParser) parse(filename string) ([]phpClass, error) {
 	fset := token.NewFileSet()
 	node, err := parser.ParseFile(fset, filename, nil, parser.ParseComments)
 	if err != nil {
 		return nil, fmt.Errorf("parsing file: %w", err)
 	}
 
-	var classes []PHPClass
+	var classes []phpClass
 	validator := Validator{}
 
 	exportDirectives := cp.collectExportDirectives(node, fset)
@@ -72,7 +72,7 @@ func (cp *ClassParser) parse(filename string) ([]PHPClass, error) {
 
 			matchedDirectives[directiveLine] = true
 
-			class := PHPClass{
+			class := phpClass{
 				Name:     phpClass,
 				GoStruct: typeSpec.Name.Name,
 			}
@@ -81,7 +81,7 @@ func (cp *ClassParser) parse(filename string) ([]PHPClass, error) {
 
 			// associate methods with this class
 			for _, method := range methods {
-				if method.ClassName == phpClass {
+				if method.className == phpClass {
 					class.Methods = append(class.Methods, method)
 				}
 			}
@@ -151,8 +151,8 @@ func (cp *ClassParser) extractPHPClassComment(commentGroup *ast.CommentGroup) st
 	return ""
 }
 
-func (cp *ClassParser) parseStructFields(fields []*ast.Field) []ClassProperty {
-	var properties []ClassProperty
+func (cp *ClassParser) parseStructFields(fields []*ast.Field) []phpClassProperty {
+	var properties []phpClassProperty
 
 	for _, field := range fields {
 		for _, name := range field.Names {
@@ -164,19 +164,19 @@ func (cp *ClassParser) parseStructFields(fields []*ast.Field) []ClassProperty {
 	return properties
 }
 
-func (cp *ClassParser) parseStructField(fieldName string, field *ast.Field) ClassProperty {
-	prop := ClassProperty{Name: fieldName}
+func (cp *ClassParser) parseStructField(fieldName string, field *ast.Field) phpClassProperty {
+	prop := phpClassProperty{name: fieldName}
 
 	// check if field is a pointer (nullable)
 	if starExpr, isPointer := field.Type.(*ast.StarExpr); isPointer {
-		prop.IsNullable = true
-		prop.GoType = cp.typeToString(starExpr.X)
+		prop.isNullable = true
+		prop.goType = cp.typeToString(starExpr.X)
 	} else {
-		prop.IsNullable = false
-		prop.GoType = cp.typeToString(field.Type)
+		prop.isNullable = false
+		prop.goType = cp.typeToString(field.Type)
 	}
 
-	prop.Type = cp.goTypeToPHPType(prop.GoType)
+	prop.phpType = cp.goTypeToPHPType(prop.goType)
 	return prop
 }
 
@@ -217,16 +217,16 @@ func (cp *ClassParser) goTypeToPHPType(goType string) string {
 	return "mixed"
 }
 
-func (cp *ClassParser) parseMethods(filename string) ([]ClassMethod, error) {
+func (cp *ClassParser) parseMethods(filename string) ([]phpClassMethod, error) {
 	file, err := os.Open(filename)
 	if err != nil {
 		return nil, err
 	}
 	defer file.Close()
 
-	var methods []ClassMethod
+	var methods []phpClassMethod
 	scanner := bufio.NewScanner(file)
-	var currentMethod *ClassMethod
+	var currentMethod *phpClassMethod
 
 	lineNumber := 0
 	for scanner.Scan() {
@@ -243,7 +243,7 @@ func (cp *ClassParser) parseMethods(filename string) ([]ClassMethod, error) {
 				continue
 			}
 
-			method.LineNumber = lineNumber
+			method.lineNumber = lineNumber
 			currentMethod = method
 		}
 
@@ -252,20 +252,20 @@ func (cp *ClassParser) parseMethods(filename string) ([]ClassMethod, error) {
 			if err != nil {
 				return nil, fmt.Errorf("extracting Go method function: %w", err)
 			}
-			currentMethod.GoFunction = goFunc
+			currentMethod.goFunction = goFunc
 			methods = append(methods, *currentMethod)
 			currentMethod = nil
 		}
 	}
 
 	if currentMethod != nil {
-		return nil, fmt.Errorf("//export_php:method directive at line %d is not followed by a function declaration", currentMethod.LineNumber)
+		return nil, fmt.Errorf("//export_php:method directive at line %d is not followed by a function declaration", currentMethod.lineNumber)
 	}
 
 	return methods, scanner.Err()
 }
 
-func (cp *ClassParser) parseMethodSignature(className, signature string) (*ClassMethod, error) {
+func (cp *ClassParser) parseMethodSignature(className, signature string) (*phpClassMethod, error) {
 	matches := methodSignatureRegex.FindStringSubmatch(signature)
 
 	if len(matches) != 4 {
@@ -279,7 +279,7 @@ func (cp *ClassParser) parseMethodSignature(className, signature string) (*Class
 	isReturnNullable := strings.HasPrefix(returnTypeStr, "?")
 	returnType := strings.TrimPrefix(returnTypeStr, "?")
 
-	var params []Parameter
+	var params []phpParameter
 	if paramsStr != "" {
 		paramParts := strings.Split(paramsStr, ",")
 		for _, part := range paramParts {
@@ -291,37 +291,37 @@ func (cp *ClassParser) parseMethodSignature(className, signature string) (*Class
 		}
 	}
 
-	return &ClassMethod{
-		Name:             methodName,
-		PHPName:          methodName,
-		ClassName:        className,
-		Signature:        signature,
-		Params:           params,
-		ReturnType:       returnType,
-		IsReturnNullable: isReturnNullable,
+	return &phpClassMethod{
+		name:             methodName,
+		phpName:          methodName,
+		className:        className,
+		signature:        signature,
+		params:           params,
+		returnType:       returnType,
+		isReturnNullable: isReturnNullable,
 	}, nil
 }
 
-func (cp *ClassParser) parseMethodParameter(paramStr string) (Parameter, error) {
+func (cp *ClassParser) parseMethodParameter(paramStr string) (phpParameter, error) {
 	parts := strings.Split(paramStr, "=")
 	typePart := strings.TrimSpace(parts[0])
 
-	param := Parameter{HasDefault: len(parts) > 1}
+	param := phpParameter{hasDefault: len(parts) > 1}
 
-	if param.HasDefault {
-		param.DefaultValue = cp.sanitizeDefaultValue(strings.TrimSpace(parts[1]))
+	if param.hasDefault {
+		param.defaultValue = cp.sanitizeDefaultValue(strings.TrimSpace(parts[1]))
 	}
 
 	matches := methodParamTypeNameRegex.FindStringSubmatch(typePart)
 
 	if len(matches) < 3 {
-		return Parameter{}, fmt.Errorf("invalid parameter format: %s", paramStr)
+		return phpParameter{}, fmt.Errorf("invalid parameter format: %s", paramStr)
 	}
 
 	typeStr := strings.TrimSpace(matches[1])
-	param.Name = strings.TrimSpace(matches[2])
-	param.IsNullable = strings.HasPrefix(typeStr, "?")
-	param.Type = strings.TrimPrefix(typeStr, "?")
+	param.name = strings.TrimSpace(matches[2])
+	param.isNullable = strings.HasPrefix(typeStr, "?")
+	param.phpType = strings.TrimPrefix(typeStr, "?")
 
 	return param, nil
 }

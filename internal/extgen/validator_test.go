@@ -9,75 +9,75 @@ import (
 func TestValidateFunction(t *testing.T) {
 	tests := []struct {
 		name        string
-		function    PHPFunction
+		function    phpFunction
 		expectError bool
 	}{
 		{
 			name: "valid function",
-			function: PHPFunction{
-				Name:       "validFunction",
-				ReturnType: "string",
-				Params: []Parameter{
-					{Name: "param1", Type: "string"},
-					{Name: "param2", Type: "int"},
+			function: phpFunction{
+				name:       "validFunction",
+				returnType: "string",
+				params: []phpParameter{
+					{name: "param1", phpType: "string"},
+					{name: "param2", phpType: "int"},
 				},
 			},
 			expectError: false,
 		},
 		{
 			name: "valid function with nullable return",
-			function: PHPFunction{
-				Name:             "nullableReturn",
-				ReturnType:       "string",
-				IsReturnNullable: true,
-				Params: []Parameter{
-					{Name: "data", Type: "array"},
+			function: phpFunction{
+				name:             "nullableReturn",
+				returnType:       "string",
+				isReturnNullable: true,
+				params: []phpParameter{
+					{name: "data", phpType: "array"},
 				},
 			},
 			expectError: false,
 		},
 		{
 			name: "empty function name",
-			function: PHPFunction{
-				Name:       "",
-				ReturnType: "string",
+			function: phpFunction{
+				name:       "",
+				returnType: "string",
 			},
 			expectError: true,
 		},
 		{
 			name: "invalid function name - starts with number",
-			function: PHPFunction{
-				Name:       "123invalid",
-				ReturnType: "string",
+			function: phpFunction{
+				name:       "123invalid",
+				returnType: "string",
 			},
 			expectError: true,
 		},
 		{
 			name: "invalid function name - contains special chars",
-			function: PHPFunction{
-				Name:       "invalid-name",
-				ReturnType: "string",
+			function: phpFunction{
+				name:       "invalid-name",
+				returnType: "string",
 			},
 			expectError: true,
 		},
 		{
 			name: "invalid parameter name",
-			function: PHPFunction{
-				Name:       "validName",
-				ReturnType: "string",
-				Params: []Parameter{
-					{Name: "123invalid", Type: "string"},
+			function: phpFunction{
+				name:       "validName",
+				returnType: "string",
+				params: []phpParameter{
+					{name: "123invalid", phpType: "string"},
 				},
 			},
 			expectError: true,
 		},
 		{
 			name: "empty parameter name",
-			function: PHPFunction{
-				Name:       "validName",
-				ReturnType: "string",
-				Params: []Parameter{
-					{Name: "", Type: "string"},
+			function: phpFunction{
+				name:       "validName",
+				returnType: "string",
+				params: []phpParameter{
+					{name: "", phpType: "string"},
 				},
 			},
 			expectError: true,
@@ -90,9 +90,9 @@ func TestValidateFunction(t *testing.T) {
 			err := validator.validateFunction(tt.function)
 
 			if tt.expectError {
-				assert.Error(t, err, "validateFunction() should return an error for function %s", tt.function.Name)
+				assert.Error(t, err, "validateFunction() should return an error for function %s", tt.function.name)
 			} else {
-				assert.NoError(t, err, "validateFunction() should not return an error for function %s", tt.function.Name)
+				assert.NoError(t, err, "validateFunction() should not return an error for function %s", tt.function.name)
 			}
 		})
 	}
@@ -168,49 +168,49 @@ func TestValidateReturnType(t *testing.T) {
 func TestValidateClassProperty(t *testing.T) {
 	tests := []struct {
 		name        string
-		prop        ClassProperty
+		prop        phpClassProperty
 		expectError bool
 	}{
 		{
 			name: "valid property",
-			prop: ClassProperty{
-				Name:   "validProperty",
-				Type:   "string",
-				GoType: "string",
+			prop: phpClassProperty{
+				name:    "validProperty",
+				phpType: "string",
+				goType:  "string",
 			},
 			expectError: false,
 		},
 		{
 			name: "valid nullable property",
-			prop: ClassProperty{
-				Name:       "nullableProperty",
-				Type:       "int",
-				GoType:     "*int",
-				IsNullable: true,
+			prop: phpClassProperty{
+				name:       "nullableProperty",
+				phpType:    "int",
+				goType:     "*int",
+				isNullable: true,
 			},
 			expectError: false,
 		},
 		{
 			name: "empty property name",
-			prop: ClassProperty{
-				Name: "",
-				Type: "string",
+			prop: phpClassProperty{
+				name:    "",
+				phpType: "string",
 			},
 			expectError: true,
 		},
 		{
 			name: "invalid property name",
-			prop: ClassProperty{
-				Name: "123invalid",
-				Type: "string",
+			prop: phpClassProperty{
+				name:    "123invalid",
+				phpType: "string",
 			},
 			expectError: true,
 		},
 		{
 			name: "invalid property type",
-			prop: ClassProperty{
-				Name: "validName",
-				Type: "invalidType",
+			prop: phpClassProperty{
+				name:    "validName",
+				phpType: "invalidType",
 			},
 			expectError: true,
 		},
@@ -233,57 +233,57 @@ func TestValidateClassProperty(t *testing.T) {
 func TestValidateParameter(t *testing.T) {
 	tests := []struct {
 		name        string
-		param       Parameter
+		param       phpParameter
 		expectError bool
 	}{
 		{
 			name: "valid string parameter",
-			param: Parameter{
-				Name: "validParam",
-				Type: "string",
+			param: phpParameter{
+				name:    "validParam",
+				phpType: "string",
 			},
 			expectError: false,
 		},
 		{
 			name: "valid nullable parameter",
-			param: Parameter{
-				Name:       "nullableParam",
-				Type:       "int",
-				IsNullable: true,
+			param: phpParameter{
+				name:       "nullableParam",
+				phpType:    "int",
+				isNullable: true,
 			},
 			expectError: false,
 		},
 		{
 			name: "valid parameter with default",
-			param: Parameter{
-				Name:         "defaultParam",
-				Type:         "string",
-				HasDefault:   true,
-				DefaultValue: "hello",
+			param: phpParameter{
+				name:         "defaultParam",
+				phpType:      "string",
+				hasDefault:   true,
+				defaultValue: "hello",
 			},
 			expectError: false,
 		},
 		{
 			name: "empty parameter name",
-			param: Parameter{
-				Name: "",
-				Type: "string",
+			param: phpParameter{
+				name:    "",
+				phpType: "string",
 			},
 			expectError: true,
 		},
 		{
 			name: "invalid parameter name",
-			param: Parameter{
-				Name: "123invalid",
-				Type: "string",
+			param: phpParameter{
+				name:    "123invalid",
+				phpType: "string",
 			},
 			expectError: true,
 		},
 		{
 			name: "invalid parameter type",
-			param: Parameter{
-				Name: "validName",
-				Type: "invalidType",
+			param: phpParameter{
+				name:    "validName",
+				phpType: "invalidType",
 			},
 			expectError: true,
 		},
@@ -306,56 +306,56 @@ func TestValidateParameter(t *testing.T) {
 func TestValidateClass(t *testing.T) {
 	tests := []struct {
 		name        string
-		class       PHPClass
+		class       phpClass
 		expectError bool
 	}{
 		{
 			name: "valid class",
-			class: PHPClass{
-				Name:     "ValidClass",
-				GoStruct: "ValidStruct",
-				Properties: []ClassProperty{
-					{Name: "name", Type: "string"},
-					{Name: "age", Type: "int"},
+			class: phpClass{
+				name:     "ValidClass",
+				goStruct: "ValidStruct",
+				properties: []phpClassProperty{
+					{name: "name", phpType: "string"},
+					{name: "age", phpType: "int"},
 				},
 			},
 			expectError: false,
 		},
 		{
 			name: "valid class with nullable properties",
-			class: PHPClass{
-				Name:     "NullableClass",
-				GoStruct: "NullableStruct",
-				Properties: []ClassProperty{
-					{Name: "required", Type: "string", IsNullable: false},
-					{Name: "optional", Type: "string", IsNullable: true},
+			class: phpClass{
+				name:     "NullableClass",
+				goStruct: "NullableStruct",
+				properties: []phpClassProperty{
+					{name: "required", phpType: "string", isNullable: false},
+					{name: "optional", phpType: "string", isNullable: true},
 				},
 			},
 			expectError: false,
 		},
 		{
 			name: "empty class name",
-			class: PHPClass{
-				Name:     "",
-				GoStruct: "ValidStruct",
+			class: phpClass{
+				name:     "",
+				goStruct: "ValidStruct",
 			},
 			expectError: true,
 		},
 		{
 			name: "invalid class name",
-			class: PHPClass{
-				Name:     "123InvalidClass",
-				GoStruct: "ValidStruct",
+			class: phpClass{
+				name:     "123InvalidClass",
+				goStruct: "ValidStruct",
 			},
 			expectError: true,
 		},
 		{
 			name: "invalid property",
-			class: PHPClass{
-				Name:     "ValidClass",
-				GoStruct: "ValidStruct",
-				Properties: []ClassProperty{
-					{Name: "123invalid", Type: "string"},
+			class: phpClass{
+				name:     "ValidClass",
+				goStruct: "ValidStruct",
+				properties: []phpClassProperty{
+					{name: "123invalid", phpType: "string"},
 				},
 			},
 			expectError: true,

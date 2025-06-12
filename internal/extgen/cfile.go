@@ -17,9 +17,9 @@ type CFileGenerator struct {
 
 type CTemplateData struct {
 	BaseName  string
-	Functions []PHPFunction
-	Classes   []PHPClass
-	Constants []PHPConstant
+	Functions []phpFunction
+	Classes   []phpClass
+	Constants []phpConstant
 	Version   string
 }
 
@@ -41,7 +41,7 @@ func (cg *CFileGenerator) buildContent() (string, error) {
 	}
 	builder.WriteString(templateContent)
 
-	for _, fn := range cg.generator.Functions {
+	for _, fn := range cg.generator.functions {
 		fnGen := PHPFuncGenerator{paramParser: &ParameterParser{}}
 		builder.WriteString(fnGen.generate(fn))
 	}
@@ -62,9 +62,9 @@ func (cg *CFileGenerator) getTemplateContent() (string, error) {
 
 	data := CTemplateData{
 		BaseName:  cg.generator.BaseName,
-		Functions: cg.generator.Functions,
-		Classes:   cg.generator.Classes,
-		Constants: cg.generator.Constants,
+		Functions: cg.generator.functions,
+		Classes:   cg.generator.classes,
+		Constants: cg.generator.constants,
 		Version:   "1.0.0",
 	}
 

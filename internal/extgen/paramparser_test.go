@@ -11,12 +11,12 @@ func TestParameterParser_AnalyzeParameters(t *testing.T) {
 
 	tests := []struct {
 		name     string
-		params   []Parameter
+		params   []phpParameter
 		expected ParameterInfo
 	}{
 		{
 			name:   "no parameters",
-			params: []Parameter{},
+			params: []phpParameter{},
 			expected: ParameterInfo{
 				RequiredCount: 0,
 				TotalCount:    0,
@@ -24,9 +24,9 @@ func TestParameterParser_AnalyzeParameters(t *testing.T) {
 		},
 		{
 			name: "all required parameters",
-			params: []Parameter{
-				{Name: "name", Type: "string", HasDefault: false},
-				{Name: "count", Type: "int", HasDefault: false},
+			params: []phpParameter{
+				{name: "name", phpType: "string", hasDefault: false},
+				{name: "count", phpType: "int", hasDefault: false},
 			},
 			expected: ParameterInfo{
 				RequiredCount: 2,
@@ -35,10 +35,10 @@ func TestParameterParser_AnalyzeParameters(t *testing.T) {
 		},
 		{
 			name: "mixed required and optional parameters",
-			params: []Parameter{
-				{Name: "name", Type: "string", HasDefault: false},
-				{Name: "count", Type: "int", HasDefault: true, DefaultValue: "10"},
-				{Name: "enabled", Type: "bool", HasDefault: true, DefaultValue: "true"},
+			params: []phpParameter{
+				{name: "name", phpType: "string", hasDefault: false},
+				{name: "count", phpType: "int", hasDefault: true, defaultValue: "10"},
+				{name: "enabled", phpType: "bool", hasDefault: true, defaultValue: "true"},
 			},
 			expected: ParameterInfo{
 				RequiredCount: 1,
@@ -60,83 +60,83 @@ func TestParameterParser_GenerateParamDeclarations(t *testing.T) {
 
 	tests := []struct {
 		name     string
-		params   []Parameter
+		params   []phpParameter
 		expected string
 	}{
 		{
 			name:     "no parameters",
-			params:   []Parameter{},
+			params:   []phpParameter{},
 			expected: "",
 		},
 		{
 			name: "string parameter",
-			params: []Parameter{
-				{Name: "message", Type: "string", HasDefault: false},
+			params: []phpParameter{
+				{name: "message", phpType: "string", hasDefault: false},
 			},
 			expected: "    zend_string *message = NULL;",
 		},
 		{
 			name: "nullable string parameter",
-			params: []Parameter{
-				{Name: "message", Type: "string", HasDefault: false, IsNullable: true},
+			params: []phpParameter{
+				{name: "message", phpType: "string", hasDefault: false, isNullable: true},
 			},
 			expected: "    zend_string *message = NULL;\n    zend_bool message_is_null = 0;",
 		},
 		{
 			name: "int parameter with default",
-			params: []Parameter{
-				{Name: "count", Type: "int", HasDefault: true, DefaultValue: "42"},
+			params: []phpParameter{
+				{name: "count", phpType: "int", hasDefault: true, defaultValue: "42"},
 			},
 			expected: "    zend_long count = 42;",
 		},
 		{
 			name: "nullable int parameter",
-			params: []Parameter{
-				{Name: "count", Type: "int", HasDefault: false, IsNullable: true},
+			params: []phpParameter{
+				{name: "count", phpType: "int", hasDefault: false, isNullable: true},
 			},
 			expected: "    zend_long count = 0;\n    zend_bool count_is_null = 0;",
 		},
 		{
 			name: "bool parameter with true default",
-			params: []Parameter{
-				{Name: "enabled", Type: "bool", HasDefault: true, DefaultValue: "true"},
+			params: []phpParameter{
+				{name: "enabled", phpType: "bool", hasDefault: true, defaultValue: "true"},
 			},
 			expected: "    zend_bool enabled = 1;",
 		},
 		{
 			name: "nullable bool parameter",
-			params: []Parameter{
-				{Name: "enabled", Type: "bool", HasDefault: false, IsNullable: true},
+			params: []phpParameter{
+				{name: "enabled", phpType: "bool", hasDefault: false, isNullable: true},
 			},
 			expected: "    zend_bool enabled = 0;\n    zend_bool enabled_is_null = 0;",
 		},
 		{
 			name: "float parameter",
-			params: []Parameter{
-				{Name: "ratio", Type: "float", HasDefault: false},
+			params: []phpParameter{
+				{name: "ratio", phpType: "float", hasDefault: false},
 			},
 			expected: "    double ratio = 0.0;",
 		},
 		{
 			name: "nullable float parameter",
-			params: []Parameter{
-				{Name: "ratio", Type: "float", HasDefault: false, IsNullable: true},
+			params: []phpParameter{
+				{name: "ratio", phpType: "float", hasDefault: false, isNullable: true},
 			},
 			expected: "    double ratio = 0.0;\n    zend_bool ratio_is_null = 0;",
 		},
 		{
 			name: "multiple parameters",
-			params: []Parameter{
-				{Name: "name", Type: "string", HasDefault: false},
-				{Name: "count", Type: "int", HasDefault: true, DefaultValue: "10"},
+			params: []phpParameter{
+				{name: "name", phpType: "string", hasDefault: false},
+				{name: "count", phpType: "int", hasDefault: true, defaultValue: "10"},
 			},
 			expected: "    zend_string *name = NULL;\n    zend_long count = 10;",
 		},
 		{
 			name: "mixed nullable and non-nullable parameters",
-			params: []Parameter{
-				{Name: "name", Type: "string", HasDefault: false, IsNullable: false},
-				{Name: "count", Type: "int", HasDefault: false, IsNullable: true},
+			params: []phpParameter{
+				{name: "name", phpType: "string", hasDefault: false, isNullable: false},
+				{name: "count", phpType: "int", hasDefault: false, isNullable: true},
 			},
 			expected: "    zend_string *name = NULL;\n    zend_long count = 0;\n    zend_bool count_is_null = 0;",
 		},
@@ -155,13 +155,13 @@ func TestParameterParser_GenerateParamParsing(t *testing.T) {
 
 	tests := []struct {
 		name          string
-		params        []Parameter
+		params        []phpParameter
 		requiredCount int
 		expected      string
 	}{
 		{
 			name:          "no parameters",
-			params:        []Parameter{},
+			params:        []phpParameter{},
 			requiredCount: 0,
 			expected: `    if (zend_parse_parameters_none() == FAILURE) {
         RETURN_THROWS();
@@ -169,8 +169,8 @@ func TestParameterParser_GenerateParamParsing(t *testing.T) {
 		},
 		{
 			name: "single required string parameter",
-			params: []Parameter{
-				{Name: "message", Type: "string", HasDefault: false},
+			params: []phpParameter{
+				{name: "message", phpType: "string", hasDefault: false},
 			},
 			requiredCount: 1,
 			expected: `    ZEND_PARSE_PARAMETERS_START(1, 1)
@@ -179,10 +179,10 @@ func TestParameterParser_GenerateParamParsing(t *testing.T) {
 		},
 		{
 			name: "mixed required and optional parameters",
-			params: []Parameter{
-				{Name: "name", Type: "string", HasDefault: false},
-				{Name: "count", Type: "int", HasDefault: true, DefaultValue: "10"},
-				{Name: "enabled", Type: "bool", HasDefault: true, DefaultValue: "true"},
+			params: []phpParameter{
+				{name: "name", phpType: "string", hasDefault: false},
+				{name: "count", phpType: "int", hasDefault: true, defaultValue: "10"},
+				{name: "enabled", phpType: "bool", hasDefault: true, defaultValue: "true"},
 			},
 			requiredCount: 1,
 			expected: `    ZEND_PARSE_PARAMETERS_START(1, 3)
@@ -207,28 +207,28 @@ func TestParameterParser_GenerateGoCallParams(t *testing.T) {
 
 	tests := []struct {
 		name     string
-		params   []Parameter
+		params   []phpParameter
 		expected string
 	}{
 		{
 			name:     "no parameters",
-			params:   []Parameter{},
+			params:   []phpParameter{},
 			expected: "",
 		},
 		{
 			name: "single string parameter",
-			params: []Parameter{
-				{Name: "message", Type: "string"},
+			params: []phpParameter{
+				{name: "message", phpType: "string"},
 			},
 			expected: "message",
 		},
 		{
 			name: "multiple parameters of different types",
-			params: []Parameter{
-				{Name: "name", Type: "string"},
-				{Name: "count", Type: "int"},
-				{Name: "ratio", Type: "float"},
-				{Name: "enabled", Type: "bool"},
+			params: []phpParameter{
+				{name: "name", phpType: "string"},
+				{name: "count", phpType: "int"},
+				{name: "ratio", phpType: "float"},
+				{name: "enabled", phpType: "bool"},
 			},
 			expected: "name, (long) count, (double) ratio, (int) enabled",
 		},
@@ -247,52 +247,52 @@ func TestParameterParser_GenerateParamParsingMacro(t *testing.T) {
 
 	tests := []struct {
 		name     string
-		param    Parameter
+		param    phpParameter
 		expected string
 	}{
 		{
 			name:     "string parameter",
-			param:    Parameter{Name: "message", Type: "string"},
+			param:    phpParameter{name: "message", phpType: "string"},
 			expected: "\n        Z_PARAM_STR(message)",
 		},
 		{
 			name:     "nullable string parameter",
-			param:    Parameter{Name: "message", Type: "string", IsNullable: true},
+			param:    phpParameter{name: "message", phpType: "string", isNullable: true},
 			expected: "\n        Z_PARAM_STR_OR_NULL(message, message_is_null)",
 		},
 		{
 			name:     "int parameter",
-			param:    Parameter{Name: "count", Type: "int"},
+			param:    phpParameter{name: "count", phpType: "int"},
 			expected: "\n        Z_PARAM_LONG(count)",
 		},
 		{
 			name:     "nullable int parameter",
-			param:    Parameter{Name: "count", Type: "int", IsNullable: true},
+			param:    phpParameter{name: "count", phpType: "int", isNullable: true},
 			expected: "\n        Z_PARAM_LONG_OR_NULL(count, count_is_null)",
 		},
 		{
 			name:     "float parameter",
-			param:    Parameter{Name: "ratio", Type: "float"},
+			param:    phpParameter{name: "ratio", phpType: "float"},
 			expected: "\n        Z_PARAM_DOUBLE(ratio)",
 		},
 		{
 			name:     "nullable float parameter",
-			param:    Parameter{Name: "ratio", Type: "float", IsNullable: true},
+			param:    phpParameter{name: "ratio", phpType: "float", isNullable: true},
 			expected: "\n        Z_PARAM_DOUBLE_OR_NULL(ratio, ratio_is_null)",
 		},
 		{
 			name:     "bool parameter",
-			param:    Parameter{Name: "enabled", Type: "bool"},
+			param:    phpParameter{name: "enabled", phpType: "bool"},
 			expected: "\n        Z_PARAM_BOOL(enabled)",
 		},
 		{
 			name:     "nullable bool parameter",
-			param:    Parameter{Name: "enabled", Type: "bool", IsNullable: true},
+			param:    phpParameter{name: "enabled", phpType: "bool", isNullable: true},
 			expected: "\n        Z_PARAM_BOOL_OR_NULL(enabled, enabled_is_null)",
 		},
 		{
 			name:     "unknown type",
-			param:    Parameter{Name: "unknown", Type: "unknown"},
+			param:    phpParameter{name: "unknown", phpType: "unknown"},
 			expected: "",
 		},
 	}
@@ -310,25 +310,25 @@ func TestParameterParser_GetDefaultValue(t *testing.T) {
 
 	tests := []struct {
 		name     string
-		param    Parameter
+		param    phpParameter
 		fallback string
 		expected string
 	}{
 		{
 			name:     "parameter without default",
-			param:    Parameter{Name: "count", Type: "int", HasDefault: false},
+			param:    phpParameter{name: "count", phpType: "int", hasDefault: false},
 			fallback: "0",
 			expected: "0",
 		},
 		{
 			name:     "parameter with default value",
-			param:    Parameter{Name: "count", Type: "int", HasDefault: true, DefaultValue: "42"},
+			param:    phpParameter{name: "count", phpType: "int", hasDefault: true, defaultValue: "42"},
 			fallback: "0",
 			expected: "42",
 		},
 		{
 			name:     "parameter with empty default value",
-			param:    Parameter{Name: "count", Type: "int", HasDefault: true, DefaultValue: ""},
+			param:    phpParameter{name: "count", phpType: "int", hasDefault: true, defaultValue: ""},
 			fallback: "0",
 			expected: "0",
 		},
@@ -347,52 +347,52 @@ func TestParameterParser_GenerateSingleGoCallParam(t *testing.T) {
 
 	tests := []struct {
 		name     string
-		param    Parameter
+		param    phpParameter
 		expected string
 	}{
 		{
 			name:     "string parameter",
-			param:    Parameter{Name: "message", Type: "string"},
+			param:    phpParameter{name: "message", phpType: "string"},
 			expected: "message",
 		},
 		{
 			name:     "nullable string parameter",
-			param:    Parameter{Name: "message", Type: "string", IsNullable: true},
+			param:    phpParameter{name: "message", phpType: "string", isNullable: true},
 			expected: "message_is_null ? NULL : message",
 		},
 		{
 			name:     "int parameter",
-			param:    Parameter{Name: "count", Type: "int"},
+			param:    phpParameter{name: "count", phpType: "int"},
 			expected: "(long) count",
 		},
 		{
 			name:     "nullable int parameter",
-			param:    Parameter{Name: "count", Type: "int", IsNullable: true},
+			param:    phpParameter{name: "count", phpType: "int", isNullable: true},
 			expected: "count_is_null ? NULL : &count",
 		},
 		{
 			name:     "float parameter",
-			param:    Parameter{Name: "ratio", Type: "float"},
+			param:    phpParameter{name: "ratio", phpType: "float"},
 			expected: "(double) ratio",
 		},
 		{
 			name:     "nullable float parameter",
-			param:    Parameter{Name: "ratio", Type: "float", IsNullable: true},
+			param:    phpParameter{name: "ratio", phpType: "float", isNullable: true},
 			expected: "ratio_is_null ? NULL : &ratio",
 		},
 		{
 			name:     "bool parameter",
-			param:    Parameter{Name: "enabled", Type: "bool"},
+			param:    phpParameter{name: "enabled", phpType: "bool"},
 			expected: "(int) enabled",
 		},
 		{
 			name:     "nullable bool parameter",
-			param:    Parameter{Name: "enabled", Type: "bool", IsNullable: true},
+			param:    phpParameter{name: "enabled", phpType: "bool", isNullable: true},
 			expected: "enabled_is_null ? NULL : &enabled",
 		},
 		{
 			name:     "unknown type",
-			param:    Parameter{Name: "unknown", Type: "unknown"},
+			param:    phpParameter{name: "unknown", phpType: "unknown"},
 			expected: "unknown",
 		},
 	}
@@ -410,52 +410,52 @@ func TestParameterParser_GenerateSingleParamDeclaration(t *testing.T) {
 
 	tests := []struct {
 		name     string
-		param    Parameter
+		param    phpParameter
 		expected []string
 	}{
 		{
 			name:     "string parameter",
-			param:    Parameter{Name: "message", Type: "string", HasDefault: false},
+			param:    phpParameter{name: "message", phpType: "string", hasDefault: false},
 			expected: []string{"zend_string *message = NULL;"},
 		},
 		{
 			name:     "nullable string parameter",
-			param:    Parameter{Name: "message", Type: "string", HasDefault: false, IsNullable: true},
+			param:    phpParameter{name: "message", phpType: "string", hasDefault: false, isNullable: true},
 			expected: []string{"zend_string *message = NULL;", "zend_bool message_is_null = 0;"},
 		},
 		{
 			name:     "int parameter with default",
-			param:    Parameter{Name: "count", Type: "int", HasDefault: true, DefaultValue: "42"},
+			param:    phpParameter{name: "count", phpType: "int", hasDefault: true, defaultValue: "42"},
 			expected: []string{"zend_long count = 42;"},
 		},
 		{
 			name:     "nullable int parameter",
-			param:    Parameter{Name: "count", Type: "int", HasDefault: false, IsNullable: true},
+			param:    phpParameter{name: "count", phpType: "int", hasDefault: false, isNullable: true},
 			expected: []string{"zend_long count = 0;", "zend_bool count_is_null = 0;"},
 		},
 		{
 			name:     "bool parameter with true default",
-			param:    Parameter{Name: "enabled", Type: "bool", HasDefault: true, DefaultValue: "true"},
+			param:    phpParameter{name: "enabled", phpType: "bool", hasDefault: true, defaultValue: "true"},
 			expected: []string{"zend_bool enabled = 1;"},
 		},
 		{
 			name:     "nullable bool parameter",
-			param:    Parameter{Name: "enabled", Type: "bool", HasDefault: false, IsNullable: true},
+			param:    phpParameter{name: "enabled", phpType: "bool", hasDefault: false, isNullable: true},
 			expected: []string{"zend_bool enabled = 0;", "zend_bool enabled_is_null = 0;"},
 		},
 		{
 			name:     "bool parameter with false default",
-			param:    Parameter{Name: "disabled", Type: "bool", HasDefault: true, DefaultValue: "false"},
+			param:    phpParameter{name: "disabled", phpType: "bool", hasDefault: true, defaultValue: "false"},
 			expected: []string{"zend_bool disabled = false;"},
 		},
 		{
 			name:     "float parameter",
-			param:    Parameter{Name: "ratio", Type: "float", HasDefault: false},
+			param:    phpParameter{name: "ratio", phpType: "float", hasDefault: false},
 			expected: []string{"double ratio = 0.0;"},
 		},
 		{
 			name:     "nullable float parameter",
-			param:    Parameter{Name: "ratio", Type: "float", HasDefault: false, IsNullable: true},
+			param:    phpParameter{name: "ratio", phpType: "float", hasDefault: false, isNullable: true},
 			expected: []string{"double ratio = 0.0;", "zend_bool ratio_is_null = 0;"},
 		},
 	}
@@ -471,10 +471,10 @@ func TestParameterParser_GenerateSingleParamDeclaration(t *testing.T) {
 func TestParameterParser_Integration(t *testing.T) {
 	pp := &ParameterParser{}
 
-	params := []Parameter{
-		{Name: "name", Type: "string", HasDefault: false},
-		{Name: "count", Type: "int", HasDefault: true, DefaultValue: "10"},
-		{Name: "enabled", Type: "bool", HasDefault: true, DefaultValue: "true"},
+	params := []phpParameter{
+		{name: "name", phpType: "string", hasDefault: false},
+		{name: "count", phpType: "int", hasDefault: true, defaultValue: "10"},
+		{name: "enabled", phpType: "bool", hasDefault: true, defaultValue: "true"},
 	}
 
 	info := pp.analyzeParameters(params)

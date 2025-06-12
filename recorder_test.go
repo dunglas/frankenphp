@@ -96,7 +96,7 @@ func (rw *ResponseRecorder) writeHeader(b []byte, str string) {
 
 	m := rw.Header()
 
-	_, hasType := m["Content-Type"]
+	_, hasType := m["Content-type"]
 	hasTE := m.Get("Transfer-Encoding") != ""
 	if !hasType && !hasTE {
 		if b == nil {

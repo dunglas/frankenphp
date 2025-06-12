@@ -27,14 +27,14 @@ func NewConstantParserWithDefRegex() *ConstantParser {
 	}
 }
 
-func (cp *ConstantParser) parse(filename string) ([]PHPConstant, error) {
+func (cp *ConstantParser) parse(filename string) ([]phpConstant, error) {
 	file, err := os.Open(filename)
 	if err != nil {
 		return nil, err
 	}
 	defer file.Close()
 
-	var constants []PHPConstant
+	var constants []phpConstant
 	scanner := bufio.NewScanner(file)
 
 	lineNumber := 0
@@ -67,20 +67,20 @@ func (cp *ConstantParser) parse(filename string) ([]PHPConstant, error) {
 				name := matches[1]
 				value := strings.TrimSpace(matches[2])
 
-				constant := PHPConstant{
-					Name:       name,
-					Value:      value,
-					IsIota:     value == "iota",
-					LineNumber: lineNumber,
-					ClassName:  currentClassName,
+				constant := phpConstant{
+					name:       name,
+					value:      value,
+					isIota:     value == "iota",
+					lineNumber: lineNumber,
+					className:  currentClassName,
 				}
 
-				constant.Type = determineConstantType(value)
+				constant.phpType = determineConstantType(value)
 
-				if constant.IsIota {
+				if constant.isIota {
 					// affect a default value because user didn't give one
-					constant.Value = fmt.Sprintf("%d", currentConstantValue)
-					constant.Type = "int"
+					constant.value = fmt.Sprintf("%d", currentConstantValue)
+					constant.phpType = "int"
 					currentConstantValue++
 				}
 

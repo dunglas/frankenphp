@@ -9,22 +9,22 @@ type PHPFuncGenerator struct {
 	paramParser *ParameterParser
 }
 
-func (pfg *PHPFuncGenerator) generate(fn PHPFunction) string {
+func (pfg *PHPFuncGenerator) generate(fn phpFunction) string {
 	var builder strings.Builder
 
-	paramInfo := pfg.paramParser.analyzeParameters(fn.Params)
+	paramInfo := pfg.paramParser.analyzeParameters(fn.params)
 
-	builder.WriteString(fmt.Sprintf("PHP_FUNCTION(%s)\n{\n", fn.Name))
+	builder.WriteString(fmt.Sprintf("PHP_FUNCTION(%s)\n{\n", fn.name))
 
-	if decl := pfg.paramParser.generateParamDeclarations(fn.Params); decl != "" {
+	if decl := pfg.paramParser.generateParamDeclarations(fn.params); decl != "" {
 		builder.WriteString(decl + "\n")
 	}
 
-	builder.WriteString(pfg.paramParser.generateParamParsing(fn.Params, paramInfo.RequiredCount) + "\n")
+	builder.WriteString(pfg.paramParser.generateParamParsing(fn.params, paramInfo.RequiredCount) + "\n")
 
 	builder.WriteString(pfg.generateGoCall(fn) + "\n")
 
-	if returnCode := pfg.generateReturnCode(fn.ReturnType); returnCode != "" {
+	if returnCode := pfg.generateReturnCode(fn.returnType); returnCode != "" {
 		builder.WriteString(returnCode + "\n")
 	}
 
@@ -33,18 +33,18 @@ func (pfg *PHPFuncGenerator) generate(fn PHPFunction) string {
 	return builder.String()
 }
 
-func (pfg *PHPFuncGenerator) generateGoCall(fn PHPFunction) string {
-	callParams := pfg.paramParser.generateGoCallParams(fn.Params)
+func (pfg *PHPFuncGenerator) generateGoCall(fn phpFunction) string {
+	callParams := pfg.paramParser.generateGoCallParams(fn.params)
 
-	if fn.ReturnType == "void" {
-		return fmt.Sprintf("    %s(%s);", fn.Name, callParams)
+	if fn.returnType == "void" {
+		return fmt.Sprintf("    %s(%s);", fn.name, callParams)
 	}
 
-	if fn.ReturnType == "string" {
-		return fmt.Sprintf("    zend_string *result = %s(%s);", fn.Name, callParams)
+	if fn.returnType == "string" {
+		return fmt.Sprintf("    zend_string *result = %s(%s);", fn.name, callParams)
 	}
 
-	return fmt.Sprintf("    %s result = %s(%s);", pfg.getCReturnType(fn.ReturnType), fn.Name, callParams)
+	return fmt.Sprintf("    %s result = %s(%s);", pfg.getCReturnType(fn.returnType), fn.name, callParams)
 }
 
 func (pfg *PHPFuncGenerator) getCReturnType(returnType string) string {

@@ -10,16 +10,16 @@ import (
 func TestPHPFunctionGenerator_Generate(t *testing.T) {
 	tests := []struct {
 		name     string
-		function PHPFunction
+		function phpFunction
 		contains []string // Strings that should be present in the output
 	}{
 		{
 			name: "simple string function",
-			function: PHPFunction{
-				Name:       "greet",
-				ReturnType: "string",
-				Params: []Parameter{
-					{Name: "name", Type: "string"},
+			function: phpFunction{
+				name:       "greet",
+				returnType: "string",
+				params: []phpParameter{
+					{name: "name", phpType: "string"},
 				},
 			},
 			contains: []string{
@@ -32,12 +32,12 @@ func TestPHPFunctionGenerator_Generate(t *testing.T) {
 		},
 		{
 			name: "function with default parameter",
-			function: PHPFunction{
-				Name:       "calculate",
-				ReturnType: "int",
-				Params: []Parameter{
-					{Name: "base", Type: "int"},
-					{Name: "multiplier", Type: "int", HasDefault: true, DefaultValue: "2"},
+			function: phpFunction{
+				name:       "calculate",
+				returnType: "int",
+				params: []phpParameter{
+					{name: "base", phpType: "int"},
+					{name: "multiplier", phpType: "int", hasDefault: true, defaultValue: "2"},
 				},
 			},
 			contains: []string{
@@ -52,11 +52,11 @@ func TestPHPFunctionGenerator_Generate(t *testing.T) {
 		},
 		{
 			name: "void function",
-			function: PHPFunction{
-				Name:       "doSomething",
-				ReturnType: "void",
-				Params: []Parameter{
-					{Name: "action", Type: "string"},
+			function: phpFunction{
+				name:       "doSomething",
+				returnType: "void",
+				params: []phpParameter{
+					{name: "action", phpType: "string"},
 				},
 			},
 			contains: []string{
@@ -66,11 +66,11 @@ func TestPHPFunctionGenerator_Generate(t *testing.T) {
 		},
 		{
 			name: "bool function with default",
-			function: PHPFunction{
-				Name:       "isEnabled",
-				ReturnType: "bool",
-				Params: []Parameter{
-					{Name: "flag", Type: "bool", HasDefault: true, DefaultValue: "true"},
+			function: phpFunction{
+				name:       "isEnabled",
+				returnType: "bool",
+				params: []phpParameter{
+					{name: "flag", phpType: "bool", hasDefault: true, defaultValue: "true"},
 				},
 			},
 			contains: []string{
@@ -82,11 +82,11 @@ func TestPHPFunctionGenerator_Generate(t *testing.T) {
 		},
 		{
 			name: "float function",
-			function: PHPFunction{
-				Name:       "calculate",
-				ReturnType: "float",
-				Params: []Parameter{
-					{Name: "value", Type: "float"},
+			function: phpFunction{
+				name:       "calculate",
+				returnType: "float",
+				params: []phpParameter{
+					{name: "value", phpType: "float"},
 				},
 			},
 			contains: []string{
@@ -116,13 +116,13 @@ func TestPHPFunctionGenerator_Generate(t *testing.T) {
 func TestPHPFunctionGenerator_GenerateParamDeclarations(t *testing.T) {
 	tests := []struct {
 		name     string
-		params   []Parameter
+		params   []phpParameter
 		contains []string
 	}{
 		{
 			name: "string parameter",
-			params: []Parameter{
-				{Name: "message", Type: "string"},
+			params: []phpParameter{
+				{name: "message", phpType: "string"},
 			},
 			contains: []string{
 				"zend_string *message = NULL;",
@@ -130,8 +130,8 @@ func TestPHPFunctionGenerator_GenerateParamDeclarations(t *testing.T) {
 		},
 		{
 			name: "int parameter",
-			params: []Parameter{
-				{Name: "count", Type: "int"},
+			params: []phpParameter{
+				{name: "count", phpType: "int"},
 			},
 			contains: []string{
 				"zend_long count = 0;",
@@ -139,8 +139,8 @@ func TestPHPFunctionGenerator_GenerateParamDeclarations(t *testing.T) {
 		},
 		{
 			name: "bool with default",
-			params: []Parameter{
-				{Name: "enabled", Type: "bool", HasDefault: true, DefaultValue: "true"},
+			params: []phpParameter{
+				{name: "enabled", phpType: "bool", hasDefault: true, defaultValue: "true"},
 			},
 			contains: []string{
 				"zend_bool enabled = 1;",
@@ -148,8 +148,8 @@ func TestPHPFunctionGenerator_GenerateParamDeclarations(t *testing.T) {
 		},
 		{
 			name: "float parameter with default",
-			params: []Parameter{
-				{Name: "rate", Type: "float", HasDefault: true, DefaultValue: "1.5"},
+			params: []phpParameter{
+				{name: "rate", phpType: "float", hasDefault: true, defaultValue: "1.5"},
 			},
 			contains: []string{
 				"double rate = 1.5;",
@@ -163,7 +163,7 @@ func TestPHPFunctionGenerator_GenerateParamDeclarations(t *testing.T) {
 			result := parser.generateParamDeclarations(tt.params)
 
 			for _, expected := range tt.contains {
-				assert.Contains(t, result, expected, "Parameter declarations should contain '%s'", expected)
+				assert.Contains(t, result, expected, "phpParameter declarations should contain '%s'", expected)
 			}
 		})
 	}
@@ -231,41 +231,41 @@ func TestPHPFunctionGenerator_GenerateReturnCode(t *testing.T) {
 func TestPHPFunctionGenerator_GenerateGoCallParams(t *testing.T) {
 	tests := []struct {
 		name     string
-		params   []Parameter
+		params   []phpParameter
 		expected string
 	}{
 		{
 			name:     "no parameters",
-			params:   []Parameter{},
+			params:   []phpParameter{},
 			expected: "",
 		},
 		{
 			name: "simple string parameter",
-			params: []Parameter{
-				{Name: "message", Type: "string"},
+			params: []phpParameter{
+				{name: "message", phpType: "string"},
 			},
 			expected: "message",
 		},
 		{
 			name: "int parameter",
-			params: []Parameter{
-				{Name: "count", Type: "int"},
+			params: []phpParameter{
+				{name: "count", phpType: "int"},
 			},
 			expected: "(long) count",
 		},
 		{
 			name: "multiple parameters",
-			params: []Parameter{
-				{Name: "name", Type: "string"},
-				{Name: "age", Type: "int"},
+			params: []phpParameter{
+				{name: "name", phpType: "string"},
+				{name: "age", phpType: "int"},
 			},
 			expected: "name, (long) age",
 		},
 		{
 			name: "bool and float parameters",
-			params: []Parameter{
-				{Name: "enabled", Type: "bool"},
-				{Name: "rate", Type: "float"},
+			params: []phpParameter{
+				{name: "enabled", phpType: "bool"},
+				{name: "rate", phpType: "float"},
 			},
 			expected: "(int) enabled, (double) rate",
 		},
@@ -284,39 +284,39 @@ func TestPHPFunctionGenerator_GenerateGoCallParams(t *testing.T) {
 func TestPHPFunctionGenerator_AnalyzeParameters(t *testing.T) {
 	tests := []struct {
 		name          string
-		params        []Parameter
+		params        []phpParameter
 		expectedReq   int
 		expectedTotal int
 	}{
 		{
 			name:          "no parameters",
-			params:        []Parameter{},
+			params:        []phpParameter{},
 			expectedReq:   0,
 			expectedTotal: 0,
 		},
 		{
 			name: "all required",
-			params: []Parameter{
-				{Name: "a", Type: "string"},
-				{Name: "b", Type: "int"},
+			params: []phpParameter{
+				{name: "a", phpType: "string"},
+				{name: "b", phpType: "int"},
 			},
 			expectedReq:   2,
 			expectedTotal: 2,
 		},
 		{
 			name: "mixed required and optional",
-			params: []Parameter{
-				{Name: "required", Type: "string"},
-				{Name: "optional", Type: "int", HasDefault: true, DefaultValue: "10"},
+			params: []phpParameter{
+				{name: "required", phpType: "string"},
+				{name: "optional", phpType: "int", hasDefault: true, defaultValue: "10"},
 			},
 			expectedReq:   1,
 			expectedTotal: 2,
 		},
 		{
 			name: "all optional",
-			params: []Parameter{
-				{Name: "opt1", Type: "string", HasDefault: true, DefaultValue: "hello"},
-				{Name: "opt2", Type: "int", HasDefault: true, DefaultValue: "0"},
+			params: []phpParameter{
+				{name: "opt1", phpType: "string", hasDefault: true, defaultValue: "hello"},
+				{name: "opt2", phpType: "int", hasDefault: true, defaultValue: "0"},
 			},
 			expectedReq:   0,
 			expectedTotal: 2,

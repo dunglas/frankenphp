@@ -19,7 +19,7 @@ func TestClassParser(t *testing.T) {
 
 //export_php:class User
 type UserStruct struct {
-	Name string
+	name string
 	Age  int
 }`,
 			expected: 1,
@@ -30,7 +30,7 @@ type UserStruct struct {
 
 //export_php:class User
 type UserStruct struct {
-	Name string
+	name string
 	Age  int
 }
 
@@ -68,13 +68,13 @@ type OptionalStruct struct {
 
 //export_php:class User
 type UserStruct struct {
-	Name string
+	name string
 	Age  int
 }
 
 //export_php:method User::getName(): string
 func GetUserName(u UserStruct) string {
-	return u.Name
+	return u.name
 }
 
 //export_php:method User::setAge(int $age): void
@@ -108,17 +108,17 @@ func SetUserAge(u *UserStruct, age int) {
 
 			if tt.name == "single class" && len(classes) > 0 {
 				class := classes[0]
-				assert.Equal(t, "User", class.Name, "Expected class name 'User'")
-				assert.Equal(t, "UserStruct", class.GoStruct, "Expected Go struct 'UserStruct'")
-				assert.Len(t, class.Properties, 2, "Expected 2 properties")
+				assert.Equal(t, "User", class.name, "Expected class name 'User'")
+				assert.Equal(t, "UserStruct", class.goStruct, "Expected Go struct 'UserStruct'")
+				assert.Len(t, class.properties, 2, "Expected 2 properties")
 			}
 
 			if tt.name == "class with nullable fields" && len(classes) > 0 {
 				class := classes[0]
-				if len(class.Properties) >= 3 {
-					assert.False(t, class.Properties[0].IsNullable, "Required field should not be nullable")
-					assert.True(t, class.Properties[1].IsNullable, "Optional field should be nullable")
-					assert.True(t, class.Properties[2].IsNullable, "Count field should be nullable")
+				if len(class.properties) >= 3 {
+					assert.False(t, class.properties[0].isNullable, "Required field should not be nullable")
+					assert.True(t, class.properties[1].isNullable, "Optional field should be nullable")
+					assert.True(t, class.properties[2].isNullable, "Count field should be nullable")
 				}
 			}
 		})
@@ -130,13 +130,13 @@ func TestClassMethods(t *testing.T) {
 
 //export_php:class User
 type UserStruct struct {
-	Name string
+	name string
 	Age  int
 }
 
 //export_php:method User::getName(): string
 func GetUserName(u UserStruct) string {
-	return u.Name
+	return u.name
 }
 
 //export_php:method User::setAge(int $age): void
@@ -146,7 +146,7 @@ func SetUserAge(u *UserStruct, age int) {
 
 //export_php:method User::getInfo(string $prefix = "User"): string
 func GetUserInfo(u UserStruct, prefix string) string {
-	return prefix + ": " + u.Name
+	return prefix + ": " + u.name
 }`
 
 	tmpfile, err := os.CreateTemp("", "test*.go")
@@ -172,39 +172,39 @@ func GetUserInfo(u UserStruct, prefix string) string {
 	}
 
 	class := classes[0]
-	assert.Len(t, class.Methods, 3, "Expected 3 methods")
-	if len(class.Methods) != 3 {
+	assert.Len(t, class.methods, 3, "Expected 3 methods")
+	if len(class.methods) != 3 {
 		return
 	}
 
-	getName := class.Methods[0]
-	assert.Equal(t, "getName", getName.Name, "Expected method name 'getName'")
-	assert.Equal(t, "string", getName.ReturnType, "Expected return type 'string'")
-	assert.Empty(t, getName.Params, "Expected 0 params")
-	assert.Equal(t, "User", getName.ClassName, "Expected class name 'User'")
+	getName := class.methods[0]
+	assert.Equal(t, "getName", getName.name, "Expected method name 'getName'")
+	assert.Equal(t, "string", getName.returnType, "Expected return type 'string'")
+	assert.Empty(t, getName.params, "Expected 0 params")
+	assert.Equal(t, "User", getName.className, "Expected class name 'User'")
 
-	setAge := class.Methods[1]
-	assert.Equal(t, "setAge", setAge.Name, "Expected method name 'setAge'")
-	assert.Equal(t, "void", setAge.ReturnType, "Expected return type 'void'")
-	assert.Len(t, setAge.Params, 1, "Expected 1 param")
-	if len(setAge.Params) > 0 {
-		param := setAge.Params[0]
-		assert.Equal(t, "age", param.Name, "Expected param name 'age'")
-		assert.Equal(t, "int", param.Type, "Expected param type 'int'")
-		assert.False(t, param.IsNullable, "Expected param to not be nullable")
-		assert.False(t, param.HasDefault, "Expected param to not have default value")
+	setAge := class.methods[1]
+	assert.Equal(t, "setAge", setAge.name, "Expected method name 'setAge'")
+	assert.Equal(t, "void", setAge.returnType, "Expected return type 'void'")
+	assert.Len(t, setAge.params, 1, "Expected 1 param")
+	if len(setAge.params) > 0 {
+		param := setAge.params[0]
+		assert.Equal(t, "age", param.name, "Expected param name 'age'")
+		assert.Equal(t, "int", param.phpType, "Expected param type 'int'")
+		assert.False(t, param.isNullable, "Expected param to not be nullable")
+		assert.False(t, param.hasDefault, "Expected param to not have default value")
 	}
 
-	getInfo := class.Methods[2]
-	assert.Equal(t, "getInfo", getInfo.Name, "Expected method name 'getInfo'")
-	assert.Equal(t, "string", getInfo.ReturnType, "Expected return type 'string'")
-	assert.Len(t, getInfo.Params, 1, "Expected 1 param")
-	if len(getInfo.Params) > 0 {
-		param := getInfo.Params[0]
-		assert.Equal(t, "prefix", param.Name, "Expected param name 'prefix'")
-		assert.Equal(t, "string", param.Type, "Expected param type 'string'")
-		assert.True(t, param.HasDefault, "Expected param to have default value")
-		assert.Equal(t, "User", param.DefaultValue, "Expected default value 'User'")
+	getInfo := class.methods[2]
+	assert.Equal(t, "getInfo", getInfo.name, "Expected method name 'getInfo'")
+	assert.Equal(t, "string", getInfo.returnType, "Expected return type 'string'")
+	assert.Len(t, getInfo.params, 1, "Expected 1 param")
+	if len(getInfo.params) > 0 {
+		param := getInfo.params[0]
+		assert.Equal(t, "prefix", param.name, "Expected param name 'prefix'")
+		assert.Equal(t, "string", param.phpType, "Expected param type 'string'")
+		assert.True(t, param.hasDefault, "Expected param to have default value")
+		assert.Equal(t, "User", param.defaultValue, "Expected default value 'User'")
 	}
 }
 
@@ -212,52 +212,52 @@ func TestMethodParameterParsing(t *testing.T) {
 	tests := []struct {
 		name          string
 		paramStr      string
-		expectedParam Parameter
+		expectedParam phpParameter
 		expectError   bool
 	}{
 		{
 			name:     "simple int parameter",
 			paramStr: "int $age",
-			expectedParam: Parameter{
-				Name:       "age",
-				Type:       "int",
-				IsNullable: false,
-				HasDefault: false,
+			expectedParam: phpParameter{
+				name:       "age",
+				phpType:    "int",
+				isNullable: false,
+				hasDefault: false,
 			},
 			expectError: false,
 		},
 		{
 			name:     "nullable string parameter",
 			paramStr: "?string $name",
-			expectedParam: Parameter{
-				Name:       "name",
-				Type:       "string",
-				IsNullable: true,
-				HasDefault: false,
+			expectedParam: phpParameter{
+				name:       "name",
+				phpType:    "string",
+				isNullable: true,
+				hasDefault: false,
 			},
 			expectError: false,
 		},
 		{
 			name:     "parameter with default value",
 			paramStr: "string $prefix = \"default\"",
-			expectedParam: Parameter{
-				Name:         "prefix",
-				Type:         "string",
-				IsNullable:   false,
-				HasDefault:   true,
-				DefaultValue: "default",
+			expectedParam: phpParameter{
+				name:         "prefix",
+				phpType:      "string",
+				isNullable:   false,
+				hasDefault:   true,
+				defaultValue: "default",
 			},
 			expectError: false,
 		},
 		{
 			name:     "nullable parameter with default null",
 			paramStr: "?int $count = null",
-			expectedParam: Parameter{
-				Name:         "count",
-				Type:         "int",
-				IsNullable:   true,
-				HasDefault:   true,
-				DefaultValue: "null",
+			expectedParam: phpParameter{
+				name:         "count",
+				phpType:      "int",
+				isNullable:   true,
+				hasDefault:   true,
+				defaultValue: "null",
 			},
 			expectError: false,
 		},
@@ -283,11 +283,11 @@ func TestMethodParameterParsing(t *testing.T) {
 				return
 			}
 
-			assert.Equal(t, tt.expectedParam.Name, param.Name, "Expected name '%s'", tt.expectedParam.Name)
-			assert.Equal(t, tt.expectedParam.Type, param.Type, "Expected type '%s'", tt.expectedParam.Type)
-			assert.Equal(t, tt.expectedParam.IsNullable, param.IsNullable, "Expected IsNullable %v", tt.expectedParam.IsNullable)
-			assert.Equal(t, tt.expectedParam.HasDefault, param.HasDefault, "Expected HasDefault %v", tt.expectedParam.HasDefault)
-			assert.Equal(t, tt.expectedParam.DefaultValue, param.DefaultValue, "Expected DefaultValue '%s'", tt.expectedParam.DefaultValue)
+			assert.Equal(t, tt.expectedParam.name, param.name, "Expected name '%s'", tt.expectedParam.name)
+			assert.Equal(t, tt.expectedParam.phpType, param.phpType, "Expected type '%s'", tt.expectedParam.phpType)
+			assert.Equal(t, tt.expectedParam.isNullable, param.isNullable, "Expected isNullable %v", tt.expectedParam.isNullable)
+			assert.Equal(t, tt.expectedParam.hasDefault, param.hasDefault, "Expected hasDefault %v", tt.expectedParam.hasDefault)
+			assert.Equal(t, tt.expectedParam.defaultValue, param.defaultValue, "Expected defaultValue '%s'", tt.expectedParam.defaultValue)
 		})
 	}
 }
@@ -393,13 +393,13 @@ type CollectionStruct struct {
 			}
 
 			class := classes[0]
-			assert.Len(t, class.Properties, len(tt.expected), "Expected %d properties", len(tt.expected))
-			if len(class.Properties) != len(tt.expected) {
+			assert.Len(t, class.properties, len(tt.expected), "Expected %d properties", len(tt.expected))
+			if len(class.properties) != len(tt.expected) {
 				return
 			}
 
 			for i, expectedType := range tt.expected {
-				assert.Equal(t, expectedType, class.Properties[i].Type, "Property %d: expected type %s", i, expectedType)
+				assert.Equal(t, expectedType, class.properties[i].phpType, "Property %d: expected type %s", i, expectedType)
 			}
 		})
 	}

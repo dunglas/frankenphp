@@ -5,70 +5,70 @@ import (
 	"strings"
 )
 
-type PHPFunction struct {
-	Name             string
-	Signature        string
-	GoFunction       string
-	Params           []Parameter
-	ReturnType       string
-	IsReturnNullable bool
-	LineNumber       int
+type phpFunction struct {
+	name             string
+	signature        string
+	goFunction       string
+	params           []phpParameter
+	returnType       string
+	isReturnNullable bool
+	lineNumber       int
 }
 
-type Parameter struct {
-	Name         string
-	Type         string
-	IsNullable   bool
-	DefaultValue string
-	HasDefault   bool
+type phpParameter struct {
+	name         string
+	phpType      string
+	isNullable   bool
+	defaultValue string
+	hasDefault   bool
 }
 
-type PHPClass struct {
-	Name       string
-	GoStruct   string
-	Properties []ClassProperty
-	Methods    []ClassMethod
+type phpClass struct {
+	name       string
+	goStruct   string
+	properties []phpClassProperty
+	methods    []phpClassMethod
 }
 
-type ClassMethod struct {
-	Name             string
-	PHPName          string
-	Signature        string
-	GoFunction       string
-	Params           []Parameter
-	ReturnType       string
-	IsReturnNullable bool
-	LineNumber       int
-	ClassName        string // used by the "//export_php:method" directive
+type phpClassMethod struct {
+	name             string
+	phpName          string
+	signature        string
+	goFunction       string
+	params           []phpParameter
+	returnType       string
+	isReturnNullable bool
+	lineNumber       int
+	className        string // used by the "//export_php:method" directive
 }
 
-type ClassProperty struct {
-	Name       string
-	Type       string
-	GoType     string
-	IsNullable bool
+type phpClassProperty struct {
+	name       string
+	phpType    string
+	goType     string
+	isNullable bool
 }
 
-type PHPConstant struct {
-	Name       string
-	Value      string
-	Type       string // "int", "string", "bool", "float"
-	IsIota     bool
-	LineNumber int
-	ClassName  string // empty for global constants, set for class constants
+type phpConstant struct {
+	name       string
+	value      string
+	phpType    string // "int", "string", "bool", "float"
+	isIota     bool
+	lineNumber int
+	className  string // empty for global constants, set for class constants
 }
 
 // CValue returns the constant value in C-compatible format
-func (c PHPConstant) CValue() string {
-	if c.Type != "int" {
-		return c.Value
+func (c phpConstant) CValue() string {
+	if c.phpType != "int" {
+		return c.value
 	}
 
-	if strings.HasPrefix(c.Value, "0o") {
-		if val, err := strconv.ParseInt(c.Value, 0, 64); err == nil {
+	if strings.HasPrefix(c.value, "0o") {
+		if val, err := strconv.ParseInt(c.value, 0, 64); err == nil {
 			return strconv.FormatInt(val, 10)
 		}
 	}
 
-	return c.Value
+	return c.value
 }

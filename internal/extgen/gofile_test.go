@@ -52,18 +52,18 @@ func anotherHelper() {
 		BaseName:   "test",
 		SourceFile: sourceFile,
 		BuildDir:   tmpDir,
-		Functions: []PHPFunction{
+		functions: []phpFunction{
 			{
-				Name:       "greet",
-				ReturnType: "string",
-				GoFunction: `func greet(name *go_string) *go_value {
+				name:       "greet",
+				returnType: "string",
+				goFunction: `func greet(name *go_string) *go_value {
 	return types.String("Hello " + CStringToGoString(name))
 }`,
 			},
 			{
-				Name:       "calculate",
-				ReturnType: "int",
-				GoFunction: `func calculate(a long, b long) *go_value {
+				name:       "calculate",
+				returnType: "int",
+				goFunction: `func calculate(a long, b long) *go_value {
 	result := a + b
 	return types.Int(result)
 }`,
@@ -88,7 +88,7 @@ func anotherHelper() {
 
 	testGoFileBasicStructure(t, content, "test")
 	testGoFileImports(t, content)
-	testGoFileExportedFunctions(t, content, generator.Functions)
+	testGoFileExportedFunctions(t, content, generator.functions)
 	testGoFileInternalFunctions(t, content)
 }
 
@@ -97,7 +97,7 @@ func TestGoFileGenerator_BuildContent(t *testing.T) {
 		name        string
 		baseName    string
 		sourceFile  string
-		functions   []PHPFunction
+		functions   []phpFunction
 		contains    []string
 		notContains []string
 	}{
@@ -110,11 +110,11 @@ func TestGoFileGenerator_BuildContent(t *testing.T) {
 func test() {
 	// simple function
 }`),
-			functions: []PHPFunction{
+			functions: []phpFunction{
 				{
-					Name:       "test",
-					ReturnType: "void",
-					GoFunction: "func test() {\n\t// simple function\n}",
+					name:       "test",
+					returnType: "void",
+					goFunction: "func test() {\n\t// simple function\n}",
 				},
 			},
 			contains: []string{
@@ -143,11 +143,11 @@ import (
 func process(data *go_string) *go_value {
 	return types.String(fmt.Sprintf("processed: %s", CStringToGoString(data)))
 }`),
-			functions: []PHPFunction{
+			functions: []phpFunction{
 				{
-					Name:       "process",
-					ReturnType: "string",
-					GoFunction: `func process(data *go_string) *go_value {
+					name:       "process",
+					returnType: "string",
+					goFunction: `func process(data *go_string) *go_value {
 	return String(fmt.Sprintf("processed: %s", CStringToGoString(data)))
 }`,
 				},
@@ -176,11 +176,11 @@ func internalFunc1() string {
 func internalFunc2(data string) {
 	// process data internally
 }`),
-			functions: []PHPFunction{
+			functions: []phpFunction{
 				{
-					Name:       "publicFunc",
-					ReturnType: "void",
-					GoFunction: "func publicFunc() {}",
+					name:       "publicFunc",
+					returnType: "void",
+					goFunction: "func publicFunc() {}",
 				},
 			},
 			contains: []string{
@@ -198,7 +198,7 @@ func internalFunc2(data string) {
 			generator := &Generator{
 				BaseName:   tt.baseName,
 				SourceFile: tt.sourceFile,
-				Functions:  tt.functions,
+				functions:  tt.functions,
 			}
 
 			goGen := GoFileGenerator{generator}
@@ -234,8 +234,8 @@ func TestGoFileGenerator_PackageNameSanitization(t *testing.T) {
 			generator := &Generator{
 				BaseName:   tt.baseName,
 				SourceFile: sourceFile,
-				Functions: []PHPFunction{
-					{Name: "test", ReturnType: "void", GoFunction: "func test() {}"},
+				functions: []phpFunction{
+					{name: "test", returnType: "void", goFunction: "func test() {}"},
 				},
 			}
 
@@ -318,8 +318,8 @@ func test() {}`
 	generator := &Generator{
 		BaseName:   "importtest",
 		SourceFile: sourceFile,
-		Functions: []PHPFunction{
-			{Name: "test", ReturnType: "void", GoFunction: "func test() {}"},
+		functions: []phpFunction{
+			{name: "test", returnType: "void", goFunction: "func test() {}"},
 		},
 	}
 
@@ -394,20 +394,20 @@ func debugPrint(msg string) {
 	sourceFile := createTempSourceFile(t, sourceContent)
 	defer os.Remove(sourceFile)
 
-	functions := []PHPFunction{
+	functions := []phpFunction{
 		{
-			Name:       "processData",
-			ReturnType: "array",
-			GoFunction: `func processData(input *go_string, options *go_nullable) *go_value {
+			name:       "processData",
+			returnType: "array",
+			goFunction: `func processData(input *go_string, options *go_nullable) *go_value {
 	data := CStringToGoString(input)
 	processed := internalProcess(data)
 	return Array([]interface{}{processed})
 }`,
 		},
 		{
-			Name:       "validateInput",
-			ReturnType: "bool",
-			GoFunction: `func validateInput(data *go_string) *go_value {
+			name:       "validateInput",
+			returnType: "bool",
+			goFunction: `func validateInput(data *go_string) *go_value {
 	input := CStringToGoString(data)
 	isValid := len(input) > 0 && validateFormat(input)
 	return Bool(isValid)
@@ -418,7 +418,7 @@ func debugPrint(msg string) {
 	generator := &Generator{
 		BaseName:   "complex-example",
 		SourceFile: sourceFile,
-		Functions:  functions,
+		functions:  functions,
 	}
 
 	goGen := GoFileGenerator{generator}
@@ -441,7 +441,7 @@ func debugPrint(msg string) {
 	}
 
 	for _, fn := range functions {
-		exportDirective := "//export " + fn.Name
+		exportDirective := "//export " + fn.name
 		assert.Contains(t, content, exportDirective, "Generated content should contain export directive: %s", exportDirective)
 	}
 
@@ -466,7 +466,7 @@ import "fmt"
 
 //export_php:class TestClass
 type TestStruct struct {
-	Name string
+	name string
 }
 
 //export_php:method TestClass::processData(string $name, ?int $count, ?bool $enabled): string
@@ -486,19 +486,19 @@ func (ts *TestStruct) ProcessData(name string, count *int64, enabled *bool) stri
 		t.Fatal(err)
 	}
 
-	methods := []ClassMethod{
+	methods := []phpClassMethod{
 		{
-			Name:       "ProcessData",
-			PHPName:    "processData",
-			ClassName:  "TestClass",
-			Signature:  "processData(string $name, ?int $count, ?bool $enabled): string",
-			ReturnType: "string",
-			Params: []Parameter{
-				{Name: "name", Type: "string", IsNullable: false},
-				{Name: "count", Type: "int", IsNullable: true},
-				{Name: "enabled", Type: "bool", IsNullable: true},
+			name:       "ProcessData",
+			phpName:    "processData",
+			className:  "TestClass",
+			signature:  "processData(string $name, ?int $count, ?bool $enabled): string",
+			returnType: "string",
+			params: []phpParameter{
+				{name: "name", phpType: "string", isNullable: false},
+				{name: "count", phpType: "int", isNullable: true},
+				{name: "enabled", phpType: "bool", isNullable: true},
 			},
-			GoFunction: `func (ts *TestStruct) ProcessData(name string, count *int64, enabled *bool) string {
+			goFunction: `func (ts *TestStruct) ProcessData(name string, count *int64, enabled *bool) string {
 	result := fmt.Sprintf("name=%s", name)
 	if count != nil {
 		result += fmt.Sprintf(", count=%d", *count)
@@ -511,18 +511,18 @@ func (ts *TestStruct) ProcessData(name string, count *int64, enabled *bool) stri
 		},
 	}
 
-	classes := []PHPClass{
+	classes := []phpClass{
 		{
-			Name:     "TestClass",
-			GoStruct: "TestStruct",
-			Methods:  methods,
+			name:     "TestClass",
+			goStruct: "TestStruct",
+			methods:  methods,
 		},
 	}
 
 	generator := &Generator{
 		BaseName:   "nullable_test",
 		SourceFile: sourceFile,
-		Classes:    classes,
+		classes:    classes,
 		BuildDir:   tmpDir,
 	}
 
@@ -582,12 +582,12 @@ func testGoFileImports(t *testing.T, content string) {
 	assert.Equal(t, 1, cImportCount, "Expected exactly 1 C import")
 }
 
-func testGoFileExportedFunctions(t *testing.T, content string, functions []PHPFunction) {
+func testGoFileExportedFunctions(t *testing.T, content string, functions []phpFunction) {
 	for _, fn := range functions {
-		exportDirective := "//export " + fn.Name
+		exportDirective := "//export " + fn.name
 		assert.Contains(t, content, exportDirective, "Go file should contain export directive: %s", exportDirective)
 
-		funcStart := "func " + fn.Name + "("
+		funcStart := "func " + fn.name + "("
 		assert.Contains(t, content, funcStart, "Go file should contain function definition: %s", funcStart)
 	}
 }

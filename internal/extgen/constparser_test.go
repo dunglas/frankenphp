@@ -149,17 +149,17 @@ const FalseConstant = false`,
 
 			if tt.name == "single constant" && len(constants) > 0 {
 				c := constants[0]
-				assert.Equal(t, "MyConstant", c.Name, "Expected constant name 'MyConstant'")
-				assert.Equal(t, "\"test_value\"", c.Value, "Expected constant value '\"test_value\"'")
-				assert.Equal(t, "string", c.Type, "Expected constant type 'string'")
-				assert.False(t, c.IsIota, "Expected IsIota to be false for string constant")
+				assert.Equal(t, "MyConstant", c.name, "Expected constant name 'MyConstant'")
+				assert.Equal(t, "\"test_value\"", c.value, "Expected constant value '\"test_value\"'")
+				assert.Equal(t, "string", c.phpType, "Expected constant type 'string'")
+				assert.False(t, c.isIota, "Expected isIota to be false for string constant")
 			}
 
 			if tt.name == "iota constant" && len(constants) > 0 {
 				c := constants[0]
-				assert.Equal(t, "IotaConstant", c.Name, "Expected constant name 'IotaConstant'")
-				assert.True(t, c.IsIota, "Expected IsIota to be true")
-				assert.Equal(t, "0", c.Value, "Expected iota constant value to be '0'")
+				assert.Equal(t, "IotaConstant", c.name, "Expected constant name 'IotaConstant'")
+				assert.True(t, c.isIota, "Expected isIota to be true")
+				assert.Equal(t, "0", c.value, "Expected iota constant value to be '0'")
 			}
 
 			if tt.name == "multiple constants" && len(constants) == 3 {
@@ -168,9 +168,9 @@ const FalseConstant = false`,
 				expectedTypes := []string{"string", "int", "bool"}
 
 				for i, c := range constants {
-					assert.Equal(t, expectedNames[i], c.Name, "Expected constant name '%s'", expectedNames[i])
-					assert.Equal(t, expectedValues[i], c.Value, "Expected constant value '%s'", expectedValues[i])
-					assert.Equal(t, expectedTypes[i], c.Type, "Expected constant type '%s'", expectedTypes[i])
+					assert.Equal(t, expectedNames[i], c.name, "Expected constant name '%s'", expectedNames[i])
+					assert.Equal(t, expectedValues[i], c.value, "Expected constant value '%s'", expectedValues[i])
+					assert.Equal(t, expectedTypes[i], c.phpType, "Expected constant type '%s'", expectedTypes[i])
 				}
 			}
 		})
@@ -261,8 +261,8 @@ const ThirdIota = iota`
 
 	expectedValues := []string{"0", "1", "2"}
 	for i, c := range constants {
-		assert.True(t, c.IsIota, "Expected constant %d to be iota", i)
-		assert.Equal(t, expectedValues[i], c.Value, "Expected constant %d value to be '%s'", i, expectedValues[i])
+		assert.True(t, c.isIota, "Expected constant %d to be iota", i)
+		assert.Equal(t, expectedValues[i], c.value, "Expected constant %d value to be '%s'", i, expectedValues[i])
 	}
 }
 
@@ -382,10 +382,10 @@ const INVALID = "missing class name"`,
 
 			if tt.name == "single class constant" && len(constants) > 0 {
 				c := constants[0]
-				assert.Equal(t, "STATUS_ACTIVE", c.Name, "Expected constant name 'STATUS_ACTIVE'")
-				assert.Equal(t, "MyClass", c.ClassName, "Expected class name 'MyClass'")
-				assert.Equal(t, "1", c.Value, "Expected constant value '1'")
-				assert.Equal(t, "int", c.Type, "Expected constant type 'int'")
+				assert.Equal(t, "STATUS_ACTIVE", c.name, "Expected constant name 'STATUS_ACTIVE'")
+				assert.Equal(t, "MyClass", c.className, "Expected class name 'MyClass'")
+				assert.Equal(t, "1", c.value, "Expected constant value '1'")
+				assert.Equal(t, "int", c.phpType, "Expected constant type 'int'")
 			}
 
 			if tt.name == "multiple class constants" && len(constants) == 3 {
@@ -394,16 +394,16 @@ const INVALID = "missing class name"`,
 				expectedValues := []string{"\"active\"", "\"inactive\"", "0"}
 
 				for i, c := range constants {
-					assert.Equal(t, expectedClasses[i], c.ClassName, "Expected class name '%s'", expectedClasses[i])
-					assert.Equal(t, expectedNames[i], c.Name, "Expected constant name '%s'", expectedNames[i])
-					assert.Equal(t, expectedValues[i], c.Value, "Expected constant value '%s'", expectedValues[i])
+					assert.Equal(t, expectedClasses[i], c.className, "Expected class name '%s'", expectedClasses[i])
+					assert.Equal(t, expectedNames[i], c.name, "Expected constant name '%s'", expectedNames[i])
+					assert.Equal(t, expectedValues[i], c.value, "Expected constant value '%s'", expectedValues[i])
 				}
 			}
 
 			if tt.name == "mixed global and class constants" && len(constants) == 3 {
-				assert.Empty(t, constants[0].ClassName, "First constant should be global")
-				assert.Equal(t, "MyClass", constants[1].ClassName, "Second constant should belong to MyClass")
-				assert.Empty(t, constants[2].ClassName, "Third constant should be global")
+				assert.Empty(t, constants[0].className, "First constant should be global")
+				assert.Equal(t, "MyClass", constants[1].className, "Second constant should belong to MyClass")
+				assert.Empty(t, constants[2].className, "Third constant should be global")
 			}
 		})
 	}
@@ -512,69 +512,69 @@ func TestConstantParserDeclRegex(t *testing.T) {
 func TestPHPConstantCValue(t *testing.T) {
 	tests := []struct {
 		name     string
-		constant PHPConstant
+		constant phpConstant
 		expected string
 	}{
 		{
 			name: "octal notation 0o35",
-			constant: PHPConstant{
-				Name:  "OctalConst",
-				Value: "0o35",
-				Type:  "int",
+			constant: phpConstant{
+				name:    "OctalConst",
+				value:   "0o35",
+				phpType: "int",
 			},
 			expected: "29", // 0o35 = 29 in decimal
 		},
 		{
 			name: "octal notation 0o755",
-			constant: PHPConstant{
-				Name:  "OctalPerm",
-				Value: "0o755",
-				Type:  "int",
+			constant: phpConstant{
+				name:    "OctalPerm",
+				value:   "0o755",
+				phpType: "int",
 			},
 			expected: "493", // 0o755 = 493 in decimal
 		},
 		{
 			name: "regular integer",
-			constant: PHPConstant{
-				Name:  "RegularInt",
-				Value: "42",
-				Type:  "int",
+			constant: phpConstant{
+				name:    "RegularInt",
+				value:   "42",
+				phpType: "int",
 			},
 			expected: "42",
 		},
 		{
 			name: "hex integer",
-			constant: PHPConstant{
-				Name:  "HexInt",
-				Value: "0xFF",
-				Type:  "int",
+			constant: phpConstant{
+				name:    "HexInt",
+				value:   "0xFF",
+				phpType: "int",
 			},
 			expected: "0xFF", // hex should remain unchanged
 		},
 		{
 			name: "string constant",
-			constant: PHPConstant{
-				Name:  "StringConst",
-				Value: "\"hello\"",
-				Type:  "string",
+			constant: phpConstant{
+				name:    "StringConst",
+				value:   "\"hello\"",
+				phpType: "string",
 			},
 			expected: "\"hello\"", // strings should remain unchanged
 		},
 		{
 			name: "boolean constant",
-			constant: PHPConstant{
-				Name:  "BoolConst",
-				Value: "true",
-				Type:  "bool",
+			constant: phpConstant{
+				name:    "BoolConst",
+				value:   "true",
+				phpType: "bool",
 			},
 			expected: "true", // booleans should remain unchanged
 		},
 		{
 			name: "float constant",
-			constant: PHPConstant{
-				Name:  "FloatConst",
-				Value: "3.14",
-				Type:  "float",
+			constant: phpConstant{
+				name:    "FloatConst",
+				value:   "3.14",
+				phpType: "float",
 			},
 			expected: "3.14", // floats should remain unchanged
 		},

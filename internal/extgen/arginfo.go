@@ -8,11 +8,11 @@ import (
 	"strings"
 )
 
-type ArginfoGenerator struct {
+type arginfoGenerator struct {
 	generator *Generator
 }
 
-func (ag *ArginfoGenerator) generate() error {
+func (ag *arginfoGenerator) generate() error {
 	genStubPath := os.Getenv("GEN_STUB_SCRIPT")
 	if genStubPath == "" {
 		genStubPath = "/usr/local/src/php/build/gen_stub.php"
@@ -32,7 +32,7 @@ func (ag *ArginfoGenerator) generate() error {
 	return ag.fixArginfoFile(stubFile)
 }
 
-func (ag *ArginfoGenerator) fixArginfoFile(stubFile string) error {
+func (ag *arginfoGenerator) fixArginfoFile(stubFile string) error {
 	arginfoFile := strings.TrimSuffix(stubFile, ".stub.php") + "_arginfo.h"
 	arginfoPath := filepath.Join(ag.generator.BuildDir, arginfoFile)
 

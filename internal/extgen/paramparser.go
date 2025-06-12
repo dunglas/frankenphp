@@ -12,11 +12,11 @@ type ParameterInfo struct {
 	TotalCount    int
 }
 
-func (pp *ParameterParser) analyzeParameters(params []Parameter) ParameterInfo {
+func (pp *ParameterParser) analyzeParameters(params []phpParameter) ParameterInfo {
 	info := ParameterInfo{TotalCount: len(params)}
 
 	for _, param := range params {
-		if !param.HasDefault {
+		if !param.hasDefault {
 			info.RequiredCount++
 		}
 	}
@@ -24,7 +24,7 @@ func (pp *ParameterParser) analyzeParameters(params []Parameter) ParameterInfo {
 	return info
 }
 
-func (pp *ParameterParser) generateParamDeclarations(params []Parameter) string {
+func (pp *ParameterParser) generateParamDeclarations(params []phpParameter) string {
 	if len(params) == 0 {
 		return ""
 	}
@@ -38,49 +38,49 @@ func (pp *ParameterParser) generateParamDeclarations(params []Parameter) string 
 	return "    " + strings.Join(declarations, "\n    ")
 }
 
-func (pp *ParameterParser) generateSingleParamDeclaration(param Parameter) []string {
+func (pp *ParameterParser) generateSingleParamDeclaration(param phpParameter) []string {
 	var decls []string
 
-	switch param.Type {
+	switch param.phpType {
 	case "string":
-		decls = append(decls, fmt.Sprintf("zend_string *%s = NULL;", param.Name))
-		if param.IsNullable {
-			decls = append(decls, fmt.Sprintf("zend_bool %s_is_null = 0;", param.Name))
+		decls = append(decls, fmt.Sprintf("zend_string *%s = NULL;", param.name))
+		if param.isNullable {
+			decls = append(decls, fmt.Sprintf("zend_bool %s_is_null = 0;", param.name))
 		}
 	case "int":
 		defaultVal := pp.getDefaultValue(param, "0")
-		decls = append(decls, fmt.Sprintf("zend_long %s = %s;", param.Name, defaultVal))
-		if param.IsNullable {
-			decls = append(decls, fmt.Sprintf("zend_bool %s_is_null = 0;", param.Name))
+		decls = append(decls, fmt.Sprintf("zend_long %s = %s;", param.name, defaultVal))
+		if param.isNullable {
+			decls = append(decls, fmt.Sprintf("zend_bool %s_is_null = 0;", param.name))
 		}
 	case "float":
 		defaultVal := pp.getDefaultValue(param, "0.0")
-		decls = append(decls, fmt.Sprintf("double %s = %s;", param.Name, defaultVal))
-		if param.IsNullable {
-			decls = append(decls, fmt.Sprintf("zend_bool %s_is_null = 0;", param.Name))
+		decls = append(decls, fmt.Sprintf("double %s = %s;", param.name, defaultVal))
+		if param.isNullable {
+			decls = append(decls, fmt.Sprintf("zend_bool %s_is_null = 0;", param.name))
 		}
 	case "bool":
 		defaultVal := pp.getDefaultValue(param, "0")
-		if param.HasDefault && param.DefaultValue == "true" {
+		if param.hasDefault && param.defaultValue == "true" {
 			defaultVal = "1"
 		}
-		decls = append(decls, fmt.Sprintf("zend_bool %s = %s;", param.Name, defaultVal))
-		if param.IsNullable {
-			decls = append(decls, fmt.Sprintf("zend_bool %s_is_null = 0;", param.Name))
+		decls = append(decls, fmt.Sprintf("zend_bool %s = %s;", param.name, defaultVal))
+		if param.isNullable {
+			decls = append(decls, fmt.Sprintf("zend_bool %s_is_null = 0;", param.name))
 		}
 	}
 
 	return decls
 }
 
-func (pp *ParameterParser) getDefaultValue(param Parameter, fallback string) string {
-	if !param.HasDefault || param.DefaultValue == "" {
+func (pp *ParameterParser) getDefaultValue(param phpParameter, fallback string) string {
+	if !param.hasDefault || param.defaultValue == "" {
 		return fallback
 	}
-	return param.DefaultValue
+	return param.defaultValue
 }
 
-func (pp *ParameterParser) generateParamParsing(params []Parameter, requiredCount int) string {
+func (pp *ParameterParser) generateParamParsing(params []phpParameter, requiredCount int) string {
 	if len(params) == 0 {
 		return `    if (zend_parse_parameters_none() == FAILURE) {
         RETURN_THROWS();
@@ -92,7 +92,7 @@ func (pp *ParameterParser) generateParamParsing(params []Parameter, requiredCoun
 
 	optionalStarted := false
 	for _, param := range params {
-		if param.HasDefault && !optionalStarted {
+		if param.hasDefault && !optionalStarted {
 			builder.WriteString("\n        Z_PARAM_OPTIONAL")
 			optionalStarted = true
 		}
@@ -104,37 +104,37 @@ func (pp *ParameterParser) generateParamParsing(params []Parameter, requiredCoun
 	return builder.String()
 }
 
-func (pp *ParameterParser) generateParamParsingMacro(param Parameter) string {
-	if param.IsNullable {
-		switch param.Type {
+func (pp *ParameterParser) generateParamParsingMacro(param phpParameter) string {
+	if param.isNullable {
+		switch param.phpType {
 		case "string":
-			return fmt.Sprintf("\n        Z_PARAM_STR_OR_NULL(%s, %s_is_null)", param.Name, param.Name)
+			return fmt.Sprintf("\n        Z_PARAM_STR_OR_NULL(%s, %s_is_null)", param.name, param.name)
 		case "int":
-			return fmt.Sprintf("\n        Z_PARAM_LONG_OR_NULL(%s, %s_is_null)", param.Name, param.Name)
+			return fmt.Sprintf("\n        Z_PARAM_LONG_OR_NULL(%s, %s_is_null)", param.name, param.name)
 		case "float":
-			return fmt.Sprintf("\n        Z_PARAM_DOUBLE_OR_NULL(%s, %s_is_null)", param.Name, param.Name)
+			return fmt.Sprintf("\n        Z_PARAM_DOUBLE_OR_NULL(%s, %s_is_null)", param.name, param.name)
 		case "bool":
-			return fmt.Sprintf("\n        Z_PARAM_BOOL_OR_NULL(%s, %s_is_null)", param.Name, param.Name)
+			return fmt.Sprintf("\n        Z_PARAM_BOOL_OR_NULL(%s, %s_is_null)", param.name, param.name)
 		default:
 			return ""
 		}
 	} else {
-		switch param.Type {
+		switch param.phpType {
 		case "string":
-			return fmt.Sprintf("\n        Z_PARAM_STR(%s)", param.Name)
+			return fmt.Sprintf("\n        Z_PARAM_STR(%s)", param.name)
 		case "int":
-			return fmt.Sprintf("\n        Z_PARAM_LONG(%s)", param.Name)
+			return fmt.Sprintf("\n        Z_PARAM_LONG(%s)", param.name)
 		case "float":
-			return fmt.Sprintf("\n        Z_PARAM_DOUBLE(%s)", param.Name)
+			return fmt.Sprintf("\n        Z_PARAM_DOUBLE(%s)", param.name)
 		case "bool":
-			return fmt.Sprintf("\n        Z_PARAM_BOOL(%s)", param.Name)
+			return fmt.Sprintf("\n        Z_PARAM_BOOL(%s)", param.name)
 		default:
 			return ""
 		}
 	}
 }
 
-func (pp *ParameterParser) generateGoCallParams(params []Parameter) string {
+func (pp *ParameterParser) generateGoCallParams(params []phpParameter) string {
 	if len(params) == 0 {
 		return ""
 	}
@@ -147,32 +147,32 @@ func (pp *ParameterParser) generateGoCallParams(params []Parameter) string {
 	return strings.Join(goParams, ", ")
 }
 
-func (pp *ParameterParser) generateSingleGoCallParam(param Parameter) string {
-	if param.IsNullable {
-		switch param.Type {
+func (pp *ParameterParser) generateSingleGoCallParam(param phpParameter) string {
+	if param.isNullable {
+		switch param.phpType {
 		case "string":
-			return fmt.Sprintf("%s_is_null ? NULL : %s", param.Name, param.Name)
+			return fmt.Sprintf("%s_is_null ? NULL : %s", param.name, param.name)
 		case "int":
-			return fmt.Sprintf("%s_is_null ? NULL : &%s", param.Name, param.Name)
+			return fmt.Sprintf("%s_is_null ? NULL : &%s", param.name, param.name)
 		case "float":
-			return fmt.Sprintf("%s_is_null ? NULL : &%s", param.Name, param.Name)
+			return fmt.Sprintf("%s_is_null ? NULL : &%s", param.name, param.name)
 		case "bool":
-			return fmt.Sprintf("%s_is_null ? NULL : &%s", param.Name, param.Name)
+			return fmt.Sprintf("%s_is_null ? NULL : &%s", param.name, param.name)
 		default:
-			return param.Name
+			return param.name
 		}
 	} else {
-		switch param.Type {
+		switch param.phpType {
 		case "string":
-			return param.Name
+			return param.name
 		case "int":
-			return fmt.Sprintf("(long) %s", param.Name)
+			return fmt.Sprintf("(long) %s", param.name)
 		case "float":
-			return fmt.Sprintf("(double) %s", param.Name)
+			return fmt.Sprintf("(double) %s", param.name)
 		case "bool":
-			return fmt.Sprintf("(int) %s", param.Name)
+			return fmt.Sprintf("(int) %s", param.name)
 		default:
-			return param.Name
+			return param.name
 		}
 	}
 }
