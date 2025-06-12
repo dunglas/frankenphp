@@ -1,67 +1,86 @@
-# Create a Static Build
+# Criar uma compilação estática
 
-Instead of using a local installation of the PHP library,
-it's possible to create a static or mostly static build of FrankenPHP thanks to the great [static-php-cli project](https://github.com/crazywhalecc/static-php-cli) (despite its name, this project supports all SAPIs, not only CLI).
+Em vez de usar uma instalação local da biblioteca PHP, é possível criar uma
+compilação estática ou quase totalmente estática do FrankenPHP graças ao
+excelente
+[projeto static-php-cli](https://github.com/crazywhalecc/static-php-cli) (apesar
+do nome, este projeto suporta todas as SAPIs, não apenas CLI).
 
-With this method, a single, portable, binary will contain the PHP interpreter, the Caddy web server, and FrankenPHP!
+Com este método, um único binário portátil conterá o interpretador PHP, o
+servidor web Caddy e o FrankenPHP!
 
-Fully static native executables require no dependencies at all and can even be run on [`scratch` Docker image](https://docs.docker.com/build/building/base-images/#create-a-minimal-base-image-using-scratch).
-However, they can't load dynamic PHP extensions (such as Xdebug) and have some limitations because they are using the musl libc.
+Executáveis nativos totalmente estáticos não requerem dependências e podem até
+ser executados na
+[imagem Docker `scratch`](https://docs.docker.com/build/building/base-images/#create-a-minimal-base-image-using-scratch).
+No entanto, eles não podem carregar extensões PHP dinâmicas (como o Xdebug) e
+têm algumas limitações por usarem a `libc` `musl`.
 
-Mostly static binaries only require `glibc` and can load dynamic extensions.
+A maioria dos binários estáticos requer apenas `glibc` e pode carregar extensões
+dinâmicas.
 
-When possible, we recommend using glibc-based, mostly static builds.
+Sempre que possível, recomendamos o uso de compilações quase totalmente
+estáticas baseadas na `glibc`.
 
-FrankenPHP also supports [embedding the PHP app in the static binary](embed.md).
+O FrankenPHP também suporta
+[a incorporação da aplicação PHP no binário estático](embed.md).
 
 ## Linux
 
-We provide Docker images to build static Linux binaries:
+Fornecemos imagens Docker para compilar binários estáticos para Linux:
 
-### musl-Based, Fully Static Build
+### Compilação totalmente estática baseada na `musl`
 
-For a fully-static binary that runs on any Linux distribution without dependencies but doesn't support dynamic loading of extensions:
+Para um binário totalmente estático que roda em qualquer distribuição Linux sem
+dependências, mas não suporta carregamento dinâmico de extensões:
 
 ```console
 docker buildx bake --load static-builder-musl
 docker cp $(docker create --name static-builder-musl dunglas/frankenphp:static-builder-musl):/go/src/app/dist/frankenphp-linux-$(uname -m) frankenphp ; docker rm static-builder-musl
 ```
 
-For better performance in heavily concurrent scenarios, consider using the [mimalloc](https://github.com/microsoft/mimalloc) allocator.
+Para melhor desempenho em cenários com alta concorrência, considere usar o
+alocador [`mimalloc`](https://github.com/microsoft/mimalloc).
 
 ```console
 docker buildx bake --load --set static-builder-musl.args.MIMALLOC=1 static-builder-musl
 ```
 
-### glibc-Based, Mostly Static Build (With Dynamic Extension Support)
+### Compilação quase totalmente estática baseada na `glibc` (com suporte a extensões dinâmicas)
 
-For a binary that supports loading PHP extensions dynamically while still having the selected extensions compiled statically:
+Para um binário que suporta o carregamento dinâmico de extensões PHP, mantendo
+as extensões selecionadas compiladas estaticamente:
 
 ```console
 docker buildx bake --load static-builder-gnu
 docker cp $(docker create --name static-builder-gnu dunglas/frankenphp:static-builder-gnu):/go/src/app/dist/frankenphp-linux-$(uname -m) frankenphp ; docker rm static-builder-gnu
 ```
 
-This binary supports all glibc versions 2.17 and superior but does not run on musl-based systems (like Alpine Linux).
+Este binário suporta todas as versões 2.17 e superiores da `glibc`, mas não roda
+em sistemas baseados em `musl` (como o Alpine Linux).
 
-The resulting mostly static (except `glibc`) binary is named `frankenphp` and is available in the current directory.
+O binário quase totalmente estático (exceto a `glibc`) resultante é chamado
+`frankenphp` e está disponível no diretório atual.
 
-If you want to build the static binary without Docker, take a look at the macOS instructions, which also work for Linux.
+Se você quiser compilar o binário estático sem o Docker, consulte as instruções
+para macOS, que também funcionam para Linux.
 
-### Custom Extensions
+### Extensões personalizadas
 
-By default, the most popular PHP extensions are compiled.
+Por padrão, as extensões PHP mais populares são compiladas.
 
-To reduce the size of the binary and to reduce the attack surface, you can choose the list of extensions to build using the `PHP_EXTENSIONS` Docker ARG.
+Para reduzir o tamanho do binário e a superfície de ataque, você pode escolher a
+lista de extensões a serem compiladas usando o `ARG` `PHP_EXTENSIONS` do Docker.
 
-For instance, run the following command to only build the `opcache` extension:
+Por exemplo, execute o seguinte comando para compilar apenas a extensão
+`opcache`:
 
 ```console
 docker buildx bake --load --set static-builder-musl.args.PHP_EXTENSIONS=opcache,pdo_sqlite static-builder-musl
 # ...
 ```
 
-To add libraries enabling additional functionality to the extensions you've enabled, you can pass the `PHP_EXTENSION_LIBS` Docker ARG:
+Para adicionar bibliotecas que habilitem funcionalidades adicionais às extensões
+habilitadas, você pode passar o `ARG` `PHP_EXTENSION_LIBS` do Docker:
 
 ```console
 docker buildx bake \
@@ -71,9 +90,11 @@ docker buildx bake \
   static-builder-musl
 ```
 
-### Extra Caddy Modules
+### Módulos Caddy extras
 
-To add extra Caddy modules or pass other arguments to [xcaddy](https://github.com/caddyserver/xcaddy), use the `XCADDY_ARGS` Docker ARG:
+Para adicionar módulos Caddy extras ou passar outros argumentos para
+[xcaddy](https://github.com/caddyserver/xcaddy), use o `ARG` `XCADDY_ARGS` do
+Docker:
 
 ```console
 docker buildx bake \
@@ -82,18 +103,24 @@ docker buildx bake \
   static-builder-musl
 ```
 
-In this example, we add the [Souin](https://souin.io) HTTP cache module for Caddy as well as the [cbrotli](https://github.com/dunglas/caddy-cbrotli), [Mercure](https://mercure.rocks) and [Vulcain](https://vulcain.rocks) modules.
+Neste exemplo, adicionamos o módulo de cache HTTP [Souin](https://souin.io) para
+o Caddy, bem como os módulos
+[cbrotli](https://github.com/dunglas/caddy-cbrotli),
+[Mercure](https://mercure.rocks) e [Vulcain](https://vulcain.rocks).
 
 > [!TIP]
->
-> The cbrotli, Mercure, and Vulcain modules are included by default if `XCADDY_ARGS` is empty or not set.
-> If you customize the value of `XCADDY_ARGS`, you must include them explicitly if you want them to be included.
+> 
+> Os módulos cbrotli, Mercure e Vulcain são incluídos por padrão se
+> `XCADDY_ARGS` estiver vazio ou não definido.
+> Se você personalizar o valor de `XCADDY_ARGS`, deverá incluí-los
+> explicitamente se desejar que sejam incluídos.
 
-See also how to [customize the build](#customizing-the-build)
+Veja também como [personalizar a compilação](#personalizando-a-compilacao).
 
-### GitHub Token
+### Token do GitHub
 
-If you hit the GitHub API rate limit, set a GitHub Personal Access Token in an environment variable named `GITHUB_TOKEN`:
+Se você atingir o limite de taxa da API do GitHub, defina um Token de Acesso
+Pessoal do GitHub em uma variável de ambiente chamada `GITHUB_TOKEN`:
 
 ```console
 GITHUB_TOKEN="xxx" docker --load buildx bake static-builder-musl
@@ -102,7 +129,8 @@ GITHUB_TOKEN="xxx" docker --load buildx bake static-builder-musl
 
 ## macOS
 
-Run the following script to create a static binary for macOS (you must have [Homebrew](https://brew.sh/) installed):
+Execute o seguinte script para criar um binário estático para macOS (você
+precisa ter o [Homebrew](https://brew.sh/) instalado):
 
 ```console
 git clone https://github.com/dunglas/frankenphp
@@ -110,33 +138,51 @@ cd frankenphp
 ./build-static.sh
 ```
 
-Note: this script also works on Linux (and probably on other Unixes), and is used internally by the Docker images we provide.
+Observação: este script também funciona no Linux (e provavelmente em outros
+sistemas Unix) e é usado internamente pelas imagens Docker que fornecemos.
 
-## Customizing The Build
+## Personalizando a compilação
 
-The following environment variables can be passed to `docker build` and to the `build-static.sh`
-script to customize the static build:
+As seguintes variáveis de ambiente podem ser passadas para `docker build` e para
+o script `build-static.sh` para personalizar a compilação estática:
 
-- `FRANKENPHP_VERSION`: the version of FrankenPHP to use
-- `PHP_VERSION`: the version of PHP to use
-- `PHP_EXTENSIONS`: the PHP extensions to build ([list of supported extensions](https://static-php.dev/en/guide/extensions.html))
-- `PHP_EXTENSION_LIBS`: extra libraries to build that add features to the extensions
-- `XCADDY_ARGS`: arguments to pass to [xcaddy](https://github.com/caddyserver/xcaddy), for instance to add extra Caddy modules
-- `EMBED`: path of the PHP application to embed in the binary
-- `CLEAN`: when set, libphp and all its dependencies are built from scratch (no cache)
-- `NO_COMPRESS`: don't compress the resulting binary using UPX
-- `DEBUG_SYMBOLS`: when set, debug-symbols will not be stripped and will be added to the binary
-- `MIMALLOC`: (experimental, Linux-only) replace musl's mallocng by [mimalloc](https://github.com/microsoft/mimalloc) for improved performance. We only recommend using this for musl targeting builds, for glibc prefer disabling this option and using [`LD_PRELOAD`](https://microsoft.github.io/mimalloc/overrides.html) when you run your binary instead.
-- `RELEASE`: (maintainers only) when set, the resulting binary will be uploaded on GitHub
+- `FRANKENPHP_VERSION`: a versão do FrankenPHP a ser usada.
+- `PHP_VERSION`: a versão do PHP a ser usada.
+- `PHP_EXTENSIONS`: as extensões PHP a serem compiladas
+  ([lista de extensões suportadas](https://static-php.dev/en/guide/extensions.html)).
+- `PHP_EXTENSION_LIBS`: bibliotecas extras a serem compiladas que adicionam
+  recursos às extensões.
+- `XCADDY_ARGS`: argumentos a passar para o
+  [`xcaddy`](https://github.com/caddyserver/xcaddy), por exemplo, para adicionar
+  módulos Caddy extras.
+- `EMBED`: caminho da aplicação PHP a ser incorporada no binário.
+- `CLEAN`: quando definida, a `libphp` e todas as suas dependências são
+  compiladas do zero (sem cache).
+- `NO_COMPRESS`: não compacta o binário resultante usando UPX.
+- `DEBUG_SYMBOLS`: quando definida, os símbolos de depuração não serão removidos
+  e serão adicionados ao binário.
+- `MIMALLOC`: (experimental, somente Linux) substitui `mallocng` do `musl` por
+  [`mimalloc`](https://github.com/microsoft/mimalloc) para melhor desempenho.
+  Recomendamos usar isso apenas para compilações direcionadas à `musl`; para
+  `glibc`, prefira desabilitar essa opção e usar
+  [`LD_PRELOAD`](https://microsoft.github.io/mimalloc/overrides.html) ao
+  executar seu binário.
+- `RELEASE`: (somente pessoas mantenedoras) quando definida, o binário
+  resultante será enviado para o GitHub.
 
-## Extensions
+## Extensões
 
-With the glibc or macOS-based binaries, you can load PHP extensions dynamically. However, these extensions will have to be compiled with ZTS support.
-Since most package managers do not currently offer ZTS versions of their extensions, you will have to compile them yourself.
+Com os binários `glibc` ou baseados em macOS, você pode carregar extensões PHP
+dinamicamente.
+No entanto, essas extensões precisarão ser compiladas com suporte a ZTS.
+Como a maioria dos gerenciadores de pacotes não oferece atualmente versões ZTS
+de suas extensões, você terá que compilá-las você mesmo.
 
-For this, you can build and run the `static-builder-gnu` Docker container, remote into it, and compile the extensions with `./configure --with-php-config=/go/src/app/dist/static-php-cli/buildroot/bin/php-config`.
+Para isso, você pode compilar e executar o contêiner Docker
+`static-builder-gnu`, acessá-lo remotamente e compilar as extensões com
+`./configure --with-php-config=/go/src/app/dist/static-php-cli/buildroot/bin/php-config`.
 
-Example steps for [the Xdebug extension](https://xdebug.org):
+Passos de exemplo para [a extensão Xdebug](https://xdebug.org):
 
 ```console
 docker build -t gnu-ext -f static-builder-gnu.Dockerfile --build-arg FRANKENPHP_VERSION=1.0 .
@@ -157,5 +203,7 @@ docker rm static-builder-gnu
 docker rmi gnu-ext
 ```
 
-This will have created `frankenphp` and `xdebug-zts.so` in the current directory.
-If you move the `xdebug-zts.so` into your extension directory, add `zend_extension=xdebug-zts.so` to your php.ini and run FrankenPHP, it will load Xdebug.
+Isso criará `frankenphp` e `xdebug-zts.so` no diretório atual.
+Se você mover `xdebug-zts.so` para o diretório de extensões, adicione
+`zend_extension=xdebug-zts.so` ao seu `php.ini` e execute o FrankenPHP, ele
+carregará o Xdebug.
