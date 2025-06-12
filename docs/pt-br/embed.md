@@ -72,7 +72,7 @@ Docker que fornecemos.
    WORKDIR /go/src/app/dist/app
    COPY . .
 
-   # Compilar o binário estático
+   # Compila o binário estático
    WORKDIR /go/src/app/
    RUN EMBED=dist/app/ ./build-static.sh
    ```
@@ -145,8 +145,8 @@ Você também pode executar os scripts PHP CLI incorporados ao seu binário:
 
 ## Extensões PHP
 
-Por padrão, o script criará as extensões necessárias para o arquivo
-`composer.json` do seu projeto, se houver.
+Por padrão, o script criará as extensões requeridas pelo arquivo `composer.json`
+do seu projeto, se houver.
 Se o arquivo `composer.json` não existir, as extensões padrão serão compiladas,
 conforme documentado na [entrada de compilações estáticas](static.md).
 

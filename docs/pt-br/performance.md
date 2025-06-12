@@ -52,7 +52,7 @@ conforme necessário.
 
 Habilitar [o modo worker](worker.md) melhora drasticamente o desempenho, mas sua
 aplicação precisa ser adaptada para ser compatível com este modo: você precisa
-criar um script worker e garantir que a aplicação não esteja com vazamento de
+criar um worker script e garantir que a aplicação não esteja com vazamento de
 memória.
 
 ## Não use `musl`
