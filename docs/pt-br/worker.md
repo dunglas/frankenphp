@@ -175,7 +175,7 @@ digitação em um script), o FrankenPHP travará com o erro:
 ## Comportamento das superglobais
 
 As
-[superglobais do PHP](https://www.php.net/manual/en/language.variables.superglobals.php)
+[superglobais do PHP](https://www.php.net/manual/pt_BR/language.variables.superglobals.php)
 (`$_SERVER`, `$_ENV`, `$_GET`...) se comportam da seguinte maneira:
 
 - antes da primeira chamada para `frankenphp_handle_request()`, as superglobais

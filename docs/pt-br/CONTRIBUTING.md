@@ -119,10 +119,10 @@ Hub:
 docker buildx bake -f docker-bake.hcl --pull --no-cache --push
 ```
 
-## Depurando falhas de segmentação com construções estáticas
+## Depurando falhas de segmentação com compilações estáticas
 
 1. Baixe a versão de depuração do binário do FrankenPHP do GitHub ou crie sua
-   própria construção estática personalizada, incluindo símbolos de depuração:
+   própria compilação estática personalizada, incluindo símbolos de depuração:
 
    ```console
    docker buildx bake \

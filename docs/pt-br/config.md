@@ -170,7 +170,7 @@ route {
     }
     redir @canonicalPath {path}/ 308
 
-    # Se o arquivo requisitado não existir, tenta os arquivos de índice
+    # Se o arquivo requisitado não existir, tenta os arquivos index
     @indexFiles file {
         try_files {path} {path}/index.php index.php
         split_path .php
@@ -359,14 +359,14 @@ Quanto às SAPIs FPM e CLI, as variáveis de ambiente são expostas por padrão 
 superglobal `$_SERVER`.
 
 O valor `S` da
-[diretiva `variables_order` do PHP](https://www.php.net/manual/en/ini.core.php#ini.variables-order)
+[diretiva `variables_order` do PHP](https://www.php.net/manual/pt_BR/ini.core.php#ini.variables-order)
 é sempre equivalente a `ES`, independentemente da colocação de `E` em outra
 parte desta diretiva.
 
 ## Configuração do PHP
 
 Para carregar
-[arquivos de configuração adicionais do PHP](https://www.php.net/manual/en/configuration.file.php#configuration.file.scan),
+[arquivos de configuração adicionais do PHP](https://www.php.net/manual/pt_BR/configuration.file.php#configuration.file.scan),
 a variável de ambiente `PHP_INI_SCAN_DIR` pode ser usada.
 Quando definida, o PHP carregará todos os arquivos com a extensão `.ini`
 presentes nos diretórios fornecidos.
