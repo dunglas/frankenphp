@@ -11,19 +11,19 @@ import (
 //go:embed templates/extension.c.tpl
 var cFileContent string
 
-type CFileGenerator struct {
+type cFileGenerator struct {
 	generator *Generator
 }
 
-type CTemplateData struct {
-	BaseName  string
-	Functions []phpFunction
-	Classes   []phpClass
-	Constants []phpConstant
-	Version   string
+type cTemplateData struct {
+	baseName  string
+	functions []phpFunction
+	classes   []phpClass
+	constants []phpConstant
+	version   string
 }
 
-func (cg *CFileGenerator) generate() error {
+func (cg *cFileGenerator) generate() error {
 	filename := filepath.Join(cg.generator.BuildDir, cg.generator.BaseName+".c")
 	content, err := cg.buildContent()
 	if err != nil {
@@ -32,7 +32,7 @@ func (cg *CFileGenerator) generate() error {
 	return WriteFile(filename, content)
 }
 
-func (cg *CFileGenerator) buildContent() (string, error) {
+func (cg *cFileGenerator) buildContent() (string, error) {
 	var builder strings.Builder
 
 	templateContent, err := cg.getTemplateContent()
@@ -49,7 +49,7 @@ func (cg *CFileGenerator) buildContent() (string, error) {
 	return builder.String(), nil
 }
 
-func (cg *CFileGenerator) getTemplateContent() (string, error) {
+func (cg *cFileGenerator) getTemplateContent() (string, error) {
 	tmpl, err := template.New("cfile").Funcs(template.FuncMap{
 		"inc": func(i int) int {
 			return i + 1
@@ -60,12 +60,12 @@ func (cg *CFileGenerator) getTemplateContent() (string, error) {
 		return "", err
 	}
 
-	data := CTemplateData{
-		BaseName:  cg.generator.BaseName,
-		Functions: cg.generator.functions,
-		Classes:   cg.generator.classes,
-		Constants: cg.generator.constants,
-		Version:   "1.0.0",
+	data := cTemplateData{
+		baseName:  cg.generator.BaseName,
+		functions: cg.generator.functions,
+		classes:   cg.generator.classes,
+		constants: cg.generator.constants,
+		version:   "1.0.0",
 	}
 
 	var buf bytes.Buffer

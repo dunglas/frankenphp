@@ -210,7 +210,7 @@ func TestSanitizePackageName(t *testing.T) {
 		},
 		{
 			name:     "mixed case with special chars",
-			input:    "MyPackage-name.Version",
+			input:    "MyPackage-name.version",
 			expected: "MyPackage_Name_Version",
 		},
 	}

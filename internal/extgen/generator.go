@@ -106,7 +106,7 @@ func (g *Generator) generateHeaderFile() error {
 }
 
 func (g *Generator) generateCFile() error {
-	generator := CFileGenerator{g}
+	generator := cFileGenerator{g}
 	if err := generator.generate(); err != nil {
 		return &GeneratorError{"C file generation", "failed to generate C file", err}
 	}

@@ -49,7 +49,7 @@ func TestCFileGenerator_Generate(t *testing.T) {
 		},
 	}
 
-	cGen := CFileGenerator{generator}
+	cGen := cFileGenerator{generator}
 	err = cGen.generate()
 	if err != nil {
 		t.Fatalf("generate() failed: %v", err)
@@ -143,7 +143,7 @@ func TestCFileGenerator_BuildContent(t *testing.T) {
 				classes:   tt.classes,
 			}
 
-			cGen := CFileGenerator{generator}
+			cGen := cFileGenerator{generator}
 			content, err := cGen.buildContent()
 			if err != nil {
 				t.Fatalf("buildContent() failed: %v", err)
@@ -200,7 +200,7 @@ func TestCFileGenerator_GetTemplateContent(t *testing.T) {
 				BaseName: tt.baseName,
 				classes:  tt.classes,
 			}
-			cGen := CFileGenerator{generator}
+			cGen := cFileGenerator{generator}
 			content, err := cGen.getTemplateContent()
 			if err != nil {
 				t.Fatalf("getTemplateContent() failed: %v", err)
@@ -273,7 +273,7 @@ func TestCFileIntegrationWithGenerators(t *testing.T) {
 		classes:   classes,
 	}
 
-	cGen := CFileGenerator{generator}
+	cGen := cFileGenerator{generator}
 	err = cGen.generate()
 	if err != nil {
 		t.Fatalf("generate() failed: %v", err)
@@ -309,7 +309,7 @@ func TestCFileErrorHandling(t *testing.T) {
 		},
 	}
 
-	cGen := CFileGenerator{generator}
+	cGen := cFileGenerator{generator}
 	err := cGen.generate()
 	assert.Error(t, err, "Expected error when writing to invalid directory")
 }
@@ -333,7 +333,7 @@ func TestCFileSpecialCharacters(t *testing.T) {
 				},
 			}
 
-			cGen := CFileGenerator{generator}
+			cGen := cFileGenerator{generator}
 			content, err := cGen.buildContent()
 			if err != nil {
 				t.Fatalf("buildContent() failed: %v", err)
@@ -405,7 +405,7 @@ func TestCFileContentValidation(t *testing.T) {
 		},
 	}
 
-	cGen := CFileGenerator{generator}
+	cGen := cFileGenerator{generator}
 	content, err := cGen.buildContent()
 	if err != nil {
 		t.Fatalf("buildContent() failed: %v", err)
@@ -468,7 +468,7 @@ func TestCFileConstants(t *testing.T) {
 				classes:   tt.classes,
 			}
 
-			cGen := CFileGenerator{generator}
+			cGen := cFileGenerator{generator}
 			content, err := cGen.buildContent()
 			if err != nil {
 				t.Fatalf("buildContent() failed: %v", err)
@@ -486,7 +486,7 @@ func TestCFileTemplateErrorHandling(t *testing.T) {
 		BaseName: "error_test",
 	}
 
-	cGen := CFileGenerator{generator}
+	cGen := cFileGenerator{generator}
 
 	_, err := cGen.getTemplateContent()
 	assert.NoError(t, err, "getTemplateContent() should not fail with valid template")
