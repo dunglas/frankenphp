@@ -64,30 +64,30 @@ func (cp *classParser) parse(filename string) ([]phpClass, error) {
 				continue
 			}
 
-			var phpClass string
+			var phpCl string
 			var directiveLine int
-			if phpClass, directiveLine = cp.extractPHPClassCommentWithLine(genDecl.Doc, fset); phpClass == "" {
+			if phpCl, directiveLine = cp.extractPHPClassCommentWithLine(genDecl.Doc, fset); phpCl == "" {
 				continue
 			}
 
 			matchedDirectives[directiveLine] = true
 
 			class := phpClass{
-				Name:     phpClass,
-				GoStruct: typeSpec.Name.Name,
+				name:     phpCl,
+				goStruct: typeSpec.Name.Name,
 			}
 
-			class.Properties = cp.parseStructFields(structType.Fields.List)
+			class.properties = cp.parseStructFields(structType.Fields.List)
 
 			// associate methods with this class
 			for _, method := range methods {
-				if method.className == phpClass {
-					class.Methods = append(class.Methods, method)
+				if method.className == phpCl {
+					class.methods = append(class.methods, method)
 				}
 			}
 
 			if err := validator.validateClass(class); err != nil {
-				fmt.Printf("Warning: Invalid class '%s': %v\n", class.Name, err)
+				fmt.Printf("Warning: Invalid class '%s': %v\n", class.name, err)
 				continue
 			}
 
