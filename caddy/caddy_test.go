@@ -1344,7 +1344,7 @@ func TestWorkerMatchDirective(t *testing.T) {
 	// 404 on unmatched paths
 	tester.AssertGetResponse("http://localhost:"+testPort+"/elsewhere", http.StatusNotFound, "")
 
-	// file will be serverd by file_server
+	// static file will be served by the fileserver
 	tester.AssertGetResponse("http://localhost:"+testPort+"/static.txt", http.StatusOK, "Hello from file")
 }
 
@@ -1383,7 +1383,7 @@ func TestWorkerMatchDirectiveWithMultipleWorkers(t *testing.T) {
 	tester.AssertGetResponse("http://localhost:"+testPort+"/not-matched", http.StatusNotFound, "")
 
 	// serve php file directly as fallback
-	tester.AssertGetResponse("http://localhost:"+testPort+"/hello.php", http.StatusOK, "Hello")
+	tester.AssertGetResponse("http://localhost:"+testPort+"/hello.php", http.StatusOK, "Hello from PHP")
 
 	// serve worker file directly as fallback
 	tester.AssertGetResponse("http://localhost:"+testPort+"/index.php", http.StatusOK, "I am by birth a Genevese (i not set)")
