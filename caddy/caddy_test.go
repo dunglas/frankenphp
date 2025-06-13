@@ -1317,9 +1317,8 @@ func TestWorkerRestart(t *testing.T) {
 		))
 }
 
-func TestWorkerMatchDirectiveWithFileServer(t *testing.T) {
+func TestWorkerMatchDirective(t *testing.T) {
 	tester := caddytest.NewTester(t)
-	testport2 := "3000"
 	tester.InitServer(`
 		{
 			skip_install_trust
@@ -1329,21 +1328,9 @@ func TestWorkerMatchDirectiveWithFileServer(t *testing.T) {
 		http://localhost:`+testPort+` {
 			php_server {
 				root ../testdata/files
-				match /matched-path* worker {
+				worker {
 					file ../worker-with-counter.php
-					num 1
-				}
-			}
-		}
-		http://localhost:`+testport2+` {
-			php_server {
-				root ../testdata
-				match /counter/* worker {
-					file worker-with-counter.php
-					num 1
-				}
-				match /index/* worker {
-					file index.php
+					match /matched-path*
 					num 1
 				}
 			}
@@ -1354,27 +1341,52 @@ func TestWorkerMatchDirectiveWithFileServer(t *testing.T) {
 	tester.AssertGetResponse("http://localhost:"+testPort+"/matched-path", http.StatusOK, "requests:1")
 	tester.AssertGetResponse("http://localhost:"+testPort+"/matched-path/anywhere", http.StatusOK, "requests:2")
 
-	// 404 on no matching paths
-	r, _ := http.NewRequest("GET", "http://localhost:"+testPort+"/not-matched-path", nil)
-	tester.AssertResponseCode(r, http.StatusNotFound)
+	// 404 on unmatched paths
+	tester.AssertGetResponse("http://localhost:"+testPort+"/elsewhere", http.StatusNotFound, "")
+
+	// file will be serverd by file_server
+	tester.AssertGetResponse("http://localhost:"+testPort+"/static.txt", http.StatusOK, "Hello from file")
+}
+
+func TestWorkerMatchDirectiveWithMultipleWorkers(t *testing.T) {
+	tester := caddytest.NewTester(t)
+	tester.InitServer(`
+		{
+			skip_install_trust
+			admin localhost:2999
+		}
+		http://localhost:`+testPort+` {
+			php_server {
+				root ../testdata
+				worker {
+					file worker-with-counter.php
+					match /counter/*
+					num 1
+				}
+				worker {
+					file index.php
+					match /index/*
+					num 1
+				}
+			}
+		}
+		`, "caddyfile")
+
+	// match 2 workers respectively (in the public directory)
+	tester.AssertGetResponse("http://localhost:"+testPort+"/counter/sub-path", http.StatusOK, "requests:1")
+	tester.AssertGetResponse("http://localhost:"+testPort+"/index/sub-path", http.StatusOK, "I am by birth a Genevese (i not set)")
 
 	// static file will be served by the fileserver
-	tester.AssertGetResponse("http://localhost:"+testPort+"/static.txt2", http.StatusOK, "Hello from file")
+	tester.AssertGetResponse("http://localhost:"+testPort+"/files/static.txt", http.StatusOK, "Hello from file")
 
-	// the second php_server has 2 different workers in the public path
-	tester.AssertGetResponse("http://localhost:"+testport2+"/counter/sub-path", http.StatusOK, "requests:1")
-	tester.AssertGetResponse("http://localhost:"+testport2+"/index/sub-path", http.StatusOK, "I am by birth a Genevese (i not set)")
+	// 404 if the request falls through
+	tester.AssertGetResponse("http://localhost:"+testPort+"/not-matched", http.StatusNotFound, "")
 
-	// 404 on no matching paths
-	r, _ = http.NewRequest("GET", "http://localhost:"+testport2+"/other", nil)
-	tester.AssertResponseCode(r, http.StatusNotFound)
+	// serve php file directly as fallback
+	tester.AssertGetResponse("http://localhost:"+testPort+"/hello.php", http.StatusOK, "Hello")
 
-	// static file will be served by the fileserver
-	tester.AssertGetResponse("http://localhost:"+testport2+"/files/static.txt2", http.StatusOK, "Hello from file")
-
-	// 404 on PHP files
-	r, _ = http.NewRequest("GET", "http://localhost:"+testport2+"/index.php", nil)
-	tester.AssertResponseCode(r, http.StatusNotFound)
+	// serve worker file directly as fallback
+	tester.AssertGetResponse("http://localhost:"+testPort+"/index.php", http.StatusOK, "I am by birth a Genevese (i not set)")
 }
 
 func TestWorkerMatchDirectiveWithoutFileServer(t *testing.T) {
@@ -1386,13 +1398,18 @@ func TestWorkerMatchDirectiveWithoutFileServer(t *testing.T) {
 		}
 
 		http://localhost:`+testPort+` {
-			php_server {
-				file_server off
-				root ../testdata/files
-				match /some-path worker {
-					file ../worker-with-counter.php
-					num 1
+			route {
+				php_server {
+					index off
+					file_server off
+					root ../testdata/files
+					worker {
+						file ../worker-with-counter.php
+						match /some-path
+					}
 				}
+
+				respond "Request falls through" 404
 			}
 		}
 		`, "caddyfile")
@@ -1400,7 +1417,7 @@ func TestWorkerMatchDirectiveWithoutFileServer(t *testing.T) {
 	// find the worker at some-path
 	tester.AssertGetResponse("http://localhost:"+testPort+"/some-path", http.StatusOK, "requests:1")
 
-	// do not find the file at static.txt2
-	r, _ := http.NewRequest("GET", "http://localhost:"+testPort+"/static.txt2", nil)
-	tester.AssertResponseCode(r, http.StatusNotFound)
+	// do not find the file at static.txt
+	// the request should completely fall through the php_server module
+	tester.AssertGetResponse("http://localhost:"+testPort+"/static.txt", http.StatusNotFound, "Request falls through")
 }

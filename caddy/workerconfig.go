@@ -33,21 +33,8 @@ type workerConfig struct {
 	// Directories to watch for file changes
 	Watch []string `json:"watch,omitempty"`
 	// The path to match against the worker
-	Match string `json:"match,omitempty"`
-
-	matchStrategy matchStrategy
+	MatchPath string `json:"match_path,omitempty"`
 }
-
-type matchStrategy int
-
-const (
-	matchNone matchStrategy = iota
-	matchAll
-	matchPrefix
-	matchSuffix
-	matchExactly
-	matchWildcard
-)
 
 func parseWorkerConfig(d *caddyfile.Dispenser) (workerConfig, error) {
 	wc := workerConfig{}
@@ -112,9 +99,14 @@ func parseWorkerConfig(d *caddyfile.Dispenser) (workerConfig, error) {
 			} else {
 				wc.Watch = append(wc.Watch, d.Val())
 			}
+		case "match":
+			if !d.NextArg() {
+				return wc, d.ArgErr()
+			}
+			wc.MatchPath = d.Val()
 
 		default:
-			allowedDirectives := "name, file, num, env, watch"
+			allowedDirectives := "name, file, num, env, watch, match"
 			return wc, wrongSubDirectiveError("worker", allowedDirectives, v)
 		}
 	}
@@ -131,11 +123,13 @@ func parseWorkerConfig(d *caddyfile.Dispenser) (workerConfig, error) {
 }
 
 func (wc workerConfig) matchesPath(r *http.Request, documentRoot string) bool {
-	if wc.Match != "" {
-		matches, _ := caddyhttp.MatchPath{wc.Match}.MatchWithError(r)
-		return matches
+
+	// try to match against a pattern if one is assigned
+	if wc.MatchPath != "" {
+		return caddyhttp.MatchPath{wc.MatchPath}.Match(r)
 	}
 
+	// if there is no pattern, try to match against the actual path (in the public directory)
 	fullScriptPath, _ := fastabs.FastAbs(documentRoot + "/" + r.URL.Path)
 	absFileName, _ := fastabs.FastAbs(wc.FileName)
 	return fullScriptPath == absFileName
