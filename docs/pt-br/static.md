@@ -108,13 +108,13 @@ o Caddy, bem como os módulos
 [Mercure](https://mercure.rocks) e [Vulcain](https://vulcain.rocks).
 
 > [!TIP]
-> 
+>
 > Os módulos cbrotli, Mercure e Vulcain são incluídos por padrão se
 > `XCADDY_ARGS` estiver vazio ou não definido.
 > Se você personalizar o valor de `XCADDY_ARGS`, deverá incluí-los
 > explicitamente se desejar que sejam incluídos.
 
-Veja também como [personalizar a compilação](#personalizando-a-compilacao).
+Veja também como [personalizar a compilação](#personalizando-a-compilação).
 
 ### Token do GitHub
 

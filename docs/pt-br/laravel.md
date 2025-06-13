@@ -201,7 +201,7 @@ independentes!
 
 Para fazer isso, [instale o Octane corretamente](#laravel-octane) e siga os
 passos descritos na
-[seção anterior](#aplicacoes-laravel-como-binarios-independentes).
+[seção anterior](#aplicações-laravel-como-binários-independentes).
 
 Em seguida, para iniciar o FrankenPHP em modo worker através do Octane, execute:
 

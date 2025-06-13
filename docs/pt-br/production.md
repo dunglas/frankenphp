@@ -78,7 +78,7 @@ Para implantar sua aplicação em produção, você precisa de um servidor.
 Neste tutorial, usaremos uma máquina virtual fornecida pela DigitalOcean, mas
 qualquer servidor Linux pode funcionar.
 Se você já possui um servidor Linux com o Docker instalado, pode pular direto
-para [a próxima seção](#configurando-um-nome-de-dominio).
+para [a próxima seção](#configurando-um-nome-de-domínio).
 
 Caso contrário, use [este link de afiliado](https://m.do.co/c/5d8aabe3ab80) para
 obter US$ 200 em créditos gratuitos, crie uma conta e clique em "Create a

@@ -85,7 +85,7 @@ Docker que fornecemos.
    > Certifique-se de ajustar ou remover o arquivo `.dockerignore` antes da
    > compilação.
 
-4. Construa:
+2. Construa:
 
    ```console
    docker build -t aplicacao-estatica -f static-build.Dockerfile .
