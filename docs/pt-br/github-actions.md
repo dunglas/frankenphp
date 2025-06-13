@@ -1,31 +1,39 @@
-# Using GitHub Actions
+# Usando GitHub Actions
 
-This repository builds and deploys the Docker image to [Docker Hub](https://hub.docker.com/r/dunglas/frankenphp) on
-every approved pull request or on your own fork once setup.
+Este repositório constrói e implementa a imagem do Docker no
+[Docker Hub](https://hub.docker.com/r/dunglas/frankenphp) em cada pull request
+aprovado ou em seu próprio fork após a configuração.
 
-## Setting up GitHub Actions
+## Configurando GitHub Actions
 
-In the repository settings, under secrets, add the following secrets:
+Nas configurações do repositório, em "Secrets", adicione os seguintes segredos:
 
-- `REGISTRY_LOGIN_SERVER`: The docker registry to use (e.g. `docker.io`).
-- `REGISTRY_USERNAME`: The username to use to log in to the registry (e.g. `dunglas`).
-- `REGISTRY_PASSWORD`: The password to use to log in to the registry (e.g. an access key).
-- `IMAGE_NAME`: The name of the image (e.g. `dunglas/frankenphp`).
+- `REGISTRY_LOGIN_SERVER`: O registro do Docker a ser usado (por exemplo,
+  `docker.io`).
+- `REGISTRY_USERNAME`: O nome de usuário a ser usado para fazer login no
+  registro (por exemplo, `dunglas`).
+- `REGISTRY_PASSWORD`: A senha a ser usada para fazer login no registro (por
+  exemplo, uma chave de acesso).
+- `IMAGE_NAME`: O nome da imagem (por exemplo, `dunglas/frankenphp`).
 
-## Building and Pushing the Image
+## Construindo e enviando a imagem
 
-1. Create a Pull Request or push to your fork.
-2. GitHub Actions will build the image and run any tests.
-3. If the build is successful, the image will be pushed to the registry using the `pr-x`, where `x` is the PR number, as the tag.
+1. Crie um pull request ou faça o push para o seu fork.
+2. O GitHub Actions construirá a imagem e executará os testes.
+3. Se a construção for bem-sucedida, a imagem será enviada para o registro
+   usando a tag `pr-x`, onde `x` é o número do PR.
 
-## Deploying the Image
+## Implantando a imagem
 
-1. Once the Pull Request is merged, GitHub Actions will again run the tests and build a new image.
-2. If the build is successful, the `main` tag will be updated in the Docker registry.
+1. Após o merge do pull request, o GitHub Actions executará os testes novamente
+   e criará uma nova imagem.
+2. Se a construção for bem-sucedida, a tag `main` será atualizada no registro do
+   Docker.
 
-## Releases
+## Versões
 
-1. Create a new tag in the repository.
-2. GitHub Actions will build the image and run any tests.
-3. If the build is successful, the image will be pushed to the registry using the tag name as the tag (e.g. `v1.2.3` and `v1.2` will be created).
-4. The `latest` tag will also be updated.
+1. Crie uma nova tag no repositório.
+2. O GitHub Actions construirá a imagem e executará os testes.
+3. Se a construção for bem-sucedida, a imagem será enviada para o registro
+   usando o nome da tag como tag (por exemplo, `v1.2.3` e `v1.2` serão criadas).
+4. A tag `latest` também será atualizada.
