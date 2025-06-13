@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strconv"
 
+	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/caddyserver/caddy/v2/modules/caddyhttp"
 	"github.com/dunglas/frankenphp"
@@ -103,7 +104,11 @@ func parseWorkerConfig(d *caddyfile.Dispenser) (workerConfig, error) {
 			if !d.NextArg() {
 				return wc, d.ArgErr()
 			}
-			wc.MatchPath = d.Val()
+			// provision the path so it's identical to Caddy match rules
+			// see: https://github.com/caddyserver/caddy/blob/master/modules/caddyhttp/matchers.go
+			caddyMatchPath := caddyhttp.MatchPath{d.Val()}
+			caddyMatchPath.Provision(caddy.Context{})
+			wc.MatchPath = caddyMatchPath[0]
 
 		default:
 			allowedDirectives := "name, file, num, env, watch, match"
