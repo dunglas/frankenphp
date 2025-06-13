@@ -1,8 +1,7 @@
 # Criar uma compilação estática
 
 Em vez de usar uma instalação local da biblioteca PHP, é possível criar uma
-compilação estática ou quase totalmente estática do FrankenPHP graças ao
-excelente
+compilação estática ou principalmente estática do FrankenPHP graças ao excelente
 [projeto static-php-cli](https://github.com/crazywhalecc/static-php-cli) (apesar
 do nome, este projeto suporta todas as SAPIs, não apenas CLI).
 
@@ -18,8 +17,8 @@ têm algumas limitações por usarem a `libc` `musl`.
 A maioria dos binários estáticos requer apenas `glibc` e pode carregar extensões
 dinâmicas.
 
-Sempre que possível, recomendamos o uso de compilações quase totalmente
-estáticas baseadas na `glibc`.
+Sempre que possível, recomendamos o uso de compilações principalmente estáticas
+baseadas na `glibc`.
 
 O FrankenPHP também suporta
 [a incorporação da aplicação PHP no binário estático](embed.md).
@@ -45,7 +44,7 @@ alocador [`mimalloc`](https://github.com/microsoft/mimalloc).
 docker buildx bake --load --set static-builder-musl.args.MIMALLOC=1 static-builder-musl
 ```
 
-### Compilação quase totalmente estática baseada na `glibc` (com suporte a extensões dinâmicas)
+### Compilação principalmente estática baseada na `glibc` (com suporte a extensões dinâmicas)
 
 Para um binário que suporta o carregamento dinâmico de extensões PHP, mantendo
 as extensões selecionadas compiladas estaticamente:
@@ -58,7 +57,7 @@ docker cp $(docker create --name static-builder-gnu dunglas/frankenphp:static-bu
 Este binário suporta todas as versões 2.17 e superiores da `glibc`, mas não roda
 em sistemas baseados em `musl` (como o Alpine Linux).
 
-O binário quase totalmente estático (exceto a `glibc`) resultante é chamado
+O binário principalmente estático (exceto a `glibc`) resultante é chamado
 `frankenphp` e está disponível no diretório atual.
 
 Se você quiser compilar o binário estático sem o Docker, consulte as instruções
@@ -161,7 +160,7 @@ o script `build-static.sh` para personalizar a compilação estática:
 - `NO_COMPRESS`: não compacta o binário resultante usando UPX.
 - `DEBUG_SYMBOLS`: quando definida, os símbolos de depuração não serão removidos
   e serão adicionados ao binário.
-- `MIMALLOC`: (experimental, somente Linux) substitui `mallocng` do `musl` por
+- `MIMALLOC`: (experimental, somente Linux) substitui `mallocng` da `musl` por
   [`mimalloc`](https://github.com/microsoft/mimalloc) para melhor desempenho.
   Recomendamos usar isso apenas para compilações direcionadas à `musl`; para
   `glibc`, prefira desabilitar essa opção e usar
