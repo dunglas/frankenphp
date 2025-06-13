@@ -97,8 +97,8 @@ compilação para o compilador Go.
 
 | Recurso                                | Dependência                                                           | Tag de compilação para desabilitá-lo |
 |----------------------------------------|-----------------------------------------------------------------------|--------------------------------------|
-| Compressão Brotli                      | [Brotli](https://github.com/google/brotli)                            | `nobrotli`                             |
-| Reiniciar workers ao alterar o arquivo | [Watcher C](https://github.com/e-dant/watcher/tree/release/watcher-c) | `nowatcher`                            |
+| Compressão Brotli                      | [Brotli](https://github.com/google/brotli)                            | `nobrotli`                           |
+| Reiniciar workers ao alterar o arquivo | [Watcher C](https://github.com/e-dant/watcher/tree/release/watcher-c) | `nowatcher`                          |
 
 ## Compilando a aplicação Go
 

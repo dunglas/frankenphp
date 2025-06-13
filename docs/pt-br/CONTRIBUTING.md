@@ -229,10 +229,10 @@ Para traduzir a documentação e o site para um novo idioma, siga estes passos:
 4. Traduza o conteúdo dos arquivos, mas não altere os nomes dos arquivos, nem
    traduza strings que comecem com `> [!` (é uma marcação especial para o
    GitHub).
-5. Crie um Pull Request com as traduções.
+5. Crie um pull request com as traduções.
 6. No
    [repositório do site](https://github.com/dunglas/frankenphp-website/tree/main),
    copie e traduza os arquivos de tradução nos diretórios `content/`, `data/` e
    `i18n/`.
 7. Traduza os valores no arquivo YAML criado.
-8. Abra um Pull Request no repositório do site.
+8. Abra um pull request no repositório do site.

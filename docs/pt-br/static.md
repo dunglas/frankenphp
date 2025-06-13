@@ -91,8 +91,8 @@ docker buildx bake \
 
 ### Módulos Caddy extras
 
-Para adicionar módulos Caddy extras ou passar outros argumentos para
-[xcaddy](https://github.com/caddyserver/xcaddy), use o `ARG` `XCADDY_ARGS` do
+Para adicionar módulos Caddy extras ou passar outros argumentos para o
+[`xcaddy`](https://github.com/caddyserver/xcaddy), use o `ARG` `XCADDY_ARGS` do
 Docker:
 
 ```console
