@@ -571,14 +571,14 @@ func parsePhpServer(h httpcaddyfile.Helper) ([]httpcaddyfile.ConfigValue, error)
 // workers can also match a path without being in the public directory
 // in this case we need to prepend the worker routes to the existing routes
 func prependWorkerRoutes(routes caddyhttp.RouteList, h httpcaddyfile.Helper, f FrankenPHPModule, fsrv caddy.Module, disableFsrv bool) caddyhttp.RouteList {
-	matchPath := caddyhttp.MatchPath{}
+	allWorkerMatches := caddyhttp.MatchPath{}
 	for _, w := range f.Workers {
-		if w.MatchPath != "" {
-			matchPath = append(matchPath, w.MatchPath)
+		for _, path := range w.MatchPath {
+			allWorkerMatches = append(matchPath, path)
 		}
 	}
 
-	if len(matchPath) == 0 {
+	if len(allWorkerMatches) == 0 {
 		return routes
 	}
 
@@ -604,10 +604,10 @@ func prependWorkerRoutes(routes caddyhttp.RouteList, h httpcaddyfile.Helper, f F
 		})
 	}
 
-	// forward matching routes instantly to the PHP handler
+	// forward matching routes to the PHP handler
 	routes = append(routes, caddyhttp.Route{
 		MatcherSetsRaw: []caddy.ModuleMap{
-			caddy.ModuleMap{"path": h.JSON(matchPath)},
+			caddy.ModuleMap{"path": h.JSON(allWorkerMatches)},
 		},
 		HandlersRaw: []json.RawMessage{
 			caddyconfig.JSONModuleObject(f, "handler", "php", nil),
