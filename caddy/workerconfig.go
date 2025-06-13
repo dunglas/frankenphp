@@ -34,7 +34,7 @@ type workerConfig struct {
 	// Directories to watch for file changes
 	Watch []string `json:"watch,omitempty"`
 	// The path to match against the worker
-	MatchPath string `json:"match_path,omitempty"`
+	MatchPath []string `json:"match_path,omitempty"`
 }
 
 func parseWorkerConfig(d *caddyfile.Dispenser) (workerConfig, error) {
@@ -101,15 +101,11 @@ func parseWorkerConfig(d *caddyfile.Dispenser) (workerConfig, error) {
 				wc.Watch = append(wc.Watch, d.Val())
 			}
 		case "match":
-			if !d.NextArg() {
-				return wc, d.ArgErr()
-			}
 			// provision the path so it's identical to Caddy match rules
 			// see: https://github.com/caddyserver/caddy/blob/master/modules/caddyhttp/matchers.go
-			caddyMatchPath := caddyhttp.MatchPath{d.Val()}
+			caddyMatchPath := (caddyhttp.MatchPath)(d.RemainingArgs())
 			caddyMatchPath.Provision(caddy.Context{})
-			wc.MatchPath = caddyMatchPath[0]
-
+			wc.MatchPath = ([]string)(caddyMatchPath)
 		default:
 			allowedDirectives := "name, file, num, env, watch, match"
 			return wc, wrongSubDirectiveError("worker", allowedDirectives, v)
@@ -130,8 +126,8 @@ func parseWorkerConfig(d *caddyfile.Dispenser) (workerConfig, error) {
 func (wc workerConfig) matchesPath(r *http.Request, documentRoot string) bool {
 
 	// try to match against a pattern if one is assigned
-	if wc.MatchPath != "" {
-		return caddyhttp.MatchPath{wc.MatchPath}.Match(r)
+	if len(wc.MatchPath) != 0 {
+		return (caddyhttp.MatchPath)(wc.MatchPath).Match(r)
 	}
 
 	// if there is no pattern, try to match against the actual path (in the public directory)
