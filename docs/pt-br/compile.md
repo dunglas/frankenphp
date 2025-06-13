@@ -1,40 +1,53 @@
-# Compile From Sources
+# Compilar a partir dos fontes
 
-This document explains how to create a FrankenPHP binary that will load PHP as a dynamic library.
-This is the recommended method.
+Este documento explica como criar um binário FrankenPHP que carregará o PHP como
+uma biblioteca dinâmica.
+Este é o método recomendado.
+
+Como alternativa, [compilações totalmente e principalmente estáticas](static.md)
+também podem ser criadas.
+
+## Instalar o PHP
 
 Alternatively, [fully and mostly static builds](static.md) can also be created.
 
 ## Install PHP
 
-FrankenPHP is compatible with PHP 8.2 and superior.
+O FrankenPHP é compatível com PHP 8.2 e versões superiores.
 
-### With Homebrew (Linux and Mac)
+### Com o Homebrew (Linux e Mac)
 
-The easiest way to install a version of libphp compatible with FrankenPHP is to use the ZTS packages provided by [Homebrew PHP](https://github.com/shivammathur/homebrew-php).
+A maneira mais fácil de instalar uma versão da `libphp` compatível com o
+FrankenPHP é usar os pacotes ZTS fornecidos pelo
+[Homebrew PHP](https://github.com/shivammathur/homebrew-php).
 
-First, if not already done, install [Homebrew](https://brew.sh).
+Primeiro, se ainda não o fez, instale o [Homebrew](https://brew.sh).
 
-Then, install the ZTS variant of PHP, Brotli (optional, for compression support) and watcher (optional, for file change detection):
+Em seguida, instale a variante ZTS do PHP, o Brotli (opcional, para suporte à
+compressão) e o watcher (opcional, para detecção de alterações em arquivos):
 
 ```console
 brew install shivammathur/php/php-zts brotli watcher
 brew link --overwrite --force shivammathur/php/php-zts
 ```
 
-### By Compiling PHP
+### Compilando o PHP
 
-Alternatively, you can compile PHP from sources with the options needed by FrankenPHP by following these steps.
-~~
-~~First, [get the PHP sources](https://www.php.net/downloads.php) and extract them:
+Alternativamente, você pode compilar o PHP a partir dos códigos-fonte com as
+opções necessárias para o FrankenPHP seguindo estes passos.
+
+Primeiro, [obtenha os códigos-fonte do PHP](https://www.php.net/downloads.php) e
+extraia-os:
 
 ```console
 tar xf php-*
 cd php-*/
 ```
 
-Then, run the `configure` script with the options needed for your platform.
-The following `./configure` flags are mandatory, but you can add others, for example, to compile extensions or additional features.
+Em seguida, execute o script `configure` com as opções necessárias para sua
+plataforma.
+As seguintes flags `./configure` são obrigatórias, mas você pode adicionar
+outras, por exemplo, para compilar extensões ou recursos adicionais.
 
 #### Linux
 
@@ -48,14 +61,15 @@ The following `./configure` flags are mandatory, but you can add others, for exa
 
 #### Mac
 
-Use the [Homebrew](https://brew.sh/) package manager to install the required and optional dependencies:
+Use o gerenciador de pacotes [Homebrew](https://brew.sh/) para instalar as
+dependências necessárias e opcionais:
 
 ```console
 brew install libiconv bison brotli re2c pkg-config watcher
 echo 'export PATH="/opt/homebrew/opt/bison/bin:$PATH"' >> ~/.zshrc
 ```
 
-Then run the configure script:
+Em seguida, execute o script `configure`:
 
 ```console
 ./configure \
@@ -65,33 +79,38 @@ Then run the configure script:
     --with-iconv=/opt/homebrew/opt/libiconv/
 ```
 
-#### Compile PHP
+#### Compilar o PHP
 
-Finally, compile and install PHP:
+Finalmente, compile e instale o PHP:
 
 ```console
 make -j"$(getconf _NPROCESSORS_ONLN)"
 sudo make install
 ```
 
-## Install Optional Dependencies
+## Instalar dependências opcionais
 
-Some FrankenPHP features depend on optional system dependencies that must be installed.
-Alternatively, these features can be disabled by passing build tags to the Go compiler.
+Alguns recursos do FrankenPHP dependem de dependências opcionais do sistema que
+devem ser instaladas.
+Alternativamente, esses recursos podem ser desabilitados passando as tags de
+compilação para o compilador Go.
 
-| Feature                        | Dependency                                                            | Build tag to disable it |
-|--------------------------------|-----------------------------------------------------------------------|-------------------------|
-| Brotli compression             | [Brotli](https://github.com/google/brotli)                            | nobrotli                |
-| Restart workers on file change | [Watcher C](https://github.com/e-dant/watcher/tree/release/watcher-c) | nowatcher               |
+| Recurso                                | Dependência                                                           | Tag de compilação para desabilitá-lo |
+|----------------------------------------|-----------------------------------------------------------------------|--------------------------------------|
+| Compressão Brotli                      | [Brotli](https://github.com/google/brotli)                            | `nobrotli`                             |
+| Reiniciar workers ao alterar o arquivo | [Watcher C](https://github.com/e-dant/watcher/tree/release/watcher-c) | `nowatcher`                            |
 
-## Compile the Go App
+## Compilando a aplicação Go
 
-You can now build the final binary.
+Agora você pode compilar o binário final.
 
-### Using xcaddy
+### Usando o `xcaddy`
 
-The recommended way is to use [xcaddy](https://github.com/caddyserver/xcaddy) to compile FrankenPHP.
-`xcaddy` also allows to easily add [custom Caddy modules](https://caddyserver.com/docs/modules/) and FrankenPHP extensions:
+A maneira recomendada é usar o [`xcaddy`](https://github.com/caddyserver/xcaddy)
+para compilar o FrankenPHP.
+O `xcaddy` também permite adicionar facilmente
+[módulos Caddy personalizados](https://caddyserver.com/docs/modules/) e
+extensões FrankenPHP:
 
 ```console
 CGO_ENABLED=1 \
@@ -103,22 +122,27 @@ xcaddy build \
     --with github.com/dunglas/frankenphp/caddy \
     --with github.com/dunglas/mercure/caddy \
     --with github.com/dunglas/vulcain/caddy
-    # Add extra Caddy modules and FrankenPHP extensions here
+    # Adicione módulos Caddy e extensões FrankenPHP extras aqui
 ```
 
 > [!TIP]
 >
-> If you're using musl libc (the default on Alpine Linux) and Symfony,
-> you may need to increase the default stack size.
-> Otherwise, you may get errors like `PHP Fatal error: Maximum call stack size of 83360 bytes reached during compilation. Try splitting expression`
+> Se você estiver usando a `libc` `musl` (o padrão no Alpine Linux) e Symfony,
+> pode ser necessário aumentar o tamanho da pilha padrão.
+> Caso contrário, você poderá receber erros como `PHP Fatal error: Maximum call
+> stack size of 83360 bytes reached during compilation.
+> Try splitting expression`.
 >
-> To do so, change the `XCADDY_GO_BUILD_FLAGS` environment variable to something like
+> Para fazer isso, altere a variável de ambiente `XCADDY_GO_BUILD_FLAGS` para
+> algo como
 > `XCADDY_GO_BUILD_FLAGS=$'-ldflags "-w -s -extldflags \'-Wl,-z,stack-size=0x80000\'"'`
-> (change the stack size value according to your app needs).
+> (altere o valor do tamanho da pilha de acordo com as necessidades da sua
+> aplicação).
 
-### Without xcaddy
+### Sem o `xcaddy`
 
-Alternatively, it's possible to compile FrankenPHP without `xcaddy` by using the `go` command directly:
+Alternativamente, é possível compilar o FrankenPHP sem o `xcaddy` usando o
+comando `go` diretamente:
 
 ```console
 curl -L https://github.com/dunglas/frankenphp/archive/refs/heads/main.tar.gz | tar xz
