@@ -573,7 +573,7 @@ func prependWorkerRoutes(routes caddyhttp.RouteList, h httpcaddyfile.Helper, f F
 	allWorkerMatches := caddyhttp.MatchPath{}
 	for _, w := range f.Workers {
 		for _, path := range w.MatchPath {
-			allWorkerMatches = append(matchPath, path)
+			allWorkerMatches = append(allWorkerMatches, path)
 		}
 	}
 
