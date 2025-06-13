@@ -1,41 +1,58 @@
-# Known Issues
+# Problemas conhecidos
 
-## Unsupported PHP Extensions
+## Extensões PHP não suportadas
 
-The following extensions are known not to be compatible with FrankenPHP:
+As seguintes extensões são conhecidas por não serem compatíveis com o
+FrankenPHP:
 
-| Name                                                                                                        | Reason          | Alternatives                                                                                                         |
-| ----------------------------------------------------------------------------------------------------------- | --------------- | -------------------------------------------------------------------------------------------------------------------- |
-| [imap](https://www.php.net/manual/en/imap.installation.php)                                                 | Not thread-safe | [javanile/php-imap2](https://github.com/javanile/php-imap2), [webklex/php-imap](https://github.com/Webklex/php-imap) |
-| [newrelic](https://docs.newrelic.com/docs/apm/agents/php-agent/getting-started/introduction-new-relic-php/) | Not thread-safe | -                                                                                                                    |
+| Nome                                                                                                        | Motivo            | Alternativas                                                                                                         |
+|-------------------------------------------------------------------------------------------------------------|-------------------|----------------------------------------------------------------------------------------------------------------------|
+| [imap](https://www.php.net/manual/pt_BR/imap.installation.php)                                              | Não é thread-safe | [javanile/php-imap2](https://github.com/javanile/php-imap2), [webklex/php-imap](https://github.com/Webklex/php-imap) |
+| [newrelic](https://docs.newrelic.com/docs/apm/agents/php-agent/getting-started/introduction-new-relic-php/) | Não é thread-safe | -                                                                                                                    |
 
-## Buggy PHP Extensions
+## Extensões PHP com falhas
 
-The following extensions have known bugs and unexpected behaviors when used with FrankenPHP:
+As seguintes extensões apresentam falhas conhecidas e comportamentos inesperados
+quando usadas com o FrankenPHP:
 
-| Name                                                          | Problem                                                                                                                                                                                                                                                                                         |
-| ------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [ext-openssl](https://www.php.net/manual/en/book.openssl.php) | When using a static build of FrankenPHP (built with the musl libc), the OpenSSL extension may crash under heavy loads. A workaround is to use a dynamically linked build (like the one used in Docker images). This bug is [being tracked by PHP](https://github.com/php/php-src/issues/13648). |
+| Nome                                                             | Problema                                                                                                                                                                                                                                                                                                                    |
+|------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [ext-openssl](https://www.php.net/manual/pt_BR/book.openssl.php) | Ao usar uma versão estática do FrankenPHP (compilada com a `libc` `musl`), a extensão OpenSSL pode quebrar sob cargas pesadas. Uma solução alternativa é usar uma versão vinculada dinamicamente (como a usada em imagens Docker). Esta falha está [sendo monitorada pelo PHP](https://github.com/php/php-src/issues/13648) |
 
-## get_browser
+## `get_browser`
 
-The [get_browser()](https://www.php.net/manual/en/function.get-browser.php) function seems to perform badly after a while. A workaround is to cache (e.g. with [APCu](https://www.php.net/manual/en/book.apcu.php)) the results per User Agent, as they are static.
+A função
+[`get_browser()`](https://www.php.net/manual/pt_BR/function.get-browser.php)
+parece apresentar mau desempenho após algum tempo.
+Uma solução alternativa é armazenar em cache (por exemplo, com
+[APCu](https://www.php.net/manual/pt_BR/book.apcu.php)) os resultados por Agente
+de Usuário, pois são estáticos.
 
-## Standalone Binary and Alpine-based Docker Images
+## Imagens Docker binárias independentes e baseadas em Alpine
 
-The standalone binary and Alpine-based docker images (`dunglas/frankenphp:*-alpine`) use [musl libc](https://musl.libc.org/) instead of [glibc and friends](https://www.etalabs.net/compare_libcs.html), to keep a smaller binary size. This may lead to some compatibility issues. In particular, the glob flag `GLOB_BRACE` is [not available](https://www.php.net/manual/en/function.glob.php)
+As imagens Docker binárias independentes e baseadas em Alpine
+(`dunglas/frankenphp:*-alpine`) usam a [`libc` `musl`](https://musl.libc.org/)
+em vez de [`glibc` e similares](https://www.etalabs.net/compare_libcs.html) para
+manter um tamanho binário menor.
+Isso pode levar a alguns problemas de compatibilidade.
+Em particular, o sinalizador glob `GLOB_BRACE`
+[não está disponível](https://www.php.net/manual/pt_BR/function.glob.php)
 
-## Using `https://127.0.0.1` with Docker
+## Usando `https://127.0.0.1` com o Docker
 
-By default, FrankenPHP generates a TLS certificate for `localhost`.
-It's the easiest and recommended option for local development.
+Por padrão, o FrankenPHP gera um certificado TLS para `localhost`.
+É a opção mais fácil e recomendada para desenvolvimento local.
 
-If you really want to use `127.0.0.1` as a host instead, it's possible to configure it to generate a certificate for it by setting the server name to `127.0.0.1`.
+Se você realmente deseja usar `127.0.0.1` como host, é possível configurá-lo
+para gerar um certificado definindo o nome do servidor como `127.0.0.1`.
 
-Unfortunately, this is not enough when using Docker because of [its networking system](https://docs.docker.com/network/).
-You will get a TLS error similar to `curl: (35) LibreSSL/3.3.6: error:1404B438:SSL routines:ST_CONNECT:tlsv1 alert internal error`.
+Infelizmente, isso não é suficiente ao usar o Docker devido ao
+[seu sistema de rede](https://docs.docker.com/network/).
+Você receberá um erro TLS semelhante a
+`curl: (35) LibreSSL/3.3.6: erro:1404B438:SSL routines:ST_CONNECT:tlsv1 alert internal error`.
 
-If you're using Linux, a solution is to use [the host networking driver](https://docs.docker.com/network/network-tutorial-host/):
+Se você estiver usando Linux, uma solução é usar
+[o driver de rede do host](https://docs.docker.com/network/network-tutorial-host/):
 
 ```console
 docker run \
@@ -45,11 +62,17 @@ docker run \
     dunglas/frankenphp
 ```
 
-The host networking driver isn't supported on Mac and Windows. On these platforms, you will have to guess the IP address of the container and include it in the server names.
+O driver de rede do host não é compatível com Mac e Windows.
+Nessas plataformas, você terá que descobrir o endereço IP do contêiner e
+incluí-lo nos nomes dos servidores.
 
-Run the `docker network inspect bridge` and look at the `Containers` key to identify the last currently assigned IP address under the `IPv4Address` key, and increment it by one. If no container is running, the first assigned IP address is usually `172.17.0.2`.
+Execute o comando `docker network inspect bridge` e verifique a chave
+`Containers` para identificar o último endereço IP atribuído atualmente sob a
+chave `IPv4Address` e incremente-o em um.
+Se nenhum contêiner estiver em execução, o primeiro endereço IP atribuído
+geralmente é `172.17.0.2`.
 
-Then, include this in the `SERVER_NAME` environment variable:
+Em seguida, inclua isso na variável de ambiente `SERVER_NAME`:
 
 ```console
 docker run \
@@ -61,11 +84,13 @@ docker run \
 
 > [!CAUTION]
 >
-> Be sure to replace `172.17.0.3` with the IP that will be assigned to your container.
+> Certifique-se de substituir `172.17.0.3` pelo IP que será atribuído ao seu
+> contêiner.
 
-You should now be able to access `https://127.0.0.1` from the host machine.
+Agora você deve conseguir acessar `https://127.0.0.1` a partir da máquina host.
 
-If that's not the case, start FrankenPHP in debug mode to try to figure out the problem:
+Se este não for o caso, inicie o FrankenPHP em modo de depuração para tentar
+descobrir o problema:
 
 ```console
 docker run \
@@ -76,14 +101,23 @@ docker run \
     dunglas/frankenphp
 ```
 
-## Composer Scripts Referencing `@php`
+## Scripts do Composer que referenciam `@php`
 
-[Composer scripts](https://getcomposer.org/doc/articles/scripts.md) may want to execute a PHP binary for some tasks, e.g. in [a Laravel project](laravel.md) to run `@php artisan package:discover --ansi`. This [currently fails](https://github.com/dunglas/frankenphp/issues/483#issuecomment-1899890915) for two reasons:
+[Scripts do Composer](https://getcomposer.org/doc/articles/scripts.md) podem
+querer executar um binário PHP para algumas tarefas, por exemplo, em
+[um projeto Laravel](laravel.md) para executar
+`@php artisan package:discover --ansi`.
+Isso
+[atualmente falha](https://github.com/dunglas/frankenphp/issues/483#issuecomment-1899890915)
+por dois motivos:
 
-- Composer does not know how to call the FrankenPHP binary;
-- Composer may add PHP settings using the `-d` flag in the command, which FrankenPHP does not yet support.
+- O Composer não sabe como chamar o binário do FrankenPHP;
+- O Composer pode adicionar configurações do PHP usando a flag `-d` no comando,
+  que o FrankenPHP ainda não suporta.
 
-As a workaround, we can create a shell script in `/usr/local/bin/php` which strips the unsupported parameters and then calls FrankenPHP:
+Como solução alternativa, podemos criar um script de shell em
+`/usr/local/bin/php` que remove os parâmetros não suportados e, em seguida,
+chama o FrankenPHP:
 
 ```bash
 #!/usr/bin/env bash
@@ -101,16 +135,18 @@ done
 /usr/local/bin/frankenphp php-cli ${args[@]}
 ```
 
-Then set the environment variable `PHP_BINARY` to the path of our `php` script and run Composer:
+Em seguida, defina a variável de ambiente `PHP_BINARY` para o caminho do nosso
+script `php` e execute o Composer:
 
 ```console
 export PHP_BINARY=/usr/local/bin/php
 composer install
 ```
 
-## Troubleshooting TLS/SSL Issues with Static Binaries
+## Solução de problemas de TLS/SSL com binários estáticos
 
-When using the static binaries, you may encounter the following TLS-related errors, for instance when sending emails using STARTTLS:
+Ao usar binários estáticos, você pode encontrar os seguintes erros relacionados
+a TLS, por exemplo, ao enviar e-mails usando STARTTLS:
 
 ```text
 Unable to connect with STARTTLS: stream_socket_enable_crypto(): SSL operation failed with code 5. OpenSSL Error messages:
@@ -120,24 +156,30 @@ error:80000002:system library::No such file or directory
 error:0A000086:SSL routines::certificate verify failed
 ```
 
-As the static binary doesn't bundle TLS certificates, you need to point OpenSSL to your local CA certificates installation.
+Como o binário estático não empacota certificados TLS, você precisa apontar o
+OpenSSL para a instalação local de certificados de CA.
 
-Inspect the output of [`openssl_get_cert_locations()`](https://www.php.net/manual/en/function.openssl-get-cert-locations.php),
-to find where CA certificates must be installed and store them at this location.
+Inspecione a saída de
+[`openssl_get_cert_locations()`](https://www.php.net/manual/pt_BR/function.openssl-get-cert-locations.php),
+para descobrir onde os certificados de CA devem ser instalados e armazene-os
+neste local.
 
 > [!WARNING]
 >
-> Web and CLI contexts may have different settings.
-> Be sure to run `openssl_get_cert_locations()` in the proper context.
+> Contextos web e CLI podem ter configurações diferentes.
+> Certifique-se de executar `openssl_get_cert_locations()` no contexto
+> apropriado.
 
-[CA certificates extracted from Mozilla can be downloaded on the curl site](https://curl.se/docs/caextract.html).
+[Certificados CA extraídos do Mozilla podem ser baixados no site do curl](https://curl.se/docs/caextract.html).
 
-Alternatively, many distributions, including Debian, Ubuntu, and Alpine provide packages named `ca-certificates` that contain these certificates.
+Como alternativa, muitas distribuições, incluindo Debian, Ubuntu e Alpine,
+fornecem pacotes chamados `ca-certificates` que contêm esses certificados.
 
-It's also possible to use the `SSL_CERT_FILE` and `SSL_CERT_DIR` to hint OpenSSL where to look for CA certificates:
+Também é possível usar `SSL_CERT_FILE` e `SSL_CERT_DIR` para indicar ao OpenSSL
+onde procurar certificados CA:
 
 ```console
-# Set TLS certificates environment variables
+# Define variáveis de ambiente para certificados TLS
 export SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
 export SSL_CERT_DIR=/etc/ssl/certs
 ```
