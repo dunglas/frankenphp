@@ -255,26 +255,9 @@ func (f *FrankenPHPModule) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 					return err
 				}
 				f.Workers = append(f.Workers, wc)
-			case "match":
-				if !d.NextArg() {
-					return d.ArgErr()
-				}
-				match := "*"
-				if d.Val() != "worker" {
-					match = d.Val()
-					if !d.NextArg() || d.Val() != "worker" {
-						return d.ArgErr()
-					}
-				}
-				wc, err := parseWorkerConfig(d)
-				if err != nil {
-					return err
-				}
-				wc.Match = match
-				f.Workers = append(f.Workers, wc)
 
 			default:
-				allowedDirectives := "root, split, env, resolve_root_symlink, worker, match"
+				allowedDirectives := "root, split, env, resolve_root_symlink, worker"
 				return wrongSubDirectiveError("php or php_server", allowedDirectives, d.Val())
 			}
 		}
@@ -444,15 +427,11 @@ func parsePhpServer(h httpcaddyfile.Helper) ([]httpcaddyfile.ConfigValue, error)
 		}
 	}
 
-	// if any worker has 'match' specified, use an alternate routing approach
-	for _, w := range phpsrv.Workers {
-		if w.Match != "" {
-			return pureWorkerRoute(h, phpsrv, fsrv, disableFsrv), nil
-		}
-	}
-
 	// set up a route list that we'll append to
 	routes := caddyhttp.RouteList{}
+
+	// prepend routes from the 'worker match *' directives
+	routes = prependWorkerRoutes(routes, h, phpsrv, fsrv, disableFsrv)
 
 	// set the list of allowed path segments on which to split
 	phpsrv.SplitPath = extensions
@@ -589,23 +568,23 @@ func parsePhpServer(h httpcaddyfile.Helper) ([]httpcaddyfile.ConfigValue, error)
 	}, nil
 }
 
-// if any worker under php_server has a match pattern,
-// routes have to be created differently
-// first, we will try to match against the file system,
-// then we will try to match aganist each worker
-func pureWorkerRoute(h httpcaddyfile.Helper, f FrankenPHPModule, fsrv caddy.Module, disableFsrv bool) []httpcaddyfile.ConfigValue {
-	f.SplitPath = []string{}
-	matchers := caddyhttp.MatchPath{}
+// workers can also match a path without being in the public directory
+// in this case we need to prepend the worker routes to the existing routes
+func prependWorkerRoutes(routes caddyhttp.RouteList, h httpcaddyfile.Helper, f FrankenPHPModule, fsrv caddy.Module, disableFsrv bool) caddyhttp.RouteList {
+	matchPath := caddyhttp.MatchPath{}
 	for _, w := range f.Workers {
-		if w.Match != "" {
-			matchers = append(matchers, w.Match)
+		if w.MatchPath != "" {
+			matchPath = append(matchPath, w.MatchPath)
 		}
 	}
 
-	subRoute := caddyhttp.Subroute{Routes: caddyhttp.RouteList{}}
+	if len(matchPath) == 0 {
+		return routes
+	}
 
+	// if there are match patterns, we need to check for files beforehand
 	if !disableFsrv {
-		subRoute.Routes = append(subRoute.Routes, caddyhttp.Route{
+		routes = append(routes, caddyhttp.Route{
 			MatcherSetsRaw: []caddy.ModuleMap{
 				caddy.ModuleMap{
 					"file": h.JSON(fileserver.MatchFile{
@@ -625,31 +604,15 @@ func pureWorkerRoute(h httpcaddyfile.Helper, f FrankenPHPModule, fsrv caddy.Modu
 		})
 	}
 
-	for _, pattern := range matchers {
-		subRoute.Routes = append(subRoute.Routes, caddyhttp.Route{
-			MatcherSetsRaw: []caddy.ModuleMap{
-				caddy.ModuleMap{"path": h.JSON(caddyhttp.MatchPath{pattern})},
-			},
-			HandlersRaw: []json.RawMessage{
-				caddyconfig.JSONModuleObject(f, "handler", "php", nil),
-			},
-		})
-	}
-
-	notFoundHandler := caddyhttp.StaticResponse{
-		StatusCode: caddyhttp.WeakString(strconv.Itoa(http.StatusNotFound)),
-	}
-	subRoute.Routes = append(subRoute.Routes, caddyhttp.Route{
-		MatcherSetsRaw: []caddy.ModuleMap{},
+	// forward matching routes instantly to the PHP handler
+	routes = append(routes, caddyhttp.Route{
+		MatcherSetsRaw: []caddy.ModuleMap{
+			caddy.ModuleMap{"path": h.JSON(matchPath)},
+		},
 		HandlersRaw: []json.RawMessage{
-			caddyconfig.JSONModuleObject(notFoundHandler, "handler", "static_response", nil),
+			caddyconfig.JSONModuleObject(f, "handler", "php", nil),
 		},
 	})
 
-	return []httpcaddyfile.ConfigValue{
-		{
-			Class: "route",
-			Value: subRoute,
-		},
-	}
+	return routes
 }
