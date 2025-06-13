@@ -146,7 +146,7 @@ composer install
 ## Solução de problemas de TLS/SSL com binários estáticos
 
 Ao usar binários estáticos, você pode encontrar os seguintes erros relacionados
-a TLS, por exemplo, ao enviar e-mails usando STARTTLS:
+a TLS, por exemplo, ao enviar emails usando STARTTLS:
 
 ```text
 Unable to connect with STARTTLS: stream_socket_enable_crypto(): SSL operation failed with code 5. OpenSSL Error messages:
