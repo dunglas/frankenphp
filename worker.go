@@ -21,7 +21,7 @@ type worker struct {
 	requestChan       chan *frankenPHPContext
 	threads           []*phpThread
 	threadMutex       sync.RWMutex
-	allowPathMatching bool // allow matching a request to a worker via path
+	allowPathMatching bool
 }
 
 var (
@@ -90,7 +90,6 @@ func getWorkerByPath(path string) *worker {
 
 func newWorker(o workerOpt) (*worker, error) {
 	absFileName, err := fastabs.FastAbs(o.fileName)
-	isModuleWorker := strings.HasPrefix(o.name, "m#") // module workers may not be matched by path
 	if err != nil {
 		return nil, fmt.Errorf("worker filename is invalid %q: %w", o.fileName, err)
 	}
@@ -99,7 +98,11 @@ func newWorker(o workerOpt) (*worker, error) {
 		o.name = absFileName
 	}
 
-	if w := getWorkerByPath(absFileName); w != nil && !isModuleWorker {
+	// workers that have a name starting with "m#" are module workers
+	// they can only be matched by their name, not by their path
+	allowPathMatching := !strings.HasPrefix(o.name, "m#")
+
+	if w := getWorkerByPath(absFileName); w != nil && allowPathMatching {
 		return w, fmt.Errorf("two workers cannot have the same filename: %q", absFileName)
 	}
 	if w := getWorkerByName(o.name); w != nil {
@@ -118,7 +121,7 @@ func newWorker(o workerOpt) (*worker, error) {
 		env:               o.env,
 		requestChan:       make(chan *frankenPHPContext),
 		threads:           make([]*phpThread, 0, o.num),
-		allowPathMatching: !isModuleWorker,
+		allowPathMatching: allowPathMatching,
 	}
 	workers = append(workers, w)
 
