@@ -72,7 +72,7 @@ PHP_METHOD({{.Name}}, __construct) {
 }
 
 {{ range .Methods}}
-PHP_METHOD({{.ClassName}}, {{.PHPName}}) {
+PHP_METHOD({{.ClassName}}, {{.PhpName}}) {
     {{$.BaseName}}_object *intern = {{$.BaseName}}_object_from_obj(Z_OBJ_P(ZEND_THIS));
     
     if (intern->go_handle == 0) {
@@ -82,16 +82,16 @@ PHP_METHOD({{.ClassName}}, {{.PHPName}}) {
     
     {{- if .Params -}}
     {{range $i, $param := .Params -}}
-    {{- if eq $param.Type "string"}}
+    {{- if eq $param.PhpType "string"}}
     zend_string *{{$param.Name}} = NULL;{{if $param.IsNullable}}
     zend_bool {{$param.Name}}_is_null = 0;{{end}}
-    {{- else if eq $param.Type "int"}}
+    {{- else if eq $param.PhpType "int"}}
     zend_long {{$param.Name}} = {{if $param.HasDefault}}{{$param.DefaultValue}}{{else}}0{{end}};{{if $param.IsNullable}}
     zend_bool {{$param.Name}}_is_null = 0;{{end}}
-    {{- else if eq $param.Type "float"}}
+    {{- else if eq $param.PhpType "float"}}
     double {{$param.Name}} = {{if $param.HasDefault}}{{$param.DefaultValue}}{{else}}0.0{{end}};{{if $param.IsNullable}}
     zend_bool {{$param.Name}}_is_null = 0;{{end}}
-    {{- else if eq $param.Type "bool"}}
+    {{- else if eq $param.PhpType "bool"}}
     zend_bool {{$param.Name}} = {{if $param.HasDefault}}{{if eq $param.DefaultValue "true"}}1{{else}}0{{end}}{{else}}0{{end}};{{if $param.IsNullable}}
     zend_bool {{$param.Name}}_is_null = 0;{{end}}
     {{- end}}
@@ -102,7 +102,7 @@ PHP_METHOD({{.ClassName}}, {{.PHPName}}) {
         {{$optionalStarted := false}}{{range .Params}}{{if .HasDefault}}{{if not $optionalStarted -}}
         Z_PARAM_OPTIONAL
         {{$optionalStarted = true}}{{end}}{{end -}}
-        {{if .IsNullable}}{{if eq .Type "string"}}Z_PARAM_STR_OR_NULL({{.Name}}, {{.Name}}_is_null){{else if eq .Type "int"}}Z_PARAM_LONG_OR_NULL({{.Name}}, {{.Name}}_is_null){{else if eq .Type "float"}}Z_PARAM_DOUBLE_OR_NULL({{.Name}}, {{.Name}}_is_null){{else if eq .Type "bool"}}Z_PARAM_BOOL_OR_NULL({{.Name}}, {{.Name}}_is_null){{end}}{{else}}{{if eq .Type "string"}}Z_PARAM_STR({{.Name}}){{else if eq .Type "int"}}Z_PARAM_LONG({{.Name}}){{else if eq .Type "float"}}Z_PARAM_DOUBLE({{.Name}}){{else if eq .Type "bool"}}Z_PARAM_BOOL({{.Name}}){{end}}{{end}}
+        {{if .IsNullable}}{{if eq .PhpType "string"}}Z_PARAM_STR_OR_NULL({{.Name}}, {{.Name}}_is_null){{else if eq .PhpType "int"}}Z_PARAM_LONG_OR_NULL({{.Name}}, {{.Name}}_is_null){{else if eq .PhpType "float"}}Z_PARAM_DOUBLE_OR_NULL({{.Name}}, {{.Name}}_is_null){{else if eq .PhpType "bool"}}Z_PARAM_BOOL_OR_NULL({{.Name}}, {{.Name}}_is_null){{end}}{{else}}{{if eq .PhpType "string"}}Z_PARAM_STR({{.Name}}){{else if eq .PhpType "int"}}Z_PARAM_LONG({{.Name}}){{else if eq .PhpType "float"}}Z_PARAM_DOUBLE({{.Name}}){{else if eq .PhpType "bool"}}Z_PARAM_BOOL({{.Name}}){{end}}{{end}}
         {{end -}}
     ZEND_PARSE_PARAMETERS_END();
     {{else}}
@@ -113,20 +113,20 @@ PHP_METHOD({{.ClassName}}, {{.PHPName}}) {
     
     {{- if ne .ReturnType "void"}}
     {{- if eq .ReturnType "string"}}
-    zend_string* result = {{.Name}}_wrapper(intern->go_handle{{if .Params}}{{range .Params}}, {{if .IsNullable}}{{if eq .Type "string"}}{{.Name}}_is_null ? NULL : {{.Name}}{{else if eq .Type "int"}}{{.Name}}_is_null ? NULL : &{{.Name}}{{else if eq .Type "float"}}{{.Name}}_is_null ? NULL : &{{.Name}}{{else if eq .Type "bool"}}{{.Name}}_is_null ? NULL : &{{.Name}}{{end}}{{else}}{{.Name}}{{end}}{{end}}{{end}});
+    zend_string* result = {{.Name}}_wrapper(intern->go_handle{{if .Params}}{{range .Params}}, {{if .IsNullable}}{{if eq .PhpType "string"}}{{.Name}}_is_null ? NULL : {{.Name}}{{else if eq .PhpType "int"}}{{.Name}}_is_null ? NULL : &{{.Name}}{{else if eq .PhpType "float"}}{{.Name}}_is_null ? NULL : &{{.Name}}{{else if eq .PhpType "bool"}}{{.Name}}_is_null ? NULL : &{{.Name}}{{end}}{{else}}{{.Name}}{{end}}{{end}}{{end}});
     RETURN_STR(result);
     {{- else if eq .ReturnType "int"}}
-    zend_long result = {{.Name}}_wrapper(intern->go_handle{{if .Params}}{{range .Params}}, {{if .IsNullable}}{{if eq .Type "string"}}{{.Name}}_is_null ? NULL : {{.Name}}{{else if eq .Type "int"}}{{.Name}}_is_null ? NULL : &{{.Name}}{{else if eq .Type "float"}}{{.Name}}_is_null ? NULL : &{{.Name}}{{else if eq .Type "bool"}}{{.Name}}_is_null ? NULL : &{{.Name}}{{end}}{{else}}(long){{.Name}}{{end}}{{end}}{{end}});
+    zend_long result = {{.Name}}_wrapper(intern->go_handle{{if .Params}}{{range .Params}}, {{if .IsNullable}}{{if eq .PhpType "string"}}{{.Name}}_is_null ? NULL : {{.Name}}{{else if eq .PhpType "int"}}{{.Name}}_is_null ? NULL : &{{.Name}}{{else if eq .PhpType "float"}}{{.Name}}_is_null ? NULL : &{{.Name}}{{else if eq .PhpType "bool"}}{{.Name}}_is_null ? NULL : &{{.Name}}{{end}}{{else}}(long){{.Name}}{{end}}{{end}}{{end}});
     RETURN_LONG(result);
     {{- else if eq .ReturnType "float"}}
-    double result = {{.Name}}_wrapper(intern->go_handle{{if .Params}}{{range .Params}}, {{if .IsNullable}}{{if eq .Type "string"}}{{.Name}}_is_null ? NULL : {{.Name}}{{else if eq .Type "int"}}{{.Name}}_is_null ? NULL : &{{.Name}}{{else if eq .Type "float"}}{{.Name}}_is_null ? NULL : &{{.Name}}{{else if eq .Type "bool"}}{{.Name}}_is_null ? NULL : &{{.Name}}{{end}}{{else}}(double){{.Name}}{{end}}{{end}}{{end}});
+    double result = {{.Name}}_wrapper(intern->go_handle{{if .Params}}{{range .Params}}, {{if .IsNullable}}{{if eq .PhpType "string"}}{{.Name}}_is_null ? NULL : {{.Name}}{{else if eq .PhpType "int"}}{{.Name}}_is_null ? NULL : &{{.Name}}{{else if eq .PhpType "float"}}{{.Name}}_is_null ? NULL : &{{.Name}}{{else if eq .PhpType "bool"}}{{.Name}}_is_null ? NULL : &{{.Name}}{{end}}{{else}}(double){{.Name}}{{end}}{{end}}{{end}});
     RETURN_DOUBLE(result);
     {{- else if eq .ReturnType "bool"}}
-    int result = {{.Name}}_wrapper(intern->go_handle{{if .Params}}{{range .Params}}, {{if .IsNullable}}{{if eq .Type "string"}}{{.Name}}_is_null ? NULL : {{.Name}}{{else if eq .Type "int"}}{{.Name}}_is_null ? NULL : &{{.Name}}{{else if eq .Type "float"}}{{.Name}}_is_null ? NULL : &{{.Name}}{{else if eq .Type "bool"}}{{.Name}}_is_null ? NULL : &{{.Name}}{{end}}{{else}}(int){{.Name}}{{end}}{{end}}{{end}});
+    int result = {{.Name}}_wrapper(intern->go_handle{{if .Params}}{{range .Params}}, {{if .IsNullable}}{{if eq .PhpType "string"}}{{.Name}}_is_null ? NULL : {{.Name}}{{else if eq .PhpType "int"}}{{.Name}}_is_null ? NULL : &{{.Name}}{{else if eq .PhpType "float"}}{{.Name}}_is_null ? NULL : &{{.Name}}{{else if eq .PhpType "bool"}}{{.Name}}_is_null ? NULL : &{{.Name}}{{end}}{{else}}(int){{.Name}}{{end}}{{end}}{{end}});
     RETURN_BOOL(result);
     {{- end}}
     {{- else}}
-    {{.Name}}_wrapper(intern->go_handle{{if .Params}}{{range .Params}}, {{if .IsNullable}}{{if eq .Type "string"}}{{.Name}}_is_null ? NULL : {{.Name}}{{else if eq .Type "int"}}{{.Name}}_is_null ? NULL : &{{.Name}}{{else if eq .Type "float"}}{{.Name}}_is_null ? NULL : &{{.Name}}{{else if eq .Type "bool"}}{{.Name}}_is_null ? NULL : &{{.Name}}{{end}}{{else}}{{if eq .Type "string"}}{{.Name}}{{else if eq .Type "int"}}(long){{.Name}}{{else if eq .Type "float"}}(double){{.Name}}{{else if eq .Type "bool"}}(int){{.Name}}{{end}}{{end}}{{end}}{{end}});
+    {{.Name}}_wrapper(intern->go_handle{{if .Params}}{{range .Params}}, {{if .IsNullable}}{{if eq .PhpType "string"}}{{.Name}}_is_null ? NULL : {{.Name}}{{else if eq .PhpType "int"}}{{.Name}}_is_null ? NULL : &{{.Name}}{{else if eq .PhpType "float"}}{{.Name}}_is_null ? NULL : &{{.Name}}{{else if eq .PhpType "bool"}}{{.Name}}_is_null ? NULL : &{{.Name}}{{end}}{{else}}{{if eq .PhpType "string"}}{{.Name}}{{else if eq .PhpType "int"}}(long){{.Name}}{{else if eq .PhpType "float"}}(double){{.Name}}{{else if eq .PhpType "bool"}}(int){{.Name}}{{end}}{{end}}{{end}}{{end}});
     {{- end}}
 }
 {{end}}{{end}}
@@ -152,9 +152,9 @@ PHP_MINIT_FUNCTION({{.BaseName}}) {
     {{- range .Constants}}
     {{- if eq .ClassName ""}}
     {{if .IsIota}}REGISTER_LONG_CONSTANT("{{.Name}}", {{.Name}}, CONST_CS | CONST_PERSISTENT);
-    {{else if eq .Type "string"}}REGISTER_STRING_CONSTANT("{{.Name}}", {{.CValue}}, CONST_CS | CONST_PERSISTENT);
-    {{else if eq .Type "bool"}}REGISTER_LONG_CONSTANT("{{.Name}}", {{if eq .Value "true"}}1{{else}}0{{end}}, CONST_CS | CONST_PERSISTENT);
-    {{else if eq .Type "float"}}REGISTER_DOUBLE_CONSTANT("{{.Name}}", {{.CValue}}, CONST_CS | CONST_PERSISTENT);
+    {{else if eq .PhpType "string"}}REGISTER_STRING_CONSTANT("{{.Name}}", {{.CValue}}, CONST_CS | CONST_PERSISTENT);
+    {{else if eq .PhpType "bool"}}REGISTER_LONG_CONSTANT("{{.Name}}", {{if eq .Value "true"}}1{{else}}0{{end}}, CONST_CS | CONST_PERSISTENT);
+    {{else if eq .PhpType "float"}}REGISTER_DOUBLE_CONSTANT("{{.Name}}", {{.CValue}}, CONST_CS | CONST_PERSISTENT);
     {{else}}REGISTER_LONG_CONSTANT("{{.Name}}", {{.CValue}}, CONST_CS | CONST_PERSISTENT);
     {{- end}}
     {{- end}}

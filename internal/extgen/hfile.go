@@ -50,8 +50,8 @@ func (hg *HeaderGenerator) buildContent() (string, error) {
 	var buf bytes.Buffer
 	err = tmpl.Execute(&buf, TemplateData{
 		HeaderGuard: headerGuard,
-		Constants:   hg.generator.constants,
-		Classes:     hg.generator.classes,
+		Constants:   hg.generator.Constants,
+		Classes:     hg.generator.Classes,
 	})
 
 	if err != nil {

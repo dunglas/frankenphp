@@ -52,17 +52,17 @@ func anotherHelper() {
 		BaseName:   "test",
 		SourceFile: sourceFile,
 		BuildDir:   tmpDir,
-		functions: []phpFunction{
+		Functions: []phpFunction{
 			{
-				name:       "greet",
-				returnType: "string",
+				Name:       "greet",
+				ReturnType: "string",
 				goFunction: `func greet(name *go_string) *go_value {
 	return types.String("Hello " + CStringToGoString(name))
 }`,
 			},
 			{
-				name:       "calculate",
-				returnType: "int",
+				Name:       "calculate",
+				ReturnType: "int",
 				goFunction: `func calculate(a long, b long) *go_value {
 	result := a + b
 	return types.Int(result)
@@ -88,7 +88,7 @@ func anotherHelper() {
 
 	testGoFileBasicStructure(t, content, "test")
 	testGoFileImports(t, content)
-	testGoFileExportedFunctions(t, content, generator.functions)
+	testGoFileExportedFunctions(t, content, generator.Functions)
 	testGoFileInternalFunctions(t, content)
 }
 
@@ -112,8 +112,8 @@ func test() {
 }`),
 			functions: []phpFunction{
 				{
-					name:       "test",
-					returnType: "void",
+					Name:       "test",
+					ReturnType: "void",
 					goFunction: "func test() {\n\t// simple function\n}",
 				},
 			},
@@ -145,8 +145,8 @@ func process(data *go_string) *go_value {
 }`),
 			functions: []phpFunction{
 				{
-					name:       "process",
-					returnType: "string",
+					Name:       "process",
+					ReturnType: "string",
 					goFunction: `func process(data *go_string) *go_value {
 	return String(fmt.Sprintf("processed: %s", CStringToGoString(data)))
 }`,
@@ -178,8 +178,8 @@ func internalFunc2(data string) {
 }`),
 			functions: []phpFunction{
 				{
-					name:       "publicFunc",
-					returnType: "void",
+					Name:       "publicFunc",
+					ReturnType: "void",
 					goFunction: "func publicFunc() {}",
 				},
 			},
@@ -198,7 +198,7 @@ func internalFunc2(data string) {
 			generator := &Generator{
 				BaseName:   tt.baseName,
 				SourceFile: tt.sourceFile,
-				functions:  tt.functions,
+				Functions:  tt.functions,
 			}
 
 			goGen := GoFileGenerator{generator}
@@ -234,8 +234,8 @@ func TestGoFileGenerator_PackageNameSanitization(t *testing.T) {
 			generator := &Generator{
 				BaseName:   tt.baseName,
 				SourceFile: sourceFile,
-				functions: []phpFunction{
-					{name: "test", returnType: "void", goFunction: "func test() {}"},
+				Functions: []phpFunction{
+					{Name: "test", ReturnType: "void", goFunction: "func test() {}"},
 				},
 			}
 
@@ -318,8 +318,8 @@ func test() {}`
 	generator := &Generator{
 		BaseName:   "importtest",
 		SourceFile: sourceFile,
-		functions: []phpFunction{
-			{name: "test", returnType: "void", goFunction: "func test() {}"},
+		Functions: []phpFunction{
+			{Name: "test", ReturnType: "void", goFunction: "func test() {}"},
 		},
 	}
 
@@ -396,8 +396,8 @@ func debugPrint(msg string) {
 
 	functions := []phpFunction{
 		{
-			name:       "processData",
-			returnType: "array",
+			Name:       "processData",
+			ReturnType: "array",
 			goFunction: `func processData(input *go_string, options *go_nullable) *go_value {
 	data := CStringToGoString(input)
 	processed := internalProcess(data)
@@ -405,8 +405,8 @@ func debugPrint(msg string) {
 }`,
 		},
 		{
-			name:       "validateInput",
-			returnType: "bool",
+			Name:       "validateInput",
+			ReturnType: "bool",
 			goFunction: `func validateInput(data *go_string) *go_value {
 	input := CStringToGoString(data)
 	isValid := len(input) > 0 && validateFormat(input)
@@ -418,7 +418,7 @@ func debugPrint(msg string) {
 	generator := &Generator{
 		BaseName:   "complex-example",
 		SourceFile: sourceFile,
-		functions:  functions,
+		Functions:  functions,
 	}
 
 	goGen := GoFileGenerator{generator}
@@ -441,7 +441,7 @@ func debugPrint(msg string) {
 	}
 
 	for _, fn := range functions {
-		exportDirective := "//export " + fn.name
+		exportDirective := "//export " + fn.Name
 		assert.Contains(t, content, exportDirective, "Generated content should contain export directive: %s", exportDirective)
 	}
 
@@ -488,15 +488,15 @@ func (ts *TestStruct) ProcessData(name string, count *int64, enabled *bool) stri
 
 	methods := []phpClassMethod{
 		{
-			name:       "ProcessData",
-			phpName:    "processData",
-			className:  "TestClass",
-			signature:  "processData(string $name, ?int $count, ?bool $enabled): string",
-			returnType: "string",
-			params: []phpParameter{
-				{name: "name", phpType: "string", isNullable: false},
-				{name: "count", phpType: "int", isNullable: true},
-				{name: "enabled", phpType: "bool", isNullable: true},
+			Name:       "ProcessData",
+			PhpName:    "processData",
+			ClassName:  "TestClass",
+			Signature:  "processData(string $name, ?int $count, ?bool $enabled): string",
+			ReturnType: "string",
+			Params: []phpParameter{
+				{Name: "name", PhpType: "string", IsNullable: false},
+				{Name: "count", PhpType: "int", IsNullable: true},
+				{Name: "enabled", PhpType: "bool", IsNullable: true},
 			},
 			goFunction: `func (ts *TestStruct) ProcessData(name string, count *int64, enabled *bool) string {
 	result := fmt.Sprintf("name=%s", name)
@@ -513,16 +513,16 @@ func (ts *TestStruct) ProcessData(name string, count *int64, enabled *bool) stri
 
 	classes := []phpClass{
 		{
-			name:     "TestClass",
-			goStruct: "TestStruct",
-			methods:  methods,
+			Name:     "TestClass",
+			GoStruct: "TestStruct",
+			Methods:  methods,
 		},
 	}
 
 	generator := &Generator{
 		BaseName:   "nullable_test",
 		SourceFile: sourceFile,
-		classes:    classes,
+		Classes:    classes,
 		BuildDir:   tmpDir,
 	}
 
@@ -584,10 +584,10 @@ func testGoFileImports(t *testing.T, content string) {
 
 func testGoFileExportedFunctions(t *testing.T, content string, functions []phpFunction) {
 	for _, fn := range functions {
-		exportDirective := "//export " + fn.name
+		exportDirective := "//export " + fn.Name
 		assert.Contains(t, content, exportDirective, "Go file should contain export directive: %s", exportDirective)
 
-		funcStart := "func " + fn.name + "("
+		funcStart := "func " + fn.Name + "("
 		assert.Contains(t, content, funcStart, "Go file should contain function definition: %s", funcStart)
 	}
 }

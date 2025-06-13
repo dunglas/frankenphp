@@ -9,7 +9,7 @@
 const {{.Name}} = UNKNOWN;
 
 {{else}}/**
- * @var {{phpType .Type}}
+ * @var {{phpType .PhpType}}
  */
 const {{.Name}} = {{.Value}};
 
@@ -23,7 +23,7 @@ const {{.Name}} = {{.Value}};
     public const {{.Name}} = UNKNOWN;
 
 {{else}}    /**
-     * @var {{phpType .Type}}
+     * @var {{phpType .PhpType}}
      */
     public const {{.Name}} = {{.Value}};
 

@@ -20,31 +20,31 @@ func TestCFileGenerator_Generate(t *testing.T) {
 	generator := &Generator{
 		BaseName: "test_extension",
 		BuildDir: tmpDir,
-		functions: []phpFunction{
+		Functions: []phpFunction{
 			{
-				name:       "simpleFunction",
-				returnType: "string",
-				params: []phpParameter{
-					{name: "input", phpType: "string"},
+				Name:       "simpleFunction",
+				ReturnType: "string",
+				Params: []phpParameter{
+					{Name: "input", PhpType: "string"},
 				},
 			},
 			{
-				name:       "complexFunction",
-				returnType: "array",
-				params: []phpParameter{
-					{name: "data", phpType: "string"},
-					{name: "count", phpType: "int", isNullable: true},
-					{name: "options", phpType: "array", hasDefault: true, defaultValue: "[]"},
+				Name:       "complexFunction",
+				ReturnType: "array",
+				Params: []phpParameter{
+					{Name: "data", PhpType: "string"},
+					{Name: "count", PhpType: "int", IsNullable: true},
+					{Name: "options", PhpType: "array", HasDefault: true, DefaultValue: "[]"},
 				},
 			},
 		},
-		classes: []phpClass{
+		Classes: []phpClass{
 			{
-				name:     "TestClass",
-				goStruct: "TestStruct",
-				properties: []phpClassProperty{
-					{name: "id", phpType: "int"},
-					{name: "name", phpType: "string"},
+				Name:     "TestClass",
+				GoStruct: "TestStruct",
+				Properties: []phpClassProperty{
+					{Name: "id", PhpType: "int"},
+					{Name: "name", PhpType: "string"},
 				},
 			},
 		},
@@ -61,8 +61,8 @@ func TestCFileGenerator_Generate(t *testing.T) {
 	require.NoError(t, err)
 
 	testCFileBasicStructure(t, content, "test_extension")
-	testCFileFunctions(t, content, generator.functions)
-	testCFileClasses(t, content, generator.classes)
+	testCFileFunctions(t, content, generator.Functions)
+	testCFileClasses(t, content, generator.Classes)
 }
 
 func TestCFileGenerator_BuildContent(t *testing.T) {
@@ -90,7 +90,7 @@ func TestCFileGenerator_BuildContent(t *testing.T) {
 			name:     "extension with functions only",
 			baseName: "func_only",
 			functions: []phpFunction{
-				{name: "testFunc", returnType: "string"},
+				{Name: "testFunc", ReturnType: "string"},
 			},
 			contains: []string{
 				"PHP_FUNCTION(testFunc)",
@@ -103,7 +103,7 @@ func TestCFileGenerator_BuildContent(t *testing.T) {
 			name:     "extension with classes only",
 			baseName: "class_only",
 			classes: []phpClass{
-				{name: "MyClass", goStruct: "MyStruct"},
+				{Name: "MyClass", GoStruct: "MyStruct"},
 			},
 			contains: []string{
 				"register_all_classes()",
@@ -116,10 +116,10 @@ func TestCFileGenerator_BuildContent(t *testing.T) {
 			name:     "extension with functions and classes",
 			baseName: "full",
 			functions: []phpFunction{
-				{name: "doSomething", returnType: "void"},
+				{Name: "doSomething", ReturnType: "void"},
 			},
 			classes: []phpClass{
-				{name: "FullClass", goStruct: "FullStruct"},
+				{Name: "FullClass", GoStruct: "FullStruct"},
 			},
 			contains: []string{
 				"PHP_FUNCTION(doSomething)",
@@ -135,8 +135,8 @@ func TestCFileGenerator_BuildContent(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			generator := &Generator{
 				BaseName:  tt.baseName,
-				functions: tt.functions,
-				classes:   tt.classes,
+				Functions: tt.functions,
+				Classes:   tt.classes,
 			}
 
 			cGen := cFileGenerator{generator}
@@ -175,8 +175,8 @@ func TestCFileGenerator_GetTemplateContent(t *testing.T) {
 			name:     "extension with classes",
 			baseName: "complex_name",
 			classes: []phpClass{
-				{name: "TestClass", goStruct: "TestStruct"},
-				{name: "AnotherClass", goStruct: "AnotherStruct"},
+				{Name: "TestClass", GoStruct: "TestStruct"},
+				{Name: "AnotherClass", GoStruct: "AnotherStruct"},
 			},
 			contains: []string{
 				`#include "complex_name.h"`,
@@ -194,7 +194,7 @@ func TestCFileGenerator_GetTemplateContent(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			generator := &Generator{
 				BaseName: tt.baseName,
-				classes:  tt.classes,
+				Classes:  tt.classes,
 			}
 			cGen := cFileGenerator{generator}
 			content, err := cGen.getTemplateContent()
@@ -221,42 +221,42 @@ func TestCFileIntegrationWithGenerators(t *testing.T) {
 
 	functions := []phpFunction{
 		{
-			name:             "processData",
-			returnType:       "array",
-			isReturnNullable: true,
-			params: []phpParameter{
-				{name: "input", phpType: "string"},
-				{name: "options", phpType: "array", hasDefault: true, defaultValue: "[]"},
-				{name: "callback", phpType: "object", isNullable: true},
+			Name:             "processData",
+			ReturnType:       "array",
+			IsReturnNullable: true,
+			Params: []phpParameter{
+				{Name: "input", PhpType: "string"},
+				{Name: "options", PhpType: "array", HasDefault: true, DefaultValue: "[]"},
+				{Name: "callback", PhpType: "object", IsNullable: true},
 			},
 		},
 		{
-			name:       "validateInput",
-			returnType: "bool",
-			params: []phpParameter{
-				{name: "data", phpType: "string", isNullable: true},
-				{name: "strict", phpType: "bool", hasDefault: true, defaultValue: "false"},
+			Name:       "validateInput",
+			ReturnType: "bool",
+			Params: []phpParameter{
+				{Name: "data", PhpType: "string", IsNullable: true},
+				{Name: "strict", PhpType: "bool", HasDefault: true, DefaultValue: "false"},
 			},
 		},
 	}
 
 	classes := []phpClass{
 		{
-			name:     "DataProcessor",
-			goStruct: "DataProcessorStruct",
-			properties: []phpClassProperty{
-				{name: "mode", phpType: "string"},
-				{name: "timeout", phpType: "int", isNullable: true},
-				{name: "options", phpType: "array"},
+			Name:     "DataProcessor",
+			GoStruct: "DataProcessorStruct",
+			Properties: []phpClassProperty{
+				{Name: "mode", PhpType: "string"},
+				{Name: "timeout", PhpType: "int", IsNullable: true},
+				{Name: "options", PhpType: "array"},
 			},
 		},
 		{
-			name:     "Result",
-			goStruct: "ResultStruct",
-			properties: []phpClassProperty{
-				{name: "success", phpType: "bool"},
-				{name: "data", phpType: "mixed", isNullable: true},
-				{name: "errors", phpType: "array"},
+			Name:     "Result",
+			GoStruct: "ResultStruct",
+			Properties: []phpClassProperty{
+				{Name: "success", PhpType: "bool"},
+				{Name: "data", PhpType: "mixed", IsNullable: true},
+				{Name: "errors", PhpType: "array"},
 			},
 		},
 	}
@@ -264,8 +264,8 @@ func TestCFileIntegrationWithGenerators(t *testing.T) {
 	generator := &Generator{
 		BaseName:  "integration_test",
 		BuildDir:  tmpDir,
-		functions: functions,
-		classes:   classes,
+		Functions: functions,
+		Classes:   classes,
 	}
 
 	cGen := cFileGenerator{generator}
@@ -275,12 +275,12 @@ func TestCFileIntegrationWithGenerators(t *testing.T) {
 	require.NoError(t, err)
 
 	for _, fn := range functions {
-		expectedFunc := "PHP_FUNCTION(" + fn.name + ")"
+		expectedFunc := "PHP_FUNCTION(" + fn.Name + ")"
 		assert.Contains(t, content, expectedFunc, "Generated C file should contain function: %s", expectedFunc)
 	}
 
 	for _, class := range classes {
-		expectedMethod := "PHP_METHOD(" + class.name + ", __construct)"
+		expectedMethod := "PHP_METHOD(" + class.Name + ", __construct)"
 		assert.Contains(t, content, expectedMethod, "Generated C file should contain class method: %s", expectedMethod)
 	}
 
@@ -293,8 +293,8 @@ func TestCFileErrorHandling(t *testing.T) {
 	generator := &Generator{
 		BaseName: "test",
 		BuildDir: "/invalid/readonly/path",
-		functions: []phpFunction{
-			{name: "test", returnType: "void"},
+		Functions: []phpFunction{
+			{Name: "test", ReturnType: "void"},
 		},
 	}
 
@@ -317,8 +317,8 @@ func TestCFileSpecialCharacters(t *testing.T) {
 		t.Run(tt.baseName, func(t *testing.T) {
 			generator := &Generator{
 				BaseName: tt.baseName,
-				functions: []phpFunction{
-					{name: "test", returnType: "void"},
+				Functions: []phpFunction{
+					{Name: "test", ReturnType: "void"},
 				},
 			}
 
@@ -352,7 +352,7 @@ func testCFileBasicStructure(t *testing.T, content, baseName string) {
 
 func testCFileFunctions(t *testing.T, content string, functions []phpFunction) {
 	for _, fn := range functions {
-		phpFunc := "PHP_FUNCTION(" + fn.name + ")"
+		phpFunc := "PHP_FUNCTION(" + fn.Name + ")"
 		assert.Contains(t, content, phpFunc, "C file should contain function declaration: %s", phpFunc)
 	}
 }
@@ -368,10 +368,10 @@ func testCFileClasses(t *testing.T, content string, classes []phpClass) {
 	assert.Contains(t, content, "register_all_classes();", "C file should contain register_all_classes call in MINIT")
 
 	for _, class := range classes {
-		expectedCall := "register_class_" + class.name + "();"
+		expectedCall := "register_class_" + class.Name + "();"
 		assert.Contains(t, content, expectedCall, "C file should contain class registration call: %s", expectedCall)
 
-		constructor := "PHP_METHOD(" + class.name + ", __construct)"
+		constructor := "PHP_METHOD(" + class.Name + ", __construct)"
 		assert.Contains(t, content, constructor, "C file should contain constructor: %s", constructor)
 	}
 }
@@ -379,17 +379,17 @@ func testCFileClasses(t *testing.T, content string, classes []phpClass) {
 func TestCFileContentValidation(t *testing.T) {
 	generator := &Generator{
 		BaseName: "syntax_test",
-		functions: []phpFunction{
+		Functions: []phpFunction{
 			{
-				name:       "testFunction",
-				returnType: "string",
-				params: []phpParameter{
-					{name: "param", phpType: "string"},
+				Name:       "testFunction",
+				ReturnType: "string",
+				Params: []phpParameter{
+					{Name: "param", PhpType: "string"},
 				},
 			},
 		},
-		classes: []phpClass{
-			{name: "TestClass", goStruct: "TestStruct"},
+		Classes: []phpClass{
+			{Name: "TestClass", GoStruct: "TestStruct"},
 		},
 	}
 
@@ -428,14 +428,14 @@ func TestCFileConstants(t *testing.T) {
 			baseName: "const_test",
 			constants: []phpConstant{
 				{
-					name:    "GLOBAL_INT",
-					value:   "42",
-					phpType: "int",
+					Name:    "GLOBAL_INT",
+					Value:   "42",
+					PhpType: "int",
 				},
 				{
-					name:    "GLOBAL_STRING",
-					value:   "\"test\"",
-					phpType: "string",
+					Name:    "GLOBAL_STRING",
+					Value:   "\"test\"",
+					PhpType: "string",
 				},
 			},
 			contains: []string{
@@ -449,8 +449,8 @@ func TestCFileConstants(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			generator := &Generator{
 				BaseName:  tt.baseName,
-				constants: tt.constants,
-				classes:   tt.classes,
+				Constants: tt.constants,
+				Classes:   tt.classes,
 			}
 
 			cGen := cFileGenerator{generator}

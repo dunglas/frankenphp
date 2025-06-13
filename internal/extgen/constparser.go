@@ -68,19 +68,19 @@ func (cp *ConstantParser) parse(filename string) ([]phpConstant, error) {
 				value := strings.TrimSpace(matches[2])
 
 				constant := phpConstant{
-					name:       name,
-					value:      value,
-					isIota:     value == "iota",
+					Name:       name,
+					Value:      value,
+					IsIota:     value == "iota",
 					lineNumber: lineNumber,
-					className:  currentClassName,
+					ClassName:  currentClassName,
 				}
 
-				constant.phpType = determineConstantType(value)
+				constant.PhpType = determineConstantType(value)
 
-				if constant.isIota {
+				if constant.IsIota {
 					// affect a default value because user didn't give one
-					constant.value = fmt.Sprintf("%d", currentConstantValue)
-					constant.phpType = "int"
+					constant.Value = fmt.Sprintf("%d", currentConstantValue)
+					constant.PhpType = "int"
 					currentConstantValue++
 				}
 

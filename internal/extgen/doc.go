@@ -37,8 +37,8 @@ func (dg *DocumentationGenerator) generateMarkdown() (string, error) {
 
 	data := DocTemplateData{
 		BaseName:  dg.generator.BaseName,
-		Functions: dg.generator.functions,
-		Classes:   dg.generator.classes,
+		Functions: dg.generator.Functions,
+		Classes:   dg.generator.Classes,
 	}
 
 	var buf bytes.Buffer

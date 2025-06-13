@@ -44,7 +44,7 @@ func main() {}
 		t.Fatalf("Failed to parse source: %v", err)
 	}
 
-	assert.Len(t, generator.constants, 2, "Expected 2 constants")
+	assert.Len(t, generator.Constants, 2, "Expected 2 constants")
 
 	expectedConstants := map[string]struct {
 		Value  string
@@ -54,15 +54,15 @@ func main() {}
 		"MAX_CONNECTIONS": {"100", false},
 	}
 
-	for _, constant := range generator.constants {
-		expected, exists := expectedConstants[constant.name]
-		assert.True(t, exists, "Unexpected constant: %s", constant.name)
+	for _, constant := range generator.Constants {
+		expected, exists := expectedConstants[constant.Name]
+		assert.True(t, exists, "Unexpected constant: %s", constant.Name)
 		if !exists {
 			continue
 		}
 
-		assert.Equal(t, expected.Value, constant.value, "Constant %s: value mismatch", constant.name)
-		assert.Equal(t, expected.IsIota, constant.isIota, "Constant %s: isIota mismatch", constant.name)
+		assert.Equal(t, expected.Value, constant.Value, "Constant %s: value mismatch", constant.Name)
+		assert.Equal(t, expected.IsIota, constant.IsIota, "Constant %s: isIota mismatch", constant.Name)
 	}
 
 	err = generator.setupBuildDirectory()
@@ -138,19 +138,19 @@ func main() {}
 		t.Fatalf("Failed to parse source: %v", err)
 	}
 
-	assert.Len(t, generator.constants, 3, "Expected 3 constants")
+	assert.Len(t, generator.Constants, 3, "Expected 3 constants")
 
 	// Verify CValue conversion
-	for _, constant := range generator.constants {
-		switch constant.name {
+	for _, constant := range generator.Constants {
+		switch constant.Name {
 		case "FILE_PERM":
-			assert.Equal(t, "0o755", constant.value, "FILE_PERM value mismatch")
+			assert.Equal(t, "0o755", constant.Value, "FILE_PERM value mismatch")
 			assert.Equal(t, "493", constant.CValue(), "FILE_PERM CValue mismatch")
 		case "OTHER_PERM":
-			assert.Equal(t, "0o644", constant.value, "OTHER_PERM value mismatch")
+			assert.Equal(t, "0o644", constant.Value, "OTHER_PERM value mismatch")
 			assert.Equal(t, "420", constant.CValue(), "OTHER_PERM CValue mismatch")
 		case "REGULAR_INT":
-			assert.Equal(t, "42", constant.value, "REGULAR_INT value mismatch")
+			assert.Equal(t, "42", constant.Value, "REGULAR_INT value mismatch")
 			assert.Equal(t, "42", constant.CValue(), "REGULAR_INT CValue mismatch")
 		}
 	}

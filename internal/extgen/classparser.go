@@ -73,21 +73,21 @@ func (cp *classParser) parse(filename string) ([]phpClass, error) {
 			matchedDirectives[directiveLine] = true
 
 			class := phpClass{
-				name:     phpCl,
-				goStruct: typeSpec.Name.Name,
+				Name:     phpCl,
+				GoStruct: typeSpec.Name.Name,
 			}
 
-			class.properties = cp.parseStructFields(structType.Fields.List)
+			class.Properties = cp.parseStructFields(structType.Fields.List)
 
 			// associate methods with this class
 			for _, method := range methods {
-				if method.className == phpCl {
-					class.methods = append(class.methods, method)
+				if method.ClassName == phpCl {
+					class.Methods = append(class.Methods, method)
 				}
 			}
 
 			if err := validator.validateClass(class); err != nil {
-				fmt.Printf("Warning: Invalid class '%s': %v\n", class.name, err)
+				fmt.Printf("Warning: Invalid class '%s': %v\n", class.Name, err)
 				continue
 			}
 
@@ -165,18 +165,18 @@ func (cp *classParser) parseStructFields(fields []*ast.Field) []phpClassProperty
 }
 
 func (cp *classParser) parseStructField(fieldName string, field *ast.Field) phpClassProperty {
-	prop := phpClassProperty{name: fieldName}
+	prop := phpClassProperty{Name: fieldName}
 
 	// check if field is a pointer (nullable)
 	if starExpr, isPointer := field.Type.(*ast.StarExpr); isPointer {
-		prop.isNullable = true
+		prop.IsNullable = true
 		prop.goType = cp.typeToString(starExpr.X)
 	} else {
-		prop.isNullable = false
+		prop.IsNullable = false
 		prop.goType = cp.typeToString(field.Type)
 	}
 
-	prop.phpType = cp.goTypeToPHPType(prop.goType)
+	prop.PhpType = cp.goTypeToPHPType(prop.goType)
 	return prop
 }
 
@@ -243,6 +243,20 @@ func (cp *classParser) parseMethods(filename string) ([]phpClassMethod, error) {
 				continue
 			}
 
+			validator := Validator{}
+			phpFunc := phpFunction{
+				Name:             method.Name,
+				Signature:        method.Signature,
+				Params:           method.Params,
+				ReturnType:       method.ReturnType,
+				IsReturnNullable: method.isReturnNullable,
+			}
+
+			if err := validator.validateScalarTypes(phpFunc); err != nil {
+				fmt.Printf("Warning: Method '%s::%s' uses unsupported types: %v\n", className, method.Name, err)
+				continue
+			}
+
 			method.lineNumber = lineNumber
 			currentMethod = method
 		}
@@ -253,6 +267,23 @@ func (cp *classParser) parseMethods(filename string) ([]phpClassMethod, error) {
 				return nil, fmt.Errorf("extracting Go method function: %w", err)
 			}
 			currentMethod.goFunction = goFunc
+
+			validator := Validator{}
+			phpFunc := phpFunction{
+				Name:             currentMethod.Name,
+				Signature:        currentMethod.Signature,
+				goFunction:       currentMethod.goFunction,
+				Params:           currentMethod.Params,
+				ReturnType:       currentMethod.ReturnType,
+				IsReturnNullable: currentMethod.isReturnNullable,
+			}
+
+			if err := validator.validateGoFunctionSignatureWithOptions(phpFunc, true); err != nil {
+				fmt.Printf("Warning: Go method signature mismatch for '%s::%s': %v\n", currentMethod.ClassName, currentMethod.Name, err)
+				currentMethod = nil
+				continue
+			}
+
 			methods = append(methods, *currentMethod)
 			currentMethod = nil
 		}
@@ -292,12 +323,12 @@ func (cp *classParser) parseMethodSignature(className, signature string) (*phpCl
 	}
 
 	return &phpClassMethod{
-		name:             methodName,
-		phpName:          methodName,
-		className:        className,
-		signature:        signature,
-		params:           params,
-		returnType:       returnType,
+		Name:             methodName,
+		PhpName:          methodName,
+		ClassName:        className,
+		Signature:        signature,
+		Params:           params,
+		ReturnType:       returnType,
 		isReturnNullable: isReturnNullable,
 	}, nil
 }
@@ -306,10 +337,10 @@ func (cp *classParser) parseMethodParameter(paramStr string) (phpParameter, erro
 	parts := strings.Split(paramStr, "=")
 	typePart := strings.TrimSpace(parts[0])
 
-	param := phpParameter{hasDefault: len(parts) > 1}
+	param := phpParameter{HasDefault: len(parts) > 1}
 
-	if param.hasDefault {
-		param.defaultValue = cp.sanitizeDefaultValue(strings.TrimSpace(parts[1]))
+	if param.HasDefault {
+		param.DefaultValue = cp.sanitizeDefaultValue(strings.TrimSpace(parts[1]))
 	}
 
 	matches := methodParamTypeNameRegex.FindStringSubmatch(typePart)
@@ -319,9 +350,9 @@ func (cp *classParser) parseMethodParameter(paramStr string) (phpParameter, erro
 	}
 
 	typeStr := strings.TrimSpace(matches[1])
-	param.name = strings.TrimSpace(matches[2])
-	param.isNullable = strings.HasPrefix(typeStr, "?")
-	param.phpType = strings.TrimPrefix(typeStr, "?")
+	param.Name = strings.TrimSpace(matches[2])
+	param.IsNullable = strings.HasPrefix(typeStr, "?")
+	param.PhpType = strings.TrimPrefix(typeStr, "?")
 
 	return param, nil
 }

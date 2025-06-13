@@ -12,7 +12,7 @@ Auto-generated PHP extension from Go code.
 
 {{if .Params}}**Parameters:**
 
-{{range .Params}}- `{{.Name}}` ({{.Type}}){{if .IsNullable}} (nullable){{end}}{{if .HasDefault}} (default: {{.DefaultValue}}){{end}}
+{{range .Params}}- `{{.Name}}` ({{.PhpType}}){{if .IsNullable}} (nullable){{end}}{{if .HasDefault}} (default: {{.DefaultValue}}){{end}}
 {{end}}
 {{end}}**Returns:** {{.ReturnType}}{{if .IsReturnNullable}} (nullable){{end}}
 
@@ -22,6 +22,6 @@ Auto-generated PHP extension from Go code.
 
 {{if .Properties}}**Properties:**
 
-{{range .Properties}}- `{{.Name}}`: {{.Type}}{{if .IsNullable}} (nullable){{end}}
+{{range .Properties}}- `{{.Name}}`: {{.PhpType}}{{if .IsNullable}} (nullable){{end}}
 {{end}}
 {{end}}{{end}}{{end}}

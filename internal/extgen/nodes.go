@@ -6,69 +6,69 @@ import (
 )
 
 type phpFunction struct {
-	name             string
-	signature        string
+	Name             string
+	Signature        string
 	goFunction       string
-	params           []phpParameter
-	returnType       string
-	isReturnNullable bool
+	Params           []phpParameter
+	ReturnType       string
+	IsReturnNullable bool
 	lineNumber       int
 }
 
 type phpParameter struct {
-	name         string
-	phpType      string
-	isNullable   bool
-	defaultValue string
-	hasDefault   bool
+	Name         string
+	PhpType      string
+	IsNullable   bool
+	DefaultValue string
+	HasDefault   bool
 }
 
 type phpClass struct {
-	name       string
-	goStruct   string
-	properties []phpClassProperty
-	methods    []phpClassMethod
+	Name       string
+	GoStruct   string
+	Properties []phpClassProperty
+	Methods    []phpClassMethod
 }
 
 type phpClassMethod struct {
-	name             string
-	phpName          string
-	signature        string
+	Name             string
+	PhpName          string
+	Signature        string
 	goFunction       string
-	params           []phpParameter
-	returnType       string
+	Params           []phpParameter
+	ReturnType       string
 	isReturnNullable bool
 	lineNumber       int
-	className        string // used by the "//export_php:method" directive
+	ClassName        string // used by the "//export_php:method" directive
 }
 
 type phpClassProperty struct {
-	name       string
-	phpType    string
+	Name       string
+	PhpType    string
 	goType     string
-	isNullable bool
+	IsNullable bool
 }
 
 type phpConstant struct {
-	name       string
-	value      string
-	phpType    string // "int", "string", "bool", "float"
-	isIota     bool
+	Name       string
+	Value      string
+	PhpType    string // "int", "string", "bool", "float"
+	IsIota     bool
 	lineNumber int
-	className  string // empty for global constants, set for class constants
+	ClassName  string // empty for global constants, set for class constants
 }
 
 // CValue returns the constant value in C-compatible format
 func (c phpConstant) CValue() string {
-	if c.phpType != "int" {
-		return c.value
+	if c.PhpType != "int" {
+		return c.Value
 	}
 
-	if strings.HasPrefix(c.value, "0o") {
-		if val, err := strconv.ParseInt(c.value, 0, 64); err == nil {
+	if strings.HasPrefix(c.Value, "0o") {
+		if val, err := strconv.ParseInt(c.Value, 0, 64); err == nil {
 			return strconv.FormatInt(val, 10)
 		}
 	}
 
-	return c.value
+	return c.Value
 }

@@ -12,19 +12,19 @@ type PHPFuncGenerator struct {
 func (pfg *PHPFuncGenerator) generate(fn phpFunction) string {
 	var builder strings.Builder
 
-	paramInfo := pfg.paramParser.analyzeParameters(fn.params)
+	paramInfo := pfg.paramParser.analyzeParameters(fn.Params)
 
-	builder.WriteString(fmt.Sprintf("PHP_FUNCTION(%s)\n{\n", fn.name))
+	builder.WriteString(fmt.Sprintf("PHP_FUNCTION(%s)\n{\n", fn.Name))
 
-	if decl := pfg.paramParser.generateParamDeclarations(fn.params); decl != "" {
+	if decl := pfg.paramParser.generateParamDeclarations(fn.Params); decl != "" {
 		builder.WriteString(decl + "\n")
 	}
 
-	builder.WriteString(pfg.paramParser.generateParamParsing(fn.params, paramInfo.RequiredCount) + "\n")
+	builder.WriteString(pfg.paramParser.generateParamParsing(fn.Params, paramInfo.RequiredCount) + "\n")
 
 	builder.WriteString(pfg.generateGoCall(fn) + "\n")
 
-	if returnCode := pfg.generateReturnCode(fn.returnType); returnCode != "" {
+	if returnCode := pfg.generateReturnCode(fn.ReturnType); returnCode != "" {
 		builder.WriteString(returnCode + "\n")
 	}
 
@@ -34,17 +34,17 @@ func (pfg *PHPFuncGenerator) generate(fn phpFunction) string {
 }
 
 func (pfg *PHPFuncGenerator) generateGoCall(fn phpFunction) string {
-	callParams := pfg.paramParser.generateGoCallParams(fn.params)
+	callParams := pfg.paramParser.generateGoCallParams(fn.Params)
 
-	if fn.returnType == "void" {
-		return fmt.Sprintf("    %s(%s);", fn.name, callParams)
+	if fn.ReturnType == "void" {
+		return fmt.Sprintf("    %s(%s);", fn.Name, callParams)
 	}
 
-	if fn.returnType == "string" {
-		return fmt.Sprintf("    zend_string *result = %s(%s);", fn.name, callParams)
+	if fn.ReturnType == "string" {
+		return fmt.Sprintf("    zend_string *result = %s(%s);", fn.Name, callParams)
 	}
 
-	return fmt.Sprintf("    %s result = %s(%s);", pfg.getCReturnType(fn.returnType), fn.name, callParams)
+	return fmt.Sprintf("    %s result = %s(%s);", pfg.getCReturnType(fn.ReturnType), fn.Name, callParams)
 }
 
 func (pfg *PHPFuncGenerator) getCReturnType(returnType string) string {

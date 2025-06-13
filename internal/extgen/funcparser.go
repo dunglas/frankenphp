@@ -48,7 +48,12 @@ func (fp *FuncParser) parse(filename string) ([]phpFunction, error) {
 			}
 
 			if err := validator.validateFunction(*phpFunc); err != nil {
-				fmt.Printf("Warning: Invalid function '%s': %v\n", phpFunc.name, err)
+				fmt.Printf("Warning: Invalid function '%s': %v\n", phpFunc.Name, err)
+				continue
+			}
+
+			if err := validator.validateScalarTypes(*phpFunc); err != nil {
+				fmt.Printf("Warning: Function '%s' uses unsupported types: %v\n", phpFunc.Name, err)
 				continue
 			}
 
@@ -62,6 +67,13 @@ func (fp *FuncParser) parse(filename string) ([]phpFunction, error) {
 				return nil, fmt.Errorf("extracting Go function: %w", err)
 			}
 			currentPHPFunc.goFunction = goFunc
+
+			if err := validator.validateGoFunctionSignatureWithOptions(*currentPHPFunc, false); err != nil {
+				fmt.Printf("Warning: Go function signature mismatch for '%s': %v\n", currentPHPFunc.Name, err)
+				currentPHPFunc = nil
+				continue
+			}
+
 			functions = append(functions, *currentPHPFunc)
 			currentPHPFunc = nil
 		}
@@ -126,11 +138,11 @@ func (fp *FuncParser) parseSignature(signature string) (*phpFunction, error) {
 	}
 
 	return &phpFunction{
-		name:             name,
-		signature:        signature,
-		params:           params,
-		returnType:       returnType,
-		isReturnNullable: isReturnNullable,
+		Name:             name,
+		Signature:        signature,
+		Params:           params,
+		ReturnType:       returnType,
+		IsReturnNullable: isReturnNullable,
 	}, nil
 }
 
@@ -138,10 +150,10 @@ func (fp *FuncParser) parseParameter(paramStr string) (phpParameter, error) {
 	parts := strings.Split(paramStr, "=")
 	typePart := strings.TrimSpace(parts[0])
 
-	param := phpParameter{hasDefault: len(parts) > 1}
+	param := phpParameter{HasDefault: len(parts) > 1}
 
-	if param.hasDefault {
-		param.defaultValue = fp.sanitizeDefaultValue(strings.TrimSpace(parts[1]))
+	if param.HasDefault {
+		param.DefaultValue = fp.sanitizeDefaultValue(strings.TrimSpace(parts[1]))
 	}
 
 	matches := typeNameRegex.FindStringSubmatch(typePart)
@@ -151,9 +163,9 @@ func (fp *FuncParser) parseParameter(paramStr string) (phpParameter, error) {
 	}
 
 	typeStr := strings.TrimSpace(matches[1])
-	param.name = strings.TrimSpace(matches[2])
-	param.isNullable = strings.HasPrefix(typeStr, "?")
-	param.phpType = strings.TrimPrefix(typeStr, "?")
+	param.Name = strings.TrimSpace(matches[2])
+	param.IsNullable = strings.HasPrefix(typeStr, "?")
+	param.PhpType = strings.TrimPrefix(typeStr, "?")
 
 	return param, nil
 }

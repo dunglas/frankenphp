@@ -19,17 +19,17 @@ func TestDocumentationGenerator_Generate(t *testing.T) {
 			generator: &Generator{
 				BaseName: "testextension",
 				BuildDir: "",
-				functions: []phpFunction{
+				Functions: []phpFunction{
 					{
-						name:       "greet",
-						returnType: "string",
-						params: []phpParameter{
-							{name: "name", phpType: "string"},
+						Name:       "greet",
+						ReturnType: "string",
+						Params: []phpParameter{
+							{Name: "name", PhpType: "string"},
 						},
-						signature: "greet(string $name): string",
+						Signature: "greet(string $name): string",
 					},
 				},
-				classes: []phpClass{},
+				Classes: []phpClass{},
 			},
 			expectError: false,
 		},
@@ -38,13 +38,13 @@ func TestDocumentationGenerator_Generate(t *testing.T) {
 			generator: &Generator{
 				BaseName:  "classextension",
 				BuildDir:  "",
-				functions: []phpFunction{},
-				classes: []phpClass{
+				Functions: []phpFunction{},
+				Classes: []phpClass{
 					{
-						name: "TestClass",
-						properties: []phpClassProperty{
-							{name: "name", phpType: "string"},
-							{name: "count", phpType: "int", isNullable: true},
+						Name: "TestClass",
+						Properties: []phpClassProperty{
+							{Name: "name", PhpType: "string"},
+							{Name: "count", PhpType: "int", IsNullable: true},
 						},
 					},
 				},
@@ -56,23 +56,23 @@ func TestDocumentationGenerator_Generate(t *testing.T) {
 			generator: &Generator{
 				BaseName: "fullextension",
 				BuildDir: "",
-				functions: []phpFunction{
+				Functions: []phpFunction{
 					{
-						name:             "calculate",
-						returnType:       "int",
-						isReturnNullable: true,
-						params: []phpParameter{
-							{name: "base", phpType: "int"},
-							{name: "multiplier", phpType: "int", hasDefault: true, defaultValue: "2", isNullable: true},
+						Name:             "calculate",
+						ReturnType:       "int",
+						IsReturnNullable: true,
+						Params: []phpParameter{
+							{Name: "base", PhpType: "int"},
+							{Name: "multiplier", PhpType: "int", HasDefault: true, DefaultValue: "2", IsNullable: true},
 						},
-						signature: "calculate(int $base, ?int $multiplier = 2): ?int",
+						Signature: "calculate(int $base, ?int $multiplier = 2): ?int",
 					},
 				},
-				classes: []phpClass{
+				Classes: []phpClass{
 					{
-						name: "Calculator",
-						properties: []phpClassProperty{
-							{name: "precision", phpType: "int"},
+						Name: "Calculator",
+						Properties: []phpClassProperty{
+							{Name: "precision", PhpType: "int"},
 						},
 					},
 				},
@@ -84,8 +84,8 @@ func TestDocumentationGenerator_Generate(t *testing.T) {
 			generator: &Generator{
 				BaseName:  "emptyextension",
 				BuildDir:  "",
-				functions: []phpFunction{},
-				classes:   []phpClass{},
+				Functions: []phpFunction{},
+				Classes:   []phpClass{},
 			},
 			expectError: false,
 		},
@@ -126,20 +126,20 @@ func TestDocumentationGenerator_Generate(t *testing.T) {
 
 			assert.Contains(t, contentStr, "Auto-generated PHP extension from Go code.", "README should contain description")
 
-			if len(tt.generator.functions) > 0 {
-				assert.Contains(t, contentStr, "## functions", "README should contain functions section when functions exist")
+			if len(tt.generator.Functions) > 0 {
+				assert.Contains(t, contentStr, "## Functions", "README should contain functions section when functions exist")
 
-				for _, fn := range tt.generator.functions {
-					assert.Contains(t, contentStr, "### "+fn.name, "README should contain function %s", fn.name)
-					assert.Contains(t, contentStr, fn.signature, "README should contain function signature for %s", fn.name)
+				for _, fn := range tt.generator.Functions {
+					assert.Contains(t, contentStr, "### "+fn.Name, "README should contain function %s", fn.Name)
+					assert.Contains(t, contentStr, fn.Signature, "README should contain function signature for %s", fn.Name)
 				}
 			}
 
-			if len(tt.generator.classes) > 0 {
-				assert.Contains(t, contentStr, "## classes", "README should contain classes section when classes exist")
+			if len(tt.generator.Classes) > 0 {
+				assert.Contains(t, contentStr, "## Classes", "README should contain classes section when classes exist")
 
-				for _, class := range tt.generator.classes {
-					assert.Contains(t, contentStr, "### "+class.name, "README should contain class %s", class.name)
+				for _, class := range tt.generator.Classes {
+					assert.Contains(t, contentStr, "### "+class.Name, "README should contain class %s", class.Name)
 				}
 			}
 		})
@@ -157,23 +157,23 @@ func TestDocumentationGenerator_GenerateMarkdown(t *testing.T) {
 			name: "function with parameters",
 			generator: &Generator{
 				BaseName: "testextension",
-				functions: []phpFunction{
+				Functions: []phpFunction{
 					{
-						name:       "processData",
-						returnType: "array",
-						params: []phpParameter{
-							{name: "data", phpType: "string"},
-							{name: "options", phpType: "array", isNullable: true},
-							{name: "count", phpType: "int", hasDefault: true, defaultValue: "10"},
+						Name:       "processData",
+						ReturnType: "array",
+						Params: []phpParameter{
+							{Name: "data", PhpType: "string"},
+							{Name: "options", PhpType: "array", IsNullable: true},
+							{Name: "count", PhpType: "int", HasDefault: true, DefaultValue: "10"},
 						},
-						signature: "processData(string $data, ?array $options, int $count = 10): array",
+						Signature: "processData(string $data, ?array $options, int $count = 10): array",
 					},
 				},
-				classes: []phpClass{},
+				Classes: []phpClass{},
 			},
 			contains: []string{
 				"# testextension Extension",
-				"## functions",
+				"## Functions",
 				"### processData",
 				"**Parameters:**",
 				"- `data` (string)",
@@ -186,16 +186,16 @@ func TestDocumentationGenerator_GenerateMarkdown(t *testing.T) {
 			name: "nullable return type",
 			generator: &Generator{
 				BaseName: "nullableext",
-				functions: []phpFunction{
+				Functions: []phpFunction{
 					{
-						name:             "maybeGetValue",
-						returnType:       "string",
-						isReturnNullable: true,
-						params:           []phpParameter{},
-						signature:        "maybeGetValue(): ?string",
+						Name:             "maybeGetValue",
+						ReturnType:       "string",
+						IsReturnNullable: true,
+						Params:           []phpParameter{},
+						Signature:        "maybeGetValue(): ?string",
 					},
 				},
-				classes: []phpClass{},
+				Classes: []phpClass{},
 			},
 			contains: []string{
 				"**Returns:** string (nullable)",
@@ -205,22 +205,22 @@ func TestDocumentationGenerator_GenerateMarkdown(t *testing.T) {
 			name: "class with properties",
 			generator: &Generator{
 				BaseName:  "classext",
-				functions: []phpFunction{},
-				classes: []phpClass{
+				Functions: []phpFunction{},
+				Classes: []phpClass{
 					{
-						name: "DataProcessor",
-						properties: []phpClassProperty{
-							{name: "name", phpType: "string"},
-							{name: "config", phpType: "array", isNullable: true},
-							{name: "enabled", phpType: "bool"},
+						Name: "DataProcessor",
+						Properties: []phpClassProperty{
+							{Name: "name", PhpType: "string"},
+							{Name: "config", PhpType: "array", IsNullable: true},
+							{Name: "enabled", PhpType: "bool"},
 						},
 					},
 				},
 			},
 			contains: []string{
-				"## classes",
+				"## Classes",
 				"### DataProcessor",
-				"**properties:**",
+				"**Properties:**",
 				"- `name`: string",
 				"- `config`: array (nullable)",
 				"- `enabled`: bool",
@@ -230,31 +230,31 @@ func TestDocumentationGenerator_GenerateMarkdown(t *testing.T) {
 			name: "extension with no functions or classes",
 			generator: &Generator{
 				BaseName:  "emptyext",
-				functions: []phpFunction{},
-				classes:   []phpClass{},
+				Functions: []phpFunction{},
+				Classes:   []phpClass{},
 			},
 			contains: []string{
 				"# emptyext Extension",
 				"Auto-generated PHP extension from Go code.",
 			},
 			notContains: []string{
-				"## functions",
-				"## classes",
+				"## Functions",
+				"## Classes",
 			},
 		},
 		{
 			name: "function with no parameters",
 			generator: &Generator{
 				BaseName: "noparamext",
-				functions: []phpFunction{
+				Functions: []phpFunction{
 					{
-						name:       "getCurrentTime",
-						returnType: "int",
-						params:     []phpParameter{},
-						signature:  "getCurrentTime(): int",
+						Name:       "getCurrentTime",
+						ReturnType: "int",
+						Params:     []phpParameter{},
+						Signature:  "getCurrentTime(): int",
 					},
 				},
-				classes: []phpClass{},
+				Classes: []phpClass{},
 			},
 			contains: []string{
 				"### getCurrentTime",
@@ -268,11 +268,11 @@ func TestDocumentationGenerator_GenerateMarkdown(t *testing.T) {
 			name: "class with no properties",
 			generator: &Generator{
 				BaseName:  "nopropsext",
-				functions: []phpFunction{},
-				classes: []phpClass{
+				Functions: []phpFunction{},
+				Classes: []phpClass{
 					{
-						name:       "EmptyClass",
-						properties: []phpClassProperty{},
+						Name:       "EmptyClass",
+						Properties: []phpClassProperty{},
 					},
 				},
 			},
@@ -280,7 +280,7 @@ func TestDocumentationGenerator_GenerateMarkdown(t *testing.T) {
 				"### EmptyClass",
 			},
 			notContains: []string{
-				"**properties:**",
+				"**Properties:**",
 			},
 		},
 	}
@@ -311,8 +311,8 @@ func TestDocumentationGenerator_Generate_InvalidDirectory(t *testing.T) {
 	generator := &Generator{
 		BaseName:  "test",
 		BuildDir:  "/nonexistent/directory",
-		functions: []phpFunction{},
-		classes:   []phpClass{},
+		Functions: []phpFunction{},
+		Classes:   []phpClass{},
 	}
 
 	docGen := &DocumentationGenerator{
@@ -326,14 +326,14 @@ func TestDocumentationGenerator_Generate_InvalidDirectory(t *testing.T) {
 func TestDocumentationGenerator_TemplateError(t *testing.T) {
 	generator := &Generator{
 		BaseName: "test",
-		functions: []phpFunction{
+		Functions: []phpFunction{
 			{
-				name:       "test",
-				returnType: "string",
-				signature:  "test(): string",
+				Name:       "test",
+				ReturnType: "string",
+				Signature:  "test(): string",
 			},
 		},
-		classes: []phpClass{},
+		Classes: []phpClass{},
 	}
 
 	docGen := &DocumentationGenerator{
@@ -348,32 +348,32 @@ func TestDocumentationGenerator_TemplateError(t *testing.T) {
 func BenchmarkDocumentationGenerator_GenerateMarkdown(b *testing.B) {
 	generator := &Generator{
 		BaseName: "benchext",
-		functions: []phpFunction{
+		Functions: []phpFunction{
 			{
-				name:       "function1",
-				returnType: "string",
-				params: []phpParameter{
-					{name: "param1", phpType: "string"},
-					{name: "param2", phpType: "int", hasDefault: true, defaultValue: "0"},
+				Name:       "function1",
+				ReturnType: "string",
+				Params: []phpParameter{
+					{Name: "param1", PhpType: "string"},
+					{Name: "param2", PhpType: "int", HasDefault: true, DefaultValue: "0"},
 				},
-				signature: "function1(string $param1, int $param2 = 0): string",
+				Signature: "function1(string $param1, int $param2 = 0): string",
 			},
 			{
-				name:             "function2",
-				returnType:       "array",
-				isReturnNullable: true,
-				params: []phpParameter{
-					{name: "data", phpType: "array", isNullable: true},
+				Name:             "function2",
+				ReturnType:       "array",
+				IsReturnNullable: true,
+				Params: []phpParameter{
+					{Name: "data", PhpType: "array", IsNullable: true},
 				},
-				signature: "function2(?array $data): ?array",
+				Signature: "function2(?array $data): ?array",
 			},
 		},
-		classes: []phpClass{
+		Classes: []phpClass{
 			{
-				name: "TestClass",
-				properties: []phpClassProperty{
-					{name: "prop1", phpType: "string"},
-					{name: "prop2", phpType: "int", isNullable: true},
+				Name: "TestClass",
+				Properties: []phpClassProperty{
+					{Name: "prop1", PhpType: "string"},
+					{Name: "prop2", PhpType: "int", IsNullable: true},
 				},
 			},
 		},
