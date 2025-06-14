@@ -123,6 +123,18 @@ func parseWorkerConfig(d *caddyfile.Dispenser) (workerConfig, error) {
 	return wc, nil
 }
 
+func (wc workerConfig) inheritEnv(env map[string]string) {
+	if wc.Env == nil {
+		wc.Env = make(map[string]string)
+	}
+	for k, v := range env {
+		// do not overwrite existing environment variables
+		if _, exists := wc.Env[k]; !exists {
+			wc.Env[k] = v
+		}
+	}
+}
+
 func (wc workerConfig) matchesPath(r *http.Request, documentRoot string) bool {
 
 	// try to match against a pattern if one is assigned
