@@ -70,21 +70,16 @@ func (f *FrankenPHPModule) Provision(ctx caddy.Context) error {
 	}
 
 	for i, wc := range f.Workers {
-		// Inherit environment variables from the parent php_server directive
+
+		// make the file path absolute from the public directory
+		// this can only be done if the root is definied inside php_server
 		if !filepath.IsAbs(wc.FileName) && f.Root != "" {
 			wc.FileName = filepath.Join(f.Root, wc.FileName)
 		}
 
+		// Inherit environment variables from the parent php_server directive
 		if f.Env != nil {
-			if wc.Env == nil {
-				wc.Env = make(map[string]string)
-			}
-			for k, v := range f.Env {
-				// Only set if not already defined in the worker
-				if _, exists := wc.Env[k]; !exists {
-					wc.Env[k] = v
-				}
-			}
+			wc.inheritEnv(f.Env)
 		}
 		f.Workers[i] = wc
 	}
