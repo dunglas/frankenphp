@@ -4,7 +4,7 @@ package frankenphp
 import "C"
 import "unsafe"
 
-// EXPERIMENTAL: GoString converts a zend_string to a Go string without copy.
+// EXPERIMENTAL: GoString copies a zend_string to a Go string.
 func GoString(s unsafe.Pointer) string {
 	if s == nil {
 		return ""
@@ -13,18 +13,6 @@ func GoString(s unsafe.Pointer) string {
 	zendStr := (*C.zend_string)(s)
 
 	return C.GoStringN((*C.char)(unsafe.Pointer(&zendStr.val)), C.int(zendStr.len))
-}
-
-// EXPERIMENTAL: GoStringCopy converts a zend_string to a Go string with copy.
-func GoStringCopy(s unsafe.Pointer) string {
-	if s == nil {
-		return ""
-	}
-
-	zendStr := (*C.zend_string)(s)
-	bytes := C.GoBytes(unsafe.Pointer(&zendStr.val), C.int(zendStr.len))
-
-	return string(bytes)
 }
 
 // EXPERIMENTAL: PHPString converts a Go string to a zend_string with copy. The string can be
