@@ -229,7 +229,7 @@ func (v *Validator) phpTypeToGoType(phpType string, isNullable bool) string {
 	return baseType
 }
 
-// isCompatibleGoType checks if the actual Go type is compatible with the expected type
+// isCompatibleGoType checks if the actual Go type is compatible with the expected type.
 func (v *Validator) isCompatibleGoType(expectedType, actualType string) bool {
 	if expectedType == actualType {
 		return true
