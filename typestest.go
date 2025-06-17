@@ -1,6 +1,6 @@
 package frankenphp
 
-//#include <Zend/zend_string.h>
+//#include <Zend/zend.h>
 //
 //zend_string *hello_string() {
 //	return zend_string_init("Hello", 5, 1);
