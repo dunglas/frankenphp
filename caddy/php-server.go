@@ -213,7 +213,7 @@ func cmdPHPServer(fs caddycmd.Flags) (int, error) {
 		}
 
 		br, err := caddy.GetModule("http.encoders.br")
-		if err != nil {
+		if err != nil && brotli {
 			return caddy.ExitCodeFailedStartup, err
 		}
 
