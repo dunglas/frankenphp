@@ -286,6 +286,23 @@ func testInput(t *testing.T, opts *testOptions) {
 	}, opts)
 }
 
+func TestFilterInput_module(t *testing.T) { testFilterInput(t, nil) }
+func TestFilterInput_worker(t *testing.T) {
+	testFilterInput(t, &testOptions{workerScript: "filter.php"})
+}
+func testFilterInput(t *testing.T, opts *testOptions) {
+	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
+		req := httptest.NewRequest("GET", "http://example.com/filter.php", nil)
+		w := httptest.NewRecorder()
+		handler(w, req)
+
+		resp := w.Result()
+		body, _ := io.ReadAll(resp.Body)
+
+		assert.Equal(t, "GET", string(body))
+	}, opts)
+}
+
 func TestPostSuperGlobals_module(t *testing.T) { testPostSuperGlobals(t, nil) }
 func TestPostSuperGlobals_worker(t *testing.T) {
 	testPostSuperGlobals(t, &testOptions{workerScript: "super-globals.php"})
