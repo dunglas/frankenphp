@@ -614,8 +614,9 @@ void frankenphp_register_trusted_var(zend_string *z_key, char *value,
   size_t new_val_len = val_len;
 
   if ((should_filter_var &&
-      sapi_module.input_filter(PARSE_SERVER, ZSTR_VAL(z_key), &value,
-                               new_val_len, &new_val_len)) || !should_filter_var) {
+       sapi_module.input_filter(PARSE_SERVER, ZSTR_VAL(z_key), &value,
+                                new_val_len, &new_val_len)) ||
+      !should_filter_var) {
     zval z_value;
     ZVAL_STRINGL_FAST(&z_value, value, new_val_len);
     zend_hash_update_ind(ht, z_key, &z_value);
@@ -744,8 +745,9 @@ void frankenphp_register_variable_safe(char *key, char *val, size_t val_len,
   }
   size_t new_val_len = val_len;
   if ((should_filter_var &&
-      sapi_module.input_filter(PARSE_SERVER, key, &val, new_val_len,
-                               &new_val_len)) || !should_filter_var) {
+       sapi_module.input_filter(PARSE_SERVER, key, &val, new_val_len,
+                                &new_val_len)) ||
+      !should_filter_var) {
     php_register_variable_safe(key, val, new_val_len, track_vars_array);
   }
 }
