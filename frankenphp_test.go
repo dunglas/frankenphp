@@ -291,6 +291,12 @@ func TestFilterInput_worker(t *testing.T) {
 	testFilterInput(t, &testOptions{workerScript: "filter.php"})
 }
 func testFilterInput(t *testing.T, opts *testOptions) {
+	if opts == nil {
+		opts = &testOptions{}
+	}
+	opts.initOpts = append(opts.initOpts, frankenphp.WithPhpIni(map[string]string{
+		"filter.default": "string.tolower",
+	}))
 	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
 		req := httptest.NewRequest("GET", "http://example.com/filter.php", nil)
 		w := httptest.NewRecorder()
