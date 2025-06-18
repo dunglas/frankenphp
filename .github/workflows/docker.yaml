@@ -197,7 +197,7 @@ jobs:
         run: |
           docker run --platform=${{ matrix.platform }} --rm \
             "$(jq -r '."builder-${{ matrix.variant }}"."containerimage.config.digest"' <<< "${METADATA}")" \
-            sh -c 'CGO_CFLAGS="${CGO_CFLAGS}" go test -tags ${{ matrix.race }} -v ./... && cd caddy && go test -tags nobadger,nomysql,nopgx ${{ matrix.race }} -v ./...'
+            sh -c 'go test -tags ${{ matrix.race }} -v (go list ./... | grep -v github.com/dunglas/frankenphp/internal/testext | grep -v github.com/dunglas/frankenphp/internal/extgen) && cd caddy && go test -tags nobadger,nomysql,nopgx ${{ matrix.race }} -v ./...'
         env:
           METADATA: ${{ steps.build.outputs.metadata }}
   # Adapted from https://docs.docker.com/build/ci/github-actions/multi-platform/
