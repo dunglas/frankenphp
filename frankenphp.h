@@ -1,8 +1,8 @@
 #ifndef _FRANKENPPHP_H
 #define _FRANKENPPHP_H
 
-#include <Zend/zend_types.h>
 #include <Zend/zend_modules.h>
+#include <Zend/zend_types.h>
 #include <stdbool.h>
 #include <stdint.h>
 
