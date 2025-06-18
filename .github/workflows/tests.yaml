@@ -54,7 +54,7 @@ jobs:
         working-directory: internal/testcli/
         run: go build
       - name: Compile library tests
-        run: go test -v -x -c
+        run: go test -race -v -x -c
       - name: Run library tests
         run: ./frankenphp.test -test.v
       - name: Run Caddy module tests
