@@ -4,6 +4,7 @@ package frankenphp
 import "C"
 import (
 	"fmt"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -74,7 +75,11 @@ func getWorkerKey(name string, filename string) string {
 }
 
 func newWorker(o workerOpt) (*worker, error) {
-	absFileName, err := fastabs.FastAbs(o.fileName)
+	absFileName, err := filepath.EvalSymlinks(o.fileName)
+	if err != nil {
+		return nil, fmt.Errorf("worker filename is invalid %q: %w", o.fileName, err)
+	}
+	absFileName, err = fastabs.FastAbs(absFileName)
 	if err != nil {
 		return nil, fmt.Errorf("worker filename is invalid %q: %w", o.fileName, err)
 	}
