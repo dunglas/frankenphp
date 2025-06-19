@@ -1,6 +1,7 @@
 package extgen
 
 import (
+	"github.com/stretchr/testify/require"
 	"os"
 	"path/filepath"
 	"testing"
@@ -177,10 +178,7 @@ func normalFunction() {
 			tempDir := t.TempDir()
 			filename := filepath.Join(tempDir, "test.go")
 
-			err := os.WriteFile(filename, []byte(tt.sourceContent), 0644)
-			if err != nil {
-				t.Fatalf("Failed to create test file: %v", err)
-			}
+			require.NoError(t, os.WriteFile(filename, []byte(tt.sourceContent), 0644))
 
 			analyzer := &SourceAnalyzer{}
 			imports, functions, err := analyzer.analyze(filename)
@@ -222,12 +220,9 @@ func TestSourceAnalyzer_Analyze_InvalidFile(t *testing.T) {
 			// invalid syntax
 		`
 
-		err := os.WriteFile(filename, []byte(invalidContent), 0644)
-		if err != nil {
-			t.Fatalf("Failed to create test file: %v", err)
-		}
+		require.NoError(t, os.WriteFile(filename, []byte(invalidContent), 0644))
 
-		_, _, err = analyzer.analyze(filename)
+		_, _, err := analyzer.analyze(filename)
 		assert.Error(t, err, "expected error for invalid syntax")
 	})
 }
@@ -372,19 +367,14 @@ func internalTwo() {
 	tempDir := b.TempDir()
 	filename := filepath.Join(tempDir, "bench.go")
 
-	err := os.WriteFile(filename, []byte(content), 0644)
-	if err != nil {
-		b.Fatalf("Failed to create test file: %v", err)
-	}
+	require.NoError(b, os.WriteFile(filename, []byte(content), 0644))
 
 	analyzer := &SourceAnalyzer{}
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_, _, err := analyzer.analyze(filename)
-		if err != nil {
-			b.Fatalf("analyze() error: %v", err)
-		}
+		require.NoError(b, err)
 	}
 }
 

@@ -15,6 +15,7 @@ func ReadFile(filename string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+
 	return string(content), nil
 }
 

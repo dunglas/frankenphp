@@ -28,6 +28,7 @@ func (hg *HeaderGenerator) generate() error {
 	if err != nil {
 		return err
 	}
+
 	return WriteFile(filename, content)
 }
 

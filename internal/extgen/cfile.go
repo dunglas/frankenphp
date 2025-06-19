@@ -1,6 +1,8 @@
 package extgen
 
 import (
+	"github.com/Masterminds/sprig/v3"
+
 	"bytes"
 	_ "embed"
 	"path/filepath"
@@ -20,7 +22,6 @@ type cTemplateData struct {
 	Functions []phpFunction
 	Classes   []phpClass
 	Constants []phpConstant
-	Version   string
 }
 
 func (cg *cFileGenerator) generate() error {
@@ -29,6 +30,7 @@ func (cg *cFileGenerator) generate() error {
 	if err != nil {
 		return err
 	}
+
 	return WriteFile(filename, content)
 }
 
@@ -50,27 +52,15 @@ func (cg *cFileGenerator) buildContent() (string, error) {
 }
 
 func (cg *cFileGenerator) getTemplateContent() (string, error) {
-	tmpl, err := template.New("cfile").Funcs(template.FuncMap{
-		"inc": func(i int) int {
-			return i + 1
-		},
-	}).Parse(cFileContent)
+	tmpl := template.Must(template.New("cfile").Funcs(sprig.FuncMap()).Parse(cFileContent))
 
-	if err != nil {
-		return "", err
-	}
-
-	data := cTemplateData{
+	var buf bytes.Buffer
+	if err := tmpl.Execute(&buf, cTemplateData{
 		BaseName:  cg.generator.BaseName,
 		Functions: cg.generator.Functions,
 		Classes:   cg.generator.Classes,
 		Constants: cg.generator.Constants,
-		Version:   "1.0.0",
-	}
-
-	var buf bytes.Buffer
-	err = tmpl.Execute(&buf, data)
-	if err != nil {
+	}); err != nil {
 		return "", err
 	}
 

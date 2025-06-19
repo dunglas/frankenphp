@@ -16,6 +16,7 @@ func (gg *GoFileGenerator) generate() error {
 	if err != nil {
 		return fmt.Errorf("building Go file content: %w", err)
 	}
+
 	return WriteFile(filename, content)
 }
 
@@ -134,13 +135,15 @@ func (gg *GoFileGenerator) generateMethodWrapper(method phpClassMethod, class ph
 	for _, param := range method.Params {
 		if param.PhpType == "string" {
 			builder.WriteString(fmt.Sprintf(", %s *C.zend_string", param.Name))
-		} else {
-			goType := gg.phpTypeToGoType(param.PhpType)
-			if param.IsNullable {
-				goType = "*" + goType
-			}
-			builder.WriteString(fmt.Sprintf(", %s %s", param.Name, goType))
+
+			continue
 		}
+
+		goType := gg.phpTypeToGoType(param.PhpType)
+		if param.IsNullable {
+			goType = "*" + goType
+		}
+		builder.WriteString(fmt.Sprintf(", %s %s", param.Name, goType))
 	}
 
 	if method.ReturnType != "void" {
@@ -199,117 +202,6 @@ type GoMethodSignature struct {
 type GoParameter struct {
 	Name string
 	Type string
-}
-
-func (gg *GoFileGenerator) parseGoMethodSignature(goFunction string) (*GoMethodSignature, error) {
-	lines := strings.Split(goFunction, "\n")
-	if len(lines) == 0 {
-		return nil, fmt.Errorf("empty function")
-	}
-
-	funcLine := strings.TrimSpace(lines[0])
-
-	if !strings.HasPrefix(funcLine, "func ") {
-		return nil, fmt.Errorf("not a function")
-	}
-
-	parts := strings.Split(funcLine, ")")
-	if len(parts) < 2 {
-		return nil, fmt.Errorf("invalid function signature")
-	}
-
-	methodPart := strings.TrimSpace(parts[1])
-
-	spaceIndex := strings.Index(methodPart, "(")
-	if spaceIndex == -1 {
-		return nil, fmt.Errorf("no parameters found")
-	}
-
-	methodName := strings.TrimSpace(methodPart[:spaceIndex])
-
-	paramStart := strings.Index(methodPart, "(")
-	paramEnd := strings.LastIndex(methodPart, ")")
-	if paramStart == -1 || paramEnd == -1 || paramStart >= paramEnd {
-		return nil, fmt.Errorf("invalid parameter section")
-	}
-
-	paramSection := methodPart[paramStart+1 : paramEnd]
-	var params []GoParameter
-
-	if strings.TrimSpace(paramSection) != "" {
-		paramParts := strings.Split(paramSection, ",")
-		for _, paramPart := range paramParts {
-			paramPart = strings.TrimSpace(paramPart)
-			if paramPart == "" {
-				continue
-			}
-
-			parts := strings.Fields(paramPart)
-			if len(parts) >= 2 {
-				params = append(params, GoParameter{
-					Name: parts[0],
-					Type: strings.Join(parts[1:], " "),
-				})
-			}
-		}
-	}
-
-	returnType := ""
-	if strings.Contains(methodPart, ") ") && !strings.HasSuffix(methodPart, ") {") {
-		afterParen := strings.Split(methodPart, ") ")
-		if len(afterParen) > 1 {
-			returnPart := strings.TrimSpace(afterParen[1])
-			if strings.HasSuffix(returnPart, " {") {
-				returnType = strings.TrimSpace(returnPart[:len(returnPart)-2])
-			}
-		}
-	}
-
-	return &GoMethodSignature{
-		MethodName: methodName,
-		Params:     params,
-		ReturnType: returnType,
-	}, nil
-}
-
-func (gg *GoFileGenerator) generateMethodWrapperFallback(method phpClassMethod, class phpClass) string {
-	var builder strings.Builder
-
-	builder.WriteString(fmt.Sprintf("func %s_wrapper(objectID uint64", method.Name))
-
-	for _, param := range method.Params {
-		goType := gg.phpTypeToGoType(param.PhpType)
-		builder.WriteString(fmt.Sprintf(", %s %s", param.Name, goType))
-	}
-
-	if method.ReturnType != "void" {
-		goReturnType := gg.phpTypeToGoType(method.ReturnType)
-		builder.WriteString(fmt.Sprintf(") %s {\n", goReturnType))
-	} else {
-		builder.WriteString(") {\n")
-	}
-
-	builder.WriteString("	objPtr := getGoObject(objectID)\n")
-	builder.WriteString(fmt.Sprintf("	obj := (*%s)(objPtr)\n", class.GoStruct))
-
-	builder.WriteString("	")
-	if method.ReturnType != "void" {
-		builder.WriteString("return ")
-	}
-
-	builder.WriteString(fmt.Sprintf("structObj.%s(", gg.goMethodName(method.Name)))
-
-	for i, param := range method.Params {
-		if i > 0 {
-			builder.WriteString(", ")
-		}
-		builder.WriteString(param.Name)
-	}
-
-	builder.WriteString(")\n")
-	builder.WriteString("}")
-
-	return builder.String()
 }
 
 func (gg *GoFileGenerator) phpTypeToGoType(phpType string) string {

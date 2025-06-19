@@ -9,8 +9,9 @@ type GeneratorError struct {
 }
 
 func (e *GeneratorError) Error() string {
-	if e.Err != nil {
-		return fmt.Sprintf("generator error at %s: %s: %v", e.Stage, e.Message, e.Err)
+	if e.Err == nil {
+		return fmt.Sprintf("generator error at %s: %s", e.Stage, e.Message)
 	}
-	return fmt.Sprintf("generator error at %s: %s", e.Stage, e.Message)
+
+	return fmt.Sprintf("generator error at %s: %s: %v", e.Stage, e.Message, e.Err)
 }

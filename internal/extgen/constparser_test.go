@@ -1,7 +1,9 @@
 package extgen
 
 import (
+	"github.com/stretchr/testify/require"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -128,21 +130,12 @@ const FalseConstant = false`,
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tmpfile, err := os.CreateTemp("", "test*.go")
-			if err != nil {
-				assert.NoError(t, err)
-				return
-			}
-			defer os.Remove(tmpfile.Name())
-
-			if _, err := tmpfile.Write([]byte(tt.input)); err != nil {
-				assert.NoError(t, err)
-				return
-			}
-			tmpfile.Close()
+			tmpDir := t.TempDir()
+			tmpFile := filepath.Join(tmpDir, tt.name+".go")
+			require.NoError(t, os.WriteFile(tmpFile, []byte(tt.input), 0644))
 
 			parser := NewConstantParserWithDefRegex()
-			constants, err := parser.parse(tmpfile.Name())
+			constants, err := parser.parse(tmpFile)
 			assert.NoError(t, err, "parse() error")
 
 			assert.Len(t, constants, tt.expected, "parse() got wrong number of constants")
@@ -150,7 +143,7 @@ const FalseConstant = false`,
 			if tt.name == "single constant" && len(constants) > 0 {
 				c := constants[0]
 				assert.Equal(t, "MyConstant", c.Name, "Expected constant name 'MyConstant'")
-				assert.Equal(t, "\"test_value\"", c.Value, "Expected constant value '\"test_value\"'")
+				assert.Equal(t, `"test_value"`, c.Value, `Expected constant value '"test_value"'`)
 				assert.Equal(t, "string", c.PhpType, "Expected constant type 'string'")
 				assert.False(t, c.IsIota, "Expected isIota to be false for string constant")
 			}
@@ -164,7 +157,7 @@ const FalseConstant = false`,
 
 			if tt.name == "multiple constants" && len(constants) == 3 {
 				expectedNames := []string{"FirstConstant", "SecondConstant", "ThirdConstant"}
-				expectedValues := []string{"\"first\"", "42", "true"}
+				expectedValues := []string{`"first"`, "42", "true"}
 				expectedTypes := []string{"string", "int", "bool"}
 
 				for i, c := range constants {
@@ -203,27 +196,21 @@ const InvalidSyntax`,
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tmpfile, err := os.CreateTemp("", "test*.go")
-			if err != nil {
-				assert.NoError(t, err)
-				return
-			}
-			defer os.Remove(tmpfile.Name())
-
-			if _, err := tmpfile.Write([]byte(tt.input)); err != nil {
-				assert.NoError(t, err)
-				return
-			}
-			tmpfile.Close()
+			tmpDir := t.TempDir()
+			tmpFile := filepath.Join(tmpDir, tt.name+".go")
+			require.NoError(t, os.WriteFile(tmpFile, []byte(tt.input), 0644))
 
 			parser := NewConstantParserWithDefRegex()
-			_, err = parser.parse(tmpfile.Name())
+			_, err := parser.parse(tmpFile)
+			require.NotNil(t, err)
 
 			if tt.expectError {
 				assert.Error(t, err, "Expected error but got none")
-			} else {
-				assert.NoError(t, err)
+
+				return
 			}
+
+			assert.NoError(t, err)
 		})
 	}
 }

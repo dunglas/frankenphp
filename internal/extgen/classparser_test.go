@@ -1,7 +1,9 @@
 package extgen
 
 import (
+	"github.com/stretchr/testify/require"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -87,22 +89,13 @@ func SetUserAge(u *UserStruct, age int) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tmpfile, err := os.CreateTemp("", "test*.go")
-			if err != nil {
-				t.Fatal(err)
-			}
-			defer os.Remove(tmpfile.Name())
-
-			if _, err := tmpfile.Write([]byte(tt.input)); err != nil {
-				t.Fatal(err)
-			}
-			tmpfile.Close()
+			tmpDir := t.TempDir()
+			fileName := filepath.Join(tmpDir, tt.name+".go")
+			require.NoError(t, os.WriteFile(fileName, []byte(tt.input), 0644))
 
 			parser := classParser{}
-			classes, err := parser.parse(tmpfile.Name())
-			if err != nil {
-				t.Fatalf("parse() error = %v", err)
-			}
+			classes, err := parser.parse(fileName)
+			require.NoError(t, err)
 
 			assert.Len(t, classes, tt.expected, "parse() got wrong number of classes")
 
@@ -126,7 +119,7 @@ func SetUserAge(u *UserStruct, age int) {
 }
 
 func TestClassMethods(t *testing.T) {
-	input := `package main
+	var input []byte = []byte(`package main
 
 //export_php:class User
 type UserStruct struct {
@@ -147,35 +140,20 @@ func SetUserAge(u *UserStruct, age int64) {
 //export_php:method User::getInfo(string $prefix = "User"): string
 func GetUserInfo(u UserStruct, prefix *C.zend_string) unsafe.Pointer {
 	return nil
-}`
+}`)
 
-	tmpfile, err := os.CreateTemp("", "test*.go")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.Remove(tmpfile.Name())
-
-	if _, err := tmpfile.Write([]byte(input)); err != nil {
-		t.Fatal(err)
-	}
-	tmpfile.Close()
+	tmpDir := t.TempDir()
+	fileName := filepath.Join(tmpDir, "test.go")
+	require.NoError(t, os.WriteFile(fileName, input, 0644))
 
 	parser := classParser{}
-	classes, err := parser.parse(tmpfile.Name())
-	if err != nil {
-		t.Fatalf("parse() error = %v", err)
-	}
+	classes, err := parser.parse(fileName)
+	require.NoError(t, err)
 
-	assert.Len(t, classes, 1, "Expected 1 class")
-	if len(classes) != 1 {
-		return
-	}
+	require.Len(t, classes, 1, "Expected 1 class")
 
 	class := classes[0]
-	assert.Len(t, class.Methods, 3, "Expected 3 methods")
-	if len(class.Methods) != 3 {
-		return
-	}
+	require.Len(t, class.Methods, 3, "Expected 3 methods")
 
 	getName := class.Methods[0]
 	assert.Equal(t, "getName", getName.Name, "Expected method name 'getName'")
@@ -186,26 +164,24 @@ func GetUserInfo(u UserStruct, prefix *C.zend_string) unsafe.Pointer {
 	setAge := class.Methods[1]
 	assert.Equal(t, "setAge", setAge.Name, "Expected method name 'setAge'")
 	assert.Equal(t, "void", setAge.ReturnType, "Expected return type 'void'")
-	assert.Len(t, setAge.Params, 1, "Expected 1 param")
-	if len(setAge.Params) > 0 {
-		param := setAge.Params[0]
-		assert.Equal(t, "age", param.Name, "Expected param name 'age'")
-		assert.Equal(t, "int", param.PhpType, "Expected param type 'int'")
-		assert.False(t, param.IsNullable, "Expected param to not be nullable")
-		assert.False(t, param.HasDefault, "Expected param to not have default value")
-	}
+	require.Len(t, setAge.Params, 1, "Expected 1 param")
+
+	param := setAge.Params[0]
+	assert.Equal(t, "age", param.Name, "Expected param name 'age'")
+	assert.Equal(t, "int", param.PhpType, "Expected param type 'int'")
+	assert.False(t, param.IsNullable, "Expected param to not be nullable")
+	assert.False(t, param.HasDefault, "Expected param to not have default value")
 
 	getInfo := class.Methods[2]
 	assert.Equal(t, "getInfo", getInfo.Name, "Expected method name 'getInfo'")
 	assert.Equal(t, "string", getInfo.ReturnType, "Expected return type 'string'")
-	assert.Len(t, getInfo.Params, 1, "Expected 1 param")
-	if len(getInfo.Params) > 0 {
-		param := getInfo.Params[0]
-		assert.Equal(t, "prefix", param.Name, "Expected param name 'prefix'")
-		assert.Equal(t, "string", param.PhpType, "Expected param type 'string'")
-		assert.True(t, param.HasDefault, "Expected param to have default value")
-		assert.Equal(t, "User", param.DefaultValue, "Expected default value 'User'")
-	}
+	require.Len(t, getInfo.Params, 1, "Expected 1 param")
+
+	param = getInfo.Params[0]
+	assert.Equal(t, "prefix", param.Name, "Expected param name 'prefix'")
+	assert.Equal(t, "string", param.PhpType, "Expected param type 'string'")
+	assert.True(t, param.HasDefault, "Expected param to have default value")
+	assert.Equal(t, "User", param.DefaultValue, "Expected default value 'User'")
 }
 
 func TestMethodParameterParsing(t *testing.T) {
@@ -239,7 +215,7 @@ func TestMethodParameterParsing(t *testing.T) {
 		},
 		{
 			name:     "parameter with default value",
-			paramStr: "string $prefix = \"default\"",
+			paramStr: `string $prefix = "default"`,
 			expectedParam: phpParameter{
 				Name:         "prefix",
 				PhpType:      "string",
@@ -278,10 +254,7 @@ func TestMethodParameterParsing(t *testing.T) {
 				return
 			}
 
-			assert.NoError(t, err, "parseMethodParameter(%s) error", tt.paramStr)
-			if err != nil {
-				return
-			}
+			require.NoError(t, err, "parseMethodParameter(%s) error", tt.paramStr)
 
 			assert.Equal(t, tt.expectedParam.Name, param.Name, "Expected name '%s'", tt.expectedParam.Name)
 			assert.Equal(t, tt.expectedParam.PhpType, param.PhpType, "Expected type '%s'", tt.expectedParam.PhpType)
@@ -370,33 +343,18 @@ type CollectionStruct struct {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tmpfile, err := os.CreateTemp("", "test*.go")
-			if err != nil {
-				t.Fatal(err)
-			}
-			defer os.Remove(tmpfile.Name())
-
-			if _, err := tmpfile.Write([]byte(tt.input)); err != nil {
-				t.Fatal(err)
-			}
-			tmpfile.Close()
+			tmpDir := t.TempDir()
+			fileName := filepath.Join(tmpDir, tt.name+".go")
+			require.NoError(t, os.WriteFile(fileName, []byte(tt.input), 0o644))
 
 			parser := classParser{}
-			classes, err := parser.parse(tmpfile.Name())
-			if err != nil {
-				t.Fatalf("parse() error = %v", err)
-			}
+			classes, err := parser.parse(fileName)
+			require.NoError(t, err)
 
-			assert.Len(t, classes, 1, "Expected 1 class")
-			if len(classes) != 1 {
-				return
-			}
+			require.Len(t, classes, 1, "Expected 1 class")
 
 			class := classes[0]
-			assert.Len(t, class.Properties, len(tt.expected), "Expected %d properties", len(tt.expected))
-			if len(class.Properties) != len(tt.expected) {
-				return
-			}
+			require.Len(t, class.Properties, len(tt.expected), "Expected %d properties", len(tt.expected))
 
 			for i, expectedType := range tt.expected {
 				assert.Equal(t, expectedType, class.Properties[i].PhpType, "Property %d: expected type %s", i, expectedType)
@@ -536,22 +494,13 @@ func voidMethod(tc *TestClass, message *C.zend_string) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tmpfile, err := os.CreateTemp("", "test*.go")
-			if err != nil {
-				t.Fatal(err)
-			}
-			defer os.Remove(tmpfile.Name())
-
-			if _, err := tmpfile.Write([]byte(tt.input)); err != nil {
-				t.Fatal(err)
-			}
-			tmpfile.Close()
+			tmpDir := t.TempDir()
+			fileName := filepath.Join(tmpDir, tt.name+".go")
+			require.NoError(t, os.WriteFile(fileName, []byte(tt.input), 0644))
 
 			parser := &classParser{}
-			classes, err := parser.parse(tmpfile.Name())
-			if err != nil {
-				t.Fatalf("parse() error = %v", err)
-			}
+			classes, err := parser.parse(fileName)
+			require.NoError(t, err)
 
 			assert.Len(t, classes, tt.expectedClasses, "parse() got wrong number of classes")
 			if len(classes) > 0 {
@@ -675,22 +624,13 @@ func validFloat(tc *TestClass, value float64) float64 {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tmpfile, err := os.CreateTemp("", "test*.go")
-			if err != nil {
-				t.Fatal(err)
-			}
-			defer os.Remove(tmpfile.Name())
-
-			if _, err := tmpfile.Write([]byte(tt.input)); err != nil {
-				t.Fatal(err)
-			}
-			tmpfile.Close()
+			tmpDir := t.TempDir()
+			fileName := filepath.Join(tmpDir, tt.name+".go")
+			require.NoError(t, os.WriteFile(fileName, []byte(tt.input), 0644))
 
 			parser := &classParser{}
-			classes, err := parser.parse(tmpfile.Name())
-			if err != nil {
-				t.Fatalf("parse() error = %v", err)
-			}
+			classes, err := parser.parse(fileName)
+			require.NoError(t, err)
 
 			assert.Len(t, classes, tt.expectedClasses, "parse() got wrong number of classes")
 			if len(classes) > 0 {

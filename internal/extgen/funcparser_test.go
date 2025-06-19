@@ -1,7 +1,9 @@
 package extgen
 
 import (
+	"github.com/stretchr/testify/require"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -95,23 +97,13 @@ func someOtherGoName(num int64) int64 {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tmpfile, err := os.CreateTemp("", "test*.go")
-			if err != nil {
-				t.Fatal(err)
-			}
-			defer os.Remove(tmpfile.Name())
-
-			if _, err := tmpfile.Write([]byte(tt.input)); err != nil {
-				t.Fatal(err)
-			}
-			tmpfile.Close()
+			tmpDir := t.TempDir()
+			fileName := filepath.Join(tmpDir, tt.name+".go")
+			require.NoError(t, os.WriteFile(fileName, []byte(tt.input), 0644))
 
 			parser := NewFuncParserDefRegex()
-			functions, err := parser.parse(tmpfile.Name())
-			if err != nil {
-				t.Fatalf("parse() error = %v", err)
-			}
-
+			functions, err := parser.parse(fileName)
+			require.NoError(t, err)
 			assert.Len(t, functions, tt.expected, "parse() got wrong number of functions")
 
 			if tt.name == "single function" && len(functions) > 0 {
@@ -285,6 +277,7 @@ func TestParameterParsing(t *testing.T) {
 
 			if tt.expectError {
 				assert.Error(t, err, "parseParameter() expected error but got none")
+
 				return
 			}
 
@@ -488,22 +481,13 @@ func validFloat(value float64) float64 {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tmpfile, err := os.CreateTemp("", "test*.go")
-			if err != nil {
-				t.Fatal(err)
-			}
-			defer os.Remove(tmpfile.Name())
-
-			if _, err := tmpfile.Write([]byte(tt.input)); err != nil {
-				t.Fatal(err)
-			}
-			tmpfile.Close()
+			tmpDir := t.TempDir()
+			fileName := filepath.Join(tmpDir, tt.name+".go")
+			require.NoError(t, os.WriteFile(fileName, []byte(tt.input), 0644))
 
 			parser := NewFuncParserDefRegex()
-			functions, err := parser.parse(tmpfile.Name())
-			if err != nil {
-				t.Fatalf("parse() error = %v", err)
-			}
+			functions, err := parser.parse(fileName)
+			require.NoError(t, err)
 
 			assert.Len(t, functions, tt.expected, "parse() got wrong number of functions")
 		})
