@@ -1,6 +1,7 @@
 package extgen
 
 import (
+	"github.com/stretchr/testify/require"
 	"os"
 	"path/filepath"
 	"testing"
@@ -28,10 +29,7 @@ func Test() {
 func main() {}
 `
 
-	err := os.WriteFile(testFile, []byte(content), 0644)
-	if err != nil {
-		t.Fatalf("Failed to create test file: %v", err)
-	}
+	require.NoError(t, os.WriteFile(testFile, []byte(content), 0644))
 
 	generator := &Generator{
 		BaseName:   "testext",
@@ -39,11 +37,7 @@ func main() {}
 		BuildDir:   filepath.Join(tmpDir, "build"),
 	}
 
-	err = generator.parseSource()
-	if err != nil {
-		t.Fatalf("Failed to parse source: %v", err)
-	}
-
+	require.NoError(t, generator.parseSource())
 	assert.Len(t, generator.Constants, 2, "Expected 2 constants")
 
 	expectedConstants := map[string]struct {
@@ -65,21 +59,12 @@ func main() {}
 		assert.Equal(t, expected.IsIota, constant.IsIota, "Constant %s: isIota mismatch", constant.Name)
 	}
 
-	err = generator.setupBuildDirectory()
-	if err != nil {
-		t.Fatalf("Failed to setup build directory: %v", err)
-	}
-
-	err = generator.generateStubFile()
-	if err != nil {
-		t.Fatalf("Failed to generate stub file: %v", err)
-	}
+	require.NoError(t, generator.setupBuildDirectory())
+	require.NoError(t, generator.generateStubFile())
 
 	stubPath := filepath.Join(generator.BuildDir, generator.BaseName+".stub.php")
 	stubContent, err := os.ReadFile(stubPath)
-	if err != nil {
-		t.Fatalf("Failed to read stub file: %v", err)
-	}
+	require.NoError(t, err)
 
 	stubStr := string(stubContent)
 
@@ -87,16 +72,11 @@ func main() {}
 	assert.Contains(t, stubStr, "const STATUS_OK = UNKNOWN;", "Stub does not contain STATUS_OK constant with UNKNOWN value")
 	assert.Contains(t, stubStr, "const MAX_CONNECTIONS = 100;", "Stub does not contain MAX_CONNECTIONS constant with explicit value")
 
-	err = generator.generateCFile()
-	if err != nil {
-		t.Fatalf("Failed to generate C file: %v", err)
-	}
+	require.NoError(t, generator.generateCFile())
 
 	cPath := filepath.Join(generator.BuildDir, generator.BaseName+".c")
 	cContent, err := os.ReadFile(cPath)
-	if err != nil {
-		t.Fatalf("Failed to read C file: %v", err)
-	}
+	require.NoError(t, err)
 
 	cStr := string(cContent)
 
@@ -122,10 +102,7 @@ const REGULAR_INT = 42
 func main() {}
 `
 
-	err := os.WriteFile(testFile, []byte(content), 0644)
-	if err != nil {
-		t.Fatalf("Failed to create test file: %v", err)
-	}
+	require.NoError(t, os.WriteFile(testFile, []byte(content), 0644))
 
 	generator := &Generator{
 		BaseName:   "octalstest",
@@ -133,11 +110,7 @@ func main() {}
 		BuildDir:   filepath.Join(tmpDir, "build"),
 	}
 
-	err = generator.parseSource()
-	if err != nil {
-		t.Fatalf("Failed to parse source: %v", err)
-	}
-
+	require.NoError(t, generator.parseSource())
 	assert.Len(t, generator.Constants, 3, "Expected 3 constants")
 
 	// Verify CValue conversion
@@ -155,22 +128,14 @@ func main() {}
 		}
 	}
 
-	err = generator.setupBuildDirectory()
-	if err != nil {
-		t.Fatalf("Failed to setup build directory: %v", err)
-	}
+	require.NoError(t, generator.setupBuildDirectory())
 
 	// Test C file generation
-	err = generator.generateCFile()
-	if err != nil {
-		t.Fatalf("Failed to generate C file: %v", err)
-	}
+	require.NoError(t, generator.generateCFile())
 
 	cPath := filepath.Join(generator.BuildDir, generator.BaseName+".c")
 	cContent, err := os.ReadFile(cPath)
-	if err != nil {
-		t.Fatalf("Failed to read C file: %v", err)
-	}
+	require.NoError(t, err)
 
 	cStr := string(cContent)
 
@@ -180,16 +145,11 @@ func main() {}
 	assert.Contains(t, cStr, `REGISTER_LONG_CONSTANT("REGULAR_INT", 42, CONST_CS | CONST_PERSISTENT);`, "C file does not contain REGULAR_INT registration with value 42")
 
 	// Test header file generation
-	err = generator.generateHeaderFile()
-	if err != nil {
-		t.Fatalf("Failed to generate header file: %v", err)
-	}
+	require.NoError(t, generator.generateHeaderFile())
 
 	hPath := filepath.Join(generator.BuildDir, generator.BaseName+".h")
 	hContent, err := os.ReadFile(hPath)
-	if err != nil {
-		t.Fatalf("Failed to read header file: %v", err)
-	}
+	require.NoError(t, err)
 
 	hStr := string(hContent)
 

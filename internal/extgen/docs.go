@@ -26,24 +26,19 @@ func (dg *DocumentationGenerator) generate() error {
 	if err != nil {
 		return err
 	}
+
 	return WriteFile(filename, content)
 }
 
 func (dg *DocumentationGenerator) generateMarkdown() (string, error) {
-	tmpl, err := template.New("readme").Parse(docFileContent)
-	if err != nil {
-		return "", err
-	}
+	tmpl := template.Must(template.New("readme").Parse(docFileContent))
 
-	data := DocTemplateData{
+	var buf bytes.Buffer
+	if err := tmpl.Execute(&buf, DocTemplateData{
 		BaseName:  dg.generator.BaseName,
 		Functions: dg.generator.Functions,
 		Classes:   dg.generator.Classes,
-	}
-
-	var buf bytes.Buffer
-	err = tmpl.Execute(&buf, data)
-	if err != nil {
+	}); err != nil {
 		return "", err
 	}
 

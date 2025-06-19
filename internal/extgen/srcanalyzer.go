@@ -40,11 +40,12 @@ func (sa *SourceAnalyzer) analyze(filename string) (imports []string, internalFu
 
 func (sa *SourceAnalyzer) extractInternalFunctions(content string) []string {
 	lines := strings.Split(content, "\n")
-	var functions []string
-	var currentFunc strings.Builder
-	var inFunction bool
-	var braceCount int
-	var hasPHPFunc bool
+	var (
+		functions              []string
+		currentFunc            strings.Builder
+		inFunction, hasPHPFunc bool
+		braceCount             int
+	)
 
 	for i, line := range lines {
 		trimmedLine := strings.TrimSpace(line)
@@ -61,10 +62,13 @@ func (sa *SourceAnalyzer) extractInternalFunctions(content string) []string {
 				if prevLine == "" {
 					continue
 				}
+
 				if strings.Contains(prevLine, "export_php:") {
 					hasPHPFunc = true
+
 					break
 				}
+
 				if !strings.HasPrefix(prevLine, "//") {
 					break
 				}

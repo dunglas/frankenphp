@@ -22,14 +22,18 @@ func NewFuncParserDefRegex() *FuncParser {
 	}
 }
 
-func (fp *FuncParser) parse(filename string) ([]phpFunction, error) {
+func (fp *FuncParser) parse(filename string) (functions []phpFunction, err error) {
 	file, err := os.Open(filename)
 	if err != nil {
 		return nil, err
 	}
-	defer file.Close()
+	defer func() {
+		e := file.Close()
+		if err == nil {
+			err = e
+		}
+	}()
 
-	var functions []phpFunction
 	scanner := bufio.NewScanner(file)
 	var currentPHPFunc *phpFunction
 	validator := Validator{}
@@ -44,16 +48,19 @@ func (fp *FuncParser) parse(filename string) ([]phpFunction, error) {
 			phpFunc, err := fp.parseSignature(signature)
 			if err != nil {
 				fmt.Printf("Warning: Error parsing signature '%s': %v\n", signature, err)
+
 				continue
 			}
 
 			if err := validator.validateFunction(*phpFunc); err != nil {
 				fmt.Printf("Warning: Invalid function '%s': %v\n", phpFunc.Name, err)
+
 				continue
 			}
 
 			if err := validator.validateScalarTypes(*phpFunc); err != nil {
 				fmt.Printf("Warning: Function '%s' uses unsupported types: %v\n", phpFunc.Name, err)
+
 				continue
 			}
 
@@ -66,11 +73,13 @@ func (fp *FuncParser) parse(filename string) ([]phpFunction, error) {
 			if err != nil {
 				return nil, fmt.Errorf("extracting Go function: %w", err)
 			}
+
 			currentPHPFunc.goFunction = goFunc
 
 			if err := validator.validateGoFunctionSignatureWithOptions(*currentPHPFunc, false); err != nil {
-				fmt.Printf("Warning: Go function signature mismatch for '%s': %v\n", currentPHPFunc.Name, err)
+				fmt.Printf("Warning: Go function signature mismatch for %q: %v\n", currentPHPFunc.Name, err)
 				currentPHPFunc = nil
+
 				continue
 			}
 
@@ -178,5 +187,5 @@ func (fp *FuncParser) sanitizeDefaultValue(value string) string {
 		return "null"
 	}
 
-	return strings.Trim(value, "'\"")
+	return strings.Trim(value, `'"`)
 }

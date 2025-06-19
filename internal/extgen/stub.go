@@ -20,6 +20,7 @@ func (sg *StubGenerator) generate() error {
 	if err != nil {
 		return err
 	}
+
 	return WriteFile(filename, content)
 }
 
@@ -32,8 +33,7 @@ func (sg *StubGenerator) buildContent() (string, error) {
 	}
 
 	var buf strings.Builder
-	err = tmpl.Execute(&buf, sg.Generator)
-	if err != nil {
+	if err := tmpl.Execute(&buf, sg.Generator); err != nil {
 		return "", err
 	}
 

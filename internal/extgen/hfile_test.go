@@ -1,7 +1,7 @@
 package extgen
 
 import (
-	"os"
+	"github.com/stretchr/testify/require"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -10,11 +10,7 @@ import (
 )
 
 func TestHeaderGenerator_Generate(t *testing.T) {
-	tmpDir, err := os.MkdirTemp("", "header_generator_test")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(tmpDir)
+	tmpDir := t.TempDir()
 
 	generator := &Generator{
 		BaseName: "test_extension",
@@ -22,19 +18,13 @@ func TestHeaderGenerator_Generate(t *testing.T) {
 	}
 
 	headerGen := HeaderGenerator{generator}
-	err = headerGen.generate()
-	if err != nil {
-		t.Fatalf("generate() failed: %v", err)
-	}
+	require.NoError(t, headerGen.generate())
 
 	expectedFile := filepath.Join(tmpDir, "test_extension.h")
-	_, err = os.Stat(expectedFile)
-	assert.False(t, os.IsNotExist(err), "Expected header file was not created: %s", expectedFile)
+	require.FileExists(t, expectedFile)
 
 	content, err := ReadFile(expectedFile)
-	if err != nil {
-		t.Fatalf("Failed to read generated header file: %v", err)
-	}
+	require.NoError(t, err)
 
 	testHeaderBasicStructure(t, content, "test_extension")
 	testHeaderIncludeGuards(t, content, "TEST_EXTENSION_H")
@@ -96,9 +86,7 @@ func TestHeaderGenerator_BuildContent(t *testing.T) {
 			generator := &Generator{BaseName: tt.baseName}
 			headerGen := HeaderGenerator{generator}
 			content, err := headerGen.buildContent()
-			if err != nil {
-				t.Fatalf("buildContent() failed: %v", err)
-			}
+			require.NoError(t, err)
 
 			for _, expected := range tt.contains {
 				assert.Contains(t, content, expected, "Generated header content should contain '%s'", expected)
@@ -126,9 +114,7 @@ func TestHeaderGenerator_HeaderGuardGeneration(t *testing.T) {
 			generator := &Generator{BaseName: tt.baseName}
 			headerGen := HeaderGenerator{generator}
 			content, err := headerGen.buildContent()
-			if err != nil {
-				t.Fatalf("buildContent() failed: %v", err)
-			}
+			require.NoError(t, err)
 
 			expectedIfndef := "#ifndef " + tt.expectedGuard
 			expectedDefine := "#define " + tt.expectedGuard
@@ -143,9 +129,7 @@ func TestHeaderGenerator_BasicStructure(t *testing.T) {
 	generator := &Generator{BaseName: "structtest"}
 	headerGen := HeaderGenerator{generator}
 	content, err := headerGen.buildContent()
-	if err != nil {
-		t.Fatalf("buildContent() failed: %v", err)
-	}
+	require.NoError(t, err)
 
 	expectedElements := []string{
 		"#include <php.h>",
@@ -166,9 +150,7 @@ func TestHeaderGenerator_CompleteStructure(t *testing.T) {
 	generator := &Generator{BaseName: "complete_test"}
 	headerGen := HeaderGenerator{generator}
 	content, err := headerGen.buildContent()
-	if err != nil {
-		t.Fatalf("buildContent() failed: %v", err)
-	}
+	require.NoError(t, err)
 
 	lines := strings.Split(content, "\n")
 
@@ -211,9 +193,7 @@ func TestHeaderGenerator_EmptyBaseName(t *testing.T) {
 	generator := &Generator{BaseName: ""}
 	headerGen := HeaderGenerator{generator}
 	content, err := headerGen.buildContent()
-	if err != nil {
-		t.Fatalf("buildContent() failed: %v", err)
-	}
+	require.NoError(t, err)
 
 	assert.Contains(t, content, "#ifndef __H", "Header with empty basename should have __H guard")
 	assert.Contains(t, content, "#define __H", "Header with empty basename should have __H define")
@@ -223,9 +203,7 @@ func TestHeaderGenerator_ContentValidation(t *testing.T) {
 	generator := &Generator{BaseName: "validation_test"}
 	headerGen := HeaderGenerator{generator}
 	content, err := headerGen.buildContent()
-	if err != nil {
-		t.Fatalf("buildContent() failed: %v", err)
-	}
+	require.NoError(t, err)
 
 	assert.Equal(t, 1, strings.Count(content, "#ifndef"), "Header should have exactly one #ifndef")
 	assert.Equal(t, 1, strings.Count(content, "#define"), "Header should have exactly one #define")
@@ -255,9 +233,7 @@ func TestHeaderGenerator_SpecialCharacterHandling(t *testing.T) {
 			generator := &Generator{BaseName: tt.input}
 			headerGen := HeaderGenerator{generator}
 			content, err := headerGen.buildContent()
-			if err != nil {
-				t.Fatalf("buildContent() failed: %v", err)
-			}
+			require.NoError(t, err)
 
 			expectedGuard := "_" + tt.expected + "_H"
 			expectedIfndef := "#ifndef " + expectedGuard
@@ -283,14 +259,10 @@ func TestHeaderGenerator_GuardConsistency(t *testing.T) {
 	headerGen := HeaderGenerator{generator}
 
 	content1, err := headerGen.buildContent()
-	if err != nil {
-		t.Fatalf("First buildContent() failed: %v", err)
-	}
+	require.NoError(t, err, "First buildContent() failed: %v", err)
 
 	content2, err := headerGen.buildContent()
-	if err != nil {
-		t.Fatalf("Second buildContent() failed: %v", err)
-	}
+	require.NoError(t, err, "Second buildContent() failed: %v", err)
 
 	assert.Equal(t, content1, content2, "Multiple calls to buildContent() should produce identical results")
 }
@@ -299,9 +271,7 @@ func TestHeaderGenerator_MinimalContent(t *testing.T) {
 	generator := &Generator{BaseName: "minimal"}
 	headerGen := HeaderGenerator{generator}
 	content, err := headerGen.buildContent()
-	if err != nil {
-		t.Fatalf("buildContent() failed: %v", err)
-	}
+	require.NoError(t, err)
 
 	essentialElements := []string{
 		"#ifndef _MINIMAL_H",
@@ -322,6 +292,7 @@ func testHeaderBasicStructure(t *testing.T, content, baseName string) {
 		if r >= 'A' && r <= 'Z' || r >= 'a' && r <= 'z' || r >= '0' && r <= '9' {
 			return r
 		}
+
 		return '_'
 	}, baseName)
 	headerGuard = strings.ToUpper(headerGuard) + "_H"

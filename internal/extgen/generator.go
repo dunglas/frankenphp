@@ -54,6 +54,7 @@ func (g *Generator) setupBuildDirectory() error {
 	if err := os.RemoveAll(g.BuildDir); err != nil {
 		return fmt.Errorf("removing build directory: %w", err)
 	}
+
 	return os.MkdirAll(g.BuildDir, 0755)
 }
 
@@ -86,6 +87,7 @@ func (g *Generator) generateStubFile() error {
 	if err := generator.generate(); err != nil {
 		return &GeneratorError{"stub generation", "failed to generate stub file", err}
 	}
+
 	return nil
 }
 
@@ -94,6 +96,7 @@ func (g *Generator) generateArginfo() error {
 	if err := generator.generate(); err != nil {
 		return &GeneratorError{"arginfo generation", "failed to generate arginfo", err}
 	}
+
 	return nil
 }
 
@@ -102,6 +105,7 @@ func (g *Generator) generateHeaderFile() error {
 	if err := generator.generate(); err != nil {
 		return &GeneratorError{"header generation", "failed to generate header file", err}
 	}
+
 	return nil
 }
 
@@ -110,6 +114,7 @@ func (g *Generator) generateCFile() error {
 	if err := generator.generate(); err != nil {
 		return &GeneratorError{"C file generation", "failed to generate C file", err}
 	}
+
 	return nil
 }
 
@@ -118,6 +123,7 @@ func (g *Generator) generateGoFile() error {
 	if err := generator.generate(); err != nil {
 		return &GeneratorError{"Go file generation", "failed to generate Go file", err}
 	}
+
 	return nil
 }
 
@@ -126,5 +132,6 @@ func (g *Generator) generateDocumentation() error {
 	if err := docGen.generate(); err != nil {
 		return &GeneratorError{"documentation generation", "failed to generate documentation", err}
 	}
+
 	return nil
 }

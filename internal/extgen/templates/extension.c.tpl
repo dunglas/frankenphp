@@ -97,7 +97,7 @@ PHP_METHOD({{.ClassName}}, {{.PhpName}}) {
     {{- end}}
     {{- end}}
     
-    {{$requiredCount := 0}}{{range .Params}}{{if not .HasDefault}}{{$requiredCount = inc $requiredCount}}{{end}}{{end -}}
+    {{$requiredCount := 0}}{{range .Params}}{{if not .HasDefault}}{{$requiredCount = add1 $requiredCount}}{{end}}{{end -}}
     ZEND_PARSE_PARAMETERS_START({{$requiredCount}}, {{len .Params}});
         {{$optionalStarted := false}}{{range .Params}}{{if .HasDefault}}{{if not $optionalStarted -}}
         Z_PARAM_OPTIONAL
@@ -164,12 +164,12 @@ PHP_MINIT_FUNCTION({{.BaseName}}) {
 
 zend_module_entry {{.BaseName}}_module_entry = {STANDARD_MODULE_HEADER,
                                          "{{.BaseName}}",
-                                         ext_functions,  /* Functions */
+                                         ext_functions,             /* Functions */
                                          PHP_MINIT({{.BaseName}}),  /* MINIT */
-                                         NULL,           /* MSHUTDOWN */
-                                         NULL,           /* RINIT */
-                                         NULL,           /* RSHUTDOWN */
-                                         NULL,           /* MINFO */
-                                         "{{.Version}}", // version
+                                         NULL,                      /* MSHUTDOWN */
+                                         NULL,                      /* RINIT */
+                                         NULL,                      /* RSHUTDOWN */
+                                         NULL,                      /* MINFO */
+                                         "1.0.0",                   /* Version */
                                          STANDARD_MODULE_PROPERTIES};
 

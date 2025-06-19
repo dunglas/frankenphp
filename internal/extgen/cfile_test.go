@@ -2,7 +2,6 @@ package extgen
 
 import (
 	"github.com/stretchr/testify/require"
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -11,11 +10,7 @@ import (
 )
 
 func TestCFileGenerator_Generate(t *testing.T) {
-	tmpDir, err := os.MkdirTemp("", "c_file_generator_test")
-	require.NoError(t, err)
-	t.Cleanup(func() {
-		os.RemoveAll(tmpDir)
-	})
+	tmpDir := t.TempDir()
 
 	generator := &Generator{
 		BaseName: "test_extension",
@@ -54,8 +49,7 @@ func TestCFileGenerator_Generate(t *testing.T) {
 	require.NoError(t, cGen.generate())
 
 	expectedFile := filepath.Join(tmpDir, "test_extension.c")
-	_, err = os.Stat(expectedFile)
-	assert.False(t, os.IsNotExist(err), "Expected C file was not created: %s", expectedFile)
+	require.FileExists(t, expectedFile, "Expected C file was not created: %s", expectedFile)
 
 	content, err := ReadFile(expectedFile)
 	require.NoError(t, err)
@@ -141,9 +135,7 @@ func TestCFileGenerator_BuildContent(t *testing.T) {
 
 			cGen := cFileGenerator{generator}
 			content, err := cGen.buildContent()
-			if err != nil {
-				t.Fatalf("buildContent() failed: %v", err)
-			}
+			require.NoError(t, err)
 
 			for _, expected := range tt.contains {
 				assert.Contains(t, content, expected, "Generated C content should contain '%s'", expected)
@@ -212,12 +204,7 @@ func TestCFileGenerator_GetTemplateContent(t *testing.T) {
 }
 
 func TestCFileIntegrationWithGenerators(t *testing.T) {
-	tmpDir, err := os.MkdirTemp("", "c_integration_test")
-	require.NoError(t, err)
-
-	t.Cleanup(func() {
-		os.RemoveAll(tmpDir)
-	})
+	tmpDir := t.TempDir()
 
 	functions := []phpFunction{
 		{
@@ -324,9 +311,7 @@ func TestCFileSpecialCharacters(t *testing.T) {
 
 			cGen := cFileGenerator{generator}
 			content, err := cGen.buildContent()
-			if err != nil {
-				t.Fatalf("buildContent() failed: %v", err)
-			}
+			require.NoError(t, err)
 
 			expectedInclude := "#include \"" + tt.expected + ".h\""
 			assert.Contains(t, content, expectedInclude, "Content should contain include: %s", expectedInclude)
@@ -434,7 +419,7 @@ func TestCFileConstants(t *testing.T) {
 				},
 				{
 					Name:    "GLOBAL_STRING",
-					Value:   "\"test\"",
+					Value:   `"test"`,
 					PhpType: "string",
 				},
 			},
@@ -455,9 +440,7 @@ func TestCFileConstants(t *testing.T) {
 
 			cGen := cFileGenerator{generator}
 			content, err := cGen.buildContent()
-			if err != nil {
-				t.Fatalf("buildContent() failed: %v", err)
-			}
+			require.NoError(t, err)
 
 			for _, expected := range tt.contains {
 				assert.Contains(t, content, expected, "Generated C content should contain '%s'", expected)

@@ -27,14 +27,18 @@ func NewConstantParserWithDefRegex() *ConstantParser {
 	}
 }
 
-func (cp *ConstantParser) parse(filename string) ([]phpConstant, error) {
+func (cp *ConstantParser) parse(filename string) (constants []phpConstant, err error) {
 	file, err := os.Open(filename)
 	if err != nil {
 		return nil, err
 	}
-	defer file.Close()
+	defer func() {
+		e := file.Close()
+		if err == nil {
+			err = e
+		}
+	}()
 
-	var constants []phpConstant
 	scanner := bufio.NewScanner(file)
 
 	lineNumber := 0
@@ -51,6 +55,7 @@ func (cp *ConstantParser) parse(filename string) ([]phpConstant, error) {
 			expectConstDecl = true
 			expectClassConstDecl = false
 			currentClassName = ""
+
 			continue
 		}
 
@@ -58,6 +63,7 @@ func (cp *ConstantParser) parse(filename string) ([]phpConstant, error) {
 			expectClassConstDecl = true
 			expectConstDecl = false
 			currentClassName = matches[1]
+
 			continue
 		}
 

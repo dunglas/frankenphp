@@ -27,14 +27,13 @@ func (cp *classParser) Parse(filename string) ([]phpClass, error) {
 	return cp.parse(filename)
 }
 
-func (cp *classParser) parse(filename string) ([]phpClass, error) {
+func (cp *classParser) parse(filename string) (classes []phpClass, err error) {
 	fset := token.NewFileSet()
 	node, err := parser.ParseFile(fset, filename, nil, parser.ParseComments)
 	if err != nil {
 		return nil, fmt.Errorf("parsing file: %w", err)
 	}
 
-	var classes []phpClass
 	validator := Validator{}
 
 	exportDirectives := cp.collectExportDirectives(node, fset)
@@ -137,20 +136,6 @@ func (cp *classParser) extractPHPClassCommentWithLine(commentGroup *ast.CommentG
 	return "", 0
 }
 
-func (cp *classParser) extractPHPClassComment(commentGroup *ast.CommentGroup) string {
-	if commentGroup == nil {
-		return ""
-	}
-
-	for _, comment := range commentGroup.List {
-		if matches := phpClassRegex.FindStringSubmatch(comment.Text); matches != nil {
-			return matches[1]
-		}
-	}
-
-	return ""
-}
-
 func (cp *classParser) parseStructFields(fields []*ast.Field) []phpClassProperty {
 	var properties []phpClassProperty
 
@@ -177,6 +162,7 @@ func (cp *classParser) parseStructField(fieldName string, field *ast.Field) phpC
 	}
 
 	prop.PhpType = cp.goTypeToPHPType(prop.goType)
+
 	return prop
 }
 
@@ -217,14 +203,19 @@ func (cp *classParser) goTypeToPHPType(goType string) string {
 	return "mixed"
 }
 
-func (cp *classParser) parseMethods(filename string) ([]phpClassMethod, error) {
+func (cp *classParser) parseMethods(filename string) (methods []phpClassMethod, err error) {
 	file, err := os.Open(filename)
 	if err != nil {
 		return nil, err
 	}
-	defer file.Close()
 
-	var methods []phpClassMethod
+	defer func() {
+		e := file.Close()
+		if err != nil {
+			err = e
+		}
+	}()
+
 	scanner := bufio.NewScanner(file)
 	var currentMethod *phpClassMethod
 
@@ -239,7 +230,8 @@ func (cp *classParser) parseMethods(filename string) ([]phpClassMethod, error) {
 
 			method, err := cp.parseMethodSignature(className, signature)
 			if err != nil {
-				fmt.Printf("Warning: Error parsing method signature '%s': %v\n", signature, err)
+				fmt.Printf("Warning: Error parsing method signature %q: %v\n", signature, err)
+
 				continue
 			}
 
@@ -253,7 +245,8 @@ func (cp *classParser) parseMethods(filename string) ([]phpClassMethod, error) {
 			}
 
 			if err := validator.validateScalarTypes(phpFunc); err != nil {
-				fmt.Printf("Warning: Method '%s::%s' uses unsupported types: %v\n", className, method.Name, err)
+				fmt.Printf("Warning: Method \"%s::%s\" uses unsupported types: %v\n", className, method.Name, err)
+
 				continue
 			}
 
@@ -266,6 +259,7 @@ func (cp *classParser) parseMethods(filename string) ([]phpClassMethod, error) {
 			if err != nil {
 				return nil, fmt.Errorf("extracting Go method function: %w", err)
 			}
+
 			currentMethod.goFunction = goFunc
 
 			validator := Validator{}
@@ -318,6 +312,7 @@ func (cp *classParser) parseMethodSignature(className, signature string) (*phpCl
 			if err != nil {
 				return nil, fmt.Errorf("parsing parameter '%s': %w", part, err)
 			}
+
 			params = append(params, param)
 		}
 	}
@@ -366,7 +361,7 @@ func (cp *classParser) sanitizeDefaultValue(value string) string {
 		return "null"
 	}
 
-	return strings.Trim(value, "'\"")
+	return strings.Trim(value, `'"`)
 }
 
 func (cp *classParser) extractGoMethodFunction(scanner *bufio.Scanner, firstLine string) (string, error) {

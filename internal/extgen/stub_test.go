@@ -1,7 +1,6 @@
 package extgen
 
 import (
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -10,9 +9,7 @@ import (
 )
 
 func TestStubGenerator_Generate(t *testing.T) {
-	tmpDir, err := os.MkdirTemp("", "stub_generator_test")
-	assert.NoError(t, err)
-	defer os.RemoveAll(tmpDir)
+	tmpDir := t.TempDir()
 
 	generator := &Generator{
 		BaseName: "test_extension",
@@ -58,12 +55,10 @@ func TestStubGenerator_Generate(t *testing.T) {
 	}
 
 	stubGen := StubGenerator{generator}
-	err = stubGen.generate()
-	assert.NoError(t, err, "generate() failed")
+	assert.NoError(t, stubGen.generate(), "generate() failed")
 
 	expectedFile := filepath.Join(tmpDir, "test_extension.stub.php")
-	_, err = os.Stat(expectedFile)
-	assert.False(t, os.IsNotExist(err), "Expected stub file was not created: %s", expectedFile)
+	assert.FileExists(t, expectedFile, "Expected stub file was not created: %s", expectedFile)
 
 	content, err := ReadFile(expectedFile)
 	assert.NoError(t, err, "Failed to read generated stub file")
@@ -132,7 +127,7 @@ func TestStubGenerator_BuildContent(t *testing.T) {
 			constants: []phpConstant{
 				{
 					Name:    "GLOBAL_CONST",
-					Value:   "\"test\"",
+					Value:   `"test"`,
 					PhpType: "string",
 				},
 			},
@@ -489,7 +484,7 @@ func TestStubGenerator_ClassConstants(t *testing.T) {
 			constants: []phpConstant{
 				{
 					Name:    "GLOBAL_CONST",
-					Value:   "\"global\"",
+					Value:   `"global"`,
 					PhpType: "string",
 				},
 				{
@@ -500,7 +495,7 @@ func TestStubGenerator_ClassConstants(t *testing.T) {
 				},
 			},
 			contains: []string{
-				"const GLOBAL_CONST = \"global\";",
+				`const GLOBAL_CONST = "global";`,
 				"class TestClass {",
 				"public const CLASS_CONST = 42;",
 			},
@@ -603,14 +598,15 @@ func testStubConstants(t *testing.T, content string, constants []phpConstant) {
 				expectedConst := "const " + constant.Name + " = " + constant.Value + ";"
 				assert.Contains(t, content, expectedConst, "Stub should contain constant: %s", expectedConst)
 			}
+
+			continue
+		}
+		if constant.IsIota {
+			expectedConst := "public const " + constant.Name + " = UNKNOWN;"
+			assert.Contains(t, content, expectedConst, "Stub should contain class iota constant: %s", expectedConst)
 		} else {
-			if constant.IsIota {
-				expectedConst := "public const " + constant.Name + " = UNKNOWN;"
-				assert.Contains(t, content, expectedConst, "Stub should contain class iota constant: %s", expectedConst)
-			} else {
-				expectedConst := "public const " + constant.Name + " = " + constant.Value + ";"
-				assert.Contains(t, content, expectedConst, "Stub should contain class constant: %s", expectedConst)
-			}
+			expectedConst := "public const " + constant.Name + " = " + constant.Value + ";"
+			assert.Contains(t, content, expectedConst, "Stub should contain class constant: %s", expectedConst)
 		}
 	}
 }

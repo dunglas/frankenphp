@@ -1,6 +1,7 @@
 package extgen
 
 import (
+	"github.com/stretchr/testify/require"
 	"os"
 	"path/filepath"
 	"testing"
@@ -110,20 +111,14 @@ func TestDocumentationGenerator_Generate(t *testing.T) {
 			assert.NoError(t, err, "generate() unexpected error")
 
 			readmePath := filepath.Join(tempDir, "README.md")
-			_, err = os.Stat(readmePath)
-			if !assert.False(t, os.IsNotExist(err), "README.md file was not created") {
-				return
-			}
+			require.FileExists(t, readmePath)
 
 			content, err := os.ReadFile(readmePath)
-			if !assert.NoError(t, err, "Failed to read generated README.md") {
-				return
-			}
+			require.NoError(t, err, "Failed to read generated README.md")
 
 			contentStr := string(content)
 
 			assert.Contains(t, contentStr, "# "+tt.generator.BaseName+" Extension", "README should contain extension title")
-
 			assert.Contains(t, contentStr, "Auto-generated PHP extension from Go code.", "README should contain description")
 
 			if len(tt.generator.Functions) > 0 {
@@ -386,8 +381,6 @@ func BenchmarkDocumentationGenerator_GenerateMarkdown(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_, err := docGen.generateMarkdown()
-		if err != nil {
-			b.Fatalf("generateMarkdown() error: %v", err)
-		}
+		assert.NoError(b, err)
 	}
 }

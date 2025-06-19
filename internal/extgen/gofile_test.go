@@ -1,6 +1,7 @@
 package extgen
 
 import (
+	"github.com/stretchr/testify/require"
 	"os"
 	"path/filepath"
 	"strings"
@@ -10,11 +11,7 @@ import (
 )
 
 func TestGoFileGenerator_Generate(t *testing.T) {
-	tmpDir, err := os.MkdirTemp("", "go_file_generator_test")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(tmpDir)
+	tmpDir := t.TempDir()
 
 	sourceContent := `package main
 
@@ -44,9 +41,7 @@ func anotherHelper() {
 }`
 
 	sourceFile := filepath.Join(tmpDir, "test.go")
-	if err := os.WriteFile(sourceFile, []byte(sourceContent), 0644); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, os.WriteFile(sourceFile, []byte(sourceContent), 0644))
 
 	generator := &Generator{
 		BaseName:   "test",
@@ -72,19 +67,13 @@ func anotherHelper() {
 	}
 
 	goGen := GoFileGenerator{generator}
-	err = goGen.generate()
-	if err != nil {
-		t.Fatalf("generate() failed: %v", err)
-	}
+	require.NoError(t, goGen.generate())
 
 	expectedFile := filepath.Join(tmpDir, "test.go")
-	_, err = os.Stat(expectedFile)
-	assert.False(t, os.IsNotExist(err), "Expected Go file was not created: %s", expectedFile)
+	require.FileExists(t, expectedFile)
 
 	content, err := ReadFile(expectedFile)
-	if err != nil {
-		t.Fatalf("Failed to read generated Go file: %v", err)
-	}
+	require.NoError(t, err)
 
 	testGoFileBasicStructure(t, content, "test")
 	testGoFileImports(t, content)
@@ -193,8 +182,6 @@ func internalFunc2(data string) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			defer os.Remove(tt.sourceFile)
-
 			generator := &Generator{
 				BaseName:   tt.baseName,
 				SourceFile: tt.sourceFile,
@@ -203,9 +190,7 @@ func internalFunc2(data string) {
 
 			goGen := GoFileGenerator{generator}
 			content, err := goGen.buildContent()
-			if err != nil {
-				t.Fatalf("buildContent() failed: %v", err)
-			}
+			require.NoError(t, err)
 
 			for _, expected := range tt.contains {
 				assert.Contains(t, content, expected, "Generated Go content should contain '%s'", expected)
@@ -229,7 +214,6 @@ func TestGoFileGenerator_PackageNameSanitization(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.baseName, func(t *testing.T) {
 			sourceFile := createTempSourceFile(t, "package main\n//export_php: test(): void\nfunc test() {}")
-			defer os.Remove(sourceFile)
 
 			generator := &Generator{
 				BaseName:   tt.baseName,
@@ -241,9 +225,7 @@ func TestGoFileGenerator_PackageNameSanitization(t *testing.T) {
 
 			goGen := GoFileGenerator{generator}
 			content, err := goGen.buildContent()
-			if err != nil {
-				t.Fatalf("buildContent() failed: %v", err)
-			}
+			require.NoError(t, err)
 
 			expectedPackage := "package " + tt.expectedPackage
 			assert.Contains(t, content, expectedPackage, "Generated content should contain '%s'", expectedPackage)
@@ -276,10 +258,6 @@ func TestGoFileGenerator_ErrorHandling(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if !tt.expectErr && tt.sourceFile != "/nonexistent/file.go" {
-				defer os.Remove(tt.sourceFile)
-			}
-
 			generator := &Generator{
 				BaseName:   "test",
 				SourceFile: tt.sourceFile,
@@ -313,7 +291,6 @@ import (
 func test() {}`
 
 	sourceFile := createTempSourceFile(t, sourceContent)
-	defer os.Remove(sourceFile)
 
 	generator := &Generator{
 		BaseName:   "importtest",
@@ -325,9 +302,7 @@ func test() {}`
 
 	goGen := GoFileGenerator{generator}
 	content, err := goGen.buildContent()
-	if err != nil {
-		t.Fatalf("buildContent() failed: %v", err)
-	}
+	require.NoError(t, err)
 
 	expectedImports := []string{
 		`import "fmt"`,
@@ -392,7 +367,6 @@ func debugPrint(msg string) {
 }`
 
 	sourceFile := createTempSourceFile(t, sourceContent)
-	defer os.Remove(sourceFile)
 
 	functions := []phpFunction{
 		{
@@ -423,10 +397,7 @@ func debugPrint(msg string) {
 
 	goGen := GoFileGenerator{generator}
 	content, err := goGen.buildContent()
-	if err != nil {
-		t.Fatalf("buildContent() failed: %v", err)
-	}
-
+	require.NoError(t, err)
 	assert.Contains(t, content, "package complex_example", "Package name should be sanitized")
 
 	internalFuncs := []string{
@@ -450,15 +421,7 @@ func debugPrint(msg string) {
 }
 
 func TestGoFileGenerator_MethodWrapperWithNullableParams(t *testing.T) {
-	tmpDir, err := os.MkdirTemp("", "method_wrapper_test")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func() {
-		if err := os.RemoveAll(tmpDir); err != nil {
-			t.Logf("Failed to remove temp dir: %v", err)
-		}
-	}()
+	tmpDir := t.TempDir()
 
 	sourceContent := `package main
 
@@ -482,9 +445,7 @@ func (ts *TestStruct) ProcessData(name string, count *int64, enabled *bool) stri
 }`
 
 	sourceFile := filepath.Join(tmpDir, "test.go")
-	if err := os.WriteFile(sourceFile, []byte(sourceContent), 0644); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, os.WriteFile(sourceFile, []byte(sourceContent), 0644))
 
 	methods := []phpClassMethod{
 		{
@@ -528,9 +489,7 @@ func (ts *TestStruct) ProcessData(name string, count *int64, enabled *bool) stri
 
 	goGen := GoFileGenerator{generator}
 	content, err := goGen.buildContent()
-	if err != nil {
-		t.Fatalf("buildContent() failed: %v", err)
-	}
+	require.NoError(t, err)
 
 	expectedWrapperSignature := "func ProcessData_wrapper(handle C.uintptr_t, name *C.zend_string, count *int64, enabled *bool)"
 	assert.Contains(t, content, expectedWrapperSignature, "Generated content should contain wrapper with nullable pointer types: %s", expectedWrapperSignature)
@@ -543,20 +502,12 @@ func (ts *TestStruct) ProcessData(name string, count *int64, enabled *bool) stri
 }
 
 func createTempSourceFile(t *testing.T, content string) string {
-	tmpfile, err := os.CreateTemp("", "source*.go")
-	if err != nil {
-		t.Fatal(err)
-	}
+	tmpDir := t.TempDir()
+	tmpFile := filepath.Join(tmpDir, "source.go")
 
-	if _, err := tmpfile.Write([]byte(content)); err != nil {
-		tmpfile.Close()
-		t.Fatal(err)
-	}
-	if err := tmpfile.Close(); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, os.WriteFile(tmpFile, []byte(content), 0644))
 
-	return tmpfile.Name()
+	return tmpFile
 }
 
 func testGoFileBasicStructure(t *testing.T, content, baseName string) {
@@ -602,6 +553,7 @@ func testGoFileInternalFunctions(t *testing.T, content string) {
 	for _, indicator := range internalIndicators {
 		if strings.Contains(content, indicator) {
 			foundInternal = true
+
 			break
 		}
 	}
