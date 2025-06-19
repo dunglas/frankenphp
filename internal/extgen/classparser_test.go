@@ -119,7 +119,7 @@ func SetUserAge(u *UserStruct, age int) {
 }
 
 func TestClassMethods(t *testing.T) {
-	var input []byte = []byte(`package main
+	var input = []byte(`package main
 
 //export_php:class User
 type UserStruct struct {
