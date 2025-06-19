@@ -80,6 +80,8 @@ var CommonRequestHeaders = map[string]string{
 	"Width":                             "HTTP_WIDTH",
 	"X-Forwarded-For":                   "HTTP_X_FORWARDED_FOR",
 	"X-Forwarded-Host":                  "HTTP_X_FORWARDED_HOST",
+	"X-Forwarded-Path":                  "HTTP_X_FORWARDED_PATH",
+	"X-Forwarded-Prefix":                "HTTP_X_FORWARDED_PREFIX",
 	"X-Forwarded-Proto":                 "HTTP_X_FORWARDED_PROTO",
 	"A-Im":                              "HTTP_A_IM",
 	"Accept-Datetime":                   "HTTP_ACCEPT_DATETIME",
@@ -110,6 +112,7 @@ var CommonRequestHeaders = map[string]string{
 	"X-Network-Info":            "HTTP_X_NETWORK_INFO",
 	"X-Client-Id":               "HTTP_X_CLIENT_ID",
 	"X-Livewire":                "HTTP_X_LIVEWIRE",
+	"X-Real-IP":                 "HTTP_X_REAL_IP",
 }
 
 // Cache up to 256 uncommon headers
