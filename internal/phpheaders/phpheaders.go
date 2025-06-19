@@ -112,7 +112,7 @@ var CommonRequestHeaders = map[string]string{
 	"X-Network-Info":            "HTTP_X_NETWORK_INFO",
 	"X-Client-Id":               "HTTP_X_CLIENT_ID",
 	"X-Livewire":                "HTTP_X_LIVEWIRE",
-	"X-Real-IP":                 "HTTP_X_REAL_IP",
+	"X-Real-Ip":                 "HTTP_X_REAL_IP",
 }
 
 // Cache up to 256 uncommon headers
