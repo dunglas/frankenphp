@@ -227,21 +227,12 @@ const SecondIota = iota
 //export_php:const
 const ThirdIota = iota`
 
-	tmpfile, err := os.CreateTemp("", "test*.go")
-	assert.NoError(t, err)
-	if err != nil {
-		return
-	}
-	defer os.Remove(tmpfile.Name())
-
-	if _, err := tmpfile.Write([]byte(input)); err != nil {
-		assert.NoError(t, err)
-		return
-	}
-	tmpfile.Close()
+	tmpDir := t.TempDir()
+	fileName := filepath.Join(tmpDir, "test.go")
+	require.NoError(t, os.WriteFile(fileName, []byte(input), 0644))
 
 	parser := NewConstantParserWithDefRegex()
-	constants, err := parser.parse(tmpfile.Name())
+	constants, err := parser.parse(fileName)
 	assert.NoError(t, err, "parse() error")
 
 	assert.Len(t, constants, 3, "Expected 3 constants")
@@ -348,21 +339,12 @@ const INVALID = "missing class name"`,
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tmpfile, err := os.CreateTemp("", "test*.go")
-			if err != nil {
-				assert.NoError(t, err)
-				return
-			}
-			defer os.Remove(tmpfile.Name())
-
-			if _, err := tmpfile.Write([]byte(tt.input)); err != nil {
-				assert.NoError(t, err)
-				return
-			}
-			tmpfile.Close()
+			tmpDir := t.TempDir()
+			tmpFile := filepath.Join(tmpDir, tt.name+".go")
+			require.NoError(t, os.WriteFile(tmpFile, []byte(tt.input), 0644))
 
 			parser := NewConstantParserWithDefRegex()
-			constants, err := parser.parse(tmpfile.Name())
+			constants, err := parser.parse(tmpFile)
 			assert.NoError(t, err, "parse() error")
 
 			assert.Len(t, constants, tt.expected, "parse() got wrong number of constants")
@@ -378,7 +360,7 @@ const INVALID = "missing class name"`,
 			if tt.name == "multiple class constants" && len(constants) == 3 {
 				expectedClasses := []string{"User", "User", "Order"}
 				expectedNames := []string{"STATUS_ACTIVE", "STATUS_INACTIVE", "STATE_PENDING"}
-				expectedValues := []string{"\"active\"", "\"inactive\"", "0"}
+				expectedValues := []string{`"active"`, `"inactive"`, "0"}
 
 				for i, c := range constants {
 					assert.Equal(t, expectedClasses[i], c.ClassName, "Expected class name '%s'", expectedClasses[i])
