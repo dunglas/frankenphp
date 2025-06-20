@@ -90,10 +90,6 @@ fi
 if [ "${os}" = "linux" ] && { [[ "${arch}" =~ "aarch" ]] || [[ "${arch}" =~ "arm" ]]; }; then
 	fpic="-fPIC"
 	fpie="-fPIE"
-
-	if [ -z "${DEBUG_SYMBOLS}" ]; then
-		export SPC_PHP_DEFAULT_OPTIMIZE_CFLAGS="-g -fstack-protector-strong -fPIC -fPIE -Os -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64"
-	fi
 else
 	fpic="-fpic"
 	fpie="-fpie"
