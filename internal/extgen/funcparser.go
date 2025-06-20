@@ -74,7 +74,7 @@ func (fp *FuncParser) parse(filename string) (functions []phpFunction, err error
 				return nil, fmt.Errorf("extracting Go function: %w", err)
 			}
 
-			currentPHPFunc.goFunction = goFunc
+			currentPHPFunc.GoFunction = goFunc
 
 			if err := validator.validateGoFunctionSignatureWithOptions(*currentPHPFunc, false); err != nil {
 				fmt.Printf("Warning: Go function signature mismatch for %q: %v\n", currentPHPFunc.Name, err)

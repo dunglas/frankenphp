@@ -1,13 +1,31 @@
 package extgen
 
 import (
+	"bytes"
+	_ "embed"
 	"fmt"
 	"path/filepath"
 	"strings"
+	"text/template"
+
+	"github.com/Masterminds/sprig/v3"
 )
+
+//go:embed templates/extension.go.tpl
+var goFileContent string
 
 type GoFileGenerator struct {
 	generator *Generator
+}
+
+type goTemplateData struct {
+	PackageName       string
+	BaseName          string
+	Imports           []string
+	Constants         []phpConstant
+	InternalFunctions []string
+	Functions         []phpFunction
+	Classes           []phpClass
 }
 
 func (gg *GoFileGenerator) generate() error {
@@ -27,104 +45,47 @@ func (gg *GoFileGenerator) buildContent() (string, error) {
 		return "", fmt.Errorf("analyzing source file: %w", err)
 	}
 
-	var builder strings.Builder
-
-	cleanPackageName := SanitizePackageName(gg.generator.BaseName)
-	builder.WriteString(fmt.Sprintf(`package %s
-
-/*
-#include <stdlib.h>
-#include "%s.h"
-*/
-import "C"
-import "runtime/cgo"
-`, cleanPackageName, gg.generator.BaseName))
-
+	filteredImports := make([]string, 0, len(imports))
 	for _, imp := range imports {
-		if imp == `"C"` {
-			continue
-		}
-
-		builder.WriteString(fmt.Sprintf("import %s\n", imp))
-	}
-
-	builder.WriteString(`
-func init() {
-	frankenphp.RegisterExtension(unsafe.Pointer(&C.ext_module_entry))
-}
-`)
-
-	for _, constant := range gg.generator.Constants {
-		builder.WriteString(fmt.Sprintf("const %s = %s\n", constant.Name, constant.Value))
-	}
-
-	if len(gg.generator.Constants) > 0 {
-		builder.WriteString("\n")
-	}
-
-	for _, internalFunc := range internalFunctions {
-		builder.WriteString(internalFunc + "\n\n")
-	}
-
-	for _, fn := range gg.generator.Functions {
-		builder.WriteString(fmt.Sprintf("//export %s\n%s\n", fn.Name, fn.goFunction))
-	}
-
-	for _, class := range gg.generator.Classes {
-		builder.WriteString(fmt.Sprintf("type %s struct {\n", class.GoStruct))
-		for _, prop := range class.Properties {
-			builder.WriteString(fmt.Sprintf("	%s %s\n", prop.Name, prop.goType))
-		}
-		builder.WriteString("}\n\n")
-	}
-
-	if len(gg.generator.Classes) > 0 {
-		builder.WriteString(`
-//export registerGoObject
-func registerGoObject(obj interface{}) C.uintptr_t {
-	handle := cgo.NewHandle(obj)
-	return C.uintptr_t(handle)
-}
-
-//export getGoObject
-func getGoObject(handle C.uintptr_t) interface{} {
-	h := cgo.Handle(handle)
-	return h.value()
-}
-
-//export removeGoObject
-func removeGoObject(handle C.uintptr_t) {
-	h := cgo.Handle(handle)
-	h.Delete()
-}
-
-`)
-	}
-
-	for _, class := range gg.generator.Classes {
-		builder.WriteString(fmt.Sprintf(`//export create_%s_object
-func create_%s_object() C.uintptr_t {
-	obj := &%s{}
-	return registerGoObject(obj)
-}
-
-`, class.GoStruct, class.GoStruct, class.GoStruct))
-
-		for _, method := range class.Methods {
-			if method.goFunction != "" {
-				builder.WriteString(method.goFunction)
-				builder.WriteString("\n\n")
-			}
-		}
-
-		for _, method := range class.Methods {
-			builder.WriteString(fmt.Sprintf("//export %s_wrapper\n", method.Name))
-			builder.WriteString(gg.generateMethodWrapper(method, class))
-			builder.WriteString("\n")
+		if imp != `"C"` {
+			filteredImports = append(filteredImports, imp)
 		}
 	}
 
-	return builder.String(), nil
+	classes := make([]phpClass, len(gg.generator.Classes))
+	copy(classes, gg.generator.Classes)
+	for i, class := range classes {
+		for j, method := range class.Methods {
+			classes[i].Methods[j].Wrapper = gg.generateMethodWrapper(method, class)
+		}
+	}
+
+	templateContent, err := gg.getTemplateContent(goTemplateData{
+		PackageName:       SanitizePackageName(gg.generator.BaseName),
+		BaseName:          gg.generator.BaseName,
+		Imports:           filteredImports,
+		Constants:         gg.generator.Constants,
+		InternalFunctions: internalFunctions,
+		Functions:         gg.generator.Functions,
+		Classes:           classes,
+	})
+
+	if err != nil {
+		return "", fmt.Errorf("executing template: %w", err)
+	}
+
+	return templateContent, nil
+}
+
+func (gg *GoFileGenerator) getTemplateContent(data goTemplateData) (string, error) {
+	tmpl := template.Must(template.New("gofile").Funcs(sprig.FuncMap()).Parse(goFileContent))
+
+	var buf bytes.Buffer
+	if err := tmpl.Execute(&buf, data); err != nil {
+		return "", err
+	}
+
+	return buf.String(), nil
 }
 
 func (gg *GoFileGenerator) generateMethodWrapper(method phpClassMethod, class phpClass) string {

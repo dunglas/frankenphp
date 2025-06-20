@@ -8,7 +8,7 @@ import (
 type phpFunction struct {
 	Name             string
 	Signature        string
-	goFunction       string
+	GoFunction       string
 	Params           []phpParameter
 	ReturnType       string
 	IsReturnNullable bool
@@ -34,7 +34,8 @@ type phpClassMethod struct {
 	Name             string
 	PhpName          string
 	Signature        string
-	goFunction       string
+	GoFunction       string
+	Wrapper          string
 	Params           []phpParameter
 	ReturnType       string
 	isReturnNullable bool
@@ -45,7 +46,7 @@ type phpClassMethod struct {
 type phpClassProperty struct {
 	Name       string
 	PhpType    string
-	goType     string
+	GoType     string
 	IsNullable bool
 }
 

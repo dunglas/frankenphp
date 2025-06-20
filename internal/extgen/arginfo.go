@@ -41,7 +41,7 @@ func (ag *arginfoGenerator) fixArginfoFile(stubFile string) error {
 		return fmt.Errorf("reading arginfo file: %w", err)
 	}
 
-	// TODO: Fix the zend_register_internal_class_with_flags issue
+	// FIXME: the script generate "zend_register_internal_class_with_flags" but it is not recognized by the compiler
 	fixedContent := strings.ReplaceAll(content,
 		"zend_register_internal_class_with_flags(&ce, NULL, 0)",
 		"zend_register_internal_class(&ce)")

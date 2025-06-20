@@ -46,6 +46,6 @@ func getPhpTypeAnnotation(goType string) string {
 	case "string", "bool", "float", "int":
 		return goType
 	default:
-		return "int" // fallback
+		return "int"
 	}
 }

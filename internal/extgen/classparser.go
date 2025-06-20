@@ -155,13 +155,13 @@ func (cp *classParser) parseStructField(fieldName string, field *ast.Field) phpC
 	// check if field is a pointer (nullable)
 	if starExpr, isPointer := field.Type.(*ast.StarExpr); isPointer {
 		prop.IsNullable = true
-		prop.goType = cp.typeToString(starExpr.X)
+		prop.GoType = cp.typeToString(starExpr.X)
 	} else {
 		prop.IsNullable = false
-		prop.goType = cp.typeToString(field.Type)
+		prop.GoType = cp.typeToString(field.Type)
 	}
 
-	prop.PhpType = cp.goTypeToPHPType(prop.goType)
+	prop.PhpType = cp.goTypeToPHPType(prop.GoType)
 
 	return prop
 }
@@ -260,13 +260,13 @@ func (cp *classParser) parseMethods(filename string) (methods []phpClassMethod, 
 				return nil, fmt.Errorf("extracting Go method function: %w", err)
 			}
 
-			currentMethod.goFunction = goFunc
+			currentMethod.GoFunction = goFunc
 
 			validator := Validator{}
 			phpFunc := phpFunction{
 				Name:             currentMethod.Name,
 				Signature:        currentMethod.Signature,
-				goFunction:       currentMethod.goFunction,
+				GoFunction:       currentMethod.GoFunction,
 				Params:           currentMethod.Params,
 				ReturnType:       currentMethod.ReturnType,
 				IsReturnNullable: currentMethod.isReturnNullable,
