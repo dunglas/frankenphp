@@ -51,14 +51,14 @@ func anotherHelper() {
 			{
 				Name:       "greet",
 				ReturnType: "string",
-				goFunction: `func greet(name *go_string) *go_value {
+				GoFunction: `func greet(name *go_string) *go_value {
 	return types.String("Hello " + CStringToGoString(name))
 }`,
 			},
 			{
 				Name:       "calculate",
 				ReturnType: "int",
-				goFunction: `func calculate(a long, b long) *go_value {
+				GoFunction: `func calculate(a long, b long) *go_value {
 	result := a + b
 	return types.Int(result)
 }`,
@@ -103,7 +103,7 @@ func test() {
 				{
 					Name:       "test",
 					ReturnType: "void",
-					goFunction: "func test() {\n\t// simple function\n}",
+					GoFunction: "func test() {\n\t// simple function\n}",
 				},
 			},
 			contains: []string{
@@ -136,7 +136,7 @@ func process(data *go_string) *go_value {
 				{
 					Name:       "process",
 					ReturnType: "string",
-					goFunction: `func process(data *go_string) *go_value {
+					GoFunction: `func process(data *go_string) *go_value {
 	return String(fmt.Sprintf("processed: %s", CStringToGoString(data)))
 }`,
 				},
@@ -169,7 +169,7 @@ func internalFunc2(data string) {
 				{
 					Name:       "publicFunc",
 					ReturnType: "void",
-					goFunction: "func publicFunc() {}",
+					GoFunction: "func publicFunc() {}",
 				},
 			},
 			contains: []string{
@@ -219,7 +219,7 @@ func TestGoFileGenerator_PackageNameSanitization(t *testing.T) {
 				BaseName:   tt.baseName,
 				SourceFile: sourceFile,
 				Functions: []phpFunction{
-					{Name: "test", ReturnType: "void", goFunction: "func test() {}"},
+					{Name: "test", ReturnType: "void", GoFunction: "func test() {}"},
 				},
 			}
 
@@ -296,7 +296,7 @@ func test() {}`
 		BaseName:   "importtest",
 		SourceFile: sourceFile,
 		Functions: []phpFunction{
-			{Name: "test", ReturnType: "void", goFunction: "func test() {}"},
+			{Name: "test", ReturnType: "void", GoFunction: "func test() {}"},
 		},
 	}
 
@@ -372,7 +372,7 @@ func debugPrint(msg string) {
 		{
 			Name:       "processData",
 			ReturnType: "array",
-			goFunction: `func processData(input *go_string, options *go_nullable) *go_value {
+			GoFunction: `func processData(input *go_string, options *go_nullable) *go_value {
 	data := CStringToGoString(input)
 	processed := internalProcess(data)
 	return Array([]interface{}{processed})
@@ -381,7 +381,7 @@ func debugPrint(msg string) {
 		{
 			Name:       "validateInput",
 			ReturnType: "bool",
-			goFunction: `func validateInput(data *go_string) *go_value {
+			GoFunction: `func validateInput(data *go_string) *go_value {
 	input := CStringToGoString(data)
 	isValid := len(input) > 0 && validateFormat(input)
 	return Bool(isValid)
@@ -459,7 +459,7 @@ func (ts *TestStruct) ProcessData(name string, count *int64, enabled *bool) stri
 				{Name: "count", PhpType: "int", IsNullable: true},
 				{Name: "enabled", PhpType: "bool", IsNullable: true},
 			},
-			goFunction: `func (ts *TestStruct) ProcessData(name string, count *int64, enabled *bool) string {
+			GoFunction: `func (ts *TestStruct) ProcessData(name string, count *int64, enabled *bool) string {
 	result := fmt.Sprintf("name=%s", name)
 	if count != nil {
 		result += fmt.Sprintf(", count=%d", *count)

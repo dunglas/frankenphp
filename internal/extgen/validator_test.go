@@ -176,7 +176,7 @@ func TestValidateClassProperty(t *testing.T) {
 			prop: phpClassProperty{
 				Name:    "validProperty",
 				PhpType: "string",
-				goType:  "string",
+				GoType:  "string",
 			},
 			expectError: false,
 		},
@@ -185,7 +185,7 @@ func TestValidateClassProperty(t *testing.T) {
 			prop: phpClassProperty{
 				Name:       "nullableProperty",
 				PhpType:    "int",
-				goType:     "*int",
+				GoType:     "*int",
 				IsNullable: true,
 			},
 			expectError: false,
@@ -527,7 +527,7 @@ func TestValidateGoFunctionSignature(t *testing.T) {
 					{Name: "name", PhpType: "string"},
 					{Name: "count", PhpType: "int"},
 				},
-				goFunction: `func testFunc(name *C.zend_string, count int64) unsafe.Pointer {
+				GoFunction: `func testFunc(name *C.zend_string, count int64) unsafe.Pointer {
 	return nil
 }`,
 			},
@@ -541,7 +541,7 @@ func TestValidateGoFunctionSignature(t *testing.T) {
 				Params: []phpParameter{
 					{Name: "message", PhpType: "string"},
 				},
-				goFunction: `func voidFunc(message *C.zend_string) {
+				GoFunction: `func voidFunc(message *C.zend_string) {
 	// Do something
 }`,
 			},
@@ -553,7 +553,7 @@ func TestValidateGoFunctionSignature(t *testing.T) {
 				Name:       "noGoFunc",
 				ReturnType: "string",
 				Params:     []phpParameter{},
-				goFunction: "",
+				GoFunction: "",
 			},
 			expectError: true,
 			errorMsg:    "no Go function found",
@@ -567,7 +567,7 @@ func TestValidateGoFunctionSignature(t *testing.T) {
 					{Name: "param1", PhpType: "string"},
 					{Name: "param2", PhpType: "int"},
 				},
-				goFunction: `func countMismatch(param1 *C.zend_string) unsafe.Pointer {
+				GoFunction: `func countMismatch(param1 *C.zend_string) unsafe.Pointer {
 	return nil
 }`,
 			},
@@ -583,7 +583,7 @@ func TestValidateGoFunctionSignature(t *testing.T) {
 					{Name: "name", PhpType: "string"},
 					{Name: "count", PhpType: "int"},
 				},
-				goFunction: `func typeMismatch(name *C.zend_string, count string) unsafe.Pointer {
+				GoFunction: `func typeMismatch(name *C.zend_string, count string) unsafe.Pointer {
 	return nil
 }`,
 			},
@@ -598,7 +598,7 @@ func TestValidateGoFunctionSignature(t *testing.T) {
 				Params: []phpParameter{
 					{Name: "value", PhpType: "string"},
 				},
-				goFunction: `func returnMismatch(value *C.zend_string) string {
+				GoFunction: `func returnMismatch(value *C.zend_string) string {
 	return ""
 }`,
 			},
@@ -613,7 +613,7 @@ func TestValidateGoFunctionSignature(t *testing.T) {
 				Params: []phpParameter{
 					{Name: "flag", PhpType: "bool"},
 				},
-				goFunction: `func boolFunc(flag bool) bool {
+				GoFunction: `func boolFunc(flag bool) bool {
 	return flag
 }`,
 			},
@@ -627,7 +627,7 @@ func TestValidateGoFunctionSignature(t *testing.T) {
 				Params: []phpParameter{
 					{Name: "value", PhpType: "float"},
 				},
-				goFunction: `func floatFunc(value float64) float64 {
+				GoFunction: `func floatFunc(value float64) float64 {
 	return value * 2.0
 }`,
 			},

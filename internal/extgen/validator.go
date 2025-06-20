@@ -135,12 +135,12 @@ func (v *Validator) isScalarType(phpType string, supportedTypes []string) bool {
 
 // validateGoFunctionSignatureWithOptions validates with option for method vs function
 func (v *Validator) validateGoFunctionSignatureWithOptions(phpFunc phpFunction, isMethod bool) error {
-	if phpFunc.goFunction == "" {
+	if phpFunc.GoFunction == "" {
 		return fmt.Errorf("no Go function found for PHP function '%s'", phpFunc.Name)
 	}
 
 	fset := token.NewFileSet()
-	file, err := parser.ParseFile(fset, "", "package main\n"+phpFunc.goFunction, 0)
+	file, err := parser.ParseFile(fset, "", "package main\n"+phpFunc.GoFunction, 0)
 	if err != nil {
 		return fmt.Errorf("failed to parse Go function: %w", err)
 	}
