@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 import http from 'k6/http'
 import { check } from 'k6'
 
