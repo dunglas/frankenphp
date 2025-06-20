@@ -226,6 +226,8 @@ func Init(options ...Option) error {
 	// Docker/Moby has a similar hack: https://github.com/moby/moby/blob/d828b032a87606ae34267e349bf7f7ccb1f6495a/cmd/dockerd/docker.go#L87-L90
 	signal.Ignore(syscall.SIGPIPE)
 
+	registerExtensions()
+
 	opt := &opt{}
 	for _, o := range options {
 		if err := o(opt); err != nil {
