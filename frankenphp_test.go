@@ -286,9 +286,9 @@ func testInput(t *testing.T, opts *testOptions) {
 	}, opts)
 }
 
-func TestFilterInputDefault_module(t *testing.T) { testFilterInput(t, nil) }
+func TestFilterInputDefault_module(t *testing.T) { testFilterInputDefault(t, nil) }
 func TestFilterInputDefault_worker(t *testing.T) {
-	testFilterInput(t, &testOptions{workerScript: "filter.php"})
+	testFilterInputDefault(t, &testOptions{workerScript: "filter.php"})
 }
 func testFilterInputDefault(t *testing.T, opts *testOptions) {
 	if opts == nil {
