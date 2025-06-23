@@ -235,6 +235,7 @@ Vous trouverez plus d'informations sur ce paramètre dans la [documentation Cadd
 Les variables d'environnement suivantes peuvent être utilisées pour insérer des directives Caddy dans le `Caddyfile` sans le modifier :
 
 - `SERVER_NAME` : change [les adresses sur lesquelles écouter](https://caddyserver.com/docs/caddyfile/concepts#addresses), les noms d'hôte fournis seront également utilisés pour le certificat TLS généré
+- `SERVER_ROOT` : change le répertoire racine du site, par défaut `public/`
 - `CADDY_GLOBAL_OPTIONS` : injecte [des options globales](https://caddyserver.com/docs/caddyfile/options)
 - `FRANKENPHP_CONFIG` : insère la configuration sous la directive `frankenphp`
 
