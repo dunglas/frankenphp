@@ -99,5 +99,10 @@ ENV SPC_OPT_BUILD_ARGS='--with-config-file-path=/etc/frankenphp --with-config-fi
 ENV SPC_REL_TYPE='binary'
 ENV EXTENSION_DIR='/usr/lib/frankenphp/modules'
 
-RUN --mount=type=secret,id=github-token GITHUB_TOKEN=$(cat /run/secrets/github-token) ./build-static.sh && \
-	rm -Rf dist/static-php-cli/source/*
+COPY --from=prebuilt . prebuilt 2>/dev/null || true
+
+RUN --mount=type=secret,id=github-token GITHUB_TOKEN=$(cat /run/secrets/github-token) \
+    PREBUILT_BUILDROOT_EXISTS=$(test -d prebuilt/buildroot && echo "1" || echo "0") \
+    sh -c 'if [ -d prebuilt/buildroot ]; then mkdir -p dist/static-php-cli && cp -r prebuilt/buildroot dist/static-php-cli/; fi' && \
+    ./build-static.sh && \
+    rm -Rf dist/static-php-cli/source/*

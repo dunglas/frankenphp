@@ -161,8 +161,12 @@ COPY --link caddy caddy
 COPY --link internal internal
 COPY --link package package
 
+COPY --from=prebuilt . prebuilt 2>/dev/null || true
+
 RUN --mount=type=secret,id=github-token \
 	set -eux; \
+	PREBUILT_BUILDROOT_EXISTS=$(test -d prebuilt/buildroot && echo "1" || echo "0"); \
+	if [ -d prebuilt/buildroot ]; then mkdir -p dist/static-php-cli && cp -r prebuilt/buildroot dist/static-php-cli/; fi; \
 	./build-static.sh && \
 	if [ -n "${BUILD_PACKAGES}" ]; then \
 		./build-packages.sh; \

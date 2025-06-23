@@ -199,7 +199,11 @@ fi
 
 # Build libphp if necessary
 cache_key="${PHP_VERSION}-${PHP_EXTENSIONS}-${PHP_EXTENSION_LIBS}"
-if [ -f ../cache_key ] && [ "$(cat ../cache_key)" = "${cache_key}" ] && [ -f "buildroot/lib/libphp.a" ]; then
+
+if [ -n "${PREBUILT_BUILDROOT_EXISTS}" ] && [ "${PREBUILT_BUILDROOT_EXISTS}" = "1" ] && [ -f "buildroot/lib/libphp.a" ]; then
+	echo "Using prebuilt static-php buildroot, skipping libphp build."
+	echo -n "${cache_key}" >../cache_key
+elif [ -f ../cache_key ] && [ "$(cat ../cache_key)" = "${cache_key}" ] && [ -f "buildroot/lib/libphp.a" ]; then
 	echo "Hit cache, skipping libphp build."
 else
 	${spcCommand} doctor --auto-fix

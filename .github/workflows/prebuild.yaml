@@ -1,0 +1,73 @@
+---
+name: Daily static-php prebuild
+concurrency:
+  cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.ref }}
+on:
+  schedule:
+    - cron: "0 2 * * *"
+  workflow_dispatch:
+permissions:
+  contents: read
+env:
+  GOTOOLCHAIN: local
+jobs:
+  prebuild-static-php:
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: ["linux/amd64", "linux/arm64"]
+        libc: ["musl", "gnu"]
+    name: Prebuild static-php ${{ matrix.libc }} ${{ matrix.platform }}
+    runs-on: ${{ startsWith(matrix.platform, 'linux/arm') && 'ubuntu-24.04-arm' || 'ubuntu-24.04' }}
+    steps:
+      - name: Prepare
+        id: prepare
+        run: |
+          platform=${{ matrix.platform }}
+          sanitized_platform=${platform//\//-}
+          echo "sanitized_platform=${sanitized_platform}" >> "${GITHUB_OUTPUT}"
+          
+          DATE=$(date +%Y-%m-%d)
+          echo "artifact_name=prebuilt-frankenphp-spc-${DATE}" >> "${GITHUB_OUTPUT}"
+          echo "date=${DATE}" >> "${GITHUB_OUTPUT}"
+
+      - uses: actions/checkout@v4
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          platforms: ${{ matrix.platform }}
+      
+      - name: Build static-php buildroot
+        id: build
+        uses: docker/bake-action@v6
+        with:
+          pull: true
+          load: true
+          targets: static-builder-${{ matrix.libc }}
+          set: |
+            *.tags=prebuild-static-php-${{ matrix.libc }}
+            *.platform=${{ matrix.platform }}
+        env:
+          SHA: ${{ github.sha }}
+          VERSION: dev
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Extract buildroot artifacts
+        run: |
+          container_id=$(docker create --platform=${{ matrix.platform }} prebuild-static-php-${{ matrix.libc }})
+          mkdir -p buildroot-artifacts
+          docker cp "${container_id}:/go/src/app/dist/static-php-cli/buildroot" buildroot-artifacts/
+          
+          docker rm "${container_id}"
+
+          cd buildroot-artifacts
+          tar -czf "../${{ steps.prepare.outputs.artifact_name }}-${{ matrix.libc }}-${{ steps.prepare.outputs.sanitized_platform }}.tar.gz" buildroot/
+      
+      - name: Upload buildroot artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.prepare.outputs.artifact_name }}-${{ matrix.libc }}-${{ steps.prepare.outputs.sanitized_platform }}
+          path: ${{ steps.prepare.outputs.artifact_name }}-${{ matrix.libc }}-${{ steps.prepare.outputs.sanitized_platform }}.tar.gz
+          retention-days: 7

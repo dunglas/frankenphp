@@ -91,7 +91,19 @@ jobs:
         id: prepare
         run: |
           platform=${{ matrix.platform }}
-          echo "sanitized_platform=${platform//\//-}" >> "${GITHUB_OUTPUT}"
+          sanitized_platform=${platform//\//-}
+          echo "sanitized_platform=${sanitized_platform}" >> "${GITHUB_OUTPUT}"
+          
+          DATE=$(date +%Y-%m-%d)
+          echo "prebuilt_artifact=prebuilt-frankenphp-spc-${DATE}-musl-${sanitized_platform}" >> "${GITHUB_OUTPUT}"
+      
+      - name: Check for prebuilt artifacts
+        id: check_prebuilt
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: ${{ steps.prepare.outputs.prebuilt_artifact }}
+          path: prebuilt/
       - uses: actions/checkout@v4
         with:
           ref: ${{ needs.prepare.outputs.ref }}
@@ -99,6 +111,14 @@ jobs:
         uses: docker/setup-buildx-action@v3
         with:
           platforms: ${{ matrix.platform }}
+      - name: Extract prebuilt artifacts
+        if: steps.check_prebuilt.outcome == 'success'
+        run: |
+          cd prebuilt/
+          tar -xzf *.tar.gz
+          echo "Using prebuilt static-php buildroot"
+          ls -la buildroot/
+      
       - name: Login to DockerHub
         uses: docker/login-action@v3
         if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
@@ -116,6 +136,7 @@ jobs:
             ${{ matrix.debug && 'static-builder-musl.args.DEBUG_SYMBOLS=1' || '' }}
             ${{ matrix.mimalloc && 'static-builder-musl.args.MIMALLOC=1' || '' }}
             ${{ (github.event_name == 'pull_request' || matrix.platform == 'linux/arm64') && 'static-builder-musl.args.NO_COMPRESS=1' || '' }}
+            ${{ steps.check_prebuilt.outcome == 'success' && 'static-builder-musl.contexts.prebuilt=prebuilt' || '' }}
             *.tags=
             *.platform=${{ matrix.platform }}
             *.cache-from=type=gha,scope=${{ needs.prepare.outputs.ref || github.ref }}-static-builder-musl${{ matrix.debug && '-debug' || '' }}${{ matrix.mimalloc && '-mimalloc' || '' }}
@@ -195,7 +216,19 @@ jobs:
         id: prepare
         run: |
           platform=${{ matrix.platform }}
-          echo "sanitized_platform=${platform//\//-}" >> "${GITHUB_OUTPUT}"
+          sanitized_platform=${platform//\//-}
+          echo "sanitized_platform=${sanitized_platform}" >> "${GITHUB_OUTPUT}"
+          
+          DATE=$(date +%Y-%m-%d)
+          echo "prebuilt_artifact=prebuilt-frankenphp-spc-${DATE}-gnu-${sanitized_platform}" >> "${GITHUB_OUTPUT}"
+      
+      - name: Check for prebuilt artifacts
+        id: check_prebuilt
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: ${{ steps.prepare.outputs.prebuilt_artifact }}
+          path: prebuilt/
       - uses: actions/checkout@v4
         with:
           ref: ${{ needs.prepare.outputs.ref }}
@@ -203,6 +236,15 @@ jobs:
         uses: docker/setup-buildx-action@v3
         with:
           platforms: ${{ matrix.platform }}
+      
+      - name: Extract prebuilt artifacts
+        if: steps.check_prebuilt.outcome == 'success'
+        run: |
+          cd prebuilt/
+          tar -xzf *.tar.gz
+          echo "Using prebuilt static-php buildroot"
+          ls -la buildroot/
+      
       - name: Login to DockerHub
         uses: docker/login-action@v3
         if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
@@ -219,6 +261,7 @@ jobs:
           set: |
             ${{ (github.event_name == 'pull_request' || matrix.platform == 'linux/arm64') && 'static-builder-gnu.args.NO_COMPRESS=1' || '' }}
             static-builder-gnu.args.BUILD_PACKAGES=1
+            ${{ steps.check_prebuilt.outcome == 'success' && 'static-builder-gnu.contexts.prebuilt=prebuilt' || '' }}
             *.tags=
             *.platform=${{ matrix.platform }}
             *.cache-from=type=gha,scope=${{ needs.prepare.outputs.ref || github.ref }}-static-builder-gnu
