@@ -351,9 +351,10 @@ no `Caddyfile` sem modificá-lo:
 - `SERVER_NAME`: altera
   [os endereços nos quais escutar](https://caddyserver.com/docs/caddyfile/concepts#addresses),
   os nomes de host fornecidos também serão usados para o certificado TLS gerado.
+- `SERVER_ROOT`: altera o diretório raiz do site, o padrão é `public/`.
 - `CADDY_GLOBAL_OPTIONS`: injeta
-  [opções globais](https://caddyserver.com/docs/caddyfile/options)
-- `FRANKENPHP_CONFIG`: injeta a configuração sob a diretiva `frankenphp`
+  [opções globais](https://caddyserver.com/docs/caddyfile/options).
+- `FRANKENPHP_CONFIG`: injeta a configuração sob a diretiva `frankenphp`.
 
 Quanto às SAPIs FPM e CLI, as variáveis de ambiente são expostas por padrão na
 superglobal `$_SERVER`.
