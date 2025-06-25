@@ -259,9 +259,13 @@ func (f *FrankenPHPModule) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 	}
 
 	// Check if a worker with this filename already exists in this module
-	for j, w1 := range f.Workers {
-		for i, w2 := range f.Workers {
-			if i != j && w1.FileName == w2.FileName {
+        fileNames := make(map[string]struct{}, len(f.Workers)
+	for j, w := range f.Workers {
+	    if _, ok := fileNames[w.FileName]; ok {
+	        return fmt.Errorf(`workers in a single "php_server" block must not have duplicate filenames: %q`, w.FileName)
+            }
+            fileNames[w.FileName] := struct{}{}
+    }
 				return fmt.Errorf(`workers in a single "php_server" block must not have duplicate filenames: %q`, w1.FileName)
 			}
 		}
@@ -405,8 +409,7 @@ func parsePhpServer(h httpcaddyfile.Helper) ([]httpcaddyfile.ConfigValue, error)
 	// the rest of the config is specified by the user
 	// using the php directive syntax
 	dispenser.Next() // consume the directive name
-	err = phpsrv.UnmarshalCaddyfile(dispenser)
-	if err != nil {
+	if err := phpsrv.UnmarshalCaddyfile(dispenser); err != nil {
 		return nil, err
 	}
 

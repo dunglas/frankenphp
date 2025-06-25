@@ -125,7 +125,7 @@ func parseWorkerConfig(d *caddyfile.Dispenser) (workerConfig, error) {
 
 func (wc workerConfig) inheritEnv(env map[string]string) {
 	if wc.Env == nil {
-		wc.Env = make(map[string]string)
+		wc.Env = make(map[string]string, len(env))
 	}
 	for k, v := range env {
 		// do not overwrite existing environment variables
@@ -145,5 +145,6 @@ func (wc workerConfig) matchesPath(r *http.Request, documentRoot string) bool {
 	// if there is no pattern, try to match against the actual path (in the public directory)
 	fullScriptPath, _ := fastabs.FastAbs(documentRoot + "/" + r.URL.Path)
 	absFileName, _ := fastabs.FastAbs(wc.FileName)
+
 	return fullScriptPath == absFileName
 }
