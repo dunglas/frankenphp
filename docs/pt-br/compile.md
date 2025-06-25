@@ -9,10 +9,6 @@ também podem ser criadas.
 
 ## Instalar o PHP
 
-Alternatively, [fully and mostly static builds](static.md) can also be created.
-
-## Install PHP
-
 O FrankenPHP é compatível com PHP 8.2 e versões superiores.
 
 ### Com o Homebrew (Linux e Mac)
