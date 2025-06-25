@@ -125,7 +125,7 @@ func parseWorkerConfig(d *caddyfile.Dispenser) (workerConfig, error) {
 
 func (wc workerConfig) inheritEnv(env map[string]string) {
 	if wc.Env == nil {
-		wc.Env = make(map[string]string)
+		wc.Env = make(map[string]string, len(env))
 	}
 	for k, v := range env {
 		// do not overwrite existing environment variables
