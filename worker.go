@@ -36,10 +36,11 @@ func initWorkers(opt []workerOpt) error {
 	watcherIsEnabled = len(directoriesToWatch) > 0
 
 	for _, o := range opt {
-		_, err := newWorker(o)
+		w, err := newWorker(o)
 		if err != nil {
 			return err
 		}
+		workers = append(workers, w)
 	}
 
 	for _, worker := range workers {
@@ -123,7 +124,6 @@ func newWorker(o workerOpt) (*worker, error) {
 		threads:           make([]*phpThread, 0, o.num),
 		allowPathMatching: allowPathMatching,
 	}
-	workers = append(workers, w)
 
 	return w, nil
 }

@@ -182,7 +182,8 @@ func TestFinishBootingAWorkerScript(t *testing.T) {
 
 func TestReturnAnErrorIf2WorkersHaveTheSameFileName(t *testing.T) {
 	workers = []*worker{}
-	_, err1 := newWorker(workerOpt{fileName: "filename.php"})
+	w, err1 := newWorker(workerOpt{fileName: "filename.php"})
+	workers = append(workers, w)
 	_, err2 := newWorker(workerOpt{fileName: "filename.php"})
 
 	assert.NoError(t, err1)
@@ -191,7 +192,8 @@ func TestReturnAnErrorIf2WorkersHaveTheSameFileName(t *testing.T) {
 
 func TestReturnAnErrorIf2ModuleWorkersHaveTheSameName(t *testing.T) {
 	workers = []*worker{}
-	_, err1 := newWorker(workerOpt{fileName: "filename.php", name: "workername"})
+	w, err1 := newWorker(workerOpt{fileName: "filename.php", name: "workername"})
+	workers = append(workers, w)
 	_, err2 := newWorker(workerOpt{fileName: "filename2.php", name: "workername"})
 
 	assert.NoError(t, err1)
@@ -206,6 +208,7 @@ func getDummyWorker(fileName string) *worker {
 		fileName: testDataPath + "/" + fileName,
 		num:      1,
 	})
+	workers = append(workers, worker)
 	return worker
 }
 
