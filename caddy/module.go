@@ -405,8 +405,7 @@ func parsePhpServer(h httpcaddyfile.Helper) ([]httpcaddyfile.ConfigValue, error)
 	// the rest of the config is specified by the user
 	// using the php directive syntax
 	dispenser.Next() // consume the directive name
-	err = phpsrv.UnmarshalCaddyfile(dispenser)
-	if err != nil {
+	if err := phpsrv.UnmarshalCaddyfile(dispenser); err != nil {
 		return nil, err
 	}
 
