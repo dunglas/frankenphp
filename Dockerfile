@@ -83,10 +83,8 @@ RUN apt-get update && \
 WORKDIR /usr/local/src/watcher
 RUN --mount=type=secret,id=github-token \
     if [ -f /run/secrets/github-token ] && [ -s /run/secrets/github-token ]; then \
-        echo "Using authenticated GitHub API request"; \
         curl -s -H "Authorization: Bearer $(cat /run/secrets/github-token)" https://api.github.com/repos/e-dant/watcher/releases/latest; \
     else \
-        echo "Using unauthenticated GitHub API request"; \
         curl -s https://api.github.com/repos/e-dant/watcher/releases/latest; \
     fi | \
     grep tarball_url | \
