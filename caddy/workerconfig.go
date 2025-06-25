@@ -145,5 +145,6 @@ func (wc workerConfig) matchesPath(r *http.Request, documentRoot string) bool {
 	// if there is no pattern, try to match against the actual path (in the public directory)
 	fullScriptPath, _ := fastabs.FastAbs(documentRoot + "/" + r.URL.Path)
 	absFileName, _ := fastabs.FastAbs(wc.FileName)
+
 	return fullScriptPath == absFileName
 }
