@@ -29,6 +29,8 @@ type workerConfig struct {
 	Env map[string]string `json:"env,omitempty"`
 	// Directories to watch for file changes
 	Watch []string `json:"watch,omitempty"`
+	// MaxConsecutiveFailures sets the maximum number of consecutive failures before panicking (defaults to 6, set to -1 to never panick)
+	MaxConsecutiveFailures int `json:"max_consecutive_failures,omitempty"`
 }
 
 func parseWorkerConfig(d *caddyfile.Dispenser) (workerConfig, error) {
@@ -94,8 +96,22 @@ func parseWorkerConfig(d *caddyfile.Dispenser) (workerConfig, error) {
 			} else {
 				wc.Watch = append(wc.Watch, d.Val())
 			}
+		case "max_consecutive_failures":
+			if !d.NextArg() {
+				return wc, d.ArgErr()
+			}
+
+			v, err := strconv.Atoi(d.Val())
+			if err != nil {
+				return wc, err
+			}
+			if v < -1 {
+				return wc, errors.New("max_consecutive_failures must be >= -1")
+			}
+
+			wc.MaxConsecutiveFailures = int(v)
 		default:
-			allowedDirectives := "name, file, num, env, watch"
+			allowedDirectives := "name, file, num, env, watch, max_consecutive_failures"
 			return wc, wrongSubDirectiveError("worker", allowedDirectives, v)
 		}
 	}
