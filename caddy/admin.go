@@ -1,6 +1,7 @@
 package caddy
 
 import (
+	"html/template"
 	"encoding/json"
 	"fmt"
 	"github.com/caddyserver/caddy/v2"
