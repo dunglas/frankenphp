@@ -33,6 +33,13 @@
 ZEND_TSRMLS_CACHE_DEFINE()
 #endif
 
+/**
+ * The list of modules to reload on each request. If an external module
+ * requires to be reloaded between requests, it is possible to hook on
+ * `sapi_module.activate` and `sapi_module.deactivate`.
+ *
+ * @see https://github.com/DataDog/dd-trace-php/pull/3169 for an example
+ */
 static const char *MODULES_TO_RELOAD[] = {"filter", "session", NULL};
 
 frankenphp_version frankenphp_get_version() {
@@ -121,7 +128,6 @@ static void frankenphp_worker_request_shutdown() {
   zend_try { php_output_end_all(); }
   zend_end_try();
 
-  /* TODO: store the list of modules to reload in a global module variable */
   const char **module_name;
   zend_module_entry *module;
   for (module_name = MODULES_TO_RELOAD; *module_name; module_name++) {
@@ -223,7 +229,6 @@ static int frankenphp_worker_request_startup() {
       }
     }
 
-    /* TODO: store the list of modules to reload in a global module variable */
     const char **module_name;
     zend_module_entry *module;
     for (module_name = MODULES_TO_RELOAD; *module_name; module_name++) {
@@ -546,10 +551,7 @@ static int frankenphp_startup(sapi_module_struct *sapi_module) {
   return php_module_startup(sapi_module, &frankenphp_module);
 }
 
-static int frankenphp_deactivate(void) {
-  /* TODO: flush everything */
-  return SUCCESS;
-}
+static int frankenphp_deactivate(void) { return SUCCESS; }
 
 static size_t frankenphp_ub_write(const char *str, size_t str_length) {
   struct go_ub_write_return result =
