@@ -641,7 +641,7 @@ void frankenphp_register_bulk(
     ht_key_value_pair gateway_interface, ht_key_value_pair server_protocol,
     ht_key_value_pair server_software, ht_key_value_pair http_host,
     ht_key_value_pair auth_type, ht_key_value_pair remote_ident,
-    ht_key_value_pair request_uri) {
+    ht_key_value_pair request_uri, ht_key_value_pair ssl_cipher) {
   HashTable *ht = Z_ARRVAL_P(track_vars_array);
   frankenphp_register_trusted_var(remote_addr.key, remote_addr.val,
                                   remote_addr.val_len, ht);
@@ -664,6 +664,8 @@ void frankenphp_register_bulk(
   frankenphp_register_trusted_var(https.key, https.val, https.val_len, ht);
   frankenphp_register_trusted_var(ssl_protocol.key, ssl_protocol.val,
                                   ssl_protocol.val_len, ht);
+  frankenphp_register_trusted_var(ssl_cipher.key, ssl_cipher.val,
+                                  ssl_cipher.val_len, ht);
   frankenphp_register_trusted_var(request_scheme.key, request_scheme.val,
                                   request_scheme.val_len, ht);
   frankenphp_register_trusted_var(server_name.key, server_name.val,
