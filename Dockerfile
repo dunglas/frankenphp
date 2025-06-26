@@ -31,6 +31,10 @@ RUN ln /etc/caddy/Caddyfile /etc/frankenphp/Caddyfile && \
 		https://github.com/mlocati/docker-php-extension-installer/releases/latest/download/install-php-extensions && \
 	chmod +x /usr/local/bin/install-php-extensions
 
+# Create non-root user for security
+RUN adduser --system --no-create-home --shell /bin/false frankenphp
+USER frankenphp
+
 CMD ["--config", "/etc/frankenphp/Caddyfile", "--adapter", "caddyfile"]
 HEALTHCHECK CMD curl -f http://localhost:2019/metrics || exit 1
 
