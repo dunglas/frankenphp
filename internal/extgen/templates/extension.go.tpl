@@ -44,7 +44,7 @@ func registerGoObject(obj interface{}) C.uintptr_t {
 //export getGoObject
 func getGoObject(handle C.uintptr_t) interface{} {
 	h := cgo.Handle(handle)
-	return h.value()
+	return h.Value()
 }
 
 //export removeGoObject
