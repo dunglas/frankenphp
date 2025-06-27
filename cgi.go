@@ -41,6 +41,7 @@ var knownServerKeys = []string{
 	"SERVER_PROTOCOL",
 	"SERVER_SOFTWARE",
 	"SSL_PROTOCOL",
+	"SSL_CIPHER",
 	"AUTH_TYPE",
 	"REMOTE_IDENT",
 	"CONTENT_TYPE",
@@ -73,11 +74,13 @@ func addKnownVariablesToServer(thread *phpThread, fc *frankenPHPContext, trackVa
 
 	var https string
 	var sslProtocol string
+	var sslCipher string
 	var rs string
 	if request.TLS == nil {
 		rs = "http"
 		https = ""
 		sslProtocol = ""
+		sslCipher = ""
 	} else {
 		rs = "https"
 		https = "on"
@@ -88,6 +91,10 @@ func addKnownVariablesToServer(thread *phpThread, fc *frankenPHPContext, trackVa
 			sslProtocol = v
 		} else {
 			sslProtocol = ""
+		}
+
+		if request.TLS.CipherSuite != 0 {
+			sslCipher = tls.CipherSuiteName(request.TLS.CipherSuite)
 		}
 	}
 
@@ -151,6 +158,7 @@ func addKnownVariablesToServer(thread *phpThread, fc *frankenPHPContext, trackVa
 		packCgiVariable(keys["REMOTE_IDENT"], ""),
 		// Request uri of the original request
 		packCgiVariable(keys["REQUEST_URI"], requestURI),
+		packCgiVariable(keys["SSL_CIPHER"], sslCipher),
 	)
 
 	// These values are already present in the SG(request_info), so we'll register them from there
