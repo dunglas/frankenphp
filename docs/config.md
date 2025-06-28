@@ -153,6 +153,7 @@ php_server [<matcher>] {
 		name <name> # Sets the name for the worker, used in logs and metrics. Default: absolute path of worker file. Always starts with m# when defined in a php_server block.
 		watch <path> # Sets the path to watch for file changes. Can be specified more than once for multiple paths.
 		env <key> <value> # Sets an extra environment variable to the given value. Can be specified more than once for multiple environment variables. Environment variables for this worker are also inherited from the php_server parent, but can be overwritten here.
+		match <path> # match the worker to a path pattern. Overrides try_files and can only be used in the php_server directive.
 	}
 	worker <other_file> <num> # Can also use the short form like in the global frankenphp block.
 }
@@ -202,6 +203,29 @@ where the FrankenPHP process was started. You can instead also specify one or mo
 - Be wary about watching files that are created at runtime (like logs) since they might cause unwanted worker restarts.
 
 The file watcher is based on [e-dant/watcher](https://github.com/e-dant/watcher).
+
+## Matching the worker to a path
+
+In traditional PHP applications, scripts are always placed in the public directory. 
+This is also true for worker scripts, which are treated like any other PHP script.
+If you want to instead put the worker script outside the public directory, you can do so via the `match` directive.
+
+The `match` directive is an optimized alternative to `try_files` only available inside `php_server` and `php`.
+The following example will always serve a file in the public directory if present
+and otherwise forward the request to the worker matching the path pattern.
+
+```caddyfile
+{
+	frankenphp {
+		php_server {
+			worker {
+				file /path/to/worker.php
+				match /api/* # all requests starting with /api/ will be handled by this worker
+			}
+		}
+	}
+}
+```
 
 ### Full Duplex (HTTP/1)
 
