@@ -31,7 +31,6 @@ func parseFilePatterns(filePatterns []string) ([]*watchPattern, error) {
 }
 
 // this method prepares the watchPattern struct for a single file pattern (aka /path/*pattern)
-// TODO: using '/' is more efficient than filepath functions, but does not work on windows
 func parseFilePattern(filePattern string) (*watchPattern, error) {
 	w := &watchPattern{}
 
@@ -43,7 +42,7 @@ func parseFilePattern(filePattern string) (*watchPattern, error) {
 	w.dir = absPattern
 
 	// then we split the pattern to determine where the directory ends and the pattern starts
-	splitPattern := strings.Split(absPattern, "/")
+	splitPattern := strings.Split(absPattern, string(filepath.Separator))
 	patternWithoutDir := ""
 	for i, part := range splitPattern {
 		isFilename := i == len(splitPattern)-1 && strings.Contains(part, ".")
@@ -58,11 +57,11 @@ func parseFilePattern(filePattern string) (*watchPattern, error) {
 	// now we split the pattern according to the recursive '**' syntax
 	w.patterns = strings.Split(patternWithoutDir, "**")
 	for i, pattern := range w.patterns {
-		w.patterns[i] = strings.Trim(pattern, "/")
+		w.patterns[i] = strings.Trim(pattern, string(filepath.Separator))
 	}
 
-	// finally, we remove the trailing slash and add leading slash
-	w.dir = "/" + strings.Trim(w.dir, "/")
+	// finally, we remove the trailing separator and add leading separator
+	w.dir = string(filepath.Separator) + strings.Trim(w.dir, string(filepath.Separator))
 
 	return w, nil
 }
@@ -94,8 +93,8 @@ func isValidPattern(fileName string, dir string, patterns []string) bool {
 		return false
 	}
 
-	// remove the dir and '/' from the filename
-	fileNameWithoutDir := strings.TrimPrefix(strings.TrimPrefix(fileName, dir), "/")
+	// remove the dir and separator from the filename
+	fileNameWithoutDir := strings.TrimPrefix(strings.TrimPrefix(fileName, dir), string(filepath.Separator))
 
 	// if the pattern has size 1 we can match it directly against the filename
 	if len(patterns) == 1 {
@@ -106,12 +105,12 @@ func isValidPattern(fileName string, dir string, patterns []string) bool {
 }
 
 func matchPatterns(patterns []string, fileName string) bool {
-	partsToMatch := strings.Split(fileName, "/")
+	partsToMatch := strings.Split(fileName, string(filepath.Separator))
 	cursor := 0
 
 	// if there are multiple patterns due to '**' we need to match them individually
 	for i, pattern := range patterns {
-		patternSize := strings.Count(pattern, "/") + 1
+		patternSize := strings.Count(pattern, string(filepath.Separator)) + 1
 
 		// if we are at the last pattern we will start matching from the end of the filename
 		if i == len(patterns)-1 {
@@ -121,7 +120,7 @@ func matchPatterns(patterns []string, fileName string) bool {
 		// the cursor will move through the fileName until the pattern matches
 		for j := cursor; j < len(partsToMatch); j++ {
 			cursor = j
-			subPattern := strings.Join(partsToMatch[j:j+patternSize], "/")
+			subPattern := strings.Join(partsToMatch[j:j+patternSize], string(filepath.Separator))
 			if matchBracketPattern(pattern, subPattern) {
 				cursor = j + patternSize - 1
 				break
