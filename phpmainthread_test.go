@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"math/rand/v2"
 	"net/http/httptest"
+	"os"
 	"path/filepath"
 	"runtime"
 	"sync"
@@ -19,7 +20,7 @@ import (
 var testDataPath, _ = filepath.Abs("./testdata")
 
 func TestStartAndStopTheMainThreadWithOneInactiveThread(t *testing.T) {
-	logger = slog.New(slog.NewTextHandler(io.Discard, nil))
+	logger = slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
 	_, err := initPHPThreads(1, 1, nil) // boot 1 thread
 	assert.NoError(t, err)
 
@@ -33,7 +34,7 @@ func TestStartAndStopTheMainThreadWithOneInactiveThread(t *testing.T) {
 
 func TestTransitionRegularThreadToWorkerThread(t *testing.T) {
 	workers = nil
-	logger = slog.New(slog.NewTextHandler(io.Discard, nil))
+	logger = slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
 	_, err := initPHPThreads(1, 1, nil)
 	assert.NoError(t, err)
 
@@ -58,7 +59,7 @@ func TestTransitionRegularThreadToWorkerThread(t *testing.T) {
 
 func TestTransitionAThreadBetween2DifferentWorkers(t *testing.T) {
 	workers = nil
-	logger = slog.New(slog.NewTextHandler(io.Discard, nil))
+	logger = slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
 	_, err := initPHPThreads(1, 1, nil)
 	assert.NoError(t, err)
 	firstWorker := getDummyWorker("transition-worker-1.php")
@@ -159,7 +160,7 @@ func TestAllCommonHeadersAreCorrect(t *testing.T) {
 }
 func TestFinishBootingAWorkerScript(t *testing.T) {
 	workers = nil
-	logger = slog.New(slog.NewTextHandler(io.Discard, nil))
+	logger = slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
 	_, err := initPHPThreads(1, 1, nil)
 	assert.NoError(t, err)
 
