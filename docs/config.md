@@ -219,7 +219,7 @@ and otherwise forward the request to the worker matching the path pattern.
 	frankenphp {
 		php_server {
 			worker {
-				file /path/to/worker.php
+				file /path/to/worker.php # file can be outside of public path
 				match /api/* # all requests starting with /api/ will be handled by this worker
 			}
 		}
