@@ -114,7 +114,13 @@ func (f *FrankenPHPApp) Start() error {
 		frankenphp.WithMaxWaitTime(f.MaxWaitTime),
 	}
 	for _, w := range append(f.Workers) {
-		opts = append(opts, frankenphp.WithWorkers(w.Name, repl.ReplaceKnown(w.FileName, ""), w.Num, w.Env, w.Watch))
+		workerOpts := []frankenphp.WorkerOption{
+			frankenphp.WithWorkerEnv(w.Env),
+			frankenphp.WithWorkerWatchMode(w.Watch),
+			frankenphp.WithWorkerMaxFailures(w.MaxConsecutiveFailures),
+		}
+
+		opts = append(opts, frankenphp.WithWorkers(w.Name, repl.ReplaceKnown(w.FileName, ""), w.Num, workerOpts...))
 	}
 
 	frankenphp.Shutdown()

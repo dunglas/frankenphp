@@ -121,8 +121,16 @@ func TestWorkerGetOpt(t *testing.T) {
 
 func ExampleServeHTTP_workers() {
 	if err := frankenphp.Init(
-		frankenphp.WithWorkers("worker1", "worker1.php", 4, map[string]string{"ENV1": "foo"}, []string{}),
-		frankenphp.WithWorkers("worker2", "worker2.php", 2, map[string]string{"ENV2": "bar"}, []string{}),
+		frankenphp.WithWorkers("worker1", "worker1.php", 4,
+			frankenphp.WithWorkerEnv(map[string]string{"ENV1": "foo"}),
+			frankenphp.WithWorkerWatchMode([]string{}),
+			frankenphp.WithWorkerMaxFailures(0),
+		),
+		frankenphp.WithWorkers("worker2", "worker2.php", 2,
+			frankenphp.WithWorkerEnv(map[string]string{"ENV2": "bar"}),
+			frankenphp.WithWorkerWatchMode([]string{}),
+			frankenphp.WithWorkerMaxFailures(0),
+		),
 	); err != nil {
 		panic(err)
 	}

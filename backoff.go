@@ -33,7 +33,7 @@ func (e *exponentialBackoff) recordFailure() bool {
 	e.backoff = min(e.backoff*2, e.maxBackoff)
 
 	e.mu.Unlock()
-	return e.failureCount >= e.maxConsecutiveFailures
+	return e.maxConsecutiveFailures != -1 && e.failureCount >= e.maxConsecutiveFailures
 }
 
 // wait sleeps for the backoff duration if failureCount is non-zero.
