@@ -44,11 +44,6 @@ func TestHeaderGenerator_BuildContent(t *testing.T) {
 				"#define _SIMPLE_H",
 				"#include <php.h>",
 				"extern zend_module_entry ext_module_entry;",
-				"typedef struct go_value go_value;",
-				"typedef struct go_string {",
-				"size_t len;",
-				"char *data;",
-				"} go_string;",
 				"#endif",
 			},
 		},
@@ -134,11 +129,6 @@ func TestHeaderGenerator_BasicStructure(t *testing.T) {
 	expectedElements := []string{
 		"#include <php.h>",
 		"extern zend_module_entry ext_module_entry;",
-		"typedef struct go_value go_value;",
-		"typedef struct go_string {",
-		"size_t len;",
-		"char *data;",
-		"} go_string;",
 	}
 
 	for _, element := range expectedElements {
@@ -209,9 +199,6 @@ func TestHeaderGenerator_ContentValidation(t *testing.T) {
 	assert.Equal(t, 1, strings.Count(content, "#define"), "Header should have exactly one #define")
 	assert.Equal(t, 1, strings.Count(content, "#endif"), "Header should have exactly one #endif")
 	assert.False(t, strings.Contains(content, "{{") || strings.Contains(content, "}}"), "Generated header contains unresolved template syntax")
-	assert.Contains(t, content, "typedef struct go_string {", "Header should contain go_string typedef")
-	assert.Contains(t, content, "size_t len;", "Header should contain len field in go_string")
-	assert.Contains(t, content, "char *data;", "Header should contain data field in go_string")
 }
 
 func TestHeaderGenerator_SpecialCharacterHandling(t *testing.T) {
@@ -278,7 +265,6 @@ func TestHeaderGenerator_MinimalContent(t *testing.T) {
 		"#define _MINIMAL_H",
 		"#include <php.h>",
 		"extern zend_module_entry ext_module_entry;",
-		"typedef struct go_value go_value;",
 		"#endif",
 	}
 
@@ -302,11 +288,6 @@ func testHeaderBasicStructure(t *testing.T, content, baseName string) {
 		"#define _" + headerGuard,
 		"#include <php.h>",
 		"extern zend_module_entry ext_module_entry;",
-		"typedef struct go_value go_value;",
-		"typedef struct go_string {",
-		"size_t len;",
-		"char *data;",
-		"} go_string;",
 		"#endif",
 	}
 
