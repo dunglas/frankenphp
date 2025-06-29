@@ -197,7 +197,7 @@ func deactivateThreads() {
 
 		// convert threads to inactive if they have been idle for too long
 		if thread.state.is(stateReady) && waitTime > maxThreadIdleTime.Milliseconds() {
-			logger.LogAttrs(context.Background(), slog.LevelDebug, "auto-converting thread to inactive", slog.Int("threadIndex", thread.threadIndex))
+			logger.LogAttrs(context.Background(), slog.LevelDebug, "auto-converting thread to inactive", slog.Int("thread", thread.threadIndex))
 			convertToInactiveThread(thread)
 			stoppedThreadCount++
 			autoScaledThreads = append(autoScaledThreads[:i], autoScaledThreads[i+1:]...)
@@ -209,7 +209,7 @@ func deactivateThreads() {
 		// Some PECL extensions like #1296 will prevent threads from fully stopping (they leak memory)
 		// Reactivate this if there is a better solution or workaround
 		// if thread.state.is(stateInactive) && waitTime > maxThreadIdleTime.Milliseconds() {
-		// 	logger.LogAttrs(nil, slog.LevelDebug, "auto-stopping thread", slog.Int("threadIndex", thread.threadIndex))
+		// 	logger.LogAttrs(nil, slog.LevelDebug, "auto-stopping thread", slog.Int("thread", thread.threadIndex))
 		// 	thread.shutdown()
 		// 	stoppedThreadCount++
 		// 	autoScaledThreads = append(autoScaledThreads[:i], autoScaledThreads[i+1:]...)
