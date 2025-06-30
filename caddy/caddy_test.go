@@ -1345,7 +1345,9 @@ func TestWorkerMatchDirective(t *testing.T) {
 	tester.AssertGetResponse("http://localhost:"+testPort+"/elsewhere", http.StatusNotFound, "")
 
 	// static file will be served by the fileserver
-	tester.AssertGetResponse("http://localhost:"+testPort+"/static.txt", http.StatusOK, "Hello from file")
+	expectedFileResponse, err := os.ReadFile("../testdata/files/static.txt")
+	require.NoError(t, err, "static.txt file must be readable for this test")
+	tester.AssertGetResponse("http://localhost:"+testPort+"/static.txt", http.StatusOK, string(expectedFileResponse))
 }
 
 func TestWorkerMatchDirectiveWithMultipleWorkers(t *testing.T) {
@@ -1377,7 +1379,9 @@ func TestWorkerMatchDirectiveWithMultipleWorkers(t *testing.T) {
 	tester.AssertGetResponse("http://localhost:"+testPort+"/index/sub-path", http.StatusOK, "I am by birth a Genevese (i not set)")
 
 	// static file will be served by the fileserver
-	tester.AssertGetResponse("http://localhost:"+testPort+"/files/static.txt", http.StatusOK, "Hello from file")
+	expectedFileResponse, err := os.ReadFile("../testdata/files/static.txt")
+	require.NoError(t, err, "static.txt file must be readable for this test")
+	tester.AssertGetResponse("http://localhost:"+testPort+"/files/static.txt", http.StatusOK, string(expectedFileResponse))
 
 	// 404 if the request falls through
 	tester.AssertGetResponse("http://localhost:"+testPort+"/not-matched", http.StatusNotFound, "")
