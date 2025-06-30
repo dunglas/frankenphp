@@ -66,7 +66,6 @@ brew install dunglas/frankenphp/frankenphp
 frankenphp php-server
 ```
 
-
 ## 文档
 
 - [worker 模式](worker.md)
