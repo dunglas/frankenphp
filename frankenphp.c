@@ -248,9 +248,7 @@ static int frankenphp_worker_request_startup() {
 }
 
 PHP_FUNCTION(frankenphp_finish_request) { /* {{{ */
-  if (zend_parse_parameters_none() == FAILURE) {
-    RETURN_THROWS();
-  }
+  ZEND_PARSE_PARAMETERS_NONE();
 
   if (go_is_context_done(thread_index)) {
     RETURN_FALSE;
@@ -318,9 +316,7 @@ PHP_FUNCTION(frankenphp_getenv) {
 
 /* {{{ Fetch all HTTP request headers */
 PHP_FUNCTION(frankenphp_request_headers) {
-  if (zend_parse_parameters_none() == FAILURE) {
-    RETURN_THROWS();
-  }
+  ZEND_PARSE_PARAMETERS_NONE();
 
   struct go_apache_request_headers_return headers =
       go_apache_request_headers(thread_index);
@@ -378,9 +374,7 @@ static void add_response_header(sapi_header_struct *h,
 
 PHP_FUNCTION(frankenphp_response_headers) /* {{{ */
 {
-  if (zend_parse_parameters_none() == FAILURE) {
-    RETURN_THROWS();
-  }
+  ZEND_PARSE_PARAMETERS_NONE();
 
   array_init(return_value);
   zend_llist_apply_with_argument(
