@@ -207,7 +207,7 @@ The file watcher is based on [e-dant/watcher](https://github.com/e-dant/watcher)
 
 ## Matching the worker to a path
 
-In traditional PHP applications, scripts are always placed in the public directory. 
+In traditional PHP applications, scripts are always placed in the public directory.
 This is also true for worker scripts, which are treated like any other PHP script.
 If you want to instead put the worker script outside the public directory, you can do so via the `match` directive.
 
