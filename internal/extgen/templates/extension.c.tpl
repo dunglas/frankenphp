@@ -60,9 +60,7 @@ void init_object_handlers() {
 static zend_class_entry *{{.Name}}_ce = NULL;
 
 PHP_METHOD({{.Name}}, __construct) {
-    if (zend_parse_parameters_none() == FAILURE) {
-        RETURN_THROWS();
-    }
+    ZEND_PARSE_PARAMETERS_NONE();
 
     {{$.BaseName}}_object *intern = {{$.BaseName}}_object_from_obj(Z_OBJ_P(ZEND_THIS));
 
@@ -98,7 +96,7 @@ PHP_METHOD({{.ClassName}}, {{.PhpName}}) {
     {{- end}}
     
     {{$requiredCount := 0}}{{range .Params}}{{if not .HasDefault}}{{$requiredCount = add1 $requiredCount}}{{end}}{{end -}}
-    ZEND_PARSE_PARAMETERS_START({{$requiredCount}}, {{len .Params}});
+    ZEND_PARSE_PARAMETERS_START({{$requiredCount}}, {{len .Params}})
         {{$optionalStarted := false}}{{range .Params}}{{if .HasDefault}}{{if not $optionalStarted -}}
         Z_PARAM_OPTIONAL
         {{$optionalStarted = true}}{{end}}{{end -}}
@@ -106,9 +104,7 @@ PHP_METHOD({{.ClassName}}, {{.PhpName}}) {
         {{end -}}
     ZEND_PARSE_PARAMETERS_END();
     {{else}}
-    if (zend_parse_parameters_none() == FAILURE) {
-        RETURN_THROWS();
-    }
+    ZEND_PARSE_PARAMETERS_NONE();
     {{end}}
     
     {{- if ne .ReturnType "void"}}
