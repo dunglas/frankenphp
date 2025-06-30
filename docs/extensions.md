@@ -26,7 +26,7 @@ Keep in mind that this tool is **not a full-fledged extension generator**. It is
 
 ### Prerequisites
 
-As covered in the manual implementation section below, you need to [get the PHP sources](https://www.php.net/downloads.php) and create a new Go module.
+As covered in the manual implementation section below as well, you need to [get the PHP sources](https://www.php.net/downloads.php) and create a new Go module.
 
 #### Create a New Module and Get PHP Sources
 
@@ -36,7 +36,7 @@ The first step to writing a PHP extension in Go is to create a new Go module. Yo
 go mod init github.com/my-account/my-module
 ```
 
-Also, you need to [get the PHP sources](https://www.php.net/downloads.php) for the next steps. Once you have them, decompress them into the directory of your choice, not inside your Go module:
+The second step is to [get the PHP sources](https://www.php.net/downloads.php) for the next steps. Once you have them, decompress them into the directory of your choice, not inside your Go module:
 
 ```console
 tar xf php-*
@@ -188,7 +188,7 @@ func (us *UserStruct) UpdateInfo(name *C.zend_string, age *int64, active *bool) 
 * **PHP `null` becomes Go `nil`** - when PHP passes `null`, your Go function receives a `nil` pointer
 
 > [!WARNING]
-> Currently, class methods have the following limitations. **Arrays and objects are not supported** as parameter types or return types. Only primitive types are supported: `string`, `int`, `float`, `bool` and `void` (for return type). **Nullable parameter types are fully supported** for all primitive types (`?string`, `?int`, `?float`, `?bool`).
+> Currently, class methods have the following limitations. **Arrays and objects are not supported** as parameter types or return types. Only scalar types are supported: `string`, `int`, `float`, `bool` and `void` (for return type). **Nullable parameter types are fully supported** for all scalar types (`?string`, `?int`, `?float`, `?bool`).
 
 After generating the extension, you will be allowed to use the class and its methods in PHP. Note that you **cannot access properties directly**:
 
@@ -276,7 +276,7 @@ echo User::ROLE_ADMIN;       // "admin"
 echo Order::STATE_PENDING;   // 0
 ```
 
-The directive supports various value types including strings, integers, booleans, floats, and iota constants. When using `iota`, the generator automatically assigns sequential values (0, 1, 2, etc.). Global constants become available in your PHP code as global constants, while class constants are scoped to their respective classes. When using integers, different possible notation (binary, hex, octal) are supported and dumped as is in the PHP stub file.
+The directive supports various value types including strings, integers, booleans, floats, and iota constants. When using `iota`, the generator automatically assigns sequential values (0, 1, 2, etc.). Global constants become available in your PHP code as global constants, while class constants are scoped to their respective classes using the public visibility. When using integers, different possible notation (binary, hex, octal) are supported and dumped as is in the PHP stub file.
 
 You can use constants just like you are used to in the Go code. For example, let's take the `repeat_this()` function we declared earlier and change the last argument to an integer:
 
@@ -380,7 +380,7 @@ echo $processor->process('Hello World', StringProcessor::MODE_LOWERCASE);  // "h
 echo $processor->process('Hello World', StringProcessor::MODE_UPPERCASE);  // "HELLO WORLD"
 ```
 
-Once you've integrated your extension into FrankenPHP (see next section), you can run this test file using `./frankenphp php-server`, and you should see your extension working.
+Once you've integrated your extension into FrankenPHP as demonstrated in the previous section, you can run this test file using `./frankenphp php-server`, and you should see your extension working.
 
 ## Manual Implementation
 
@@ -480,9 +480,7 @@ We then define our PHP function as a native language function:
 ```c
 PHP_FUNCTION(go_print)
 {
-    if (zend_parse_parameters_none() == FAILURE) {
-        RETURN_THROWS();
-    }
+    ZEND_PARSE_PARAMETERS_NONE();
 
     go_print_something();
 }
@@ -603,7 +601,7 @@ func go_upper(s *C.zend_string) *C.zend_string {
 }
 ```
 
-This approach is much cleaner and safer than manual memory management. FrankenPHP's helper functions handle the conversion between PHP's `zend_string` format and Go strings automatically. The `false` parameter in `PHPString()` indicates that we want to create a new string (not persistent).
+This approach is much cleaner and safer than manual memory management. FrankenPHP's helper functions handle the conversion between PHP's `zend_string` format and Go strings automatically. The `false` parameter in `PHPString()` indicates that we want to create a new non-persistent string (freed at the end of the request).
 
 > [!TIP]
 > In this example, we don't perform any error handling, but you should always check that pointers are not `nil` and that the data is valid before using it in your Go functions.
