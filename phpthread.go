@@ -47,20 +47,26 @@ func (thread *phpThread) boot() {
 		logger.Error("thread is not in reserved state: " + thread.state.name())
 		panic("thread is not in reserved state: " + thread.state.name())
 	}
+	logger.Debug("phpThread.boot() state check passed", slog.Int("threadIndex", thread.threadIndex))
 
 	// boot threads as inactive
 	thread.handlerMu.Lock()
 	thread.handler = &inactiveThread{thread: thread}
 	thread.drainChan = make(chan struct{})
 	thread.handlerMu.Unlock()
+	logger.Debug("phpThread.boot() handler initialized", slog.Int("threadIndex", thread.threadIndex))
 
 	// start the actual posix thread - TODO: try this with go threads instead
+	logger.Debug("phpThread.boot() calling frankenphp_new_php_thread", slog.Int("threadIndex", thread.threadIndex))
 	if !C.frankenphp_new_php_thread(C.uintptr_t(thread.threadIndex)) {
 		logger.LogAttrs(context.Background(), slog.LevelError, "unable to create thread", slog.Int("thread", thread.threadIndex))
 		panic("unable to create thread")
 	}
+	logger.Debug("phpThread.boot() frankenphp_new_php_thread returned", slog.Int("threadIndex", thread.threadIndex))
 
+	logger.Debug("phpThread.boot() waiting for stateInactive", slog.Int("threadIndex", thread.threadIndex))
 	thread.state.waitFor(stateInactive)
+	logger.Debug("phpThread.boot() stateInactive reached", slog.Int("threadIndex", thread.threadIndex))
 }
 
 // shutdown the underlying PHP thread

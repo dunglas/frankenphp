@@ -9,12 +9,11 @@ package frankenphp
 import "C"
 import (
 	"context"
+	"github.com/dunglas/frankenphp/internal/memory"
+	"github.com/dunglas/frankenphp/internal/phpheaders"
 	"log/slog"
 	"strings"
 	"sync"
-
-	"github.com/dunglas/frankenphp/internal/memory"
-	"github.com/dunglas/frankenphp/internal/phpheaders"
 )
 
 // represents the main PHP thread
@@ -39,6 +38,7 @@ var (
 // a fixed number of inactive PHP threads
 // and reserves a fixed number of possible PHP threads
 func initPHPThreads(numThreads int, numMaxThreads int, phpIni map[string]string) (*phpMainThread, error) {
+	logger.Debug("Initializing PHP threads", slog.Int("numThreads", numThreads), slog.Int("numMaxThreads", numMaxThreads))
 	mainThread = &phpMainThread{
 		state:        newThreadState(),
 		done:         make(chan struct{}),
@@ -56,8 +56,10 @@ func initPHPThreads(numThreads int, numMaxThreads int, phpIni map[string]string)
 	phpThreads = []*phpThread{initialThread}
 
 	if err := mainThread.start(); err != nil {
+		logger.Error("Failed to start main thread", "error", err)
 		return nil, err
 	}
+	logger.Debug("Main thread started successfully")
 
 	// initialize all other threads
 	phpThreads = make([]*phpThread, mainThread.maxThreads)
@@ -72,16 +74,20 @@ func initPHPThreads(numThreads int, numMaxThreads int, phpIni map[string]string)
 	for i := 0; i < numThreads; i++ {
 		thread := phpThreads[i]
 		go func() {
+			logger.Debug("Booting PHP thread", slog.Int("threadIndex", thread.threadIndex))
 			thread.boot()
+			logger.Debug("PHP thread booted", slog.Int("threadIndex", thread.threadIndex))
 			ready.Done()
 		}()
 	}
 	ready.Wait()
+	logger.Debug("All PHP threads initialized")
 
 	return mainThread, nil
 }
 
 func drainPHPThreads() {
+	logger.Debug("Draining PHP threads")
 	doneWG := sync.WaitGroup{}
 	doneWG.Add(len(phpThreads))
 	mainThread.state.set(stateShuttingDown)
@@ -89,12 +95,15 @@ func drainPHPThreads() {
 	for _, thread := range phpThreads {
 		// shut down all reserved threads
 		if thread.state.compareAndSwap(stateReserved, stateDone) {
+			logger.Debug("Reserved PHP thread marked as done", slog.Int("threadIndex", thread.threadIndex))
 			doneWG.Done()
 			continue
 		}
 		// shut down all active threads
 		go func(thread *phpThread) {
+			logger.Debug("Shutting down PHP thread", slog.Int("threadIndex", thread.threadIndex))
 			thread.shutdown()
+			logger.Debug("PHP thread shut down", slog.Int("threadIndex", thread.threadIndex))
 			doneWG.Done()
 		}(thread)
 	}
@@ -103,26 +112,40 @@ func drainPHPThreads() {
 	mainThread.state.set(stateDone)
 	mainThread.state.waitFor(stateReserved)
 	phpThreads = nil
+	logger.Debug("All PHP threads drained")
+}
+
+//export go_wait_for_pending_threads
+func go_wait_for_pending_threads() {
+	logger.Debug("Waiting for pending threads")
+	mainThread.state.waitFor(stateDone)
+	logger.Debug("Pending threads finished")
 }
 
 func (mainThread *phpMainThread) start() error {
+	logger.Debug("Calling frankenphp_new_main_thread", slog.Int("numThreads", mainThread.numThreads))
 	if C.frankenphp_new_main_thread(C.int(mainThread.numThreads)) != 0 {
 		return ErrMainThreadCreation
 	}
+	logger.Debug("frankenphp_new_main_thread returned successfully")
 
 	mainThread.state.waitFor(stateReady)
 
 	// cache common request headers as zend_strings (HTTP_ACCEPT, HTTP_USER_AGENT, etc.)
 	mainThread.commonHeaders = make(map[string]*C.zend_string, len(phpheaders.CommonRequestHeaders))
 	for key, phpKey := range phpheaders.CommonRequestHeaders {
+		logger.Debug("Initializing persistent string for common header", slog.String("key", key))
 		mainThread.commonHeaders[key] = C.frankenphp_init_persistent_string(C.CString(phpKey), C.size_t(len(phpKey)))
 	}
+	logger.Debug("Common headers initialized")
 
 	// cache $_SERVER keys as zend_strings (SERVER_PROTOCOL, SERVER_SOFTWARE, etc.)
 	mainThread.knownServerKeys = make(map[string]*C.zend_string, len(knownServerKeys))
 	for _, phpKey := range knownServerKeys {
+		logger.Debug("Initializing persistent string for known server key", slog.String("key", phpKey))
 		mainThread.knownServerKeys[phpKey] = C.frankenphp_init_persistent_string(toUnsafeChar(phpKey), C.size_t(len(phpKey)))
 	}
+	logger.Debug("Known server keys initialized")
 
 	return nil
 }
@@ -130,22 +153,27 @@ func (mainThread *phpMainThread) start() error {
 func getInactivePHPThread() *phpThread {
 	for _, thread := range phpThreads {
 		if thread.state.is(stateInactive) {
+			logger.Debug("Found inactive PHP thread", slog.Int("threadIndex", thread.threadIndex))
 			return thread
 		}
 	}
 
 	for _, thread := range phpThreads {
 		if thread.state.compareAndSwap(stateReserved, stateBootRequested) {
+			logger.Debug("Booting reserved PHP thread", slog.Int("threadIndex", thread.threadIndex))
 			thread.boot()
+			logger.Debug("Reserved PHP thread booted", slog.Int("threadIndex", thread.threadIndex))
 			return thread
 		}
 	}
 
+	logger.Debug("No inactive or reserved PHP thread found")
 	return nil
 }
 
 //export go_frankenphp_main_thread_is_ready
 func go_frankenphp_main_thread_is_ready() {
+	logger.Debug("Main PHP thread is ready callback received")
 	mainThread.setAutomaticMaxThreads()
 	if mainThread.maxThreads < mainThread.numThreads {
 		mainThread.maxThreads = mainThread.numThreads
@@ -153,6 +181,7 @@ func go_frankenphp_main_thread_is_ready() {
 
 	mainThread.state.set(stateReady)
 	mainThread.state.waitFor(stateDone)
+	logger.Debug("Main PHP thread ready and waiting for done state")
 }
 
 // max_threads = auto
@@ -166,6 +195,7 @@ func (mainThread *phpMainThread) setAutomaticMaxThreads() {
 	totalSysMemory := memory.TotalSysMemory()
 	if perThreadMemoryLimit <= 0 || totalSysMemory == 0 {
 		mainThread.maxThreads = mainThread.numThreads * 2
+		logger.Debug("Automatic thread limit set (default)", slog.Int("maxThreads", mainThread.maxThreads))
 		return
 	}
 	maxAllowedThreads := totalSysMemory / uint64(perThreadMemoryLimit)
@@ -176,6 +206,7 @@ func (mainThread *phpMainThread) setAutomaticMaxThreads() {
 
 //export go_frankenphp_shutdown_main_thread
 func go_frankenphp_shutdown_main_thread() {
+	logger.Debug("Main PHP thread shutdown callback received")
 	mainThread.state.set(stateReserved)
 }
 
@@ -202,6 +233,6 @@ func go_get_custom_php_ini(disableTimeouts C.bool) *C.char {
 		overrides.WriteString(v)
 		overrides.WriteByte('\n')
 	}
-
+	logger.Debug("Returning custom php.ini", slog.String("ini", overrides.String()))
 	return C.CString(overrides.String())
 }
