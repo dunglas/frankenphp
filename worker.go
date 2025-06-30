@@ -22,6 +22,7 @@ type worker struct {
 	threads           []*phpThread
 	threadMutex       sync.RWMutex
 	allowPathMatching bool
+	maxConsecutiveFailures int
 }
 
 var (
@@ -123,6 +124,7 @@ func newWorker(o workerOpt) (*worker, error) {
 		requestChan:       make(chan *frankenPHPContext),
 		threads:           make([]*phpThread, 0, o.num),
 		allowPathMatching: allowPathMatching,
+		maxConsecutiveFailures: o.maxConsecutiveFailures,
 	}
 
 	return w, nil

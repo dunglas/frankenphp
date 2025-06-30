@@ -8,12 +8,19 @@
 
 {{- if .Classes}}
 
+#define VALIDATE_GO_HANDLE(intern) \
+    do { \
+        if ((intern)->go_handle == 0) { \
+            zend_throw_error(NULL, "Go object not found in registry"); \
+            RETURN_THROWS(); \
+        } \
+    } while (0)
+
 static zend_object_handlers object_handlers_{{.BaseName}};
 
 typedef struct {
     uintptr_t go_handle;
-    char* class_name;
-    zend_object std; /* This MUST be the last struct field to memory alignement problems */
+    zend_object std; /* This must be the last field in the structure: the property store starts at this offset */
 } {{.BaseName}}_object;
 
 static inline {{.BaseName}}_object *{{.BaseName}}_object_from_obj(zend_object *obj) {
@@ -28,18 +35,13 @@ static zend_object *{{.BaseName}}_create_object(zend_class_entry *ce) {
     
     intern->std.handlers = &object_handlers_{{.BaseName}};
     intern->go_handle = 0; /* will be set in __construct */
-    intern->class_name = estrdup(ZSTR_VAL(ce->name));
-    
+
     return &intern->std;
 }
 
 static void {{.BaseName}}_free_object(zend_object *object) {
     {{.BaseName}}_object *intern = {{.BaseName}}_object_from_obj(object);
-    
-    if (intern->class_name) {
-        efree(intern->class_name);
-    }
-    
+
     if (intern->go_handle != 0) {
         removeGoObject(intern->go_handle);
     }
@@ -47,14 +49,10 @@ static void {{.BaseName}}_free_object(zend_object *object) {
     zend_object_std_dtor(&intern->std);
 }
 
-static zend_function *{{.BaseName}}_get_method(zend_object **object, zend_string *method, const zval *key) {
-    return zend_std_get_method(object, method, key);
-}
-
 void init_object_handlers() {
     memcpy(&object_handlers_{{.BaseName}}, &std_object_handlers, sizeof(zend_object_handlers));
-    object_handlers_{{.BaseName}}.get_method = {{.BaseName}}_get_method;
     object_handlers_{{.BaseName}}.free_obj = {{.BaseName}}_free_object;
+    object_handlers_{{.BaseName}}.clone_obj = NULL;
     object_handlers_{{.BaseName}}.offset = offsetof({{.BaseName}}_object, std);
 }
 {{- end}}
@@ -62,12 +60,15 @@ void init_object_handlers() {
 static zend_class_entry *{{.Name}}_ce = NULL;
 
 PHP_METHOD({{.Name}}, __construct) {
-    if (zend_parse_parameters_none() == FAILURE) {
-        RETURN_THROWS();
-    }
+    ZEND_PARSE_PARAMETERS_NONE();
 
     {{$.BaseName}}_object *intern = {{$.BaseName}}_object_from_obj(Z_OBJ_P(ZEND_THIS));
-    
+
+    /* Constructor is called more than once, make it no-op */
+    if (intern->go_handle != 0) {
+        return;
+    }
+
     intern->go_handle = create_{{.GoStruct}}_object();
 }
 
@@ -75,10 +76,7 @@ PHP_METHOD({{.Name}}, __construct) {
 PHP_METHOD({{.ClassName}}, {{.PhpName}}) {
     {{$.BaseName}}_object *intern = {{$.BaseName}}_object_from_obj(Z_OBJ_P(ZEND_THIS));
     
-    if (intern->go_handle == 0) {
-        zend_throw_error(NULL, "Go object not found in registry");
-        RETURN_THROWS();
-    }
+    VALIDATE_GO_HANDLE(intern);
     
     {{- if .Params -}}
     {{range $i, $param := .Params -}}
@@ -98,7 +96,7 @@ PHP_METHOD({{.ClassName}}, {{.PhpName}}) {
     {{- end}}
     
     {{$requiredCount := 0}}{{range .Params}}{{if not .HasDefault}}{{$requiredCount = add1 $requiredCount}}{{end}}{{end -}}
-    ZEND_PARSE_PARAMETERS_START({{$requiredCount}}, {{len .Params}});
+    ZEND_PARSE_PARAMETERS_START({{$requiredCount}}, {{len .Params}})
         {{$optionalStarted := false}}{{range .Params}}{{if .HasDefault}}{{if not $optionalStarted -}}
         Z_PARAM_OPTIONAL
         {{$optionalStarted = true}}{{end}}{{end -}}
@@ -106,9 +104,7 @@ PHP_METHOD({{.ClassName}}, {{.PhpName}}) {
         {{end -}}
     ZEND_PARSE_PARAMETERS_END();
     {{else}}
-    if (zend_parse_parameters_none() == FAILURE) {
-        RETURN_THROWS();
-    }
+    ZEND_PARSE_PARAMETERS_NONE();
     {{end}}
     
     {{- if ne .ReturnType "void"}}

@@ -56,7 +56,7 @@ func (thread *phpThread) boot() {
 
 	// start the actual posix thread - TODO: try this with go threads instead
 	if !C.frankenphp_new_php_thread(C.uintptr_t(thread.threadIndex)) {
-		logger.LogAttrs(context.Background(), slog.LevelError, "unable to create thread", slog.Int("threadIndex", thread.threadIndex))
+		logger.LogAttrs(context.Background(), slog.LevelError, "unable to create thread", slog.Int("thread", thread.threadIndex))
 		panic("unable to create thread")
 	}
 

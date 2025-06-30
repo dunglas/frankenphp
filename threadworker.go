@@ -30,7 +30,7 @@ func convertToWorkerThread(thread *phpThread, worker *worker) {
 		backoff: &exponentialBackoff{
 			maxBackoff:             1 * time.Second,
 			minBackoff:             100 * time.Millisecond,
-			maxConsecutiveFailures: 6,
+			maxConsecutiveFailures: worker.maxConsecutiveFailures,
 		},
 	})
 	worker.attachThread(thread)
@@ -116,7 +116,6 @@ func tearDownWorkerScript(handler *workerThread, exitStatus int) {
 
 	// on exit status 0 we just run the worker script again
 	if exitStatus == 0 && !handler.isBootingScript {
-		// TODO: make the max restart configurable
 		metrics.StopWorker(worker.name, StopReasonRestart)
 		handler.backoff.recordSuccess()
 		logger.LogAttrs(ctx, slog.LevelDebug, "restarting", slog.String("worker", worker.name), slog.Int("thread", handler.thread.threadIndex), slog.Int("exit_status", exitStatus))

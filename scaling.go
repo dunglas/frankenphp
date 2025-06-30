@@ -99,6 +99,8 @@ func scaleWorkerThread(worker *worker) {
 	}
 
 	autoScaledThreads = append(autoScaledThreads, thread)
+
+	logger.LogAttrs(context.Background(), slog.LevelInfo, "upscaling worker thread", slog.String("worker", worker.name), slog.Int("thread", thread.threadIndex), slog.Int("num_threads", len(autoScaledThreads)))
 }
 
 // scaleRegularThread adds a regular PHP thread automatically
@@ -122,6 +124,8 @@ func scaleRegularThread() {
 	}
 
 	autoScaledThreads = append(autoScaledThreads, thread)
+
+	logger.LogAttrs(context.Background(), slog.LevelInfo, "upscaling regular thread", slog.Int("thread", thread.threadIndex), slog.Int("num_threads", len(autoScaledThreads)))
 }
 
 func startUpscalingThreads(maxScaledThreads int, scale chan *frankenPHPContext, done chan struct{}) {
@@ -197,10 +201,10 @@ func deactivateThreads() {
 
 		// convert threads to inactive if they have been idle for too long
 		if thread.state.is(stateReady) && waitTime > maxThreadIdleTime.Milliseconds() {
-			logger.LogAttrs(context.Background(), slog.LevelDebug, "auto-converting thread to inactive", slog.Int("threadIndex", thread.threadIndex))
 			convertToInactiveThread(thread)
 			stoppedThreadCount++
 			autoScaledThreads = append(autoScaledThreads[:i], autoScaledThreads[i+1:]...)
+			logger.LogAttrs(context.Background(), slog.LevelInfo, "downscaling thread", slog.Int("thread", thread.threadIndex), slog.Int64("wait_time", waitTime), slog.Int("num_threads", len(autoScaledThreads)))
 
 			continue
 		}
@@ -209,7 +213,7 @@ func deactivateThreads() {
 		// Some PECL extensions like #1296 will prevent threads from fully stopping (they leak memory)
 		// Reactivate this if there is a better solution or workaround
 		// if thread.state.is(stateInactive) && waitTime > maxThreadIdleTime.Milliseconds() {
-		// 	logger.LogAttrs(nil, slog.LevelDebug, "auto-stopping thread", slog.Int("threadIndex", thread.threadIndex))
+		// 	logger.LogAttrs(nil, slog.LevelDebug, "auto-stopping thread", slog.Int("thread", thread.threadIndex))
 		// 	thread.shutdown()
 		// 	stoppedThreadCount++
 		// 	autoScaledThreads = append(autoScaledThreads[:i], autoScaledThreads[i+1:]...)
