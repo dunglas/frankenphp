@@ -14,13 +14,14 @@ import (
 
 // represents a worker script and can have many threads assigned to it
 type worker struct {
-	name        string
-	fileName    string
-	num         int
-	env         PreparedEnv
-	requestChan chan *frankenPHPContext
-	threads     []*phpThread
-	threadMutex sync.RWMutex
+	name                   string
+	fileName               string
+	num                    int
+	env                    PreparedEnv
+	requestChan            chan *frankenPHPContext
+	threads                []*phpThread
+	threadMutex            sync.RWMutex
+	maxConsecutiveFailures int
 }
 
 var (
@@ -99,12 +100,13 @@ func newWorker(o workerOpt) (*worker, error) {
 
 	o.env["FRANKENPHP_WORKER\x00"] = "1"
 	w := &worker{
-		name:        o.name,
-		fileName:    absFileName,
-		num:         o.num,
-		env:         o.env,
-		requestChan: make(chan *frankenPHPContext),
-		threads:     make([]*phpThread, 0, o.num),
+		name:                   o.name,
+		fileName:               absFileName,
+		num:                    o.num,
+		env:                    o.env,
+		requestChan:            make(chan *frankenPHPContext),
+		threads:                make([]*phpThread, 0, o.num),
+		maxConsecutiveFailures: o.maxConsecutiveFailures,
 	}
 	workers[key] = w
 

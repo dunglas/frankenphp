@@ -1,12 +1,19 @@
 package frankenphp
 
 import (
+	"fmt"
 	"log/slog"
 	"time"
 )
 
+// defaultMaxConsecutiveFailures is the default maximum number of consecutive failures before panicking
+const defaultMaxConsecutiveFailures = 6
+
 // Option instances allow to configure FrankenPHP.
 type Option func(h *opt) error
+
+// WorkerOption instances allow configuring FrankenPHP worker.
+type WorkerOption func(*workerOpt) error
 
 // opt contains the available options.
 //
@@ -22,11 +29,12 @@ type opt struct {
 }
 
 type workerOpt struct {
-	name     string
-	fileName string
-	num      int
-	env      PreparedEnv
-	watch    []string
+	name                   string
+	fileName               string
+	num                    int
+	env                    PreparedEnv
+	watch                  []string
+	maxConsecutiveFailures int
 }
 
 // WithNumThreads configures the number of PHP threads to start.
@@ -55,9 +63,54 @@ func WithMetrics(m Metrics) Option {
 }
 
 // WithWorkers configures the PHP workers to start
-func WithWorkers(name string, fileName string, num int, env map[string]string, watch []string) Option {
+func WithWorkers(name string, fileName string, num int, options ...WorkerOption) Option {
 	return func(o *opt) error {
-		o.workers = append(o.workers, workerOpt{name, fileName, num, PrepareEnv(env), watch})
+		worker := workerOpt{
+			name:                   name,
+			fileName:               fileName,
+			num:                    num,
+			env:                    PrepareEnv(nil),
+			watch:                  []string{},
+			maxConsecutiveFailures: defaultMaxConsecutiveFailures,
+		}
+
+		for _, option := range options {
+			if err := option(&worker); err != nil {
+				return err
+			}
+		}
+
+		o.workers = append(o.workers, worker)
+
+		return nil
+	}
+}
+
+// WithWorkerEnv sets environment variables for the worker
+func WithWorkerEnv(env map[string]string) WorkerOption {
+	return func(w *workerOpt) error {
+		w.env = PrepareEnv(env)
+
+		return nil
+	}
+}
+
+// WithWorkerWatchMode sets directories to watch for file changes
+func WithWorkerWatchMode(watch []string) WorkerOption {
+	return func(w *workerOpt) error {
+		w.watch = watch
+
+		return nil
+	}
+}
+
+// WithWorkerMaxFailures sets the maximum number of consecutive failures before panicking
+func WithWorkerMaxFailures(maxFailures int) WorkerOption {
+	return func(w *workerOpt) error {
+		if maxFailures < -1 {
+			return fmt.Errorf("max consecutive failures must be >= -1, got %d", maxFailures)
+		}
+		w.maxConsecutiveFailures = maxFailures
 
 		return nil
 	}

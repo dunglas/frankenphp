@@ -37,7 +37,11 @@ func TestScaleAWorkerThreadUpAndDown(t *testing.T) {
 	assert.NoError(t, Init(
 		WithNumThreads(2),
 		WithMaxThreads(3),
-		WithWorkers(workerName, workerPath, 1, map[string]string{}, []string{}),
+		WithWorkers(workerName, workerPath, 1,
+			WithWorkerEnv(map[string]string{}),
+			WithWorkerWatchMode([]string{}),
+			WithWorkerMaxFailures(0),
+		),
 		WithLogger(slog.New(slog.NewTextHandler(io.Discard, nil))),
 	))
 
