@@ -48,7 +48,7 @@ func TestScaleAWorkerThreadUpAndDown(t *testing.T) {
 	autoScaledThread := phpThreads[2]
 
 	// scale up
-	scaleWorkerThread(workers[workerPath])
+	scaleWorkerThread(getWorkerByPath(workerPath))
 	assert.Equal(t, stateReady, autoScaledThread.state.get())
 
 	// on down-scale, the thread will be marked as inactive

@@ -1316,3 +1316,112 @@ func TestWorkerRestart(t *testing.T) {
 			"frankenphp_worker_restarts",
 		))
 }
+
+func TestWorkerMatchDirective(t *testing.T) {
+	tester := caddytest.NewTester(t)
+	tester.InitServer(`
+		{
+			skip_install_trust
+			admin localhost:2999
+		}
+
+		http://localhost:`+testPort+` {
+			php_server {
+				root ../testdata/files
+				worker {
+					file ../worker-with-counter.php
+					match /matched-path*
+					num 1
+				}
+			}
+		}
+		`, "caddyfile")
+
+	// worker is outside of public directory, match anyways
+	tester.AssertGetResponse("http://localhost:"+testPort+"/matched-path", http.StatusOK, "requests:1")
+	tester.AssertGetResponse("http://localhost:"+testPort+"/matched-path/anywhere", http.StatusOK, "requests:2")
+
+	// 404 on unmatched paths
+	tester.AssertGetResponse("http://localhost:"+testPort+"/elsewhere", http.StatusNotFound, "")
+
+	// static file will be served by the fileserver
+	expectedFileResponse, err := os.ReadFile("../testdata/files/static.txt")
+	require.NoError(t, err, "static.txt file must be readable for this test")
+	tester.AssertGetResponse("http://localhost:"+testPort+"/static.txt", http.StatusOK, string(expectedFileResponse))
+}
+
+func TestWorkerMatchDirectiveWithMultipleWorkers(t *testing.T) {
+	tester := caddytest.NewTester(t)
+	tester.InitServer(`
+		{
+			skip_install_trust
+			admin localhost:2999
+		}
+		http://localhost:`+testPort+` {
+			php_server {
+				root ../testdata
+				worker {
+					file worker-with-counter.php
+					match /counter/*
+					num 1
+				}
+				worker {
+					file index.php
+					match /index/*
+					num 1
+				}
+			}
+		}
+		`, "caddyfile")
+
+	// match 2 workers respectively (in the public directory)
+	tester.AssertGetResponse("http://localhost:"+testPort+"/counter/sub-path", http.StatusOK, "requests:1")
+	tester.AssertGetResponse("http://localhost:"+testPort+"/index/sub-path", http.StatusOK, "I am by birth a Genevese (i not set)")
+
+	// static file will be served by the fileserver
+	expectedFileResponse, err := os.ReadFile("../testdata/files/static.txt")
+	require.NoError(t, err, "static.txt file must be readable for this test")
+	tester.AssertGetResponse("http://localhost:"+testPort+"/files/static.txt", http.StatusOK, string(expectedFileResponse))
+
+	// 404 if the request falls through
+	tester.AssertGetResponse("http://localhost:"+testPort+"/not-matched", http.StatusNotFound, "")
+
+	// serve php file directly as fallback
+	tester.AssertGetResponse("http://localhost:"+testPort+"/hello.php", http.StatusOK, "Hello from PHP")
+
+	// serve worker file directly as fallback
+	tester.AssertGetResponse("http://localhost:"+testPort+"/index.php", http.StatusOK, "I am by birth a Genevese (i not set)")
+}
+
+func TestWorkerMatchDirectiveWithoutFileServer(t *testing.T) {
+	tester := caddytest.NewTester(t)
+	tester.InitServer(`
+		{
+			skip_install_trust
+			admin localhost:2999
+		}
+
+		http://localhost:`+testPort+` {
+			route {
+				php_server {
+					index off
+					file_server off
+					root ../testdata/files
+					worker {
+						file ../worker-with-counter.php
+						match /some-path
+					}
+				}
+
+				respond "Request falls through" 404
+			}
+		}
+		`, "caddyfile")
+
+	// find the worker at some-path
+	tester.AssertGetResponse("http://localhost:"+testPort+"/some-path", http.StatusOK, "requests:1")
+
+	// do not find the file at static.txt
+	// the request should completely fall through the php_server module
+	tester.AssertGetResponse("http://localhost:"+testPort+"/static.txt", http.StatusNotFound, "Request falls through")
+}

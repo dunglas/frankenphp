@@ -189,8 +189,9 @@ func TestFinishBootingAWorkerScript(t *testing.T) {
 }
 
 func TestReturnAnErrorIf2WorkersHaveTheSameFileName(t *testing.T) {
-	workers = make(map[string]*worker)
-	_, err1 := newWorker(workerOpt{fileName: "filename.php", maxConsecutiveFailures: defaultMaxConsecutiveFailures})
+	workers = []*worker{}
+	w, err1 := newWorker(workerOpt{fileName: "filename.php", maxConsecutiveFailures: defaultMaxConsecutiveFailures})
+	workers = append(workers, w)
 	_, err2 := newWorker(workerOpt{fileName: "filename.php", maxConsecutiveFailures: defaultMaxConsecutiveFailures})
 
 	assert.NoError(t, err1)
@@ -198,8 +199,9 @@ func TestReturnAnErrorIf2WorkersHaveTheSameFileName(t *testing.T) {
 }
 
 func TestReturnAnErrorIf2ModuleWorkersHaveTheSameName(t *testing.T) {
-	workers = make(map[string]*worker)
-	_, err1 := newWorker(workerOpt{fileName: "filename.php", name: "workername", maxConsecutiveFailures: defaultMaxConsecutiveFailures})
+	workers = []*worker{}
+	w, err1 := newWorker(workerOpt{fileName: "filename.php", name: "workername", maxConsecutiveFailures: defaultMaxConsecutiveFailures})
+	workers = append(workers, w)
 	_, err2 := newWorker(workerOpt{fileName: "filename2.php", name: "workername", maxConsecutiveFailures: defaultMaxConsecutiveFailures})
 
 	assert.NoError(t, err1)
@@ -208,13 +210,14 @@ func TestReturnAnErrorIf2ModuleWorkersHaveTheSameName(t *testing.T) {
 
 func getDummyWorker(fileName string) *worker {
 	if workers == nil {
-		workers = make(map[string]*worker)
+		workers = []*worker{}
 	}
 	worker, _ := newWorker(workerOpt{
 		fileName:               testDataPath + "/" + fileName,
 		num:                    1,
 		maxConsecutiveFailures: defaultMaxConsecutiveFailures,
 	})
+	workers = append(workers, worker)
 	return worker
 }
 
@@ -241,9 +244,9 @@ func allPossibleTransitions(worker1Path string, worker2Path string) []func(*phpT
 				thread.boot()
 			}
 		},
-		func(thread *phpThread) { convertToWorkerThread(thread, workers[worker1Path]) },
+		func(thread *phpThread) { convertToWorkerThread(thread, getWorkerByPath(worker1Path)) },
 		convertToInactiveThread,
-		func(thread *phpThread) { convertToWorkerThread(thread, workers[worker2Path]) },
+		func(thread *phpThread) { convertToWorkerThread(thread, getWorkerByPath(worker2Path)) },
 		convertToInactiveThread,
 	}
 }

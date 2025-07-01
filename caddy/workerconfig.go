@@ -2,11 +2,15 @@ package caddy
 
 import (
 	"errors"
+	"net/http"
 	"path/filepath"
 	"strconv"
 
+	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
+	"github.com/caddyserver/caddy/v2/modules/caddyhttp"
 	"github.com/dunglas/frankenphp"
+	"github.com/dunglas/frankenphp/internal/fastabs"
 )
 
 // workerConfig represents the "worker" directive in the Caddyfile
@@ -29,6 +33,8 @@ type workerConfig struct {
 	Env map[string]string `json:"env,omitempty"`
 	// Directories to watch for file changes
 	Watch []string `json:"watch,omitempty"`
+	// The path to match against the worker
+	MatchPath []string `json:"match_path,omitempty"`
 	// MaxConsecutiveFailures sets the maximum number of consecutive failures before panicking (defaults to 6, set to -1 to never panick)
 	MaxConsecutiveFailures int `json:"max_consecutive_failures,omitempty"`
 }
@@ -96,6 +102,12 @@ func parseWorkerConfig(d *caddyfile.Dispenser) (workerConfig, error) {
 			} else {
 				wc.Watch = append(wc.Watch, d.Val())
 			}
+		case "match":
+			// provision the path so it's identical to Caddy match rules
+			// see: https://github.com/caddyserver/caddy/blob/master/modules/caddyhttp/matchers.go
+			caddyMatchPath := (caddyhttp.MatchPath)(d.RemainingArgs())
+			caddyMatchPath.Provision(caddy.Context{})
+			wc.MatchPath = ([]string)(caddyMatchPath)
 		case "max_consecutive_failures":
 			if !d.NextArg() {
 				return wc, d.ArgErr()
@@ -111,7 +123,7 @@ func parseWorkerConfig(d *caddyfile.Dispenser) (workerConfig, error) {
 
 			wc.MaxConsecutiveFailures = int(v)
 		default:
-			allowedDirectives := "name, file, num, env, watch, max_consecutive_failures"
+			allowedDirectives := "name, file, num, env, watch, match, max_consecutive_failures"
 			return wc, wrongSubDirectiveError("worker", allowedDirectives, v)
 		}
 	}
@@ -125,4 +137,30 @@ func parseWorkerConfig(d *caddyfile.Dispenser) (workerConfig, error) {
 	}
 
 	return wc, nil
+}
+
+func (wc workerConfig) inheritEnv(env map[string]string) {
+	if wc.Env == nil {
+		wc.Env = make(map[string]string, len(env))
+	}
+	for k, v := range env {
+		// do not overwrite existing environment variables
+		if _, exists := wc.Env[k]; !exists {
+			wc.Env[k] = v
+		}
+	}
+}
+
+func (wc workerConfig) matchesPath(r *http.Request, documentRoot string) bool {
+
+	// try to match against a pattern if one is assigned
+	if len(wc.MatchPath) != 0 {
+		return (caddyhttp.MatchPath)(wc.MatchPath).Match(r)
+	}
+
+	// if there is no pattern, try to match against the actual path (in the public directory)
+	fullScriptPath, _ := fastabs.FastAbs(documentRoot + "/" + r.URL.Path)
+	absFileName, _ := fastabs.FastAbs(wc.FileName)
+
+	return fullScriptPath == absFileName
 }

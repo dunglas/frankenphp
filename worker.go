@@ -21,27 +21,31 @@ type worker struct {
 	requestChan            chan *frankenPHPContext
 	threads                []*phpThread
 	threadMutex            sync.RWMutex
+	allowPathMatching      bool
 	maxConsecutiveFailures int
 }
 
 var (
-	workers          map[string]*worker
+	workers          []*worker
 	watcherIsEnabled bool
 )
 
 func initWorkers(opt []workerOpt) error {
-	workers = make(map[string]*worker, len(opt))
+	workers = make([]*worker, 0, len(opt))
 	workersReady := sync.WaitGroup{}
 	directoriesToWatch := getDirectoriesToWatch(opt)
 	watcherIsEnabled = len(directoriesToWatch) > 0
 
 	for _, o := range opt {
-		worker, err := newWorker(o)
+		w, err := newWorker(o)
 		if err != nil {
 			return err
 		}
+		workers = append(workers, w)
+	}
 
-		workersReady.Add(o.num)
+	for _, worker := range workers {
+		workersReady.Add(worker.num)
 		for i := 0; i < worker.num; i++ {
 			thread := getInactivePHPThread()
 			convertToWorkerThread(thread, worker)
@@ -66,12 +70,24 @@ func initWorkers(opt []workerOpt) error {
 	return nil
 }
 
-func getWorkerKey(name string, filename string) string {
-	key := filename
-	if strings.HasPrefix(name, "m#") {
-		key = name
+func getWorkerByName(name string) *worker {
+	for _, w := range workers {
+		if w.name == name {
+			return w
+		}
 	}
-	return key
+
+	return nil
+}
+
+func getWorkerByPath(path string) *worker {
+	for _, w := range workers {
+		if w.fileName == path && w.allowPathMatching {
+			return w
+		}
+	}
+
+	return nil
 }
 
 func newWorker(o workerOpt) (*worker, error) {
@@ -80,22 +96,23 @@ func newWorker(o workerOpt) (*worker, error) {
 		return nil, fmt.Errorf("worker filename is invalid %q: %w", o.fileName, err)
 	}
 
-	key := getWorkerKey(o.name, absFileName)
-	if _, ok := workers[key]; ok {
-		return nil, fmt.Errorf("two workers cannot use the same key %q", key)
+	if o.name == "" {
+		o.name = absFileName
 	}
-	for _, w := range workers {
-		if w.name == o.name {
-			return w, fmt.Errorf("two workers cannot have the same name: %q", o.name)
-		}
+
+	// workers that have a name starting with "m#" are module workers
+	// they can only be matched by their name, not by their path
+	allowPathMatching := !strings.HasPrefix(o.name, "m#")
+
+	if w := getWorkerByPath(absFileName); w != nil && allowPathMatching {
+		return w, fmt.Errorf("two workers cannot have the same filename: %q", absFileName)
+	}
+	if w := getWorkerByName(o.name); w != nil {
+		return w, fmt.Errorf("two workers cannot have the same name: %q", o.name)
 	}
 
 	if o.env == nil {
 		o.env = make(PreparedEnv, 1)
-	}
-
-	if o.name == "" {
-		o.name = absFileName
 	}
 
 	o.env["FRANKENPHP_WORKER\x00"] = "1"
@@ -106,9 +123,9 @@ func newWorker(o workerOpt) (*worker, error) {
 		env:                    o.env,
 		requestChan:            make(chan *frankenPHPContext),
 		threads:                make([]*phpThread, 0, o.num),
+		allowPathMatching:      allowPathMatching,
 		maxConsecutiveFailures: o.maxConsecutiveFailures,
 	}
-	workers[key] = w
 
 	return w, nil
 }
