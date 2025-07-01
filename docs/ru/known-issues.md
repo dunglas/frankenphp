@@ -77,7 +77,7 @@ docker run \
 ## Скрипты Composer с использованием `@php`
 
 [Скрипты Composer](https://getcomposer.org/doc/articles/scripts.md) могут вызывать PHP для выполнения задач, например, в [проекте Laravel](laravel.md) для команды `@php artisan package:discover --ansi`.  
-Это [на данный момент не поддерживается](https://github.com/dunglas/frankenphp/issues/483#issuecomment-1899890915) по двум причинам:
+Это [на данный момент не поддерживается](https://github.com/php/frankenphp/issues/483#issuecomment-1899890915) по двум причинам:
 
 - Composer не знает, как вызывать бинарный файл FrankenPHP;
 - Composer может добавлять настройки PHP через флаг `-d`, который FrankenPHP пока не поддерживает.

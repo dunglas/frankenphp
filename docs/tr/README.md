@@ -34,18 +34,18 @@ docker run -v $PWD:/app/public \
 ### Binary Çıktısı
 
 Docker kullanmayı tercih etmiyorsanız, Linux ve macOS için bağımsız FrankenPHP binary dosyası sağlıyoruz
-[PHP 8.4](https://www.php.net/releases/8.4/en.php) ve en popüler PHP eklentilerini de içermekte: [FrankenPHP](https://github.com/dunglas/frankenphp/releases) indirin
+[PHP 8.4](https://www.php.net/releases/8.4/en.php) ve en popüler PHP eklentilerini de içermekte: [FrankenPHP](https://github.com/php/frankenphp/releases) indirin
 
 Geçerli dizinin içeriğini başlatmak için çalıştırın:
 
 ```console
-./frankenphp php-server
+frankenphp php-server
 ```
 
 Ayrıca aşağıdaki tek komut satırı ile de çalıştırabilirsiniz:
 
 ```console
-./frankenphp php-cli /path/to/your/script.php
+frankenphp php-cli /path/to/your/script.php
 ```
 
 ## Docs

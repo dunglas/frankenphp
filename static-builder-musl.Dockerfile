@@ -28,7 +28,7 @@ SHELL ["/bin/ash", "-eo", "pipefail", "-c"]
 LABEL org.opencontainers.image.title=FrankenPHP
 LABEL org.opencontainers.image.description="The modern PHP app server"
 LABEL org.opencontainers.image.url=https://frankenphp.dev
-LABEL org.opencontainers.image.source=https://github.com/dunglas/frankenphp
+LABEL org.opencontainers.image.source=https://github.com/php/frankenphp
 LABEL org.opencontainers.image.licenses=MIT
 LABEL org.opencontainers.image.vendor="Kévin Dunglas"
 

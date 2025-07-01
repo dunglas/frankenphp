@@ -23,7 +23,7 @@ containing [PHP 8.4](https://www.php.net/releases/8.4/en.php) and most popular P
 
 On Windows, use [WSL](https://learn.microsoft.com/windows/wsl/) to run FrankenPHP.
 
-[Download FrankenPHP](https://github.com/dunglas/frankenphp/releases) or copy this line into your
+[Download FrankenPHP](https://github.com/php/frankenphp/releases) or copy this line into your
 terminal to automatically install the version appropriate for your platform:
 
 ```console

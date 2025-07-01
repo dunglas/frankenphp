@@ -37,7 +37,7 @@ docker run -v .:/app/public \
 
 Для Windows используйте [WSL](https://learn.microsoft.com/windows/wsl/) для запуска FrankenPHP.
 
-[Скачать FrankenPHP](https://github.com/dunglas/frankenphp/releases) или выполните следующую команду для автоматической установки подходящей версии:
+[Скачать FrankenPHP](https://github.com/php/frankenphp/releases) или выполните следующую команду для автоматической установки подходящей версии:
 
 ```console
 curl https://frankenphp.dev/install.sh | sh

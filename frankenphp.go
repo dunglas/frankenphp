@@ -157,7 +157,7 @@ func calculateMaxThreads(opt *opt) (int, int, int, error) {
 	var numWorkers int
 	for i, w := range opt.workers {
 		if w.num <= 0 {
-			// https://github.com/dunglas/frankenphp/issues/126
+			// https://github.com/php/frankenphp/issues/126
 			opt.workers[i].num = maxProcs
 		}
 		metrics.TotalWorkers(w.name, w.num)
@@ -222,7 +222,7 @@ func Init(options ...Option) error {
 	}
 	isRunning = true
 
-	// Ignore all SIGPIPE signals to prevent weird issues with systemd: https://github.com/dunglas/frankenphp/issues/1020
+	// Ignore all SIGPIPE signals to prevent weird issues with systemd: https://github.com/php/frankenphp/issues/1020
 	// Docker/Moby has a similar hack: https://github.com/moby/moby/blob/d828b032a87606ae34267e349bf7f7ccb1f6495a/cmd/dockerd/docker.go#L87-L90
 	signal.Ignore(syscall.SIGPIPE)
 

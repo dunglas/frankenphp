@@ -10,7 +10,7 @@ body:
         Before submitting a bug, please double-check that your problem [is not
         a known issue](https://frankenphp.dev/docs/known-issues/)
         (especially if you use XDebug or Tideways), and that is has not
-        [already been reported](https://github.com/dunglas/frankenphp/issues).
+        [already been reported](https://github.com/php/frankenphp/issues).
   - type: textarea
     id: what-happened
     attributes:

@@ -16,7 +16,7 @@ docker run -p 80:80 -p 443:443 -p 443:443/udp -v $PWD:/app dunglas/frankenphp
 
 或者，你可以从本地机器上使用 FrankenPHP 运行 Laravel 项目：
 
-1. [下载与您的系统相对应的二进制文件](https://github.com/dunglas/frankenphp/releases)
+1. [下载与你的系统相对应的二进制文件](https://github.com/php/frankenphp/releases)
 2. 将以下配置添加到 Laravel 项目根目录中名为 `Caddyfile` 的文件中：
 
     ```caddyfile
@@ -45,7 +45,7 @@ Octane 可以通过 Composer 包管理器安装：
 composer require laravel/octane
 ```
 
-安装 Octane 后，您可以执行 `octane:install` Artisan 命令，该命令会将 Octane 的配置文件安装到您的应用程序中：
+安装 Octane 后，你可以执行 `octane:install` Artisan 命令，该命令会将 Octane 的配置文件安装到你的应用程序中：
 
 ```console
 php artisan octane:install --server=frankenphp

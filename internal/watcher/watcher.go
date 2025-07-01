@@ -178,7 +178,7 @@ func handleWatcherEvent(watchPattern *watchPattern, path string, associatedPath 
 
 	// some editors create temporary files and never actually modify the original file
 	// so we need to also check the associated path of an event
-	// see https://github.com/dunglas/frankenphp/issues/1375
+	// see https://github.com/php/frankenphp/issues/1375
 	if associatedPath != "" && watchPattern.allowReload(associatedPath, eventType, pathType) {
 		watchPattern.trigger <- associatedPath
 	}

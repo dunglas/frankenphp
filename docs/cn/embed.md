@@ -10,14 +10,14 @@ FrankenPHP 能够将 PHP 应用程序的源代码和资源文件嵌入到静态�
 
 在创建独立二进制文件之前，请确保应用已准备好进行打包。
 
-例如，您可能希望：
+例如，你可能希望：
 
 * 给应用安装生产环境的依赖
 * 导出 autoloader
 * 如果可能，为应用启用生产模式
 * 丢弃不需要的文件，例如 `.git` 或测试文件，以减小最终二进制文件的大小
 
-例如，对于 Symfony 应用程序，您可以使用以下命令：
+例如，对于 Symfony 应用程序，你可以使用以下命令：
 
 ```console
 # 导出项目以避免 .git/ 等目录
@@ -80,10 +80,10 @@ composer dump-env prod
 
 ## 为其他操作系统创建二进制文件
 
-如果您不想使用 Docker，或者想要构建 macOS 二进制文件，你可以使用我们提供的 shell 脚本：
+如果你不想使用 Docker，或者想要构建 macOS 二进制文件，你可以使用我们提供的 shell 脚本：
 
 ```console
-git clone https://github.com/dunglas/frankenphp
+git clone https://github.com/php/frankenphp
 cd frankenphp
 EMBED=/path/to/your/app \
     PHP_EXTENSIONS=ctype,iconv,pdo_sqlite \
@@ -94,7 +94,7 @@ EMBED=/path/to/your/app \
 
 ## 使用二进制文件
 
-就是这样！`my-app` 文件（或其他操作系统上的 `dist/frankenphp-<os>-<arch>`）包含您的独立应用程序！
+就是这样！`my-app` 文件（或其他操作系统上的 `dist/frankenphp-<os>-<arch>`）包含你的独立应用程序！
 
 若要启动 Web 应用，请执行：
 
@@ -102,7 +102,7 @@ EMBED=/path/to/your/app \
 ./my-app php-server
 ```
 
-如果您的应用包含 [worker 脚本](worker.md)，请使用如下命令启动 worker：
+如果你的应用包含 [worker 脚本](worker.md)，请使用如下命令启动 worker：
 
 ```console
 ./my-app php-server --worker public/index.php
@@ -114,7 +114,7 @@ EMBED=/path/to/your/app \
 ./my-app php-server --domain localhost
 ```
 
-您还可以运行二进制文件中嵌入的 PHP CLI 脚本：
+你还可以运行二进制文件中嵌入的 PHP CLI 脚本：
 
 ```console
 ./my-app php-cli bin/console

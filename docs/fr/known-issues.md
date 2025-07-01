@@ -78,7 +78,7 @@ docker run \
 
 ## Scripts Composer Faisant Références à `@php`
 
-Les [scripts Composer](https://getcomposer.org/doc/articles/scripts.md) peuvent vouloir exécuter un binaire PHP pour certaines tâches, par exemple dans [un projet Laravel](laravel.md) pour exécuter `@php artisan package:discover --ansi`. Cela [echoue actuellement](https://github.com/dunglas/frankenphp/issues/483#issuecomment-1899890915) pour deux raisons :
+Les [scripts Composer](https://getcomposer.org/doc/articles/scripts.md) peuvent vouloir exécuter un binaire PHP pour certaines tâches, par exemple dans [un projet Laravel](laravel.md) pour exécuter `@php artisan package:discover --ansi`. Cela [echoue actuellement](https://github.com/php/frankenphp/issues/483#issuecomment-1899890915) pour deux raisons :
 
 - Composer ne sait pas comment appeler le binaire FrankenPHP ;
 - Composer peut ajouter des paramètres PHP en utilisant le paramètre `-d` dans la commande, ce que FrankenPHP ne supporte pas encore.

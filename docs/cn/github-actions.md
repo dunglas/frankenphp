@@ -1,7 +1,7 @@
 # 使用 GitHub Actions
 
 此存储库构建 Docker 镜像并将其部署到 [Docker Hub](https://hub.docker.com/r/dunglas/frankenphp) 上
-每个批准的拉取请求或设置后在您自己的分支上。
+每个批准的拉取请求或设置后在你自己的分支上。
 
 ## 设置 GitHub Actions
 

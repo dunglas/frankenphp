@@ -83,7 +83,7 @@ Elde edilen binary dosyası, geçerli dizindeki `my-app` adlı dosyadır.
 Docker kullanmak istemiyorsanız veya bir macOS binary dosyası oluşturmak istiyorsanız, sağladığımız kabuk betiğini kullanın:
 
 ```console
-git clone https://github.com/dunglas/frankenphp
+git clone https://github.com/php/frankenphp
 cd frankenphp
 EMBED=/path/to/your/app \
     PHP_EXTENSIONS=ctype,iconv,pdo_sqlite \
