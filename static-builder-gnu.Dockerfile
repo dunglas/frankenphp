@@ -106,13 +106,9 @@ RUN yum install -y \
 	rm go.tar.gz && \
 	/usr/local/go/bin/go install github.com/caddyserver/xcaddy/cmd/xcaddy@latest
 
-ENV PATH="/cmake/bin:/usr/local/go/bin:$PATH"
+ENV PATH="/opt/rh/devtoolset-10/root/usr/bin:/cmake/bin:/usr/local/go/bin:$PATH"
 
 # Apply GNU mode
-ENV CC='/opt/rh/devtoolset-10/root/usr/bin/gcc'
-ENV CXX='/opt/rh/devtoolset-10/root/usr/bin/g++'
-ENV AR='/opt/rh/devtoolset-10/root/usr/bin/ar'
-ENV LD='/opt/rh/devtoolset-10/root/usr/bin/ld'
 ENV SPC_DEFAULT_C_FLAGS='-fPIE -fPIC -O3'
 ENV SPC_LIBC='glibc'
 ENV SPC_CMD_VAR_PHP_MAKE_EXTRA_LDFLAGS_PROGRAM='-Wl,-O3 -pie'
