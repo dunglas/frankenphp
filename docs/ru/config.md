@@ -85,6 +85,27 @@ localhost {
 # ...
 ```
 
+Блоки worker также могут быть определены внутри блока `php` или `php_server`. В этом случае worker наследует переменные окружения и корневой путь от родительской директивы и доступен только для этого конкретного домена:
+
+```caddyfile
+{
+	frankenphp
+}
+example.com {
+	root /path/to/app
+	php_server {
+		root <path>
+		worker {
+			file <path, может быть относительным к root>
+			num <num>
+			env <key> <value>
+			watch <path>
+			name <name>
+		}
+	}
+}
+```
+
 Вы также можете определить несколько workers, если обслуживаете несколько приложений на одном сервере:
 
 ```caddyfile
@@ -199,9 +220,9 @@ php_server [<matcher>] {
 
 ```caddyfile
 {
-  servers {
-    enable_full_duplex
-  }
+	servers {
+		enable_full_duplex
+	}
 }
 ```
 
@@ -232,8 +253,65 @@ CADDY_GLOBAL_OPTIONS="servers {
 
 ## Конфигурация PHP
 
+Вы также можете изменить конфигурацию PHP, используя директиву `php_ini` в блоке `frankenphp`:
+
+```caddyfile
+{
+	frankenphp {
+		php_ini memory_limit 256M
+
+		# или
+
+		php_ini {
+			memory_limit 256M
+			max_execution_time 15
+		}
+	}
+}
+```
+
 Для загрузки [дополнительных конфигурационных файлов PHP](https://www.php.net/manual/en/configuration.file.php#configuration.file.scan) можно использовать переменную окружения `PHP_INI_SCAN_DIR`.
 Если она установлена, PHP загрузит все файлы с расширением `.ini`, находящиеся в указанных директориях.
+
+## Команда php-server
+
+Команда `php-server` — это удобный способ запустить готовый к продакшну PHP-сервер. Она особенно полезна для быстрого развертывания, демонстраций, разработки или запуска [встроенного приложения](embed.md).
+
+```console
+frankenphp php-server [--domain <example.com>] [--root <path>] [--listen <addr>] [--worker /path/to/worker.php<,nb-workers>] [--watch <paths...>] [--access-log] [--debug] [--no-compress] [--mercure]
+```
+
+### Опции
+
+- `--domain`, `-d`: Доменное имя, на котором будут обслуживаться файлы. Если указано, сервер будет использовать HTTPS и автоматически получит сертификат Let's Encrypt.
+- `--root`, `-r`: Путь к корневой директории сайта. Если не указано и используется встроенное приложение, по умолчанию будет использоваться директория embedded_app/public.
+- `--listen`, `-l`: Адрес, к которому будет привязан слушатель. По умолчанию `:80` или `:443`, если указан домен.
+- `--worker`, `-w`: Скрипт worker для запуска. Может быть указан несколько раз для нескольких workers.
+- `--watch`: Директория для отслеживания изменений файлов. Может быть указана несколько раз для нескольких директорий.
+- `--access-log`, `-a`: Включить журнал доступа.
+- `--debug`, `-v`: Включить подробные журналы отладки.
+- `--mercure`, `-m`: Включить встроенный хаб Mercure.rocks.
+- `--no-compress`: Отключить сжатие Zstandard, Brotli и Gzip.
+
+### Примеры
+
+Запуск сервера с текущей директорией в качестве корневой:
+
+```console
+frankenphp php-server --root ./
+```
+
+Запуск сервера с включенным HTTPS:
+
+```console
+frankenphp php-server --domain example.com
+```
+
+Запуск сервера с worker:
+
+```console
+frankenphp php-server --worker public/index.php
+```
 
 ## Включение режима отладки
 

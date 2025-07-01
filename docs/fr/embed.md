@@ -48,6 +48,9 @@ Pour personnaliser [la configuration](config.md),
 vous pouvez mettre un fichier `Caddyfile` ainsi qu'un fichier `php.ini`
 dans le répertoire principal de l'application à intégrer
 (`$TMPDIR/my-prepared-app` dans l'exemple précédent).
+Si une application avec un Caddyfile dans le répertoire est intégrée, elle utilisera automatiquement la configuration de ce Caddyfile lors de l'exécution du binaire.
+
+Si vous souhaitez servir des fichiers directement depuis l'application embarquée, spécifiez « root ./ », car ne pas spécifier l'option root servira embedded_app/public par défaut.
 
 ## Créer un binaire Linux
 
@@ -106,6 +109,12 @@ Pour démarrer l'application web, exécutez :
 
 ```console
 ./my-app php-server
+```
+
+Par défaut, si aucune option root n'est spécifiée, il utilisera le répertoire embedded_app/public comme racine de document. Si vous souhaitez servir directement depuis le répertoire de l'application embarquée, spécifiez l'option root :
+
+```console
+./my-app php-server --root ./
 ```
 
 Si votre application contient un [script worker](worker.md), démarrez le worker avec quelque chose comme :

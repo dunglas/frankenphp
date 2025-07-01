@@ -91,6 +91,27 @@ Alternatively, you may use the one-line short form of the `worker` option:
 # ...
 ```
 
+Worker blocks can also be defined inside a `php` or `php_server` block. In this case, the worker inherits environment variables and root path from the parent directive and is only accessible by that specific domain:
+
+```caddyfile
+{
+	frankenphp
+}
+example.com {
+	root /path/to/app
+	php_server {
+		root <path>
+		worker {
+			file <path, can be relative to root>
+			num <num>
+			env <key> <value>
+			watch <path>
+			name <name>
+		}
+	}
+}
+```
+
 You can also define multiple workers if you serve multiple apps on the same server:
 
 ```caddyfile
@@ -214,7 +235,7 @@ This is an opt-in configuration that needs to be added to the global options in 
 ```caddyfile
 {
   servers {
-    enable_full_duplex
+	enable_full_duplex
   }
 }
 ```
@@ -255,17 +276,57 @@ You can also change the PHP configuration using the `php_ini` directive in the `
 
 ```caddyfile
 {
-    frankenphp {
-        php_ini memory_limit 256M
+	frankenphp {
+		php_ini memory_limit 256M
 
-        # or
+		# or
 
-        php_ini {
-            memory_limit 256M
-            max_execution_time 15
-        }
-    }
+		php_ini {
+			memory_limit 256M
+			max_execution_time 15
+		}
+	}
 }
+```
+
+## The php-server Command
+
+The `php-server` command is a convenient way to start a production-ready PHP server. It's especially useful for quick deployments, demos, development, or to run an [embedded app](embed.md).
+
+```console
+frankenphp php-server [--domain <example.com>] [--root <path>] [--listen <addr>] [--worker /path/to/worker.php<,nb-workers>] [--watch <paths...>] [--access-log] [--debug] [--no-compress] [--mercure]
+```
+
+### Options
+
+- `--domain`, `-d`: Domain name at which to serve the files. If specified, the server will use HTTPS and automatically obtain a Let's Encrypt certificate.
+- `--root`, `-r`: The path to the root of the site. If not specified and using an embedded app, it will use the embedded_app/public directory by default.
+- `--listen`, `-l`: The address to which to bind the listener. Default is `:80` or `:443` if a domain is specified.
+- `--worker`, `-w`: Worker script to run. Can be specified multiple times for multiple workers.
+- `--watch`: Directory to watch for file changes. Can be specified multiple times for multiple directories.
+- `--access-log`, `-a`: Enable the access log.
+- `--debug`, `-v`: Enable verbose debug logs.
+- `--mercure`, `-m`: Enable the built-in Mercure.rocks hub.
+- `--no-compress`: Disable Zstandard, Brotli and Gzip compression.
+
+### Examples
+
+Start a server with the current directory as the document root:
+
+```console
+frankenphp php-server --root ./
+```
+
+Start a server with HTTPS enabled:
+
+```console
+frankenphp php-server --domain example.com
+```
+
+Start a server with a worker:
+
+```console
+frankenphp php-server --worker public/index.php
 ```
 
 ## Enable the Debug Mode

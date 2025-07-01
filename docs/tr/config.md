@@ -84,6 +84,27 @@ Alternatif olarak, `worker` seçeneğinin tek satırlık kısa formunu kullanabi
 # ...
 ```
 
+Worker blokları ayrıca bir `php` veya `php_server` bloğu içinde de tanımlanabilir. Bu durumda, worker, üst yönergenin ortam değişkenlerini ve kök yolunu devralır ve yalnızca o belirli alan tarafından erişilebilir:
+
+```caddyfile
+{
+	frankenphp
+}
+example.com {
+	root /path/to/app
+	php_server {
+		root <path>
+		worker {
+			file <path, root'a göre göreceli olabilir>
+			num <num>
+			env <key> <value>
+			watch <path>
+			name <name>
+		}
+	}
+}
+```
+
 Aynı sunucuda birden fazla uygulamaya hizmet veriyorsanız birden fazla işçi de tanımlayabilirsiniz:
 
 ```caddyfile
@@ -164,9 +185,66 @@ FPM ve CLI SAPI'lerinde olduğu gibi, ortam değişkenleri varsayılan olarak `$
 
 ## PHP konfigürasyonu
 
+Ayrıca `frankenphp` bloğundaki `php_ini` yönergesini kullanarak PHP yapılandırmasını değiştirebilirsiniz:
+
+```caddyfile
+{
+	frankenphp {
+		php_ini memory_limit 256M
+
+		# veya
+
+		php_ini {
+			memory_limit 256M
+			max_execution_time 15
+		}
+	}
+}
+```
+
 Ek olarak [PHP yapılandırma dosyalarını](https://www.php.net/manual/en/configuration.file.php#configuration.file.scan) yüklemek için
 `PHP_INI_SCAN_DIR` ortam değişkeni kullanılabilir.
 Ayarlandığında, PHP verilen dizinlerde bulunan `.ini` uzantılı tüm dosyaları yükleyecektir.
+
+## php-server Komutu
+
+`php-server` komutu, üretime hazır bir PHP sunucusu başlatmanın uygun bir yoludur. Özellikle hızlı dağıtımlar, demolar, geliştirme veya [gömülü bir uygulama](embed.md) çalıştırmak için kullanışlıdır.
+
+```console
+frankenphp php-server [--domain <example.com>] [--root <path>] [--listen <addr>] [--worker /path/to/worker.php<,nb-workers>] [--watch <paths...>] [--access-log] [--debug] [--no-compress] [--mercure]
+```
+
+### Seçenekler
+
+- `--domain`, `-d`: Dosyaların sunulacağı alan adı. Belirtilirse, sunucu HTTPS kullanacak ve otomatik olarak bir Let's Encrypt sertifikası alacaktır.
+- `--root`, `-r`: Sitenin kök dizininin yolu. Belirtilmezse ve gömülü bir uygulama kullanılıyorsa, varsayılan olarak embedded_app/public dizinini kullanacaktır.
+- `--listen`, `-l`: Dinleyicinin bağlanacağı adres. Varsayılan olarak `:80` veya bir alan adı belirtilmişse `:443`'tür.
+- `--worker`, `-w`: Çalıştırılacak worker betiği. Birden fazla worker için birden çOK kez belirtilebilir.
+- `--watch`: Dosya değişikliklerini izlemek için dizin. Birden fazla dizin için birden çOK kez belirtilebilir.
+- `--access-log`, `-a`: Erişim günlüğünü etkinleştirin.
+- `--debug`, `-v`: Ayrıntılı hata ayıklama günlüklerini etkinleştirin.
+- `--mercure`, `-m`: Yerleşik Mercure.rocks hub'ını etkinleştirin.
+- `--no-compress`: Zstandard, Brotli ve Gzip sıkıştırmasını devre dışı bırakın.
+
+### Örnekler
+
+Geçerli dizini belge kökü olarak kullanarak bir sunucu başlatın:
+
+```console
+frankenphp php-server --root ./
+```
+
+HTTPS etkin bir sunucu başlatın:
+
+```console
+frankenphp php-server --domain example.com
+```
+
+Bir worker ile sunucu başlatın:
+
+```console
+frankenphp php-server --worker public/index.php
+```
 
 ## Hata Ayıklama Modunu Etkinleştirin
 

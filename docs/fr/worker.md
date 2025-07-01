@@ -3,6 +3,45 @@
 Démarrez votre application une fois et gardez-la en mémoire.
 FrankenPHP traitera les requêtes entrantes en quelques millisecondes.
 
+## Configuration du Caddyfile
+
+Les blocs worker peuvent être définis de deux manières :
+
+Dans le bloc global frankenphp, comme décrit dans la [documentation de configuration](config.md#configuration-du-caddyfile) :
+
+```caddyfile
+{
+	frankenphp {
+		worker {
+			file <chemin>
+			num <nombre>
+			env <clé> <valeur>
+			watch <chemin>
+			name <nom>
+		}
+	}
+}
+```
+
+À l'intérieur d'un bloc php ou php_server :
+
+```caddyfile
+example.com {
+	root /path/to/app
+	php_server {
+		worker {
+			file <chemin>
+			num <nombre>
+			env <clé> <valeur>
+			watch <chemin>
+			name <nom>
+		}
+	}
+}
+```
+
+Lorsqu'il est défini à l'intérieur d'un bloc php ou php_server, le worker hérite des variables d'environnement et du chemin racine de la directive parente et n'est accessible que par ce php ou php_server spécifique.
+
 ## Démarrage des scripts workers
 
 ### Docker
