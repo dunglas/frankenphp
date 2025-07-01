@@ -77,7 +77,7 @@ FrankenPHP 提供的 `builder` 镜像包含 libphp 的编译版本。
 > [!TIP]
 >
 > 如果你的系统基于 musl libc（Alpine Linux 上默认使用）并搭配 Symfony 使用，
-> 您可能需要 [增加默认堆栈大小](compile.md#使用-xcaddy)。
+> 你可能需要 [增加默认堆栈大小](compile.md#使用-xcaddy)。
 
 ## 默认启用 worker 模式
 

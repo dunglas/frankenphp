@@ -25,7 +25,7 @@
 如果确实想使用 `127.0.0.1` 作为主机，可以通过将服务器名称设置为 `127.0.0.1` 来配置它以为其生成证书。
 
 如果你使用 Docker，因为 [Docker 网络](https://docs.docker.com/network/) 问题，只做这些是不够的。
-您将收到类似于以下内容的 TLS 错误 `curl: (35) LibreSSL/3.3.6: error:1404B438:SSL routines:ST_CONNECT:tlsv1 alert internal error`。
+你将收到类似于以下内容的 TLS 错误 `curl: (35) LibreSSL/3.3.6: error:1404B438:SSL routines:ST_CONNECT:tlsv1 alert internal error`。
 
 如果你使用的是 Linux，解决方案是使用 [使用宿主机网络](https://docs.docker.com/network/network-tutorial-host/)：
 
@@ -37,7 +37,7 @@ docker run \
     dunglas/frankenphp
 ```
 
-Mac 和 Windows 不支持 Docker 使用宿主机网络。在这些平台上，您必须猜测容器的 IP 地址并将其包含在服务器名称中。
+Mac 和 Windows 不支持 Docker 使用宿主机网络。在这些平台上，你必须猜测容器的 IP 地址并将其包含在服务器名称中。
 
 运行 `docker network inspect bridge` 并查看 `Containers`，找到 `IPv4Address` 当前分配的最后一个 IP 地址，并增加 1。如果没有容器正在运行，则第一个分配的 IP 地址通常为 `172.17.0.2`。
 
@@ -55,7 +55,7 @@ docker run \
 >
 > 请务必将 `172.17.0.3` 替换为将分配给容器的 IP。
 
-您现在应该能够从主机访问 `https://127.0.0.1`。
+你现在应该能够从主机访问 `https://127.0.0.1`。
 
 如果不是这种情况，请在调试模式下启动 FrankenPHP 以尝试找出问题：
 

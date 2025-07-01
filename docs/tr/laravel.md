@@ -16,7 +16,7 @@ And tadını çıkarın!
 
 Alternatif olarak, Laravel projelerinizi FrankenPHP ile yerel makinenizden çalıştırabilirsiniz:
 
-1. [Sisteminize karşılık gelen binary dosyayı indirin](https://github.com/dunglas/frankenphp/releases)
+1. [Sisteminize karşılık gelen binary dosyayı indirin](https://github.com/php/frankenphp/releases)
 2. Aşağıdaki yapılandırmayı Laravel projenizin kök dizinindeki `Caddyfile` adlı bir dosyaya ekleyin:
 
    ```caddyfile

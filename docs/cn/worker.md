@@ -96,7 +96,7 @@ docker run \
 ```
 
 默认情况下，每个 CPU 启动一个 worker。
-您还可以配置要启动的 worker 数：
+你还可以配置要启动的 worker 数：
 
 ```console
 docker run \

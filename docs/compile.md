@@ -121,7 +121,7 @@ xcaddy build \
 Alternatively, it's possible to compile FrankenPHP without `xcaddy` by using the `go` command directly:
 
 ```console
-curl -L https://github.com/dunglas/frankenphp/archive/refs/heads/main.tar.gz | tar xz
+curl -L https://github.com/php/frankenphp/archive/refs/heads/main.tar.gz | tar xz
 cd frankenphp-main/caddy/frankenphp
 CGO_CFLAGS=$(php-config --includes) CGO_LDFLAGS="$(php-config --ldflags) $(php-config --libs)" go build -tags=nobadger,nomysql,nopgx
 ```

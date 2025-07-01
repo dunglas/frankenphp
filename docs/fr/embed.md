@@ -91,7 +91,7 @@ Le binaire généré sera nommé `my-app` dans le répertoire courant.
 Si vous ne souhaitez pas utiliser Docker, ou souhaitez construire un binaire macOS, utilisez le script shell que nous fournissons :
 
 ```console
-git clone https://github.com/dunglas/frankenphp
+git clone https://github.com/php/frankenphp
 cd frankenphp
 EMBED=/path/to/your/app ./build-static.sh
 ```

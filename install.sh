@@ -76,9 +76,9 @@ if [ $? -eq 1 ]; then
 fi
 
 if type "curl" >/dev/null 2>&1; then
-	curl -L --progress-bar "https://github.com/dunglas/frankenphp/releases/latest/download/${THE_ARCH_BIN}" -o "${DEST}"
+	curl -L --progress-bar "https://github.com/php/frankenphp/releases/latest/download/${THE_ARCH_BIN}" -o "${DEST}"
 elif type "wget" >/dev/null 2>&1; then
-	${SUDO} wget "https://github.com/dunglas/frankenphp/releases/latest/download/${THE_ARCH_BIN}" -O "${DEST}"
+	${SUDO} wget "https://github.com/php/frankenphp/releases/latest/download/${THE_ARCH_BIN}" -O "${DEST}"
 else
 	echo "❗ Please install ${italic}curl${normal} or ${italic}wget${normal} to download FrankenPHP"
 	exit 1
@@ -91,4 +91,4 @@ echo "🥳 FrankenPHP downloaded successfully to ${italic}${DEST}${normal}"
 echo "🔧 Move the binary to ${italic}/usr/local/bin/${normal} or another directory in your ${italic}PATH${normal} to use it globally:"
 echo "   ${bold}sudo mv ${DEST} /usr/local/bin/${normal}"
 echo
-echo "⭐ If you like FrankenPHP, please give it a star on GitHub: ${italic}https://github.com/dunglas/frankenphp${normal}"
+echo "⭐ If you like FrankenPHP, please give it a star on GitHub: ${italic}https://github.com/php/frankenphp${normal}"

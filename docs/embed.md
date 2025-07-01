@@ -89,7 +89,7 @@ The resulting binary is the file named `my-app` in the current directory.
 If you don't want to use Docker, or want to build a macOS binary, use the shell script we provide:
 
 ```console
-git clone https://github.com/dunglas/frankenphp
+git clone https://github.com/php/frankenphp
 cd frankenphp
 EMBED=/path/to/your/app ./build-static.sh
 ```

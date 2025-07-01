@@ -12,7 +12,7 @@ Docker:
 - php.ini: `/usr/local/etc/php/php.ini` 默认情况下不提供 php.ini。
 - 附加配置文件: `/usr/local/etc/php/conf.d/*.ini`
 - php 扩展: `/usr/local/lib/php/extensions/no-debug-zts-<YYYYMMDD>/`
-- 您应该复制 PHP 项目提供的官方模板：
+- 你应该复制 PHP 项目提供的官方模板：
 
 ```dockerfile
 FROM dunglas/frankenphp
@@ -39,7 +39,7 @@ FrankenPHP 安装 (.rpm 或 .deb):
 
 ## Caddyfile 配置
 
-可以在站点块中使用 `php_server` 或 `php` [HTTP 指令](https://caddyserver.com/docs/caddyfile/concepts#directives) 来为您的 PHP 应用程序提供服务。
+可以在站点块中使用 `php_server` 或 `php` [HTTP 指令](https://caddyserver.com/docs/caddyfile/concepts#directives) 来为你的 PHP 应用程序提供服务。
 
 最小示例：
 
@@ -52,7 +52,7 @@ localhost {
 }
 ```
 
-您也可以使用全局选项显式配置 FrankenPHP：
+你也可以使用全局选项显式配置 FrankenPHP：
 `frankenphp` [全局选项](https://caddyserver.com/docs/caddyfile/concepts#global-options) 可用于配置 FrankenPHP。
 
 ```caddyfile
@@ -70,7 +70,7 @@ localhost {
 # ...
 ```
 
-或者，您可以使用 `worker` 选项的一行缩写形式：
+或者，你可以使用 `worker` 选项的一行缩写形式：
 
 ```caddyfile
 {

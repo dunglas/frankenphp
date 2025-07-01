@@ -18,7 +18,7 @@ docker cp $(docker create --name static-builder-musl dunglas/frankenphp:static-b
 
 生成的静态二进制文件名为 `frankenphp`，可在当前目录中找到。
 
-如果您想在没有 Docker 的情况下构建静态二进制文件，请查看 macOS 说明，它也适用于 Linux。
+如果你想在没有 Docker 的情况下构建静态二进制文件，请查看 macOS 说明，它也适用于 Linux。
 
 ### 自定义扩展
 
@@ -77,7 +77,7 @@ GITHUB_TOKEN="xxx" docker --load buildx bake static-builder
 运行以下脚本以创建适用于 macOS 的静态二进制文件（需要先安装 [Homebrew](https://brew.sh/)）：
 
 ```console
-git clone https://github.com/dunglas/frankenphp
+git clone https://github.com/php/frankenphp
 cd frankenphp
 ./build-static.sh
 ```

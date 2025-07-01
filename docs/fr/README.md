@@ -23,7 +23,7 @@ contenant [PHP 8.4](https://www.php.net/releases/8.4/fr.php) et la plupart des e
 
 Sous Windows, utilisez [WSL](https://learn.microsoft.com/windows/wsl/) pour exécuter FrankenPHP.
 
-[Téléchargez FrankenPHP](https://github.com/dunglas/frankenphp/releases) ou copiez cette ligne dans votre terminal pour installer automatiquement la version appropriée à votre plateforme :
+[Téléchargez FrankenPHP](https://github.com/php/frankenphp/releases) ou copiez cette ligne dans votre terminal pour installer automatiquement la version appropriée à votre plateforme :
 
 ```console
 curl https://frankenphp.dev/install.sh | sh
