@@ -157,8 +157,6 @@ frankenphp {
 }
 ```
 
-```caddyfile
-
 ## Superglobals Behavior
 
 [PHP superglobals](https://www.php.net/manual/en/language.variables.superglobals.php) (`$_SERVER`, `$_ENV`, `$_GET`...)
