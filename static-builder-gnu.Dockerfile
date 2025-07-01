@@ -27,6 +27,8 @@ ARG NO_COMPRESS=''
 ARG GO_VERSION
 ENV GOTOOLCHAIN=local
 
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+
 # labels, same as static-builder.Dockerfile
 LABEL org.opencontainers.image.title=FrankenPHP
 LABEL org.opencontainers.image.description="The modern PHP app server"
