@@ -62,7 +62,6 @@ Exemplo mínimo:
 localhost {
     # Habilita compressão (opcional)
     encode zstd br gzip
-
     # Executa arquivos PHP no diretório atual e serve assets
     php_server
 }
@@ -75,43 +74,16 @@ A [opção global](https://caddyserver.com/docs/caddyfile/concepts#global-option
 ```caddyfile
 {
     frankenphp {
-        num_threads <num_threads> # Define o número de threads PHP a serem
-                                  # iniciadas.
-                                  # Padrão: 2x o número de CPUs disponíveis.
-
-        max_threads <num_threads> # Limita o número de threads PHP adicionais
-                                  # que podem ser iniciadas em tempo de
-                                  # execução.
-                                  # Padrão: num_threads.
-                                  # Pode ser definido como 'auto'.
-
-        max_wait_time <duracao> # Define o tempo máximo que uma requisição pode
-                                # esperar por uma thread PHP livre antes de
-                                # atingir o tempo limite.
-                                # Padrão: disabled.
-
-        php_ini <chave> <valor> # Define uma diretiva php.ini.
-                                # Pode ser usada várias vezes para definir
-                                # múltiplas diretivas.
-
+        num_threads <num_threads> # Define o número de threads PHP a serem iniciadas. Padrão: 2x o número de CPUs disponíveis.
+        max_threads <num_threads> # Limita o número de threads PHP adicionais que podem ser iniciadas em tempo de execução. Padrão: num_threads. Pode ser definido como 'auto'.
+        max_wait_time <duracao> # Define o tempo máximo que uma requisição pode esperar por uma thread PHP livre antes de atingir o tempo limite. Padrão: disabled.
+        php_ini <chave> <valor> # Define uma diretiva php.ini. Pode ser usada várias vezes para definir múltiplas diretivas.
         worker {
             file <caminho> # Define o caminho para o script do worker.
-
-            num <num> # Define o número de threads PHP a serem iniciadas, o
-                      # padrão é 2x o número de CPUs disponíveis.
-
-            env <chave> <valor> # Define uma variável de ambiente extra para o
-                                # valor fornecido.
-                                # Pode ser especificado mais de uma vez para
-                                # múltiplas variáveis de ambiente.
-
-            watch <caminho> # Define o caminho para monitorar alterações no
-                            # arquivo.
-                            # Pode ser especificado mais de uma vez para
-                            # múltiplos caminhos.
-
-            name <nome> # Define o nome do worker, usado em logs e métricas.
-                        # Padrão: caminho absoluto do arquivo do worker.
+            num <num> # Define o número de threads PHP a serem iniciadas, o padrão é 2x o número de CPUs disponíveis.
+            env <chave> <valor> # Define uma variável de ambiente extra para o valor fornecido. Pode ser especificado mais de uma vez para múltiplas variáveis de ambiente.
+            watch <caminho> # Define o caminho para monitorar alterações no arquivo. Pode ser especificado mais de uma vez para múltiplos caminhos.
+            name <nome> # Define o nome do worker, usado em logs e métricas. Padrão: caminho absoluto do arquivo do worker.
         }
     }
 }
@@ -169,7 +141,6 @@ route {
         not path */
     }
     redir @canonicalPath {path}/ 308
-
     # Se o arquivo requisitado não existir, tenta os arquivos index
     @indexFiles file {
         try_files {path} {path}/index.php index.php
@@ -188,60 +159,19 @@ As diretivas `php_server` e `php` têm as seguintes opções:
 
 ```caddyfile
 php_server [<matcher>] {
-    root <directory> # Define a pasta raiz para o site.
-                     # Padrão: diretiva `root`.
-
-    split_path <delim...> # Define as substrings para dividir o URI em duas
-                          # partes.
-                          # A primeira substring correspondente será usada para
-                          # separar as "informações de caminho" do caminho.
-                          # A primeira parte é sufixada com a substring
-                          # correspondente e será assumida como o nome real do
-                          # recurso (script CGI).
-                          # A segunda parte será definida como PATH_INFO para o
-                          # script usar.
-                          # Padrão: `.php`
-
-    resolve_root_symlink false # Desabilita a resolução do diretório `root` para
-                               # seu valor real avaliando um link simbólico, se
-                               # houver (habilitado por padrão).
-
-    env <chave> <valor> # Define uma variável de ambiente extra para o valor
-                        # fornecido.
-                        # Pode ser especificado mais de uma vez para múltiplas
-                        # variáveis de ambiente.
-
+    root <directory> # Define a pasta raiz para o site. Padrão: diretiva `root`.
+    split_path <delim...> # Define as substrings para dividir o URI em duas partes. A primeira substring correspondente será usada para separar as "informações de caminho" do caminho. A primeira parte é sufixada com a substring correspondente e será assumida como o nome real do recurso (script CGI). A segunda parte será definida como PATH_INFO para o script usar. Padrão: `.php`
+    resolve_root_symlink false # Desabilita a resolução do diretório `root` para seu valor real avaliando um link simbólico, se houver (habilitado por padrão).
+    env <chave> <valor> # Define uma variável de ambiente extra para o valor fornecido. Pode ser especificado mais de uma vez para múltiplas variáveis de ambiente.
     file_server off # Desabilita a diretiva interna file_server.
-
-    worker { # Cria um worker específico para este servidor.
-             # Pode ser especificado mais de uma vez para múltiplos workers.
-
-        file <caminho> # Define o caminho para o script do worker, pode ser
-                       # relativo à raiz do php_server
-
-        num <num> # Define o número de threads PHP a serem iniciadas, o padrão é
-                  # 2x o número de threads disponíveis
-
-        name <nome> # Define o nome do worker, usado em logs e métricas.
-                    # Padrão: caminho absoluto do arquivo do worker.
-                    # Sempre começa com m# quando definido em um bloco
-                    # php_server.
-
-        watch <caminho> # Define o caminho para monitorar alterações no arquivo.
-                        # Pode ser especificado mais de uma vez para múltiplos
-                        # caminhos.
-
-        env <chave> <valor> # Define uma variável de ambiente extra para o valor
-                            # fornecido.
-                            # Pode ser especificado mais de uma vez para
-                            # múltiplas variáveis de ambiente.
-                            # As variáveis de ambiente para este worker também
-                            # são herdadas do php_server pai, mas podem ser
-                            # sobrescritas aqui.
+    worker { # Cria um worker específico para este servidor. Pode ser especificado mais de uma vez para múltiplos workers.
+        file <caminho> # Define o caminho para o script do worker, pode ser relativo à raiz do php_server
+        num <num> # Define o número de threads PHP a serem iniciadas, o padrão é 2x o número de threads disponíveis
+        name <nome> # Define o nome do worker, usado em logs e métricas. Padrão: caminho absoluto do arquivo do worker. Sempre começa com m# quando definido em um bloco php_server.
+        watch <caminho> # Define o caminho para monitorar alterações no arquivo. Pode ser especificado mais de uma vez para múltiplos caminhos.
+        env <chave> <valor> # Define uma variável de ambiente extra para o valor fornecido. Pode ser especificado mais de uma vez para múltiplas variáveis de ambiente. As variáveis de ambiente para este worker também são herdadas do php_server pai, mas podem ser sobrescritas aqui.
     }
-
-    worker <outro_arquivo> <num> # Também pode usar a forma abreviada, como no
-                                 # bloco global frankenphp.
+    worker <outro_arquivo> <num> # Também pode usar a forma abreviada, como no bloco global frankenphp.
 }
 ```
 
@@ -277,23 +207,10 @@ Você também pode especificar um ou mais diretórios por meio de um
     frankenphp {
         worker {
             file  /caminho/para/aplicacao/public/worker.php
-
-            watch /caminho/para/aplicacao # monitora todos os arquivos em todos
-                                          # os subdiretórios de
-                                          # /caminho/para/aplicacao
-
-            watch /caminho/para/aplicacao/*.php # monitora arquivos terminados
-                                                # em .php em
-                                                # /caminho/para/aplicacao
-
-            watch /caminho/para/aplicacao/**/*.php # monitora arquivos PHP em
-                                                   # /caminho/para/aplicacao
-                                                   # e subdiretórios
-
-            watch /caminho/para/aplicacao/**/*.{php,twig} # monitora arquivos
-                                                          # PHP e Twig em
-                                                          # /caminho/para/aplicacao
-                                                          # e subdiretórios
+            watch /caminho/para/aplicacao # monitora todos os arquivos em todos os subdiretórios de /caminho/para/aplicacao
+            watch /caminho/para/aplicacao/*.php # monitora arquivos terminados em .php em /caminho/para/aplicacao
+            watch /caminho/para/aplicacao/**/*.php # monitora arquivos PHP em /caminho/para/aplicacao e subdiretórios
+            watch /caminho/para/aplicacao/**/*.{php,twig} # monitora arquivos PHP e Twig em /caminho/para/aplicacao e subdiretórios
         }
     }
 }

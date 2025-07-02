@@ -124,8 +124,7 @@ explicitamente `try_files` assim:
 ```caddyfile
 php_server {
     try_files {path} index.php
-    root /raiz/da/sua/aplicacao # adicionar explicitamente a raiz aqui permite um
-                                # melhor armazenamento em cache
+    root /raiz/da/sua/aplicacao # adicionar explicitamente a raiz aqui permite um melhor armazenamento em cache
 }
 ```
 
@@ -150,12 +149,10 @@ route {
         root /raiz/da/sua/aplicacao
     }
 
-    # tudo o que não está em /assets é gerenciado pelo seu arquivo index ou
-    # worker PHP
+    # tudo o que não está em /assets é gerenciado pelo seu arquivo index ou worker PHP
     rewrite index.php
     php {
-        root /raiz/da/sua/aplicacao # adicionar explicitamente a raiz aqui
-                                    # permite um melhor armazenamento em cache
+        root /raiz/da/sua/aplicacao # adicionar explicitamente a raiz aqui permite um melhor armazenamento em cache
     }
 }
 ```
