@@ -51,24 +51,24 @@ func TestWriteFile(t *testing.T) {
 				filename = tt.filename
 			}
 
-			err := WriteFile(filename, tt.content)
+			err := writeFile(filename, tt.content)
 
 			if tt.expectError {
-				assert.Error(t, err, "WriteFile() should return an error")
+				assert.Error(t, err, "writeFile() should return an error")
 				return
 			}
 
-			assert.NoError(t, err, "WriteFile() should not return an error")
+			assert.NoError(t, err, "writeFile() should not return an error")
 
 			content, err := os.ReadFile(filename)
 			assert.NoError(t, err, "Failed to read written file")
-			assert.Equal(t, tt.content, string(content), "WriteFile() content mismatch")
+			assert.Equal(t, tt.content, string(content), "writeFile() content mismatch")
 
 			info, err := os.Stat(filename)
 			assert.NoError(t, err, "Failed to stat file")
 
 			expectedMode := os.FileMode(0644)
-			assert.Equal(t, expectedMode, info.Mode().Perm(), "WriteFile() wrong permissions")
+			assert.Equal(t, expectedMode, info.Mode().Perm(), "writeFile() wrong permissions")
 		})
 	}
 }
@@ -104,21 +104,21 @@ func TestReadFile(t *testing.T) {
 			err := os.WriteFile(filename, []byte(tt.content), 0644)
 			assert.NoError(t, err, "Failed to create test file")
 
-			content, err := ReadFile(filename)
+			content, err := readFile(filename)
 
 			if tt.expectError {
-				assert.Error(t, err, "ReadFile() should return an error")
+				assert.Error(t, err, "readFile() should return an error")
 				return
 			}
 
-			assert.NoError(t, err, "ReadFile() should not return an error")
-			assert.Equal(t, tt.content, content, "ReadFile() content mismatch")
+			assert.NoError(t, err, "readFile() should not return an error")
+			assert.Equal(t, tt.content, content, "readFile() content mismatch")
 		})
 	}
 
 	t.Run("read nonexistent file", func(t *testing.T) {
-		_, err := ReadFile("/nonexistent/file.txt")
-		assert.Error(t, err, "ReadFile() should return an error for nonexistent file")
+		_, err := readFile("/nonexistent/file.txt")
+		assert.Error(t, err, "readFile() should return an error for nonexistent file")
 	})
 }
 

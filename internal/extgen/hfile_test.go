@@ -23,7 +23,7 @@ func TestHeaderGenerator_Generate(t *testing.T) {
 	expectedFile := filepath.Join(tmpDir, "test_extension.h")
 	require.FileExists(t, expectedFile)
 
-	content, err := ReadFile(expectedFile)
+	content, err := readFile(expectedFile)
 	require.NoError(t, err)
 
 	testHeaderBasicStructure(t, content, "test_extension")

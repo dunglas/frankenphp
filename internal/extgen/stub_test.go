@@ -60,7 +60,7 @@ func TestStubGenerator_Generate(t *testing.T) {
 	expectedFile := filepath.Join(tmpDir, "test_extension.stub.php")
 	assert.FileExists(t, expectedFile, "Expected stub file was not created: %s", expectedFile)
 
-	content, err := ReadFile(expectedFile)
+	content, err := readFile(expectedFile)
 	assert.NoError(t, err, "Failed to read generated stub file")
 
 	testStubBasicStructure(t, content)

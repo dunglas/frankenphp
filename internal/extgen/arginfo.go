@@ -36,7 +36,7 @@ func (ag *arginfoGenerator) fixArginfoFile(stubFile string) error {
 	arginfoFile := strings.TrimSuffix(stubFile, ".stub.php") + "_arginfo.h"
 	arginfoPath := filepath.Join(ag.generator.BuildDir, arginfoFile)
 
-	content, err := ReadFile(arginfoPath)
+	content, err := readFile(arginfoPath)
 	if err != nil {
 		return fmt.Errorf("reading arginfo file: %w", err)
 	}
@@ -46,5 +46,5 @@ func (ag *arginfoGenerator) fixArginfoFile(stubFile string) error {
 		"zend_register_internal_class_with_flags(&ce, NULL, 0)",
 		"zend_register_internal_class(&ce)")
 
-	return WriteFile(arginfoPath, fixedContent)
+	return writeFile(arginfoPath, fixedContent)
 }

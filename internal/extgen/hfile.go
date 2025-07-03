@@ -29,7 +29,7 @@ func (hg *HeaderGenerator) generate() error {
 		return err
 	}
 
-	return WriteFile(filename, content)
+	return writeFile(filename, content)
 }
 
 func (hg *HeaderGenerator) buildContent() (string, error) {

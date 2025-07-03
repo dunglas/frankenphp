@@ -35,7 +35,7 @@ func (gg *GoFileGenerator) generate() error {
 		return fmt.Errorf("building Go file content: %w", err)
 	}
 
-	return WriteFile(filename, content)
+	return writeFile(filename, content)
 }
 
 func (gg *GoFileGenerator) buildContent() (string, error) {
