@@ -27,7 +27,7 @@ func (dg *DocumentationGenerator) generate() error {
 		return err
 	}
 
-	return WriteFile(filename, content)
+	return writeFile(filename, content)
 }
 
 func (dg *DocumentationGenerator) generateMarkdown() (string, error) {

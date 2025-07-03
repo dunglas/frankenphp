@@ -31,7 +31,7 @@ func (cg *cFileGenerator) generate() error {
 		return err
 	}
 
-	return WriteFile(filename, content)
+	return writeFile(filename, content)
 }
 
 func (cg *cFileGenerator) buildContent() (string, error) {

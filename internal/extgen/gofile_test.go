@@ -72,7 +72,7 @@ func anotherHelper() {
 	expectedFile := filepath.Join(tmpDir, "test.go")
 	require.FileExists(t, expectedFile)
 
-	content, err := ReadFile(expectedFile)
+	content, err := readFile(expectedFile)
 	require.NoError(t, err)
 
 	testGoFileBasicStructure(t, content, "test")

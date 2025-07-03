@@ -6,11 +6,11 @@ import (
 	"unicode"
 )
 
-func WriteFile(filename, content string) error {
+func writeFile(filename, content string) error {
 	return os.WriteFile(filename, []byte(content), 0644)
 }
 
-func ReadFile(filename string) (string, error) {
+func readFile(filename string) (string, error) {
 	content, err := os.ReadFile(filename)
 	if err != nil {
 		return "", err
