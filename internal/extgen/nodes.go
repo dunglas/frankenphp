@@ -5,19 +5,36 @@ import (
 	"strings"
 )
 
+// phpType represents a PHP type
+type phpType string
+
+const (
+	phpString phpType = "string"
+	phpInt    phpType = "int"
+	phpFloat  phpType = "float"
+	phpBool   phpType = "bool"
+	phpArray  phpType = "array"
+	phpObject phpType = "object"
+	phpMixed  phpType = "mixed"
+	phpVoid   phpType = "void"
+	phpNull   phpType = "null"
+	phpTrue   phpType = "true"
+	phpFalse  phpType = "false"
+)
+
 type phpFunction struct {
 	Name             string
 	Signature        string
 	GoFunction       string
 	Params           []phpParameter
-	ReturnType       string
+	ReturnType       phpType
 	IsReturnNullable bool
 	lineNumber       int
 }
 
 type phpParameter struct {
 	Name         string
-	PhpType      string
+	PhpType      phpType
 	IsNullable   bool
 	DefaultValue string
 	HasDefault   bool
@@ -37,7 +54,7 @@ type phpClassMethod struct {
 	GoFunction       string
 	Wrapper          string
 	Params           []phpParameter
-	ReturnType       string
+	ReturnType       phpType
 	isReturnNullable bool
 	lineNumber       int
 	ClassName        string // used by the "//export_php:method" directive
@@ -45,7 +62,7 @@ type phpClassMethod struct {
 
 type phpClassProperty struct {
 	Name       string
-	PhpType    string
+	PhpType    phpType
 	GoType     string
 	IsNullable bool
 }
@@ -53,7 +70,7 @@ type phpClassProperty struct {
 type phpConstant struct {
 	Name       string
 	Value      string
-	PhpType    string // "int", "string", "bool", "float"
+	PhpType    phpType
 	IsIota     bool
 	lineNumber int
 	ClassName  string // empty for global constants, set for class constants
@@ -61,7 +78,7 @@ type phpConstant struct {
 
 // CValue returns the constant value in C-compatible format
 func (c phpConstant) CValue() string {
-	if c.PhpType != "int" {
+	if c.PhpType != phpInt {
 		return c.Value
 	}
 

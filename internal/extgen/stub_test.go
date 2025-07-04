@@ -19,18 +19,18 @@ func TestStubGenerator_Generate(t *testing.T) {
 				Name:      "greet",
 				Signature: "greet(string $name): string",
 				Params: []phpParameter{
-					{Name: "name", PhpType: "string"},
+					{Name: "name", PhpType: phpString},
 				},
-				ReturnType: "string",
+				ReturnType: phpString,
 			},
 			{
 				Name:      "calculate",
 				Signature: "calculate(int $a, int $b): int",
 				Params: []phpParameter{
-					{Name: "a", PhpType: "int"},
-					{Name: "b", PhpType: "int"},
+					{Name: "a", PhpType: phpInt},
+					{Name: "b", PhpType: phpInt},
 				},
-				ReturnType: "int",
+				ReturnType: phpInt,
 			},
 		},
 		Classes: []phpClass{
@@ -43,12 +43,12 @@ func TestStubGenerator_Generate(t *testing.T) {
 			{
 				Name:    "GLOBAL_CONST",
 				Value:   "42",
-				PhpType: "int",
+				PhpType: phpInt,
 			},
 			{
 				Name:      "USER_STATUS_ACTIVE",
 				Value:     "1",
-				PhpType:   "int",
+				PhpType:   phpInt,
 				ClassName: "User",
 			},
 		},
@@ -128,7 +128,7 @@ func TestStubGenerator_BuildContent(t *testing.T) {
 				{
 					Name:    "GLOBAL_CONST",
 					Value:   `"test"`,
-					PhpType: "string",
+					PhpType: phpString,
 				},
 			},
 			contains: []string{
@@ -430,13 +430,13 @@ func TestStubGenerator_ClassConstants(t *testing.T) {
 				{
 					Name:      "STATUS_ACTIVE",
 					Value:     "1",
-					PhpType:   "int",
+					PhpType:   phpInt,
 					ClassName: "MyClass",
 				},
 				{
 					Name:      "STATUS_INACTIVE",
 					Value:     "0",
-					PhpType:   "int",
+					PhpType:   phpInt,
 					ClassName: "MyClass",
 				},
 			},
@@ -456,14 +456,14 @@ func TestStubGenerator_ClassConstants(t *testing.T) {
 				{
 					Name:      "FIRST",
 					Value:     "0",
-					PhpType:   "int",
+					PhpType:   phpInt,
 					IsIota:    true,
 					ClassName: "StatusClass",
 				},
 				{
 					Name:      "SECOND",
 					Value:     "1",
-					PhpType:   "int",
+					PhpType:   phpInt,
 					IsIota:    true,
 					ClassName: "StatusClass",
 				},
@@ -485,12 +485,12 @@ func TestStubGenerator_ClassConstants(t *testing.T) {
 				{
 					Name:    "GLOBAL_CONST",
 					Value:   `"global"`,
-					PhpType: "string",
+					PhpType: phpString,
 				},
 				{
 					Name:      "CLASS_CONST",
 					Value:     "42",
-					PhpType:   "int",
+					PhpType:   phpInt,
 					ClassName: "TestClass",
 				},
 			},

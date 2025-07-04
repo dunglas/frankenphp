@@ -18,18 +18,18 @@ func TestCFileGenerator_Generate(t *testing.T) {
 		Functions: []phpFunction{
 			{
 				Name:       "simpleFunction",
-				ReturnType: "string",
+				ReturnType: phpString,
 				Params: []phpParameter{
-					{Name: "input", PhpType: "string"},
+					{Name: "input", PhpType: phpString},
 				},
 			},
 			{
 				Name:       "complexFunction",
-				ReturnType: "array",
+				ReturnType: phpArray,
 				Params: []phpParameter{
-					{Name: "data", PhpType: "string"},
-					{Name: "count", PhpType: "int", IsNullable: true},
-					{Name: "options", PhpType: "array", HasDefault: true, DefaultValue: "[]"},
+					{Name: "data", PhpType: phpString},
+					{Name: "count", PhpType: phpInt, IsNullable: true},
+					{Name: "options", PhpType: phpArray, HasDefault: true, DefaultValue: "[]"},
 				},
 			},
 		},
@@ -38,8 +38,8 @@ func TestCFileGenerator_Generate(t *testing.T) {
 				Name:     "TestClass",
 				GoStruct: "TestStruct",
 				Properties: []phpClassProperty{
-					{Name: "id", PhpType: "int"},
-					{Name: "name", PhpType: "string"},
+					{Name: "id", PhpType: phpInt},
+					{Name: "name", PhpType: phpString},
 				},
 			},
 		},
@@ -84,7 +84,7 @@ func TestCFileGenerator_BuildContent(t *testing.T) {
 			name:     "extension with functions only",
 			baseName: "func_only",
 			functions: []phpFunction{
-				{Name: "testFunc", ReturnType: "string"},
+				{Name: "testFunc", ReturnType: phpString},
 			},
 			contains: []string{
 				"PHP_FUNCTION(testFunc)",
@@ -110,7 +110,7 @@ func TestCFileGenerator_BuildContent(t *testing.T) {
 			name:     "extension with functions and classes",
 			baseName: "full",
 			functions: []phpFunction{
-				{Name: "doSomething", ReturnType: "void"},
+				{Name: "doSomething", ReturnType: phpVoid},
 			},
 			classes: []phpClass{
 				{Name: "FullClass", GoStruct: "FullStruct"},
@@ -209,20 +209,20 @@ func TestCFileIntegrationWithGenerators(t *testing.T) {
 	functions := []phpFunction{
 		{
 			Name:             "processData",
-			ReturnType:       "array",
+			ReturnType:       phpArray,
 			IsReturnNullable: true,
 			Params: []phpParameter{
-				{Name: "input", PhpType: "string"},
-				{Name: "options", PhpType: "array", HasDefault: true, DefaultValue: "[]"},
-				{Name: "callback", PhpType: "object", IsNullable: true},
+				{Name: "input", PhpType: phpString},
+				{Name: "options", PhpType: phpArray, HasDefault: true, DefaultValue: "[]"},
+				{Name: "callback", PhpType: phpObject, IsNullable: true},
 			},
 		},
 		{
 			Name:       "validateInput",
-			ReturnType: "bool",
+			ReturnType: phpBool,
 			Params: []phpParameter{
-				{Name: "data", PhpType: "string", IsNullable: true},
-				{Name: "strict", PhpType: "bool", HasDefault: true, DefaultValue: "false"},
+				{Name: "data", PhpType: phpString, IsNullable: true},
+				{Name: "strict", PhpType: phpBool, HasDefault: true, DefaultValue: "false"},
 			},
 		},
 	}
@@ -232,18 +232,18 @@ func TestCFileIntegrationWithGenerators(t *testing.T) {
 			Name:     "DataProcessor",
 			GoStruct: "DataProcessorStruct",
 			Properties: []phpClassProperty{
-				{Name: "mode", PhpType: "string"},
-				{Name: "timeout", PhpType: "int", IsNullable: true},
-				{Name: "options", PhpType: "array"},
+				{Name: "mode", PhpType: phpString},
+				{Name: "timeout", PhpType: phpInt, IsNullable: true},
+				{Name: "options", PhpType: phpArray},
 			},
 		},
 		{
 			Name:     "Result",
 			GoStruct: "ResultStruct",
 			Properties: []phpClassProperty{
-				{Name: "success", PhpType: "bool"},
-				{Name: "data", PhpType: "mixed", IsNullable: true},
-				{Name: "errors", PhpType: "array"},
+				{Name: "success", PhpType: phpBool},
+				{Name: "data", PhpType: phpMixed, IsNullable: true},
+				{Name: "errors", PhpType: phpArray},
 			},
 		},
 	}
@@ -281,7 +281,7 @@ func TestCFileErrorHandling(t *testing.T) {
 		BaseName: "test",
 		BuildDir: "/invalid/readonly/path",
 		Functions: []phpFunction{
-			{Name: "test", ReturnType: "void"},
+			{Name: "test", ReturnType: phpVoid},
 		},
 	}
 
@@ -305,7 +305,7 @@ func TestCFileSpecialCharacters(t *testing.T) {
 			generator := &Generator{
 				BaseName: tt.baseName,
 				Functions: []phpFunction{
-					{Name: "test", ReturnType: "void"},
+					{Name: "test", ReturnType: phpVoid},
 				},
 			}
 
@@ -367,9 +367,9 @@ func TestCFileContentValidation(t *testing.T) {
 		Functions: []phpFunction{
 			{
 				Name:       "testFunction",
-				ReturnType: "string",
+				ReturnType: phpString,
 				Params: []phpParameter{
-					{Name: "param", PhpType: "string"},
+					{Name: "param", PhpType: phpString},
 				},
 			},
 		},
@@ -415,12 +415,12 @@ func TestCFileConstants(t *testing.T) {
 				{
 					Name:    "GLOBAL_INT",
 					Value:   "42",
-					PhpType: "int",
+					PhpType: phpInt,
 				},
 				{
 					Name:    "GLOBAL_STRING",
 					Value:   `"test"`,
-					PhpType: "string",
+					PhpType: phpString,
 				},
 			},
 			contains: []string{

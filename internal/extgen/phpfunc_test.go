@@ -17,9 +17,9 @@ func TestPHPFunctionGenerator_Generate(t *testing.T) {
 			name: "simple string function",
 			function: phpFunction{
 				Name:       "greet",
-				ReturnType: "string",
+				ReturnType: phpString,
 				Params: []phpParameter{
-					{Name: "name", PhpType: "string"},
+					{Name: "name", PhpType: phpString},
 				},
 			},
 			contains: []string{
@@ -34,10 +34,10 @@ func TestPHPFunctionGenerator_Generate(t *testing.T) {
 			name: "function with default parameter",
 			function: phpFunction{
 				Name:       "calculate",
-				ReturnType: "int",
+				ReturnType: phpInt,
 				Params: []phpParameter{
-					{Name: "base", PhpType: "int"},
-					{Name: "multiplier", PhpType: "int", HasDefault: true, DefaultValue: "2"},
+					{Name: "base", PhpType: phpInt},
+					{Name: "multiplier", PhpType: phpInt, HasDefault: true, DefaultValue: "2"},
 				},
 			},
 			contains: []string{
@@ -54,9 +54,9 @@ func TestPHPFunctionGenerator_Generate(t *testing.T) {
 			name: "void function",
 			function: phpFunction{
 				Name:       "doSomething",
-				ReturnType: "void",
+				ReturnType: phpVoid,
 				Params: []phpParameter{
-					{Name: "action", PhpType: "string"},
+					{Name: "action", PhpType: phpString},
 				},
 			},
 			contains: []string{
@@ -68,9 +68,9 @@ func TestPHPFunctionGenerator_Generate(t *testing.T) {
 			name: "bool function with default",
 			function: phpFunction{
 				Name:       "isEnabled",
-				ReturnType: "bool",
+				ReturnType: phpBool,
 				Params: []phpParameter{
-					{Name: "flag", PhpType: "bool", HasDefault: true, DefaultValue: "true"},
+					{Name: "flag", PhpType: phpBool, HasDefault: true, DefaultValue: "true"},
 				},
 			},
 			contains: []string{
@@ -84,9 +84,9 @@ func TestPHPFunctionGenerator_Generate(t *testing.T) {
 			name: "float function",
 			function: phpFunction{
 				Name:       "calculate",
-				ReturnType: "float",
+				ReturnType: phpFloat,
 				Params: []phpParameter{
-					{Name: "value", PhpType: "float"},
+					{Name: "value", PhpType: phpFloat},
 				},
 			},
 			contains: []string{
@@ -94,6 +94,46 @@ func TestPHPFunctionGenerator_Generate(t *testing.T) {
 				"double value = 0.0;",
 				"Z_PARAM_DOUBLE(value)",
 				"RETURN_DOUBLE(result)",
+			},
+		},
+		{
+			name: "array function with array parameter",
+			function: phpFunction{
+				Name:       "process_array",
+				ReturnType: phpArray,
+				Params: []phpParameter{
+					{Name: "input", PhpType: phpArray},
+				},
+			},
+			contains: []string{
+				"PHP_FUNCTION(process_array)",
+				"zval *input = NULL;",
+				"Z_PARAM_ARRAY(input)",
+				"zend_array *result = process_array(input);",
+				"RETURN_ARR(result)",
+			},
+		},
+		{
+			name: "array function with mixed parameters",
+			function: phpFunction{
+				Name:       "filter_array",
+				ReturnType: phpArray,
+				Params: []phpParameter{
+					{Name: "data", PhpType: phpArray},
+					{Name: "key", PhpType: phpString},
+					{Name: "limit", PhpType: phpInt, HasDefault: true, DefaultValue: "10"},
+				},
+			},
+			contains: []string{
+				"PHP_FUNCTION(filter_array)",
+				"zval *data = NULL;",
+				"zend_string *key = NULL;",
+				"zend_long limit = 10;",
+				"Z_PARAM_ARRAY(data)",
+				"Z_PARAM_STR(key)",
+				"Z_PARAM_LONG(limit)",
+				"ZEND_PARSE_PARAMETERS_START(2, 3)",
+				"Z_PARAM_OPTIONAL",
 			},
 		},
 	}
@@ -122,7 +162,7 @@ func TestPHPFunctionGenerator_GenerateParamDeclarations(t *testing.T) {
 		{
 			name: "string parameter",
 			params: []phpParameter{
-				{Name: "message", PhpType: "string"},
+				{Name: "message", PhpType: phpString},
 			},
 			contains: []string{
 				"zend_string *message = NULL;",
@@ -131,7 +171,7 @@ func TestPHPFunctionGenerator_GenerateParamDeclarations(t *testing.T) {
 		{
 			name: "int parameter",
 			params: []phpParameter{
-				{Name: "count", PhpType: "int"},
+				{Name: "count", PhpType: phpInt},
 			},
 			contains: []string{
 				"zend_long count = 0;",
@@ -140,7 +180,7 @@ func TestPHPFunctionGenerator_GenerateParamDeclarations(t *testing.T) {
 		{
 			name: "bool with default",
 			params: []phpParameter{
-				{Name: "enabled", PhpType: "bool", HasDefault: true, DefaultValue: "true"},
+				{Name: "enabled", PhpType: phpBool, HasDefault: true, DefaultValue: "true"},
 			},
 			contains: []string{
 				"zend_bool enabled = 1;",
@@ -149,10 +189,32 @@ func TestPHPFunctionGenerator_GenerateParamDeclarations(t *testing.T) {
 		{
 			name: "float parameter with default",
 			params: []phpParameter{
-				{Name: "rate", PhpType: "float", HasDefault: true, DefaultValue: "1.5"},
+				{Name: "rate", PhpType: phpFloat, HasDefault: true, DefaultValue: "1.5"},
 			},
 			contains: []string{
 				"double rate = 1.5;",
+			},
+		},
+		{
+			name: "array parameter",
+			params: []phpParameter{
+				{Name: "items", PhpType: phpArray},
+			},
+			contains: []string{
+				"zval *items = NULL;",
+			},
+		},
+		{
+			name: "mixed types with array",
+			params: []phpParameter{
+				{Name: "name", PhpType: phpString},
+				{Name: "data", PhpType: phpArray},
+				{Name: "count", PhpType: phpInt},
+			},
+			contains: []string{
+				"zend_string *name = NULL;",
+				"zval *data = NULL;",
+				"zend_long count = 0;",
 			},
 		},
 	}
@@ -172,12 +234,12 @@ func TestPHPFunctionGenerator_GenerateParamDeclarations(t *testing.T) {
 func TestPHPFunctionGenerator_GenerateReturnCode(t *testing.T) {
 	tests := []struct {
 		name       string
-		returnType string
+		returnType phpType
 		contains   []string
 	}{
 		{
 			name:       "string return",
-			returnType: "string",
+			returnType: phpString,
 			contains: []string{
 				"RETURN_STR(result)",
 				"RETURN_EMPTY_STRING()",
@@ -185,28 +247,36 @@ func TestPHPFunctionGenerator_GenerateReturnCode(t *testing.T) {
 		},
 		{
 			name:       "int return",
-			returnType: "int",
+			returnType: phpInt,
 			contains: []string{
 				"RETURN_LONG(result)",
 			},
 		},
 		{
 			name:       "bool return",
-			returnType: "bool",
+			returnType: phpBool,
 			contains: []string{
 				"RETURN_BOOL(result)",
 			},
 		},
 		{
 			name:       "float return",
-			returnType: "float",
+			returnType: phpFloat,
 			contains: []string{
 				"RETURN_DOUBLE(result)",
 			},
 		},
 		{
+			name:       "array return",
+			returnType: phpArray,
+			contains: []string{
+				"RETURN_ARR(result)",
+				"RETURN_EMPTY_ARRAY()",
+			},
+		},
+		{
 			name:       "void return",
-			returnType: "void",
+			returnType: phpVoid,
 			contains:   []string{},
 		},
 	}
@@ -214,7 +284,7 @@ func TestPHPFunctionGenerator_GenerateReturnCode(t *testing.T) {
 	generator := PHPFuncGenerator{}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := generator.generateReturnCode(tt.returnType)
+			result := generator.generateReturnCode(phpType(tt.returnType))
 
 			if len(tt.contains) == 0 {
 				assert.Empty(t, result, "Return code should be empty for void")
@@ -242,32 +312,48 @@ func TestPHPFunctionGenerator_GenerateGoCallParams(t *testing.T) {
 		{
 			name: "simple string parameter",
 			params: []phpParameter{
-				{Name: "message", PhpType: "string"},
+				{Name: "message", PhpType: phpString},
 			},
 			expected: "message",
 		},
 		{
 			name: "int parameter",
 			params: []phpParameter{
-				{Name: "count", PhpType: "int"},
+				{Name: "count", PhpType: phpInt},
 			},
 			expected: "(long) count",
 		},
 		{
 			name: "multiple parameters",
 			params: []phpParameter{
-				{Name: "name", PhpType: "string"},
-				{Name: "age", PhpType: "int"},
+				{Name: "name", PhpType: phpString},
+				{Name: "age", PhpType: phpInt},
 			},
 			expected: "name, (long) age",
 		},
 		{
 			name: "bool and float parameters",
 			params: []phpParameter{
-				{Name: "enabled", PhpType: "bool"},
-				{Name: "rate", PhpType: "float"},
+				{Name: "enabled", PhpType: phpBool},
+				{Name: "rate", PhpType: phpFloat},
 			},
 			expected: "(int) enabled, (double) rate",
+		},
+		{
+			name: "array parameter",
+			params: []phpParameter{
+				{Name: "data", PhpType: phpArray},
+			},
+			expected: "data",
+		},
+		{
+			name: "mixed parameters with array",
+			params: []phpParameter{
+				{Name: "name", PhpType: phpString},
+				{Name: "items", PhpType: phpArray},
+				{Name: "count", PhpType: phpInt},
+			},
+			expected: "name, items, (long) count",
 		},
 	}
 
@@ -297,8 +383,8 @@ func TestPHPFunctionGenerator_AnalyzeParameters(t *testing.T) {
 		{
 			name: "all required",
 			params: []phpParameter{
-				{Name: "a", PhpType: "string"},
-				{Name: "b", PhpType: "int"},
+				{Name: "a", PhpType: phpString},
+				{Name: "b", PhpType: phpInt},
 			},
 			expectedReq:   2,
 			expectedTotal: 2,
@@ -306,8 +392,8 @@ func TestPHPFunctionGenerator_AnalyzeParameters(t *testing.T) {
 		{
 			name: "mixed required and optional",
 			params: []phpParameter{
-				{Name: "required", PhpType: "string"},
-				{Name: "optional", PhpType: "int", HasDefault: true, DefaultValue: "10"},
+				{Name: "required", PhpType: phpString},
+				{Name: "optional", PhpType: phpInt, HasDefault: true, DefaultValue: "10"},
 			},
 			expectedReq:   1,
 			expectedTotal: 2,
@@ -315,8 +401,8 @@ func TestPHPFunctionGenerator_AnalyzeParameters(t *testing.T) {
 		{
 			name: "all optional",
 			params: []phpParameter{
-				{Name: "opt1", PhpType: "string", HasDefault: true, DefaultValue: "hello"},
-				{Name: "opt2", PhpType: "int", HasDefault: true, DefaultValue: "0"},
+				{Name: "opt1", PhpType: phpString, HasDefault: true, DefaultValue: "hello"},
+				{Name: "opt2", PhpType: phpInt, HasDefault: true, DefaultValue: "0"},
 			},
 			expectedReq:   0,
 			expectedTotal: 2,

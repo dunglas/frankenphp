@@ -5,7 +5,6 @@ import (
 	_ "embed"
 	"fmt"
 	"path/filepath"
-	"strings"
 	"text/template"
 
 	"github.com/Masterminds/sprig/v3"
@@ -54,11 +53,6 @@ func (gg *GoFileGenerator) buildContent() (string, error) {
 
 	classes := make([]phpClass, len(gg.generator.Classes))
 	copy(classes, gg.generator.Classes)
-	for i, class := range classes {
-		for j, method := range class.Methods {
-			classes[i].Methods[j].Wrapper = gg.generateMethodWrapper(method, class)
-		}
-	}
 
 	templateContent, err := gg.getTemplateContent(goTemplateData{
 		PackageName:       SanitizePackageName(gg.generator.BaseName),
@@ -78,7 +72,16 @@ func (gg *GoFileGenerator) buildContent() (string, error) {
 }
 
 func (gg *GoFileGenerator) getTemplateContent(data goTemplateData) (string, error) {
-	tmpl := template.Must(template.New("gofile").Funcs(sprig.FuncMap()).Parse(goFileContent))
+	funcMap := sprig.FuncMap()
+	funcMap["phpTypeToGoType"] = gg.phpTypeToGoType
+	funcMap["isStringOrArray"] = func(t phpType) bool {
+		return t == phpString || t == phpArray
+	}
+	funcMap["isVoid"] = func(t phpType) bool {
+		return t == phpVoid
+	}
+
+	tmpl := template.Must(template.New("gofile").Funcs(funcMap).Parse(goFileContent))
 
 	var buf bytes.Buffer
 	if err := tmpl.Execute(&buf, data); err != nil {
@@ -86,72 +89,6 @@ func (gg *GoFileGenerator) getTemplateContent(data goTemplateData) (string, erro
 	}
 
 	return buf.String(), nil
-}
-
-func (gg *GoFileGenerator) generateMethodWrapper(method phpClassMethod, class phpClass) string {
-	var builder strings.Builder
-
-	builder.WriteString(fmt.Sprintf("func %s_wrapper(handle C.uintptr_t", method.Name))
-
-	for _, param := range method.Params {
-		if param.PhpType == "string" {
-			builder.WriteString(fmt.Sprintf(", %s *C.zend_string", param.Name))
-
-			continue
-		}
-
-		goType := gg.phpTypeToGoType(param.PhpType)
-		if param.IsNullable {
-			goType = "*" + goType
-		}
-		builder.WriteString(fmt.Sprintf(", %s %s", param.Name, goType))
-	}
-
-	if method.ReturnType != "void" {
-		if method.ReturnType == "string" {
-			builder.WriteString(") unsafe.Pointer {\n")
-		} else {
-			goReturnType := gg.phpTypeToGoType(method.ReturnType)
-			builder.WriteString(fmt.Sprintf(") %s {\n", goReturnType))
-		}
-	} else {
-		builder.WriteString(") {\n")
-	}
-
-	builder.WriteString("	obj := getGoObject(handle)\n")
-	builder.WriteString("	if obj == nil {\n")
-	if method.ReturnType != "void" {
-		if method.ReturnType == "string" {
-			builder.WriteString("		return nil\n")
-		} else {
-			builder.WriteString(fmt.Sprintf("		var zero %s\n", gg.phpTypeToGoType(method.ReturnType)))
-			builder.WriteString("		return zero\n")
-		}
-	} else {
-		builder.WriteString("		return\n")
-	}
-	builder.WriteString("	}\n")
-	builder.WriteString(fmt.Sprintf("	structObj := obj.(*%s)\n", class.GoStruct))
-
-	builder.WriteString("	")
-	if method.ReturnType != "void" {
-		builder.WriteString("return ")
-	}
-
-	builder.WriteString(fmt.Sprintf("structObj.%s(", gg.goMethodName(method.Name)))
-
-	for i, param := range method.Params {
-		if i > 0 {
-			builder.WriteString(", ")
-		}
-
-		builder.WriteString(param.Name)
-	}
-
-	builder.WriteString(")\n")
-	builder.WriteString("}")
-
-	return builder.String()
 }
 
 type GoMethodSignature struct {
@@ -165,28 +102,20 @@ type GoParameter struct {
 	Type string
 }
 
-func (gg *GoFileGenerator) phpTypeToGoType(phpType string) string {
-	typeMap := map[string]string{
-		"string": "string",
-		"int":    "int64",
-		"float":  "float64",
-		"bool":   "bool",
-		"array":  "[]interface{}",
-		"mixed":  "interface{}",
-		"void":   "",
+func (gg *GoFileGenerator) phpTypeToGoType(phpT phpType) string {
+	typeMap := map[phpType]string{
+		phpString: "string",
+		phpInt:    "int64",
+		phpFloat:  "float64",
+		phpBool:   "bool",
+		phpArray:  "*frankenphp.Array",
+		phpMixed:  "interface{}",
+		phpVoid:   "",
 	}
 
-	if goType, exists := typeMap[phpType]; exists {
+	if goType, exists := typeMap[phpT]; exists {
 		return goType
 	}
 
 	return "interface{}"
-}
-
-func (gg *GoFileGenerator) goMethodName(phpMethodName string) string {
-	if len(phpMethodName) == 0 {
-		return phpMethodName
-	}
-
-	return strings.ToUpper(phpMethodName[:1]) + phpMethodName[1:]
 }
