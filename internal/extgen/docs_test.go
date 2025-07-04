@@ -23,9 +23,9 @@ func TestDocumentationGenerator_Generate(t *testing.T) {
 				Functions: []phpFunction{
 					{
 						Name:       "greet",
-						ReturnType: "string",
+						ReturnType: phpString,
 						Params: []phpParameter{
-							{Name: "name", PhpType: "string"},
+							{Name: "name", PhpType: phpString},
 						},
 						Signature: "greet(string $name): string",
 					},
@@ -44,8 +44,8 @@ func TestDocumentationGenerator_Generate(t *testing.T) {
 					{
 						Name: "TestClass",
 						Properties: []phpClassProperty{
-							{Name: "name", PhpType: "string"},
-							{Name: "count", PhpType: "int", IsNullable: true},
+							{Name: "name", PhpType: phpString},
+							{Name: "count", PhpType: phpInt, IsNullable: true},
 						},
 					},
 				},
@@ -60,11 +60,11 @@ func TestDocumentationGenerator_Generate(t *testing.T) {
 				Functions: []phpFunction{
 					{
 						Name:             "calculate",
-						ReturnType:       "int",
+						ReturnType:       phpInt,
 						IsReturnNullable: true,
 						Params: []phpParameter{
-							{Name: "base", PhpType: "int"},
-							{Name: "multiplier", PhpType: "int", HasDefault: true, DefaultValue: "2", IsNullable: true},
+							{Name: "base", PhpType: phpInt},
+							{Name: "multiplier", PhpType: phpInt, HasDefault: true, DefaultValue: "2", IsNullable: true},
 						},
 						Signature: "calculate(int $base, ?int $multiplier = 2): ?int",
 					},
@@ -73,7 +73,7 @@ func TestDocumentationGenerator_Generate(t *testing.T) {
 					{
 						Name: "Calculator",
 						Properties: []phpClassProperty{
-							{Name: "precision", PhpType: "int"},
+							{Name: "precision", PhpType: phpInt},
 						},
 					},
 				},
@@ -155,11 +155,11 @@ func TestDocumentationGenerator_GenerateMarkdown(t *testing.T) {
 				Functions: []phpFunction{
 					{
 						Name:       "processData",
-						ReturnType: "array",
+						ReturnType: phpArray,
 						Params: []phpParameter{
-							{Name: "data", PhpType: "string"},
-							{Name: "options", PhpType: "array", IsNullable: true},
-							{Name: "count", PhpType: "int", HasDefault: true, DefaultValue: "10"},
+							{Name: "data", PhpType: phpString},
+							{Name: "options", PhpType: phpArray, IsNullable: true},
+							{Name: "count", PhpType: phpInt, HasDefault: true, DefaultValue: "10"},
 						},
 						Signature: "processData(string $data, ?array $options, int $count = 10): array",
 					},
@@ -184,7 +184,7 @@ func TestDocumentationGenerator_GenerateMarkdown(t *testing.T) {
 				Functions: []phpFunction{
 					{
 						Name:             "maybeGetValue",
-						ReturnType:       "string",
+						ReturnType:       phpString,
 						IsReturnNullable: true,
 						Params:           []phpParameter{},
 						Signature:        "maybeGetValue(): ?string",
@@ -205,9 +205,9 @@ func TestDocumentationGenerator_GenerateMarkdown(t *testing.T) {
 					{
 						Name: "DataProcessor",
 						Properties: []phpClassProperty{
-							{Name: "name", PhpType: "string"},
-							{Name: "config", PhpType: "array", IsNullable: true},
-							{Name: "enabled", PhpType: "bool"},
+							{Name: "name", PhpType: phpString},
+							{Name: "config", PhpType: phpArray, IsNullable: true},
+							{Name: "enabled", PhpType: phpBool},
 						},
 					},
 				},
@@ -244,7 +244,7 @@ func TestDocumentationGenerator_GenerateMarkdown(t *testing.T) {
 				Functions: []phpFunction{
 					{
 						Name:       "getCurrentTime",
-						ReturnType: "int",
+						ReturnType: phpInt,
 						Params:     []phpParameter{},
 						Signature:  "getCurrentTime(): int",
 					},
@@ -324,7 +324,7 @@ func TestDocumentationGenerator_TemplateError(t *testing.T) {
 		Functions: []phpFunction{
 			{
 				Name:       "test",
-				ReturnType: "string",
+				ReturnType: phpString,
 				Signature:  "test(): string",
 			},
 		},
@@ -346,19 +346,19 @@ func BenchmarkDocumentationGenerator_GenerateMarkdown(b *testing.B) {
 		Functions: []phpFunction{
 			{
 				Name:       "function1",
-				ReturnType: "string",
+				ReturnType: phpString,
 				Params: []phpParameter{
-					{Name: "param1", PhpType: "string"},
-					{Name: "param2", PhpType: "int", HasDefault: true, DefaultValue: "0"},
+					{Name: "param1", PhpType: phpString},
+					{Name: "param2", PhpType: phpInt, HasDefault: true, DefaultValue: "0"},
 				},
 				Signature: "function1(string $param1, int $param2 = 0): string",
 			},
 			{
 				Name:             "function2",
-				ReturnType:       "array",
+				ReturnType:       phpArray,
 				IsReturnNullable: true,
 				Params: []phpParameter{
-					{Name: "data", PhpType: "array", IsNullable: true},
+					{Name: "data", PhpType: phpArray, IsNullable: true},
 				},
 				Signature: "function2(?array $data): ?array",
 			},
@@ -367,8 +367,8 @@ func BenchmarkDocumentationGenerator_GenerateMarkdown(b *testing.B) {
 			{
 				Name: "TestClass",
 				Properties: []phpClassProperty{
-					{Name: "prop1", PhpType: "string"},
-					{Name: "prop2", PhpType: "int", IsNullable: true},
+					{Name: "prop1", PhpType: phpString},
+					{Name: "prop2", PhpType: phpInt, IsNullable: true},
 				},
 			},
 		},

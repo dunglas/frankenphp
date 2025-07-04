@@ -86,7 +86,7 @@ func (cp *ConstantParser) parse(filename string) (constants []phpConstant, err e
 				if constant.IsIota {
 					// affect a default value because user didn't give one
 					constant.Value = fmt.Sprintf("%d", currentConstantValue)
-					constant.PhpType = "int"
+					constant.PhpType = phpInt
 					currentConstantValue++
 				}
 
@@ -108,26 +108,26 @@ func (cp *ConstantParser) parse(filename string) (constants []phpConstant, err e
 }
 
 // determineConstantType analyzes the value and determines its type
-func determineConstantType(value string) string {
+func determineConstantType(value string) phpType {
 	value = strings.TrimSpace(value)
 
 	if (strings.HasPrefix(value, "\"") && strings.HasSuffix(value, "\"")) ||
 		(strings.HasPrefix(value, "`") && strings.HasSuffix(value, "`")) {
-		return "string"
+		return phpString
 	}
 
 	if value == "true" || value == "false" {
-		return "bool"
+		return phpBool
 	}
 
 	// check for integer literals, including hex, octal, binary
 	if _, err := strconv.ParseInt(value, 0, 64); err == nil {
-		return "int"
+		return phpInt
 	}
 
 	if _, err := strconv.ParseFloat(value, 64); err == nil {
-		return "float"
+		return phpFloat
 	}
 
-	return "int"
+	return phpInt
 }

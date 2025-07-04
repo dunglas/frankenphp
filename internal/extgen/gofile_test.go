@@ -50,14 +50,14 @@ func anotherHelper() {
 		Functions: []phpFunction{
 			{
 				Name:       "greet",
-				ReturnType: "string",
+				ReturnType: phpString,
 				GoFunction: `func greet(name *go_string) *go_value {
 	return types.String("Hello " + CStringToGoString(name))
 }`,
 			},
 			{
 				Name:       "calculate",
-				ReturnType: "int",
+				ReturnType: phpInt,
 				GoFunction: `func calculate(a long, b long) *go_value {
 	result := a + b
 	return types.Int(result)
@@ -102,7 +102,7 @@ func test() {
 			functions: []phpFunction{
 				{
 					Name:       "test",
-					ReturnType: "void",
+					ReturnType: phpVoid,
 					GoFunction: "func test() {\n\t// simple function\n}",
 				},
 			},
@@ -135,7 +135,7 @@ func process(data *go_string) *go_value {
 			functions: []phpFunction{
 				{
 					Name:       "process",
-					ReturnType: "string",
+					ReturnType: phpString,
 					GoFunction: `func process(data *go_string) *go_value {
 	return String(fmt.Sprintf("processed: %s", CStringToGoString(data)))
 }`,
@@ -168,7 +168,7 @@ func internalFunc2(data string) {
 			functions: []phpFunction{
 				{
 					Name:       "publicFunc",
-					ReturnType: "void",
+					ReturnType: phpVoid,
 					GoFunction: "func publicFunc() {}",
 				},
 			},
@@ -219,7 +219,7 @@ func TestGoFileGenerator_PackageNameSanitization(t *testing.T) {
 				BaseName:   tt.baseName,
 				SourceFile: sourceFile,
 				Functions: []phpFunction{
-					{Name: "test", ReturnType: "void", GoFunction: "func test() {}"},
+					{Name: "test", ReturnType: phpVoid, GoFunction: "func test() {}"},
 				},
 			}
 
@@ -296,7 +296,7 @@ func test() {}`
 		BaseName:   "importtest",
 		SourceFile: sourceFile,
 		Functions: []phpFunction{
-			{Name: "test", ReturnType: "void", GoFunction: "func test() {}"},
+			{Name: "test", ReturnType: phpVoid, GoFunction: "func test() {}"},
 		},
 	}
 
@@ -371,7 +371,7 @@ func debugPrint(msg string) {
 	functions := []phpFunction{
 		{
 			Name:       "processData",
-			ReturnType: "array",
+			ReturnType: phpArray,
 			GoFunction: `func processData(input *go_string, options *go_nullable) *go_value {
 	data := CStringToGoString(input)
 	processed := internalProcess(data)
@@ -380,7 +380,7 @@ func debugPrint(msg string) {
 		},
 		{
 			Name:       "validateInput",
-			ReturnType: "bool",
+			ReturnType: phpBool,
 			GoFunction: `func validateInput(data *go_string) *go_value {
 	input := CStringToGoString(data)
 	isValid := len(input) > 0 && validateFormat(input)
@@ -453,11 +453,11 @@ func (ts *TestStruct) ProcessData(name string, count *int64, enabled *bool) stri
 			PhpName:    "processData",
 			ClassName:  "TestClass",
 			Signature:  "processData(string $name, ?int $count, ?bool $enabled): string",
-			ReturnType: "string",
+			ReturnType: phpString,
 			Params: []phpParameter{
-				{Name: "name", PhpType: "string", IsNullable: false},
-				{Name: "count", PhpType: "int", IsNullable: true},
-				{Name: "enabled", PhpType: "bool", IsNullable: true},
+				{Name: "name", PhpType: phpString, IsNullable: false},
+				{Name: "count", PhpType: phpInt, IsNullable: true},
+				{Name: "enabled", PhpType: phpBool, IsNullable: true},
 			},
 			GoFunction: `func (ts *TestStruct) ProcessData(name string, count *int64, enabled *bool) string {
 	result := fmt.Sprintf("name=%s", name)
@@ -499,6 +499,176 @@ func (ts *TestStruct) ProcessData(name string, count *int64, enabled *bool) stri
 
 	exportDirective := "//export ProcessData_wrapper"
 	assert.Contains(t, content, exportDirective, "Generated content should contain export directive: %s", exportDirective)
+}
+
+func TestGoFileGenerator_MethodWrapperWithArrayParams(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	sourceContent := `package main
+
+import "fmt"
+
+//export_php:class ArrayClass
+type ArrayStruct struct {
+	data []interface{}
+}
+
+//export_php:method ArrayClass::processArray(array $items): array
+func (as *ArrayStruct) ProcessArray(items *frankenphp.Array) *frankenphp.Array {
+	result := &frankenphp.Array{}
+	for i := uint32(0); i < items.Len(); i++ {
+		key, value := items.At(i)
+		result.SetString(fmt.Sprintf("processed_%d", i), value)
+	}
+	return result
+}
+
+//export_php:method ArrayClass::filterData(array $data, string $filter): array
+func (as *ArrayStruct) FilterData(data *frankenphp.Array, filter string) *frankenphp.Array {
+	result := &frankenphp.Array{}
+	// Filter logic here
+	return result
+}`
+
+	sourceFile := filepath.Join(tmpDir, "test.go")
+	require.NoError(t, os.WriteFile(sourceFile, []byte(sourceContent), 0644))
+
+	methods := []phpClassMethod{
+		{
+			Name:       "ProcessArray",
+			PhpName:    "processArray",
+			ClassName:  "ArrayClass",
+			Signature:  "processArray(array $items): array",
+			ReturnType: phpArray,
+			Params: []phpParameter{
+				{Name: "items", PhpType: phpArray, IsNullable: false},
+			},
+			GoFunction: `func (as *ArrayStruct) ProcessArray(items *frankenphp.Array) *frankenphp.Array {
+	result := &frankenphp.Array{}
+	for i := uint32(0); i < items.Len(); i++ {
+		key, value := items.At(i)
+		result.SetString(fmt.Sprintf("processed_%d", i), value)
+	}
+	return result
+}`,
+		},
+		{
+			Name:       "FilterData",
+			PhpName:    "filterData",
+			ClassName:  "ArrayClass",
+			Signature:  "filterData(array $data, string $filter): array",
+			ReturnType: phpArray,
+			Params: []phpParameter{
+				{Name: "data", PhpType: phpArray, IsNullable: false},
+				{Name: "filter", PhpType: phpString, IsNullable: false},
+			},
+			GoFunction: `func (as *ArrayStruct) FilterData(data *frankenphp.Array, filter string) *frankenphp.Array {
+	result := &frankenphp.Array{}
+	return result
+}`,
+		},
+	}
+
+	classes := []phpClass{
+		{
+			Name:     "ArrayClass",
+			GoStruct: "ArrayStruct",
+			Methods:  methods,
+		},
+	}
+
+	generator := &Generator{
+		BaseName:   "array_test",
+		SourceFile: sourceFile,
+		Classes:    classes,
+		BuildDir:   tmpDir,
+	}
+
+	goGen := GoFileGenerator{generator}
+	content, err := goGen.buildContent()
+	require.NoError(t, err)
+
+	expectedArrayWrapperSignature := "func ProcessArray_wrapper(handle C.uintptr_t, items *C.zval) unsafe.Pointer"
+	assert.Contains(t, content, expectedArrayWrapperSignature, "Generated content should contain array wrapper signature: %s", expectedArrayWrapperSignature)
+
+	expectedMixedWrapperSignature := "func FilterData_wrapper(handle C.uintptr_t, data *C.zval, filter *C.zend_string) unsafe.Pointer"
+	assert.Contains(t, content, expectedMixedWrapperSignature, "Generated content should contain mixed wrapper signature: %s", expectedMixedWrapperSignature)
+
+	expectedArrayCall := "structObj.ProcessArray(items)"
+	assert.Contains(t, content, expectedArrayCall, "Generated content should contain array method call: %s", expectedArrayCall)
+
+	expectedMixedCall := "structObj.FilterData(data, filter)"
+	assert.Contains(t, content, expectedMixedCall, "Generated content should contain mixed method call: %s", expectedMixedCall)
+
+	assert.Contains(t, content, "//export ProcessArray_wrapper", "Generated content should contain ProcessArray export directive")
+	assert.Contains(t, content, "//export FilterData_wrapper", "Generated content should contain FilterData export directive")
+}
+
+func TestGoFileGenerator_MethodWrapperWithNullableArrayParams(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	sourceContent := `package main
+
+//export_php:class NullableArrayClass
+type NullableArrayStruct struct{}
+
+//export_php:method NullableArrayClass::processOptionalArray(?array $items, string $name): string
+func (nas *NullableArrayStruct) ProcessOptionalArray(items *frankenphp.Array, name string) string {
+	if items == nil {
+		return "No items: " + name
+	}
+	return fmt.Sprintf("Processing %d items for %s", items.Len(), name)
+}`
+
+	sourceFile := filepath.Join(tmpDir, "test.go")
+	require.NoError(t, os.WriteFile(sourceFile, []byte(sourceContent), 0644))
+
+	methods := []phpClassMethod{
+		{
+			Name:       "ProcessOptionalArray",
+			PhpName:    "processOptionalArray",
+			ClassName:  "NullableArrayClass",
+			Signature:  "processOptionalArray(?array $items, string $name): string",
+			ReturnType: phpString,
+			Params: []phpParameter{
+				{Name: "items", PhpType: phpArray, IsNullable: true},
+				{Name: "name", PhpType: phpString, IsNullable: false},
+			},
+			GoFunction: `func (nas *NullableArrayStruct) ProcessOptionalArray(items *frankenphp.Array, name string) string {
+	if items == nil {
+		return "No items: " + name
+	}
+	return fmt.Sprintf("Processing %d items for %s", items.Len(), name)
+}`,
+		},
+	}
+
+	classes := []phpClass{
+		{
+			Name:     "NullableArrayClass",
+			GoStruct: "NullableArrayStruct",
+			Methods:  methods,
+		},
+	}
+
+	generator := &Generator{
+		BaseName:   "nullable_array_test",
+		SourceFile: sourceFile,
+		Classes:    classes,
+		BuildDir:   tmpDir,
+	}
+
+	goGen := GoFileGenerator{generator}
+	content, err := goGen.buildContent()
+	require.NoError(t, err)
+
+	expectedWrapperSignature := "func ProcessOptionalArray_wrapper(handle C.uintptr_t, items *C.zval, name *C.zend_string) unsafe.Pointer"
+	assert.Contains(t, content, expectedWrapperSignature, "Generated content should contain nullable array wrapper signature: %s", expectedWrapperSignature)
+
+	expectedCall := "structObj.ProcessOptionalArray(items, name)"
+	assert.Contains(t, content, expectedCall, "Generated content should contain method call: %s", expectedCall)
+
+	assert.Contains(t, content, "//export ProcessOptionalArray_wrapper", "Generated content should contain export directive")
 }
 
 func createTempSourceFile(t *testing.T, content string) string {
