@@ -86,13 +86,15 @@ localhost {
 
 ```caddyfile
 app.example.com {
+	root /path/to/app/public
 	php_server {
-		root /path/to/app/public
+		root /path/to/app/public # 允许更好的缓存
 		worker index.php <num>
 	}
 }
 
 other.example.com {
+	root /path/to/other/public
 	php_server {
 		root /path/to/other/public
 		worker index.php <num>
