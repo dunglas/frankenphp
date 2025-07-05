@@ -95,13 +95,15 @@ You can also define multiple workers if you serve multiple apps on the same serv
 
 ```caddyfile
 app.example.com {
+    root /path/to/app/public
 	php_server {
-		root /path/to/app/public
+		root /path/to/app/public # allows for better caching
 		worker index.php <num>
 	}
 }
 
 other.example.com {
+    root /path/to/other/public
 	php_server {
 		root /path/to/other/public
 		worker index.php <num>
