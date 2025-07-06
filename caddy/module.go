@@ -464,6 +464,7 @@ func parsePhpServer(h httpcaddyfile.Helper) ([]httpcaddyfile.ConfigValue, error)
 			redirMatcherSet := caddy.ModuleMap{
 				"file": h.JSON(fileserver.MatchFile{
 					TryFiles: []string{dirIndex},
+					Root:     phpsrv.Root,
 				}),
 				"not": h.JSON(caddyhttp.MatchNot{
 					MatcherSetsRaw: []caddy.ModuleMap{
@@ -491,6 +492,7 @@ func parsePhpServer(h httpcaddyfile.Helper) ([]httpcaddyfile.ConfigValue, error)
 				TryFiles:  tryFiles,
 				TryPolicy: tryPolicy,
 				SplitPath: extensions,
+				Root:      phpsrv.Root,
 			}),
 		}
 		rewriteHandler := rewrite.Rewrite{
