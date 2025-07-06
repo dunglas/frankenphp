@@ -26,10 +26,10 @@ func TestRootBehavesTheSameOutsideAndInsidePhpServer(t *testing.T) {
 		}
 
 		http://localhost:`+testPortTwo+` {
-            php_server {
-                root ../testdata/files
-            }
-        }
+			php_server {
+				root ../testdata/files
+			}
+		}
 		`, "caddyfile")
 
 	// serve the file with root outside of php_server
