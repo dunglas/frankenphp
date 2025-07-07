@@ -51,7 +51,7 @@ func TestCFileGenerator_Generate(t *testing.T) {
 	expectedFile := filepath.Join(tmpDir, "test_extension.c")
 	require.FileExists(t, expectedFile, "Expected C file was not created: %s", expectedFile)
 
-	content, err := ReadFile(expectedFile)
+	content, err := readFile(expectedFile)
 	require.NoError(t, err)
 
 	testCFileBasicStructure(t, content, "test_extension")
@@ -258,7 +258,7 @@ func TestCFileIntegrationWithGenerators(t *testing.T) {
 	cGen := cFileGenerator{generator}
 	require.NoError(t, cGen.generate())
 
-	content, err := ReadFile(filepath.Join(tmpDir, "integration_test.c"))
+	content, err := readFile(filepath.Join(tmpDir, "integration_test.c"))
 	require.NoError(t, err)
 
 	for _, fn := range functions {

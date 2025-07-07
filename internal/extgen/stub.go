@@ -21,7 +21,7 @@ func (sg *StubGenerator) generate() error {
 		return err
 	}
 
-	return WriteFile(filename, content)
+	return writeFile(filename, content)
 }
 
 func (sg *StubGenerator) buildContent() (string, error) {
