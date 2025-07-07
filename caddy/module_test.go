@@ -20,7 +20,6 @@ func TestRootBehavesTheSameOutsideAndInsidePhpServer(t *testing.T) {
 		{
 			skip_install_trust
 			admin localhost:2999
-			debug
 		}
 
 		`+hostWithRootOutside+` {
@@ -48,6 +47,6 @@ func TestRootBehavesTheSameOutsideAndInsidePhpServer(t *testing.T) {
 	tester.AssertGetResponse(hostWithRootInside+"/some-path", http.StatusOK, "I am by birth a Genevese (i not set)")
 
 	// fallback to directory index ('dirIndex' in module.go)
-	tester.AssertGetResponse(hostWithRootOutside+"/files/", http.StatusOK, "Hello from directory index.php")
-	tester.AssertGetResponse(hostWithRootInside+"/files/", http.StatusOK, "Hello from directory index.php")
+	tester.AssertGetResponse(hostWithRootOutside+"/dirindex/", http.StatusOK, "Hello from directory index.php")
+	tester.AssertGetResponse(hostWithRootInside+"/dirindex/", http.StatusOK, "Hello from directory index.php")
 }
