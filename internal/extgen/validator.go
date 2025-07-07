@@ -47,7 +47,7 @@ func (v *Validator) validateParameter(param phpParameter) error {
 		return fmt.Errorf("invalid parameter name: %s", param.Name)
 	}
 
-	validTypes := []string{"string", "int", "float", "bool", "array", "object", "mixed"}
+	validTypes := []string{"string", "int", "float", "bool", "array", "object", "mixed", "callable"}
 	if !v.isValidType(param.PhpType, validTypes) {
 		return fmt.Errorf("invalid parameter type: %s", param.PhpType)
 	}
@@ -90,7 +90,7 @@ func (v *Validator) validateClassProperty(prop phpClassProperty) error {
 		return fmt.Errorf("invalid property name: %s", prop.Name)
 	}
 
-	validTypes := []string{"string", "int", "float", "bool", "array", "object", "mixed"}
+	validTypes := []string{"string", "int", "float", "bool", "array", "object", "mixed", "callable"}
 	if !v.isValidType(prop.PhpType, validTypes) {
 		return fmt.Errorf("invalid property type: %s", prop.PhpType)
 	}
@@ -109,16 +109,16 @@ func (v *Validator) isValidType(typeStr string, validTypes []string) bool {
 
 // validateScalarTypes checks if PHP signature contains only supported scalar types
 func (v *Validator) validateScalarTypes(fn phpFunction) error {
-	supportedTypes := []string{"string", "int", "float", "bool", "array"}
+	supportedTypes := []string{"string", "int", "float", "bool", "array", "callable"}
 
 	for i, param := range fn.Params {
 		if !v.isScalarType(param.PhpType, supportedTypes) {
-			return fmt.Errorf("parameter %d (%s) has unsupported type '%s'. Only scalar types (string, int, float, bool, array) and their nullable variants are supported", i+1, param.Name, param.PhpType)
+			return fmt.Errorf("parameter %d (%s) has unsupported type '%s'. Only scalar types (string, int, float, bool, array, callable) and their nullable variants are supported", i+1, param.Name, param.PhpType)
 		}
 	}
 
 	if fn.ReturnType != "void" && !v.isScalarType(fn.ReturnType, supportedTypes) {
-		return fmt.Errorf("return type '%s' is not supported. Only scalar types (string, int, float, bool, array), void, and their nullable variants are supported", fn.ReturnType)
+		return fmt.Errorf("return type '%s' is not supported. Only scalar types (string, int, float, bool, array, callable), void, and their nullable variants are supported", fn.ReturnType)
 	}
 
 	return nil
@@ -175,8 +175,10 @@ func (v *Validator) validateGoFunctionSignatureWithOptions(phpFunc phpFunction, 
 		effectiveGoParamCount = goParamCount - 1
 	}
 
-	if len(phpFunc.Params) != effectiveGoParamCount {
-		return fmt.Errorf("parameter count mismatch: PHP function has %d parameters but Go function has %d", len(phpFunc.Params), effectiveGoParamCount)
+	expectedGoParams := len(phpFunc.Params)
+
+	if expectedGoParams != effectiveGoParamCount {
+		return fmt.Errorf("parameter count mismatch: PHP function has %d parameters (expecting %d Go parameters) but Go function has %d", len(phpFunc.Params), expectedGoParams, effectiveGoParamCount)
 	}
 
 	if goFunc.Type.Params != nil && len(phpFunc.Params) > 0 {
@@ -220,11 +222,13 @@ func (v *Validator) phpTypeToGoType(phpType string, isNullable bool) string {
 		baseType = "bool"
 	case "array":
 		baseType = "*C.zval"
+	case "callable":
+		baseType = "*C.zval"
 	default:
 		baseType = "interface{}"
 	}
 
-	if isNullable && phpType != "string" && phpType != "array" {
+	if isNullable && phpType != "string" && phpType != "array" && phpType != "callable" {
 		return "*" + baseType
 	}
 
