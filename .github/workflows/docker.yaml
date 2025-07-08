@@ -69,9 +69,10 @@ jobs:
               exit 0
           fi
 
-          FRANKENPHP_82_LATEST=$(skopeo inspect docker://docker.io/dunglas/frankenphp:php8.2 --override-os linux --override-arch amd64 | jq -r '.Env[] | select(test("^PHP_VERSION=")) | sub("^PHP_VERSION="; "")')
-          FRANKENPHP_83_LATEST=$(skopeo inspect docker://docker.io/dunglas/frankenphp:php8.3 --override-os linux --override-arch amd64 | jq -r '.Env[] | select(test("^PHP_VERSION=")) | sub("^PHP_VERSION="; "")')
-          FRANKENPHP_84_LATEST=$(skopeo inspect docker://docker.io/dunglas/frankenphp:php8.4 --override-os linux --override-arch amd64 | jq -r '.Env[] | select(test("^PHP_VERSION=")) | sub("^PHP_VERSION="; "")')
+          FRANKENPHP_LATEST_TAG=$(gh release view --repo php/frankenphp --json tagName --jq '.tagName')
+          FRANKENPHP_82_LATEST=$(skopeo inspect docker://docker.io/dunglas/frankenphp:${FRANKENPHP_LATEST_TAG}-php8.2 --override-os linux --override-arch amd64 | jq -r '.Env[] | select(test("^PHP_VERSION=")) | sub("^PHP_VERSION="; "")')
+          FRANKENPHP_83_LATEST=$(skopeo inspect docker://docker.io/dunglas/frankenphp:${FRANKENPHP_LATEST_TAG}-php8.3 --override-os linux --override-arch amd64 | jq -r '.Env[] | select(test("^PHP_VERSION=")) | sub("^PHP_VERSION="; "")')
+          FRANKENPHP_84_LATEST=$(skopeo inspect docker://docker.io/dunglas/frankenphp:${FRANKENPHP_LATEST_TAG}-php8.4 --override-os linux --override-arch amd64 | jq -r '.Env[] | select(test("^PHP_VERSION=")) | sub("^PHP_VERSION="; "")')
 
           if [[ "${FRANKENPHP_82_LATEST}" == "${PHP_82_LATEST}" ]] && [[ "${FRANKENPHP_83_LATEST}" == "${PHP_83_LATEST}" ]] && [[ "${FRANKENPHP_84_LATEST}" == "${PHP_84_LATEST}" ]]; then
               echo skip=true >> "${GITHUB_OUTPUT}"
@@ -79,7 +80,7 @@ jobs:
           fi
 
           {
-            echo ref="$(gh release view --repo dunglas/frankenphp --json tagName --jq '.tagName')"
+            echo ref="FRANKENPHP_LATEST_TAG"
             echo skip=false
           } >> "${GITHUB_OUTPUT}"
       - uses: actions/checkout@v4
