@@ -14,15 +14,15 @@ package frankenphp
 
 // #cgo nocallback frankenphp_update_server_context
 // #cgo noescape frankenphp_update_server_context
-// #cgo !nosysinc darwin pkg-config: libxml-2.0
+// #cgo !nosys darwin pkg-config: libxml-2.0
 // #cgo CFLAGS: -Wall -Werror
-// #cgo !nosysinc CFLAGS: -I/usr/local/include -I/usr/local/include/php -I/usr/local/include/php/main -I/usr/local/include/php/TSRM -I/usr/local/include/php/Zend -I/usr/local/include/php/ext -I/usr/local/include/php/ext/date/lib
+// #cgo !nosys CFLAGS: -I/usr/local/include -I/usr/local/include/php -I/usr/local/include/php/main -I/usr/local/include/php/TSRM -I/usr/local/include/php/Zend -I/usr/local/include/php/ext -I/usr/local/include/php/ext/date/lib
 // #cgo linux CFLAGS: -D_GNU_SOURCE
-// #cgo !nosysinc darwin CFLAGS: -I/opt/homebrew/include
-// #cgo !nosysinc LDFLAGS: -L/usr/local/lib -L/usr/lib
+// #cgo !nosys darwin CFLAGS: -I/opt/homebrew/include
+// #cgo !nosys LDFLAGS: -L/usr/local/lib -L/usr/lib
 // #cgo LDFLAGS: -lphp -lm -lutil
 // #cgo linux LDFLAGS: -ldl -lresolv
-// #cgo !nosysinc darwin LDFLAGS: -Wl,-rpath,/usr/local/lib -L/opt/homebrew/lib -L/opt/homebrew/opt/libiconv/lib
+// #cgo !nosys darwin LDFLAGS: -Wl,-rpath,/usr/local/lib -L/opt/homebrew/lib -L/opt/homebrew/opt/libiconv/lib
 // #cgo darwin LDFLAGS: -liconv -ldl
 // #include <stdlib.h>
 // #include <stdint.h>
