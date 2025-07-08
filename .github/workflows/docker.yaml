@@ -80,7 +80,7 @@ jobs:
           fi
 
           {
-            echo ref="FRANKENPHP_LATEST_TAG"
+            echo ref="${FRANKENPHP_LATEST_TAG}"
             echo skip=false
           } >> "${GITHUB_OUTPUT}"
       - uses: actions/checkout@v4
