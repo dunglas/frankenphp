@@ -16,10 +16,10 @@ func TestValidateFunction(t *testing.T) {
 			name: "valid function",
 			function: phpFunction{
 				Name:       "validFunction",
-				ReturnType: "string",
+				ReturnType: phpString,
 				Params: []phpParameter{
-					{Name: "param1", PhpType: "string"},
-					{Name: "param2", PhpType: "int"},
+					{Name: "param1", PhpType: phpString},
+					{Name: "param2", PhpType: phpInt},
 				},
 			},
 			expectError: false,
@@ -28,10 +28,34 @@ func TestValidateFunction(t *testing.T) {
 			name: "valid function with nullable return",
 			function: phpFunction{
 				Name:             "nullableReturn",
-				ReturnType:       "string",
+				ReturnType:       phpString,
 				IsReturnNullable: true,
 				Params: []phpParameter{
-					{Name: "data", PhpType: "array"},
+					{Name: "data", PhpType: phpArray},
+				},
+			},
+			expectError: false,
+		},
+		{
+			name: "valid function with array parameter",
+			function: phpFunction{
+				Name:       "arrayFunction",
+				ReturnType: phpArray,
+				Params: []phpParameter{
+					{Name: "items", PhpType: phpArray},
+					{Name: "filter", PhpType: phpString},
+				},
+			},
+			expectError: false,
+		},
+		{
+			name: "valid function with nullable array parameter",
+			function: phpFunction{
+				Name:       "nullableArrayFunction",
+				ReturnType: phpString,
+				Params: []phpParameter{
+					{Name: "items", PhpType: phpArray, IsNullable: true},
+					{Name: "name", PhpType: phpString},
 				},
 			},
 			expectError: false,
@@ -40,7 +64,7 @@ func TestValidateFunction(t *testing.T) {
 			name: "empty function name",
 			function: phpFunction{
 				Name:       "",
-				ReturnType: "string",
+				ReturnType: phpString,
 			},
 			expectError: true,
 		},
@@ -48,7 +72,7 @@ func TestValidateFunction(t *testing.T) {
 			name: "invalid function name - starts with number",
 			function: phpFunction{
 				Name:       "123invalid",
-				ReturnType: "string",
+				ReturnType: phpString,
 			},
 			expectError: true,
 		},
@@ -56,7 +80,7 @@ func TestValidateFunction(t *testing.T) {
 			name: "invalid function name - contains special chars",
 			function: phpFunction{
 				Name:       "invalid-name",
-				ReturnType: "string",
+				ReturnType: phpString,
 			},
 			expectError: true,
 		},
@@ -64,9 +88,9 @@ func TestValidateFunction(t *testing.T) {
 			name: "invalid parameter name",
 			function: phpFunction{
 				Name:       "validName",
-				ReturnType: "string",
+				ReturnType: phpString,
 				Params: []phpParameter{
-					{Name: "123invalid", PhpType: "string"},
+					{Name: "123invalid", PhpType: phpString},
 				},
 			},
 			expectError: true,
@@ -75,9 +99,9 @@ func TestValidateFunction(t *testing.T) {
 			name: "empty parameter name",
 			function: phpFunction{
 				Name:       "validName",
-				ReturnType: "string",
+				ReturnType: phpString,
 				Params: []phpParameter{
-					{Name: "", PhpType: "string"},
+					{Name: "", PhpType: phpString},
 				},
 			},
 			expectError: true,
@@ -154,7 +178,7 @@ func TestValidateReturnType(t *testing.T) {
 	validator := Validator{}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := validator.validateReturnType(tt.returnType)
+			err := validator.validateReturnType(phpType(tt.returnType))
 
 			if tt.expectError {
 				assert.Error(t, err, "validateReturnType(%s) should return an error", tt.returnType)
@@ -175,7 +199,7 @@ func TestValidateClassProperty(t *testing.T) {
 			name: "valid property",
 			prop: phpClassProperty{
 				Name:    "validProperty",
-				PhpType: "string",
+				PhpType: phpString,
 				GoType:  "string",
 			},
 			expectError: false,
@@ -184,7 +208,7 @@ func TestValidateClassProperty(t *testing.T) {
 			name: "valid nullable property",
 			prop: phpClassProperty{
 				Name:       "nullableProperty",
-				PhpType:    "int",
+				PhpType:    phpInt,
 				GoType:     "*int",
 				IsNullable: true,
 			},
@@ -194,7 +218,7 @@ func TestValidateClassProperty(t *testing.T) {
 			name: "empty property name",
 			prop: phpClassProperty{
 				Name:    "",
-				PhpType: "string",
+				PhpType: phpString,
 			},
 			expectError: true,
 		},
@@ -202,7 +226,7 @@ func TestValidateClassProperty(t *testing.T) {
 			name: "invalid property name",
 			prop: phpClassProperty{
 				Name:    "123invalid",
-				PhpType: "string",
+				PhpType: phpString,
 			},
 			expectError: true,
 		},
@@ -210,7 +234,7 @@ func TestValidateClassProperty(t *testing.T) {
 			name: "invalid property type",
 			prop: phpClassProperty{
 				Name:    "validName",
-				PhpType: "invalidType",
+				PhpType: phpType("invalidType"),
 			},
 			expectError: true,
 		},
@@ -240,7 +264,7 @@ func TestValidateParameter(t *testing.T) {
 			name: "valid string parameter",
 			param: phpParameter{
 				Name:    "validParam",
-				PhpType: "string",
+				PhpType: phpString,
 			},
 			expectError: false,
 		},
@@ -248,7 +272,7 @@ func TestValidateParameter(t *testing.T) {
 			name: "valid nullable parameter",
 			param: phpParameter{
 				Name:       "nullableParam",
-				PhpType:    "int",
+				PhpType:    phpInt,
 				IsNullable: true,
 			},
 			expectError: false,
@@ -257,9 +281,26 @@ func TestValidateParameter(t *testing.T) {
 			name: "valid parameter with default",
 			param: phpParameter{
 				Name:         "defaultParam",
-				PhpType:      "string",
+				PhpType:      phpString,
 				HasDefault:   true,
 				DefaultValue: "hello",
+			},
+			expectError: false,
+		},
+		{
+			name: "valid array parameter",
+			param: phpParameter{
+				Name:    "arrayParam",
+				PhpType: phpArray,
+			},
+			expectError: false,
+		},
+		{
+			name: "valid nullable array parameter",
+			param: phpParameter{
+				Name:       "nullableArrayParam",
+				PhpType:    phpArray,
+				IsNullable: true,
 			},
 			expectError: false,
 		},
@@ -267,7 +308,7 @@ func TestValidateParameter(t *testing.T) {
 			name: "empty parameter name",
 			param: phpParameter{
 				Name:    "",
-				PhpType: "string",
+				PhpType: phpString,
 			},
 			expectError: true,
 		},
@@ -275,7 +316,7 @@ func TestValidateParameter(t *testing.T) {
 			name: "invalid parameter name",
 			param: phpParameter{
 				Name:    "123invalid",
-				PhpType: "string",
+				PhpType: phpString,
 			},
 			expectError: true,
 		},
@@ -283,7 +324,7 @@ func TestValidateParameter(t *testing.T) {
 			name: "invalid parameter type",
 			param: phpParameter{
 				Name:    "validName",
-				PhpType: "invalidType",
+				PhpType: phpType("invalidType"),
 			},
 			expectError: true,
 		},
@@ -315,8 +356,8 @@ func TestValidateClass(t *testing.T) {
 				Name:     "ValidClass",
 				GoStruct: "ValidStruct",
 				Properties: []phpClassProperty{
-					{Name: "name", PhpType: "string"},
-					{Name: "age", PhpType: "int"},
+					{Name: "name", PhpType: phpString},
+					{Name: "age", PhpType: phpInt},
 				},
 			},
 			expectError: false,
@@ -327,8 +368,8 @@ func TestValidateClass(t *testing.T) {
 				Name:     "NullableClass",
 				GoStruct: "NullableStruct",
 				Properties: []phpClassProperty{
-					{Name: "required", PhpType: "string", IsNullable: false},
-					{Name: "optional", PhpType: "string", IsNullable: true},
+					{Name: "required", PhpType: phpString, IsNullable: false},
+					{Name: "optional", PhpType: phpString, IsNullable: true},
 				},
 			},
 			expectError: false,
@@ -355,7 +396,7 @@ func TestValidateClass(t *testing.T) {
 				Name:     "ValidClass",
 				GoStruct: "ValidStruct",
 				Properties: []phpClassProperty{
-					{Name: "123invalid", PhpType: "string"},
+					{Name: "123invalid", PhpType: phpString},
 				},
 			},
 			expectError: true,
@@ -387,12 +428,12 @@ func TestValidateScalarTypes(t *testing.T) {
 			name: "valid scalar parameters only",
 			function: phpFunction{
 				Name:       "validFunction",
-				ReturnType: "string",
+				ReturnType: phpString,
 				Params: []phpParameter{
-					{Name: "stringParam", PhpType: "string"},
-					{Name: "intParam", PhpType: "int"},
-					{Name: "floatParam", PhpType: "float"},
-					{Name: "boolParam", PhpType: "bool"},
+					{Name: "stringParam", PhpType: phpString},
+					{Name: "intParam", PhpType: phpInt},
+					{Name: "floatParam", PhpType: phpFloat},
+					{Name: "boolParam", PhpType: phpBool},
 				},
 			},
 			expectError: false,
@@ -401,10 +442,10 @@ func TestValidateScalarTypes(t *testing.T) {
 			name: "valid nullable scalar parameters",
 			function: phpFunction{
 				Name:       "nullableFunction",
-				ReturnType: "string",
+				ReturnType: phpString,
 				Params: []phpParameter{
-					{Name: "stringParam", PhpType: "string", IsNullable: true},
-					{Name: "intParam", PhpType: "int", IsNullable: true},
+					{Name: "stringParam", PhpType: phpString, IsNullable: true},
+					{Name: "intParam", PhpType: phpInt, IsNullable: true},
 				},
 			},
 			expectError: false,
@@ -413,32 +454,43 @@ func TestValidateScalarTypes(t *testing.T) {
 			name: "valid void return type",
 			function: phpFunction{
 				Name:       "voidFunction",
-				ReturnType: "void",
+				ReturnType: phpVoid,
 				Params: []phpParameter{
-					{Name: "stringParam", PhpType: "string"},
+					{Name: "stringParam", PhpType: phpString},
 				},
 			},
 			expectError: false,
 		},
 		{
-			name: "invalid array parameter",
+			name: "valid array parameter and return",
 			function: phpFunction{
 				Name:       "arrayFunction",
-				ReturnType: "string",
+				ReturnType: phpArray,
 				Params: []phpParameter{
-					{Name: "arrayParam", PhpType: "array"},
+					{Name: "arrayParam", PhpType: phpArray},
+					{Name: "stringParam", PhpType: phpString},
 				},
 			},
-			expectError: true,
-			errorMsg:    "parameter 1 (arrayParam) has unsupported type 'array'",
+			expectError: false,
+		},
+		{
+			name: "valid nullable array parameter",
+			function: phpFunction{
+				Name:       "nullableArrayFunction",
+				ReturnType: phpString,
+				Params: []phpParameter{
+					{Name: "arrayParam", PhpType: phpArray, IsNullable: true},
+				},
+			},
+			expectError: false,
 		},
 		{
 			name: "invalid object parameter",
 			function: phpFunction{
 				Name:       "objectFunction",
-				ReturnType: "string",
+				ReturnType: phpString,
 				Params: []phpParameter{
-					{Name: "objectParam", PhpType: "object"},
+					{Name: "objectParam", PhpType: phpObject},
 				},
 			},
 			expectError: true,
@@ -448,33 +500,21 @@ func TestValidateScalarTypes(t *testing.T) {
 			name: "invalid mixed parameter",
 			function: phpFunction{
 				Name:       "mixedFunction",
-				ReturnType: "string",
+				ReturnType: phpString,
 				Params: []phpParameter{
-					{Name: "mixedParam", PhpType: "mixed"},
+					{Name: "mixedParam", PhpType: phpMixed},
 				},
 			},
 			expectError: true,
 			errorMsg:    "parameter 1 (mixedParam) has unsupported type 'mixed'",
 		},
 		{
-			name: "invalid array return type",
-			function: phpFunction{
-				Name:       "arrayReturnFunction",
-				ReturnType: "array",
-				Params: []phpParameter{
-					{Name: "stringParam", PhpType: "string"},
-				},
-			},
-			expectError: true,
-			errorMsg:    "return type 'array' is not supported",
-		},
-		{
 			name: "invalid object return type",
 			function: phpFunction{
 				Name:       "objectReturnFunction",
-				ReturnType: "object",
+				ReturnType: phpObject,
 				Params: []phpParameter{
-					{Name: "stringParam", PhpType: "string"},
+					{Name: "stringParam", PhpType: phpString},
 				},
 			},
 			expectError: true,
@@ -484,15 +524,15 @@ func TestValidateScalarTypes(t *testing.T) {
 			name: "mixed scalar and invalid parameters",
 			function: phpFunction{
 				Name:       "mixedFunction",
-				ReturnType: "string",
+				ReturnType: phpString,
 				Params: []phpParameter{
-					{Name: "validParam", PhpType: "string"},
-					{Name: "invalidParam", PhpType: "array"},
-					{Name: "anotherValidParam", PhpType: "int"},
+					{Name: "validParam", PhpType: phpString},
+					{Name: "invalidParam", PhpType: phpObject},
+					{Name: "anotherValidParam", PhpType: phpInt},
 				},
 			},
 			expectError: true,
-			errorMsg:    "parameter 2 (invalidParam) has unsupported type 'array'",
+			errorMsg:    "parameter 2 (invalidParam) has unsupported type 'object'",
 		},
 	}
 
@@ -522,10 +562,10 @@ func TestValidateGoFunctionSignature(t *testing.T) {
 			name: "valid Go function signature",
 			phpFunc: phpFunction{
 				Name:       "testFunc",
-				ReturnType: "string",
+				ReturnType: phpString,
 				Params: []phpParameter{
-					{Name: "name", PhpType: "string"},
-					{Name: "count", PhpType: "int"},
+					{Name: "name", PhpType: phpString},
+					{Name: "count", PhpType: phpInt},
 				},
 				GoFunction: `func testFunc(name *C.zend_string, count int64) unsafe.Pointer {
 	return nil
@@ -537,9 +577,9 @@ func TestValidateGoFunctionSignature(t *testing.T) {
 			name: "valid void return type",
 			phpFunc: phpFunction{
 				Name:       "voidFunc",
-				ReturnType: "void",
+				ReturnType: phpVoid,
 				Params: []phpParameter{
-					{Name: "message", PhpType: "string"},
+					{Name: "message", PhpType: phpString},
 				},
 				GoFunction: `func voidFunc(message *C.zend_string) {
 	// Do something
@@ -551,7 +591,7 @@ func TestValidateGoFunctionSignature(t *testing.T) {
 			name: "no Go function provided",
 			phpFunc: phpFunction{
 				Name:       "noGoFunc",
-				ReturnType: "string",
+				ReturnType: phpString,
 				Params:     []phpParameter{},
 				GoFunction: "",
 			},
@@ -562,10 +602,10 @@ func TestValidateGoFunctionSignature(t *testing.T) {
 			name: "parameter count mismatch",
 			phpFunc: phpFunction{
 				Name:       "countMismatch",
-				ReturnType: "string",
+				ReturnType: phpString,
 				Params: []phpParameter{
-					{Name: "param1", PhpType: "string"},
-					{Name: "param2", PhpType: "int"},
+					{Name: "param1", PhpType: phpString},
+					{Name: "param2", PhpType: phpInt},
 				},
 				GoFunction: `func countMismatch(param1 *C.zend_string) unsafe.Pointer {
 	return nil
@@ -578,10 +618,10 @@ func TestValidateGoFunctionSignature(t *testing.T) {
 			name: "parameter type mismatch",
 			phpFunc: phpFunction{
 				Name:       "typeMismatch",
-				ReturnType: "string",
+				ReturnType: phpString,
 				Params: []phpParameter{
-					{Name: "name", PhpType: "string"},
-					{Name: "count", PhpType: "int"},
+					{Name: "name", PhpType: phpString},
+					{Name: "count", PhpType: phpInt},
 				},
 				GoFunction: `func typeMismatch(name *C.zend_string, count string) unsafe.Pointer {
 	return nil
@@ -594,9 +634,9 @@ func TestValidateGoFunctionSignature(t *testing.T) {
 			name: "return type mismatch",
 			phpFunc: phpFunction{
 				Name:       "returnMismatch",
-				ReturnType: "int",
+				ReturnType: phpInt,
 				Params: []phpParameter{
-					{Name: "value", PhpType: "string"},
+					{Name: "value", PhpType: phpString},
 				},
 				GoFunction: `func returnMismatch(value *C.zend_string) string {
 	return ""
@@ -609,9 +649,9 @@ func TestValidateGoFunctionSignature(t *testing.T) {
 			name: "valid bool parameter and return",
 			phpFunc: phpFunction{
 				Name:       "boolFunc",
-				ReturnType: "bool",
+				ReturnType: phpBool,
 				Params: []phpParameter{
-					{Name: "flag", PhpType: "bool"},
+					{Name: "flag", PhpType: phpBool},
 				},
 				GoFunction: `func boolFunc(flag bool) bool {
 	return flag
@@ -623,12 +663,57 @@ func TestValidateGoFunctionSignature(t *testing.T) {
 			name: "valid float parameter and return",
 			phpFunc: phpFunction{
 				Name:       "floatFunc",
-				ReturnType: "float",
+				ReturnType: phpFloat,
 				Params: []phpParameter{
-					{Name: "value", PhpType: "float"},
+					{Name: "value", PhpType: phpFloat},
 				},
 				GoFunction: `func floatFunc(value float64) float64 {
 	return value * 2.0
+}`,
+			},
+			expectError: false,
+		},
+		{
+			name: "valid array parameter and return",
+			phpFunc: phpFunction{
+				Name:       "arrayFunc",
+				ReturnType: phpArray,
+				Params: []phpParameter{
+					{Name: "items", PhpType: phpArray},
+				},
+				GoFunction: `func arrayFunc(items *C.zval) unsafe.Pointer {
+	return nil
+}`,
+			},
+			expectError: false,
+		},
+		{
+			name: "valid nullable array parameter",
+			phpFunc: phpFunction{
+				Name:       "nullableArrayFunc",
+				ReturnType: phpString,
+				Params: []phpParameter{
+					{Name: "items", PhpType: phpArray, IsNullable: true},
+					{Name: "name", PhpType: phpString},
+				},
+				GoFunction: `func nullableArrayFunc(items *C.zval, name *C.zend_string) unsafe.Pointer {
+	return nil
+}`,
+			},
+			expectError: false,
+		},
+		{
+			name: "mixed array and scalar parameters",
+			phpFunc: phpFunction{
+				Name:       "mixedFunc",
+				ReturnType: phpArray,
+				Params: []phpParameter{
+					{Name: "data", PhpType: phpArray},
+					{Name: "filter", PhpType: phpString},
+					{Name: "limit", PhpType: phpInt},
+				},
+				GoFunction: `func mixedFunc(data *C.zval, filter *C.zend_string, limit int64) unsafe.Pointer {
+	return nil
 }`,
 			},
 			expectError: false,
@@ -657,20 +742,22 @@ func TestPhpTypeToGoType(t *testing.T) {
 		expected   string
 	}{
 		{"string", false, "*C.zend_string"},
-		{"string", true, "*C.zend_string"}, // String is already a pointer, no change for nullable
+		{"string", true, "*C.zend_string"},
 		{"int", false, "int64"},
-		{"int", true, "*int64"}, // Nullable int becomes pointer to int64
+		{"int", true, "*int64"},
 		{"float", false, "float64"},
-		{"float", true, "*float64"}, // Nullable float becomes pointer to float64
+		{"float", true, "*float64"},
 		{"bool", false, "bool"},
-		{"bool", true, "*bool"}, // Nullable bool becomes pointer to bool
+		{"bool", true, "*bool"},
+		{"array", false, "*C.zval"},
+		{"array", true, "*C.zval"},
 		{"unknown", false, "interface{}"},
 	}
 
 	validator := Validator{}
 	for _, tt := range tests {
 		t.Run(tt.phpType, func(t *testing.T) {
-			result := validator.phpTypeToGoType(tt.phpType, tt.isNullable)
+			result := validator.phpTypeToGoType(phpType(tt.phpType), tt.isNullable)
 			assert.Equal(t, tt.expected, result, "phpTypeToGoType(%s, %v) should return %s", tt.phpType, tt.isNullable, tt.expected)
 		})
 	}
@@ -679,27 +766,28 @@ func TestPhpTypeToGoType(t *testing.T) {
 func TestPhpReturnTypeToGoType(t *testing.T) {
 	tests := []struct {
 		phpReturnType string
-		isNullable    bool
 		expected      string
 	}{
-		{"void", false, ""},
-		{"void", true, ""},
-		{"string", false, "unsafe.Pointer"},
-		{"string", true, "unsafe.Pointer"},
-		{"int", false, "int64"},
-		{"int", true, "int64"},
-		{"float", false, "float64"},
-		{"float", true, "float64"},
-		{"bool", false, "bool"},
-		{"bool", true, "bool"},
-		{"unknown", false, "interface{}"},
+		{"void", ""},
+		{"void", ""},
+		{"string", "unsafe.Pointer"},
+		{"string", "unsafe.Pointer"},
+		{"int", "int64"},
+		{"int", "int64"},
+		{"float", "float64"},
+		{"float", "float64"},
+		{"bool", "bool"},
+		{"bool", "bool"},
+		{"array", "unsafe.Pointer"},
+		{"array", "unsafe.Pointer"},
+		{"unknown", "interface{}"},
 	}
 
 	validator := Validator{}
 	for _, tt := range tests {
 		t.Run(tt.phpReturnType, func(t *testing.T) {
-			result := validator.phpReturnTypeToGoType(tt.phpReturnType, tt.isNullable)
-			assert.Equal(t, tt.expected, result, "phpReturnTypeToGoType(%s, %v) should return %s", tt.phpReturnType, tt.isNullable, tt.expected)
+			result := validator.phpReturnTypeToGoType(phpType(tt.phpReturnType))
+			assert.Equal(t, tt.expected, result, "phpReturnTypeToGoType(%s) should return %s", tt.phpReturnType, tt.expected)
 		})
 	}
 }

@@ -40,11 +40,19 @@ func (sg *StubGenerator) buildContent() (string, error) {
 	return buf.String(), nil
 }
 
-// getPhpTypeAnnotation converts Go constant type to PHP type annotation
-func getPhpTypeAnnotation(goType string) string {
-	switch goType {
-	case "string", "bool", "float", "int":
-		return goType
+// getPhpTypeAnnotation converts phpType to PHP type annotation
+func getPhpTypeAnnotation(t phpType) string {
+	switch t {
+	case phpString:
+		return "string"
+	case phpBool:
+		return "bool"
+	case phpFloat:
+		return "float"
+	case phpInt:
+		return "int"
+	case phpArray:
+		return "array"
 	default:
 		return "int"
 	}

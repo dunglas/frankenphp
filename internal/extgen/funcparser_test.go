@@ -109,7 +109,7 @@ func someOtherGoName(num int64) int64 {
 			if tt.name == "single function" && len(functions) > 0 {
 				fn := functions[0]
 				assert.Equal(t, "testFunc", fn.Name, "Expected function name 'testFunc'")
-				assert.Equal(t, "string", fn.ReturnType, "Expected return type 'string'")
+				assert.Equal(t, phpString, fn.ReturnType, "Expected return type 'string'")
 				assert.Len(t, fn.Params, 1, "Expected 1 parameter")
 				if len(fn.Params) > 0 {
 					assert.Equal(t, "name", fn.Params[0].Name, "Expected parameter name 'name'")
@@ -133,7 +133,7 @@ func TestSignatureParsing(t *testing.T) {
 		expectError bool
 		funcName    string
 		paramCount  int
-		returnType  string
+		returnType  phpType
 		nullable    bool
 	}{
 		{
@@ -141,7 +141,7 @@ func TestSignatureParsing(t *testing.T) {
 			signature:  "test(name string): string",
 			funcName:   "test",
 			paramCount: 1,
-			returnType: "string",
+			returnType: phpString,
 			nullable:   false,
 		},
 		{
@@ -149,7 +149,7 @@ func TestSignatureParsing(t *testing.T) {
 			signature:  "test(id int): ?string",
 			funcName:   "test",
 			paramCount: 1,
-			returnType: "string",
+			returnType: phpString,
 			nullable:   true,
 		},
 		{
@@ -157,7 +157,7 @@ func TestSignatureParsing(t *testing.T) {
 			signature:  "calculate(a int, b float, name string): float",
 			funcName:   "calculate",
 			paramCount: 3,
-			returnType: "float",
+			returnType: phpFloat,
 			nullable:   false,
 		},
 		{
@@ -165,7 +165,7 @@ func TestSignatureParsing(t *testing.T) {
 			signature:  "getValue(): int",
 			funcName:   "getValue",
 			paramCount: 0,
-			returnType: "int",
+			returnType: phpInt,
 			nullable:   false,
 		},
 		{
@@ -173,7 +173,7 @@ func TestSignatureParsing(t *testing.T) {
 			signature:  "process(?string data, ?int count): bool",
 			funcName:   "process",
 			paramCount: 2,
-			returnType: "bool",
+			returnType: phpBool,
 			nullable:   false,
 		},
 		{
@@ -219,7 +219,7 @@ func TestParameterParsing(t *testing.T) {
 		name             string
 		paramStr         string
 		expectedName     string
-		expectedType     string
+		expectedType     phpType
 		expectedNullable bool
 		expectedDefault  string
 		hasDefault       bool
@@ -229,20 +229,20 @@ func TestParameterParsing(t *testing.T) {
 			name:         "simple string param",
 			paramStr:     "string name",
 			expectedName: "name",
-			expectedType: "string",
+			expectedType: phpString,
 		},
 		{
 			name:             "nullable int param",
 			paramStr:         "?int count",
 			expectedName:     "count",
-			expectedType:     "int",
+			expectedType:     phpInt,
 			expectedNullable: true,
 		},
 		{
 			name:            "param with default",
 			paramStr:        "string message = 'hello'",
 			expectedName:    "message",
-			expectedType:    "string",
+			expectedType:    phpString,
 			expectedDefault: "hello",
 			hasDefault:      true,
 		},
@@ -250,7 +250,7 @@ func TestParameterParsing(t *testing.T) {
 			name:            "int with default",
 			paramStr:        "int limit = 10",
 			expectedName:    "limit",
-			expectedType:    "int",
+			expectedType:    phpInt,
 			expectedDefault: "10",
 			hasDefault:      true,
 		},
@@ -258,7 +258,7 @@ func TestParameterParsing(t *testing.T) {
 			name:             "nullable with default",
 			paramStr:         "?string data = null",
 			expectedName:     "data",
-			expectedType:     "string",
+			expectedType:     phpString,
 			expectedNullable: true,
 			expectedDefault:  "null",
 			hasDefault:       true,

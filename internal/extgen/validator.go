@@ -9,6 +9,22 @@ import (
 	"strings"
 )
 
+func scalarTypes() []phpType {
+	return []phpType{phpString, phpInt, phpFloat, phpBool, phpArray}
+}
+
+func paramTypes() []phpType {
+	return []phpType{phpString, phpInt, phpFloat, phpBool, phpArray, phpObject, phpMixed}
+}
+
+func returnTypes() []phpType {
+	return []phpType{phpVoid, phpString, phpInt, phpFloat, phpBool, phpArray, phpObject, phpMixed, phpNull, phpTrue, phpFalse}
+}
+
+func propTypes() []phpType {
+	return []phpType{phpString, phpInt, phpFloat, phpBool, phpArray, phpObject, phpMixed}
+}
+
 var functionNameRegex = regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_]*$`)
 var parameterNameRegex = regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_]*$`)
 var classNameRegex = regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_]*$`)
@@ -47,17 +63,17 @@ func (v *Validator) validateParameter(param phpParameter) error {
 		return fmt.Errorf("invalid parameter name: %s", param.Name)
 	}
 
-	validTypes := []string{"string", "int", "float", "bool", "array", "object", "mixed"}
-	if !v.isValidType(param.PhpType, validTypes) {
+	validTypes := paramTypes()
+	if !v.isValidPHPType(param.PhpType, validTypes) {
 		return fmt.Errorf("invalid parameter type: %s", param.PhpType)
 	}
 
 	return nil
 }
 
-func (v *Validator) validateReturnType(returnType string) error {
-	validReturnTypes := []string{"void", "string", "int", "float", "bool", "array", "object", "mixed", "null", "true", "false"}
-	if !v.isValidType(returnType, validReturnTypes) {
+func (v *Validator) validateReturnType(returnType phpType) error {
+	validReturnTypes := returnTypes()
+	if !v.isValidPHPType(returnType, validReturnTypes) {
 		return fmt.Errorf("invalid return type: %s", returnType)
 	}
 	return nil
@@ -90,17 +106,17 @@ func (v *Validator) validateClassProperty(prop phpClassProperty) error {
 		return fmt.Errorf("invalid property name: %s", prop.Name)
 	}
 
-	validTypes := []string{"string", "int", "float", "bool", "array", "object", "mixed"}
-	if !v.isValidType(prop.PhpType, validTypes) {
+	validTypes := propTypes()
+	if !v.isValidPHPType(prop.PhpType, validTypes) {
 		return fmt.Errorf("invalid property type: %s", prop.PhpType)
 	}
 
 	return nil
 }
 
-func (v *Validator) isValidType(typeStr string, validTypes []string) bool {
+func (v *Validator) isValidPHPType(phpType phpType, validTypes []phpType) bool {
 	for _, valid := range validTypes {
-		if typeStr == valid {
+		if phpType == valid {
 			return true
 		}
 	}
@@ -109,22 +125,22 @@ func (v *Validator) isValidType(typeStr string, validTypes []string) bool {
 
 // validateScalarTypes checks if PHP signature contains only supported scalar types
 func (v *Validator) validateScalarTypes(fn phpFunction) error {
-	supportedTypes := []string{"string", "int", "float", "bool"}
+	supportedTypes := scalarTypes()
 
 	for i, param := range fn.Params {
-		if !v.isScalarType(param.PhpType, supportedTypes) {
-			return fmt.Errorf("parameter %d (%s) has unsupported type '%s'. Only scalar types (string, int, float, bool) and their nullable variants are supported", i+1, param.Name, param.PhpType)
+		if !v.isScalarPHPType(param.PhpType, supportedTypes) {
+			return fmt.Errorf("parameter %d (%s) has unsupported type '%s'. Only scalar types (string, int, float, bool, array) and their nullable variants are supported", i+1, param.Name, param.PhpType)
 		}
 	}
 
-	if fn.ReturnType != "void" && !v.isScalarType(fn.ReturnType, supportedTypes) {
-		return fmt.Errorf("return type '%s' is not supported. Only scalar types (string, int, float, bool), void, and their nullable variants are supported", fn.ReturnType)
+	if fn.ReturnType != phpVoid && !v.isScalarPHPType(fn.ReturnType, supportedTypes) {
+		return fmt.Errorf("return type '%s' is not supported. Only scalar types (string, int, float, bool, array), void, and their nullable variants are supported", fn.ReturnType)
 	}
 
 	return nil
 }
 
-func (v *Validator) isScalarType(phpType string, supportedTypes []string) bool {
+func (v *Validator) isScalarPHPType(phpType phpType, supportedTypes []phpType) bool {
 	for _, supported := range supportedTypes {
 		if phpType == supported {
 			return true
@@ -197,7 +213,7 @@ func (v *Validator) validateGoFunctionSignatureWithOptions(phpFunc phpFunction, 
 		}
 	}
 
-	expectedGoReturnType := v.phpReturnTypeToGoType(phpFunc.ReturnType, phpFunc.IsReturnNullable)
+	expectedGoReturnType := v.phpReturnTypeToGoType(phpFunc.ReturnType)
 	actualGoReturnType := v.goReturnTypeToString(goFunc.Type.Results)
 
 	if !v.isCompatibleGoType(expectedGoReturnType, actualGoReturnType) {
@@ -207,22 +223,24 @@ func (v *Validator) validateGoFunctionSignatureWithOptions(phpFunc phpFunction, 
 	return nil
 }
 
-func (v *Validator) phpTypeToGoType(phpType string, isNullable bool) string {
+func (v *Validator) phpTypeToGoType(t phpType, isNullable bool) string {
 	var baseType string
-	switch phpType {
-	case "string":
+	switch t {
+	case phpString:
 		baseType = "*C.zend_string"
-	case "int":
+	case phpInt:
 		baseType = "int64"
-	case "float":
+	case phpFloat:
 		baseType = "float64"
-	case "bool":
+	case phpBool:
 		baseType = "bool"
+	case phpArray:
+		baseType = "*C.zval"
 	default:
 		baseType = "interface{}"
 	}
 
-	if isNullable && phpType != "string" {
+	if isNullable && t != phpString && t != phpArray {
 		return "*" + baseType
 	}
 
@@ -247,18 +265,20 @@ func (v *Validator) isCompatibleGoType(expectedType, actualType string) bool {
 	return false
 }
 
-func (v *Validator) phpReturnTypeToGoType(phpReturnType string, isNullable bool) string {
+func (v *Validator) phpReturnTypeToGoType(phpReturnType phpType) string {
 	switch phpReturnType {
-	case "void":
+	case phpVoid:
 		return ""
-	case "string":
+	case phpString:
 		return "unsafe.Pointer"
-	case "int":
+	case phpInt:
 		return "int64"
-	case "float":
+	case phpFloat:
 		return "float64"
-	case "bool":
+	case phpBool:
 		return "bool"
+	case phpArray:
+		return "unsafe.Pointer"
 	default:
 		return "interface{}"
 	}

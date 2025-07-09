@@ -157,29 +157,29 @@ func GetUserInfo(u UserStruct, prefix *C.zend_string) unsafe.Pointer {
 
 	getName := class.Methods[0]
 	assert.Equal(t, "getName", getName.Name, "Expected method name 'getName'")
-	assert.Equal(t, "string", getName.ReturnType, "Expected return type 'string'")
+	assert.Equal(t, phpString, getName.ReturnType, "Expected return type 'string'")
 	assert.Empty(t, getName.Params, "Expected 0 params")
 	assert.Equal(t, "User", getName.ClassName, "Expected class name 'User'")
 
 	setAge := class.Methods[1]
 	assert.Equal(t, "setAge", setAge.Name, "Expected method name 'setAge'")
-	assert.Equal(t, "void", setAge.ReturnType, "Expected return type 'void'")
+	assert.Equal(t, phpVoid, setAge.ReturnType, "Expected return type 'void'")
 	require.Len(t, setAge.Params, 1, "Expected 1 param")
 
 	param := setAge.Params[0]
 	assert.Equal(t, "age", param.Name, "Expected param name 'age'")
-	assert.Equal(t, "int", param.PhpType, "Expected param type 'int'")
+	assert.Equal(t, phpInt, param.PhpType, "Expected param type 'int'")
 	assert.False(t, param.IsNullable, "Expected param to not be nullable")
 	assert.False(t, param.HasDefault, "Expected param to not have default value")
 
 	getInfo := class.Methods[2]
 	assert.Equal(t, "getInfo", getInfo.Name, "Expected method name 'getInfo'")
-	assert.Equal(t, "string", getInfo.ReturnType, "Expected return type 'string'")
+	assert.Equal(t, phpString, getInfo.ReturnType, "Expected return type 'string'")
 	require.Len(t, getInfo.Params, 1, "Expected 1 param")
 
 	param = getInfo.Params[0]
 	assert.Equal(t, "prefix", param.Name, "Expected param name 'prefix'")
-	assert.Equal(t, "string", param.PhpType, "Expected param type 'string'")
+	assert.Equal(t, phpString, param.PhpType, "Expected param type 'string'")
 	assert.True(t, param.HasDefault, "Expected param to have default value")
 	assert.Equal(t, "User", param.DefaultValue, "Expected default value 'User'")
 }
@@ -196,7 +196,7 @@ func TestMethodParameterParsing(t *testing.T) {
 			paramStr: "int $age",
 			expectedParam: phpParameter{
 				Name:       "age",
-				PhpType:    "int",
+				PhpType:    phpInt,
 				IsNullable: false,
 				HasDefault: false,
 			},
@@ -207,7 +207,7 @@ func TestMethodParameterParsing(t *testing.T) {
 			paramStr: "?string $name",
 			expectedParam: phpParameter{
 				Name:       "name",
-				PhpType:    "string",
+				PhpType:    phpString,
 				IsNullable: true,
 				HasDefault: false,
 			},
@@ -218,7 +218,7 @@ func TestMethodParameterParsing(t *testing.T) {
 			paramStr: `string $prefix = "default"`,
 			expectedParam: phpParameter{
 				Name:         "prefix",
-				PhpType:      "string",
+				PhpType:      phpString,
 				IsNullable:   false,
 				HasDefault:   true,
 				DefaultValue: "default",
@@ -230,7 +230,7 @@ func TestMethodParameterParsing(t *testing.T) {
 			paramStr: "?int $count = null",
 			expectedParam: phpParameter{
 				Name:         "count",
-				PhpType:      "int",
+				PhpType:      phpInt,
 				IsNullable:   true,
 				HasDefault:   true,
 				DefaultValue: "null",
@@ -268,22 +268,22 @@ func TestMethodParameterParsing(t *testing.T) {
 func TestGoTypeToPHPType(t *testing.T) {
 	tests := []struct {
 		goType   string
-		expected string
+		expected phpType
 	}{
-		{"string", "string"},
-		{"*string", "string"},
-		{"int", "int"},
-		{"int64", "int"},
-		{"*int", "int"},
-		{"float64", "float"},
-		{"*float32", "float"},
-		{"bool", "bool"},
-		{"*bool", "bool"},
-		{"[]string", "array"},
-		{"map[string]int", "array"},
-		{"*[]int", "array"},
-		{"interface{}", "mixed"},
-		{"CustomType", "mixed"},
+		{"string", phpString},
+		{"*string", phpString},
+		{"int", phpInt},
+		{"int64", phpInt},
+		{"*int", phpInt},
+		{"float64", phpFloat},
+		{"*float32", phpFloat},
+		{"bool", phpBool},
+		{"*bool", phpBool},
+		{"[]string", phpArray},
+		{"map[string]int", phpArray},
+		{"*[]int", phpArray},
+		{"interface{}", phpMixed},
+		{"CustomType", phpMixed},
 	}
 
 	parser := classParser{}
@@ -299,7 +299,7 @@ func TestTypeToString(t *testing.T) {
 	tests := []struct {
 		name     string
 		input    string
-		expected []string
+		expected []phpType
 	}{
 		{
 			name: "basic types",
@@ -312,7 +312,7 @@ type TestStruct struct {
 	FloatField  float64
 	BoolField   bool
 }`,
-			expected: []string{"string", "int", "float", "bool"},
+			expected: []phpType{phpString, phpInt, phpFloat, phpBool},
 		},
 		{
 			name: "pointer types",
@@ -325,7 +325,7 @@ type NullableStruct struct {
 	NullableFloat  *float64
 	NullableBool   *bool
 }`,
-			expected: []string{"string", "int", "float", "bool"},
+			expected: []phpType{phpString, phpInt, phpFloat, phpBool},
 		},
 		{
 			name: "collection types",
@@ -337,7 +337,7 @@ type CollectionStruct struct {
 	IntMap      map[string]int
 	MixedSlice  []interface{}
 }`,
-			expected: []string{"array", "array", "array"},
+			expected: []phpType{phpArray, phpArray, phpArray},
 		},
 	}
 
