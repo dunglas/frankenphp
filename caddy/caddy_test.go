@@ -1383,14 +1383,12 @@ func TestWorkerMatchDirectiveWithMultipleWorkers(t *testing.T) {
 	require.NoError(t, err, "static.txt file must be readable for this test")
 	tester.AssertGetResponse("http://localhost:"+testPort+"/files/static.txt", http.StatusOK, string(expectedFileResponse))
 
-	// 404 if the request falls through
-	tester.AssertGetResponse("http://localhost:"+testPort+"/not-matched", http.StatusNotFound, "")
-
 	// serve php file directly as fallback
 	tester.AssertGetResponse("http://localhost:"+testPort+"/hello.php", http.StatusOK, "Hello from PHP")
 
-	// serve worker file directly as fallback
+	// serve index.php file directly as fallback
 	tester.AssertGetResponse("http://localhost:"+testPort+"/index.php", http.StatusOK, "I am by birth a Genevese (i not set)")
+	tester.AssertGetResponse("http://localhost:"+testPort+"/not-matched", http.StatusOK, "I am by birth a Genevese (i not set)")
 }
 
 func TestWorkerMatchDirectiveWithoutFileServer(t *testing.T) {
