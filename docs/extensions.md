@@ -81,24 +81,124 @@ While the first point speaks for itself, the second may be harder to apprehend. 
 
 While some variable types have the same memory representation between C/PHP and Go, some types require more logic to be directly used. This is maybe the hardest part when it comes to writing extensions because it requires understanding internals of the Zend Engine and how variables are stored internally in PHP. This table summarizes what you need to know:
 
-| PHP type           | Go type          | Direct conversion | C to Go helper        | Go to C helper         | Class Methods Support |
-|--------------------|------------------|-------------------|-----------------------|------------------------|-----------------------|
-| `int`              | `int64`          | ✅                 | -                     | -                      | ✅                     |
-| `?int`             | `*int64`         | ✅                 | -                     | -                      | ✅                     |
-| `float`            | `float64`        | ✅                 | -                     | -                      | ✅                     |
-| `?float`           | `*float64`       | ✅                 | -                     | -                      | ✅                     |
-| `bool`             | `bool`           | ✅                 | -                     | -                      | ✅                     |
-| `?bool`            | `*bool`          | ✅                 | -                     | -                      | ✅                     |
-| `string`/`?string` | `*C.zend_string` | ❌                 | frankenphp.GoString() | frankenphp.PHPString() | ✅                     |
-| `array`            | `slice`/`map`    | ❌                 | _Not yet implemented_ | _Not yet implemented_  | ❌                     |
-| `object`           | `struct`         | ❌                 | _Not yet implemented_ | _Not yet implemented_  | ❌                     |
+| PHP type           | Go type             | Direct conversion | C to Go helper        | Go to C helper               | Class Methods Support |
+|--------------------|---------------------|-------------------|-----------------------|------------------------------|-----------------------|
+| `int`              | `int64`             | ✅                 | -                     | -                            | ✅                     |
+| `?int`             | `*int64`            | ✅                 | -                     | -                            | ✅                     |
+| `float`            | `float64`           | ✅                 | -                     | -                            | ✅                     |
+| `?float`           | `*float64`          | ✅                 | -                     | -                            | ✅                     |
+| `bool`             | `bool`              | ✅                 | -                     | -                            | ✅                     |
+| `?bool`            | `*bool`             | ✅                 | -                     | -                            | ✅                     |
+| `string`/`?string` | `*C.zend_string`    | ❌                 | frankenphp.GoString() | frankenphp.PHPString()       | ✅                     |
+| `array`            | `*frankenphp.Array` | ❌                 | frankenphp.GoArray()  | frankenphp.PHPArray()        | ✅                     |
+| `callable`         | `*C.zval`           | ❌                 | -                     | frankenphp.CallPHPCallable() | ❌                     |
+| `object`           | -                   | ❌                 | _Not yet implemented_ | _Not yet implemented_        | ❌                     |
 
 > [!NOTE]
 > This table is not exhaustive yet and will be completed as the FrankenPHP types API gets more complete.
 >
-> For class methods specifically, only primitive types are currently supported. Arrays and objects cannot be used as method parameters or return types yet.
+> For class methods specifically, primitive types and arrays are currently supported. Objects cannot be used as method parameters or return types yet.
 
 If you refer to the code snippet of the previous section, you can see that helpers are used to convert the first parameter and the return value. The second and third parameter of our `repeat_this()` function don't need to be converted as memory representation of the underlying types are the same for both C and Go.
+
+#### Working with Arrays
+
+FrankenPHP provides native support for PHP arrays through the `frankenphp.Array` type. This type represents both PHP indexed arrays (lists) and associative arrays (hashmaps) with ordered key-value pairs.
+
+**Creating and manipulating arrays in Go:**
+
+```go
+//export_php:function process_data(array $input): array
+func process_data(arr *C.zval) unsafe.Pointer {
+    // Convert PHP array to Go
+    goArray := frankenphp.GoArray(unsafe.Pointer(arr))
+	
+	result := &frankenphp.Array{}
+    
+    result.SetInt(0, "first")
+    result.SetInt(1, "second")
+    result.Append("third") // Automatically assigns next integer key
+    
+    result.SetString("name", "John")
+    result.SetString("age", int64(30))
+    
+    for i := uint32(0); i < goArray.Len(); i++ {
+        key, value := goArray.At(i)
+        if key.Type == frankenphp.PHPStringKey {
+            result.SetString("processed_"+key.Str, value)
+        } else {
+            result.SetInt(key.Int+100, value)
+        }
+    }
+    
+    // Convert back to PHP array
+    return frankenphp.PHPArray(result)
+}
+```
+
+**Key features of `frankenphp.Array`:**
+
+* **Ordered key-value pairs** - Maintains insertion order like PHP arrays
+* **Mixed key types** - Supports both integer and string keys in the same array
+* **Type safety** - The `PHPKey` type ensures proper key handling
+* **Automatic list detection** - When converting to PHP, automatically detects if array should be a packed list or hashmap
+
+**Available methods:**
+
+* `SetInt(key int64, value interface{})` - Set value with integer key
+* `SetString(key string, value interface{})` - Set value with string key  
+* `Append(value interface{})` - Add value with next available integer key
+* `Len() uint32` - Get number of elements
+* `At(index uint32) (PHPKey, interface{})` - Get key-value pair at index
+* `frankenphp.PHPArray(arr *frankenphp.Array) unsafe.Pointer` - Convert to PHP array
+
+### Working with Callables
+
+FrankenPHP provides a way to work with PHP callables using the `frankenphp.CallPHPCallable` helper. This allows you to call PHP functions or methods from Go code.
+
+To showcase this, let's create our own `array_map()` function that takes a callable and an array, applies the callable to each element of the array, and returns a new array with the results:
+
+```go
+// export_php:function my_array_map(array $data, callable $callback): array
+func my_array_map(arr *C.zval, callback *C.zval) unsafe.Pointer {
+	goArr := frankenphp.GoArray(unsafe.Pointer(arr))
+	result := &frankenphp.Array{}
+
+	for i := uint32(0); i < goArr.Len(); i++ {
+		key, value := goArr.At(i)
+
+		callbackResult := frankenphp.CallPHPCallable(unsafe.Pointer(callback), []interface{}{value})
+
+		if key.Type == frankenphp.PHPIntKey {
+			result.SetInt(key.Int, callbackResult)
+		} else {
+			result.SetString(key.Str, callbackResult)
+		}
+	}
+
+	return frankenphp.PHPArray(result)
+}
+```
+
+Notice how we use `frankenphp.CallPHPCallable()` to call the PHP callable passed as a parameter. This function takes a pointer to the callable and an array of arguments, and it returns the result of the callable execution. You can use the callable syntax you're used to:
+
+```php
+<?php
+
+$strArray = ['a' => 'hello', 'b' => 'world', 'c' => 'php'];
+$result = my_array_map($strArray, 'strtoupper'); // $result will be ['a' => 'HELLO', 'b' => 'WORLD', 'c' => 'PHP']
+
+$arr = [1, 2, 3, 4, [5, 6]];
+$result = my_array_map($arr, function($item) {
+    if (\is_array($item)) {
+        return my_array_map($item, function($subItem) {
+            return $subItem * 2;
+        });
+    }
+
+    return $item * 3;
+}); // $result will be [3, 6, 9, 12, [10, 12]]
+```
 
 ### Declaring a Native PHP Class
 
@@ -188,7 +288,7 @@ func (us *UserStruct) UpdateInfo(name *C.zend_string, age *int64, active *bool) 
 * **PHP `null` becomes Go `nil`** - when PHP passes `null`, your Go function receives a `nil` pointer
 
 > [!WARNING]
-> Currently, class methods have the following limitations. **Arrays and objects are not supported** as parameter types or return types. Only scalar types are supported: `string`, `int`, `float`, `bool` and `void` (for return type). **Nullable parameter types are fully supported** for all scalar types (`?string`, `?int`, `?float`, `?bool`).
+> Currently, class methods have the following limitations. **Objects are not supported** as parameter types or return types. **Arrays are fully supported** for both parameters and return types. Supported types: `string`, `int`, `float`, `bool`, `array`, and `void` (for return type). **Nullable parameter types are fully supported** for all scalar types (`?string`, `?int`, `?float`, `?bool`).
 
 After generating the extension, you will be allowed to use the class and its methods in PHP. Note that you **cannot access properties directly**:
 
