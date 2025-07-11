@@ -78,7 +78,7 @@ php artisan octane:frankenphp
 
 詳しくは[Laravel Octaneの公式ドキュメント](https://laravel.com/docs/octane)をご覧ください。
 
-## Laravelアプリをスタンドアロンバイナリとして
+## Laravelアプリのスタンドアロンバイナリ化
 
 [FrankenPHPのアプリケーション埋め込み機能](embed.md)を使用して、Laravelアプリをスタンドアロンバイナリとして
 配布することが可能です。
@@ -169,7 +169,7 @@ Laravelはアップロードされたファイルやキャッシュ、ログな�
 
 Laravel Octaneアプリもスタンドアロンバイナリとしてパッケージ化することが可能です！
 
-そのためには、[Octaneを正しくインストール](#laravel-octane)し、[前のセクション](#laravel-apps-as-standalone-binaries)で説明した手順に従ってください。
+そのためには、[Octaneを正しくインストール](#laravel-octane)し、[前のセクション](#laravelアプリのスタンドアロンバイナリ化)で説明した手順に従ってください。
 
 次に、Octaneを通じてワーカーモードでFrankenPHPを起動するには、以下を実行してください：
 

@@ -89,7 +89,7 @@ docker buildx bake \
 > cbrotli、Mercure、Vulcainモジュールは、`XCADDY_ARGS`が空または設定されていない場合はデフォルトで含まれます。
 > `XCADDY_ARGS`の値をカスタマイズする場合、デフォルトのモジュールは含まれなくなるため、必要なものは明示的に記述してください。
 
-[ビルドのカスタマイズ](#customizing-the-build)も参照してください
+[ビルドのカスタマイズ](#ビルドのカスタマイズ)も参照してください
 
 ### GitHubトークン
 
