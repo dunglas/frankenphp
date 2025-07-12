@@ -505,7 +505,7 @@ func splitRawHeader(rawHeader *C.char, length int) (string, string) {
 		return "", "" // No colon found, invalid header
 	}
 
-	key := C.GoStringN(rawHeader, C.int(i))
+	headerKey := C.GoStringN(rawHeader, C.int(i))
 
 	// skip whitespaces after the colon
 	j := i + 1
@@ -514,11 +514,10 @@ func splitRawHeader(rawHeader *C.char, length int) (string, string) {
 	}
 
 	// anything left is the header value
-	valueLen := length - j
 	valuePtr := (*C.char)(unsafe.Pointer(uintptr(unsafe.Pointer(rawHeader)) + uintptr(j)))
-	value := C.GoStringN(valuePtr, C.int(valueLen))
+	headerValue := C.GoStringN(valuePtr, C.int(length-j))
 
-	return key, value
+	return headerKey, headerValue
 }
 
 //export go_write_headers
