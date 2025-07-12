@@ -481,22 +481,48 @@ func go_apache_request_headers(threadIndex C.uintptr_t) (*C.go_string, C.size_t)
 }
 
 func addHeader(fc *frankenPHPContext, cString *C.char, length C.int) {
-	parts := strings.SplitN(C.GoStringN(cString, length), ": ", 2)
-	if len(parts) == 2 {
-		fc.responseWriter.Header().Add(parts[0], parts[1])
-
+	key, val := splitHeader(cString)
+	if key == "" {
+		fc.logger.LogAttrs(context.Background(), slog.LevelDebug, "invalid header", slog.String("header", C.GoStringN(cString, length)))
 		return
 	}
+	fc.responseWriter.Header().Add(key, val)
+}
 
-	// also check for the format "Header:Value" without a space
-	parts = strings.SplitN(C.GoStringN(cString, length), ":", 2)
-	if len(parts) == 2 {
-		fc.responseWriter.Header().Add(parts[0], parts[1])
+// split the raw header coming from C with minimal allocations
+func splitHeader(raw *C.char) (string, string) {
+	ptr := unsafe.Pointer(raw)
+	var i int
 
-		return
+	// Scan for ':'
+	for {
+		b := *(*byte)(unsafe.Pointer(uintptr(ptr) + uintptr(i)))
+		if b == 0 {
+			// Reached end without finding ':'
+			return "", ""
+		}
+		if b == ':' {
+			break
+		}
+		i++
 	}
 
-	fc.logger.LogAttrs(context.Background(), slog.LevelDebug, "invalid header", slog.String("header", parts[0]))
+	key := C.GoStringN(raw, C.int(i))
+
+	// Skip whitespace after ':'
+	j := i + 1
+	for {
+		b := *(*byte)(unsafe.Pointer(uintptr(ptr) + uintptr(j)))
+		if b != ' ' {
+			break
+		}
+		j++
+	}
+
+	valuePtr := (*C.char)(unsafe.Pointer(uintptr(ptr) + uintptr(j)))
+	value := C.GoString(valuePtr)
+
+	return key, value
 }
 
 //export go_write_headers
