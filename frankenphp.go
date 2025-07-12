@@ -481,7 +481,7 @@ func go_apache_request_headers(threadIndex C.uintptr_t) (*C.go_string, C.size_t)
 }
 
 func addHeader(fc *frankenPHPContext, cString *C.char, length C.int) {
-	key, val := splitHeader(cString)
+	key, val := splitRawHeader(cString, int(length))
 	if key == "" {
 		fc.logger.LogAttrs(context.Background(), slog.LevelDebug, "invalid header", slog.String("header", C.GoStringN(cString, length)))
 		return
@@ -490,37 +490,33 @@ func addHeader(fc *frankenPHPContext, cString *C.char, length C.int) {
 }
 
 // split the raw header coming from C with minimal allocations
-func splitHeader(raw *C.char) (string, string) {
-	ptr := unsafe.Pointer(raw)
-	var i int
+func splitRawHeader(rawHeader *C.char, length int) (string, string) {
+	buf := unsafe.Slice((*byte)(unsafe.Pointer(rawHeader)), length)
 
-	// Scan for ':'
-	for {
-		b := *(*byte)(unsafe.Pointer(uintptr(ptr) + uintptr(i)))
-		if b == 0 {
-			// Reached end without finding ':'
-			return "", ""
-		}
-		if b == ':' {
+	// Search for the colon in 'Header-Key: value'
+	var i int
+	for i = 0; i < length; i++ {
+		if buf[i] == ':' {
 			break
 		}
-		i++
 	}
 
-	key := C.GoStringN(raw, C.int(i))
+	if i == length {
+		return "", "" // No colon found, invalid header
+	}
 
-	// Skip whitespace after ':'
+	key := C.GoStringN(rawHeader, C.int(i))
+
+	// skip whitespaces after the colon
 	j := i + 1
-	for {
-		b := *(*byte)(unsafe.Pointer(uintptr(ptr) + uintptr(j)))
-		if b != ' ' {
-			break
-		}
+	for j < length && buf[j] == ' ' {
 		j++
 	}
 
-	valuePtr := (*C.char)(unsafe.Pointer(uintptr(ptr) + uintptr(j)))
-	value := C.GoString(valuePtr)
+	// anything left is the header value
+	valueLen := length - j
+	valuePtr := (*C.char)(unsafe.Pointer(uintptr(unsafe.Pointer(rawHeader)) + uintptr(j)))
+	value := C.GoStringN(valuePtr, C.int(valueLen))
 
 	return key, value
 }
