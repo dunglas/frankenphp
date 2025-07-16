@@ -55,7 +55,7 @@ func removeGoObject(handle C.uintptr_t) {
 
 {{- end}}
 
-{{- range .Classes}}
+{{- range $class := .Classes}}
 //export create_{{.GoStruct}}_object
 func create_{{.GoStruct}}_object() C.uintptr_t {
 	obj := &{{.GoStruct}}{}
@@ -70,6 +70,22 @@ func create_{{.GoStruct}}_object() C.uintptr_t {
 
 {{- range .Methods}}
 //export {{.Name}}_wrapper
-{{.Wrapper}}
+func {{.Name}}_wrapper(handle C.uintptr_t{{range .Params}}{{if eq .PhpType "string"}}, {{.Name}} *C.zend_string{{else if eq .PhpType "array"}}, {{.Name}} *C.zval{{else}}, {{.Name}} {{if .IsNullable}}*{{end}}{{phpTypeToGoType .PhpType}}{{end}}{{end}}){{if not (isVoid .ReturnType)}}{{if isStringOrArray .ReturnType}} unsafe.Pointer{{else}} {{phpTypeToGoType .ReturnType}}{{end}}{{end}} {
+	obj := getGoObject(handle)
+	if obj == nil {
+{{- if not (isVoid .ReturnType)}}
+{{- if isStringOrArray .ReturnType}}
+		return nil
+{{- else}}
+		var zero {{phpTypeToGoType .ReturnType}}
+		return zero
+{{- end}}
+{{- else}}
+		return
+{{- end}}
+	}
+	structObj := obj.(*{{$class.GoStruct}})
+	{{if not (isVoid .ReturnType)}}return {{end}}structObj.{{.Name | title}}({{range $i, $param := .Params}}{{if $i}}, {{end}}{{$param.Name}}{{end}})
+}
 {{end}}
 {{- end}}

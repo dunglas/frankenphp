@@ -150,7 +150,7 @@ func (fp *FuncParser) parseSignature(signature string) (*phpFunction, error) {
 		Name:             name,
 		Signature:        signature,
 		Params:           params,
-		ReturnType:       returnType,
+		ReturnType:       phpType(returnType),
 		IsReturnNullable: isReturnNullable,
 	}, nil
 }
@@ -174,7 +174,7 @@ func (fp *FuncParser) parseParameter(paramStr string) (phpParameter, error) {
 	typeStr := strings.TrimSpace(matches[1])
 	param.Name = strings.TrimSpace(matches[2])
 	param.IsNullable = strings.HasPrefix(typeStr, "?")
-	param.PhpType = strings.TrimPrefix(typeStr, "?")
+	param.PhpType = phpType(strings.TrimPrefix(typeStr, "?"))
 
 	return param, nil
 }

@@ -181,15 +181,15 @@ func (cp *classParser) typeToString(expr ast.Expr) string {
 	}
 }
 
-func (cp *classParser) goTypeToPHPType(goType string) string {
+func (cp *classParser) goTypeToPHPType(goType string) phpType {
 	goType = strings.TrimPrefix(goType, "*")
 
-	typeMap := map[string]string{
-		"string": "string",
-		"int":    "int", "int64": "int", "int32": "int", "int16": "int", "int8": "int",
-		"uint": "int", "uint64": "int", "uint32": "int", "uint16": "int", "uint8": "int",
-		"float64": "float", "float32": "float",
-		"bool": "bool",
+	typeMap := map[string]phpType{
+		"string": phpString,
+		"int":    phpInt, "int64": phpInt, "int32": phpInt, "int16": phpInt, "int8": phpInt,
+		"uint": phpInt, "uint64": phpInt, "uint32": phpInt, "uint16": phpInt, "uint8": phpInt,
+		"float64": phpFloat, "float32": phpFloat,
+		"bool": phpBool,
 	}
 
 	if phpType, exists := typeMap[goType]; exists {
@@ -197,10 +197,10 @@ func (cp *classParser) goTypeToPHPType(goType string) string {
 	}
 
 	if strings.HasPrefix(goType, "[]") || strings.HasPrefix(goType, "map[") {
-		return "array"
+		return phpArray
 	}
 
-	return "mixed"
+	return phpMixed
 }
 
 func (cp *classParser) parseMethods(filename string) (methods []phpClassMethod, err error) {
@@ -323,7 +323,7 @@ func (cp *classParser) parseMethodSignature(className, signature string) (*phpCl
 		ClassName:        className,
 		Signature:        signature,
 		Params:           params,
-		ReturnType:       returnType,
+		ReturnType:       phpType(returnType),
 		isReturnNullable: isReturnNullable,
 	}, nil
 }
@@ -347,7 +347,7 @@ func (cp *classParser) parseMethodParameter(paramStr string) (phpParameter, erro
 	typeStr := strings.TrimSpace(matches[1])
 	param.Name = strings.TrimSpace(matches[2])
 	param.IsNullable = strings.HasPrefix(typeStr, "?")
-	param.PhpType = strings.TrimPrefix(typeStr, "?")
+	param.PhpType = phpType(strings.TrimPrefix(typeStr, "?"))
 
 	return param, nil
 }

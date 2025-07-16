@@ -144,7 +144,7 @@ const FalseConstant = false`,
 				c := constants[0]
 				assert.Equal(t, "MyConstant", c.Name, "Expected constant name 'MyConstant'")
 				assert.Equal(t, `"test_value"`, c.Value, `Expected constant value '"test_value"'`)
-				assert.Equal(t, "string", c.PhpType, "Expected constant type 'string'")
+				assert.Equal(t, phpString, c.PhpType, "Expected constant type 'string'")
 				assert.False(t, c.IsIota, "Expected isIota to be false for string constant")
 			}
 
@@ -158,7 +158,7 @@ const FalseConstant = false`,
 			if tt.name == "multiple constants" && len(constants) == 3 {
 				expectedNames := []string{"FirstConstant", "SecondConstant", "ThirdConstant"}
 				expectedValues := []string{`"first"`, "42", "true"}
-				expectedTypes := []string{"string", "int", "bool"}
+				expectedTypes := []phpType{phpString, phpInt, phpBool}
 
 				for i, c := range constants {
 					assert.Equal(t, expectedNames[i], c.Name, "Expected constant name '%s'", expectedNames[i])
@@ -248,22 +248,22 @@ func TestConstantParserTypeDetection(t *testing.T) {
 	tests := []struct {
 		name         string
 		value        string
-		expectedType string
+		expectedType phpType
 	}{
-		{"string with double quotes", "\"hello world\"", "string"},
-		{"string with backticks", "`hello world`", "string"},
-		{"boolean true", "true", "bool"},
-		{"boolean false", "false", "bool"},
-		{"integer", "42", "int"},
-		{"negative integer", "-42", "int"},
-		{"hex integer", "0xFF", "int"},
-		{"octal integer", "0755", "int"},
-		{"go octal integer", "0o755", "int"},
-		{"binary integer", "0b1010", "int"},
-		{"float", "3.14", "float"},
-		{"negative float", "-3.14", "float"},
-		{"scientific notation", "1e10", "float"},
-		{"unknown type", "someFunction()", "int"},
+		{"string with double quotes", "\"hello world\"", phpString},
+		{"string with backticks", "`hello world`", phpString},
+		{"boolean true", "true", phpBool},
+		{"boolean false", "false", phpBool},
+		{"integer", "42", phpInt},
+		{"negative integer", "-42", phpInt},
+		{"hex integer", "0xFF", phpInt},
+		{"octal integer", "0755", phpInt},
+		{"go octal integer", "0o755", phpInt},
+		{"binary integer", "0b1010", phpInt},
+		{"float", "3.14", phpFloat},
+		{"negative float", "-3.14", phpFloat},
+		{"scientific notation", "1e10", phpFloat},
+		{"unknown type", "someFunction()", phpInt},
 	}
 
 	for _, tt := range tests {
@@ -354,7 +354,7 @@ const INVALID = "missing class name"`,
 				assert.Equal(t, "STATUS_ACTIVE", c.Name, "Expected constant name 'STATUS_ACTIVE'")
 				assert.Equal(t, "MyClass", c.ClassName, "Expected class name 'MyClass'")
 				assert.Equal(t, "1", c.Value, "Expected constant value '1'")
-				assert.Equal(t, "int", c.PhpType, "Expected constant type 'int'")
+				assert.Equal(t, phpInt, c.PhpType, "Expected constant type 'int'")
 			}
 
 			if tt.name == "multiple class constants" && len(constants) == 3 {
@@ -489,7 +489,7 @@ func TestPHPConstantCValue(t *testing.T) {
 			constant: phpConstant{
 				Name:    "OctalConst",
 				Value:   "0o35",
-				PhpType: "int",
+				PhpType: phpInt,
 			},
 			expected: "29", // 0o35 = 29 in decimal
 		},
@@ -498,7 +498,7 @@ func TestPHPConstantCValue(t *testing.T) {
 			constant: phpConstant{
 				Name:    "OctalPerm",
 				Value:   "0o755",
-				PhpType: "int",
+				PhpType: phpInt,
 			},
 			expected: "493", // 0o755 = 493 in decimal
 		},
@@ -507,7 +507,7 @@ func TestPHPConstantCValue(t *testing.T) {
 			constant: phpConstant{
 				Name:    "RegularInt",
 				Value:   "42",
-				PhpType: "int",
+				PhpType: phpInt,
 			},
 			expected: "42",
 		},
@@ -516,7 +516,7 @@ func TestPHPConstantCValue(t *testing.T) {
 			constant: phpConstant{
 				Name:    "HexInt",
 				Value:   "0xFF",
-				PhpType: "int",
+				PhpType: phpInt,
 			},
 			expected: "0xFF", // hex should remain unchanged
 		},
@@ -525,7 +525,7 @@ func TestPHPConstantCValue(t *testing.T) {
 			constant: phpConstant{
 				Name:    "StringConst",
 				Value:   "\"hello\"",
-				PhpType: "string",
+				PhpType: phpString,
 			},
 			expected: "\"hello\"", // strings should remain unchanged
 		},
@@ -534,7 +534,7 @@ func TestPHPConstantCValue(t *testing.T) {
 			constant: phpConstant{
 				Name:    "BoolConst",
 				Value:   "true",
-				PhpType: "bool",
+				PhpType: phpBool,
 			},
 			expected: "true", // booleans should remain unchanged
 		},
@@ -543,7 +543,7 @@ func TestPHPConstantCValue(t *testing.T) {
 			constant: phpConstant{
 				Name:    "FloatConst",
 				Value:   "3.14",
-				PhpType: "float",
+				PhpType: phpFloat,
 			},
 			expected: "3.14", // floats should remain unchanged
 		},

@@ -38,46 +38,58 @@ func (pfg *PHPFuncGenerator) generate(fn phpFunction) string {
 func (pfg *PHPFuncGenerator) generateGoCall(fn phpFunction) string {
 	callParams := pfg.paramParser.generateGoCallParams(fn.Params)
 
-	if fn.ReturnType == "void" {
+	if fn.ReturnType == phpVoid {
 		return fmt.Sprintf("    %s(%s);", fn.Name, callParams)
 	}
 
-	if fn.ReturnType == "string" {
+	if fn.ReturnType == phpString {
 		return fmt.Sprintf("    zend_string *result = %s(%s);", fn.Name, callParams)
+	}
+
+	if fn.ReturnType == phpArray {
+		return fmt.Sprintf("    zend_array *result = %s(%s);", fn.Name, callParams)
 	}
 
 	return fmt.Sprintf("    %s result = %s(%s);", pfg.getCReturnType(fn.ReturnType), fn.Name, callParams)
 }
 
-func (pfg *PHPFuncGenerator) getCReturnType(returnType string) string {
+func (pfg *PHPFuncGenerator) getCReturnType(returnType phpType) string {
 	switch returnType {
-	case "string":
+	case phpString:
 		return "zend_string*"
-	case "int":
+	case phpInt:
 		return "long"
-	case "float":
+	case phpFloat:
 		return "double"
-	case "bool":
+	case phpBool:
 		return "int"
+	case phpArray:
+		return "zend_array*"
 	default:
 		return "void"
 	}
 }
 
-func (pfg *PHPFuncGenerator) generateReturnCode(returnType string) string {
+func (pfg *PHPFuncGenerator) generateReturnCode(returnType phpType) string {
 	switch returnType {
-	case "string":
+	case phpString:
 		return `    if (result) {
         RETURN_STR(result);
-    } else {
-        RETURN_EMPTY_STRING();
-    }`
-	case "int":
+    }
+
+	RETURN_EMPTY_STRING();`
+	case phpInt:
 		return `    RETURN_LONG(result);`
-	case "float":
+	case phpFloat:
 		return `    RETURN_DOUBLE(result);`
-	case "bool":
+	case phpBool:
 		return `    RETURN_BOOL(result);`
+	case phpArray:
+		return `    if (result) {
+        RETURN_ARR(result);
+    }
+
+	RETURN_EMPTY_ARRAY();`
 	default:
 		return ""
 	}

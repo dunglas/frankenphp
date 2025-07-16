@@ -42,24 +42,24 @@ func (pp *ParameterParser) generateSingleParamDeclaration(param phpParameter) []
 	var decls []string
 
 	switch param.PhpType {
-	case "string":
+	case phpString:
 		decls = append(decls, fmt.Sprintf("zend_string *%s = NULL;", param.Name))
 		if param.IsNullable {
 			decls = append(decls, fmt.Sprintf("zend_bool %s_is_null = 0;", param.Name))
 		}
-	case "int":
+	case phpInt:
 		defaultVal := pp.getDefaultValue(param, "0")
 		decls = append(decls, fmt.Sprintf("zend_long %s = %s;", param.Name, defaultVal))
 		if param.IsNullable {
 			decls = append(decls, fmt.Sprintf("zend_bool %s_is_null = 0;", param.Name))
 		}
-	case "float":
+	case phpFloat:
 		defaultVal := pp.getDefaultValue(param, "0.0")
 		decls = append(decls, fmt.Sprintf("double %s = %s;", param.Name, defaultVal))
 		if param.IsNullable {
 			decls = append(decls, fmt.Sprintf("zend_bool %s_is_null = 0;", param.Name))
 		}
-	case "bool":
+	case phpBool:
 		defaultVal := pp.getDefaultValue(param, "0")
 		if param.HasDefault && param.DefaultValue == "true" {
 			defaultVal = "1"
@@ -68,6 +68,8 @@ func (pp *ParameterParser) generateSingleParamDeclaration(param phpParameter) []
 		if param.IsNullable {
 			decls = append(decls, fmt.Sprintf("zend_bool %s_is_null = 0;", param.Name))
 		}
+	case phpArray:
+		decls = append(decls, fmt.Sprintf("zval *%s = NULL;", param.Name))
 	}
 
 	return decls
@@ -107,27 +109,31 @@ func (pp *ParameterParser) generateParamParsing(params []phpParameter, requiredC
 func (pp *ParameterParser) generateParamParsingMacro(param phpParameter) string {
 	if param.IsNullable {
 		switch param.PhpType {
-		case "string":
+		case phpString:
 			return fmt.Sprintf("\n        Z_PARAM_STR_OR_NULL(%s, %s_is_null)", param.Name, param.Name)
-		case "int":
+		case phpInt:
 			return fmt.Sprintf("\n        Z_PARAM_LONG_OR_NULL(%s, %s_is_null)", param.Name, param.Name)
-		case "float":
+		case phpFloat:
 			return fmt.Sprintf("\n        Z_PARAM_DOUBLE_OR_NULL(%s, %s_is_null)", param.Name, param.Name)
-		case "bool":
+		case phpBool:
 			return fmt.Sprintf("\n        Z_PARAM_BOOL_OR_NULL(%s, %s_is_null)", param.Name, param.Name)
+		case phpArray:
+			return fmt.Sprintf("\n        Z_PARAM_ARRAY_OR_NULL(%s)", param.Name)
 		default:
 			return ""
 		}
 	} else {
 		switch param.PhpType {
-		case "string":
+		case phpString:
 			return fmt.Sprintf("\n        Z_PARAM_STR(%s)", param.Name)
-		case "int":
+		case phpInt:
 			return fmt.Sprintf("\n        Z_PARAM_LONG(%s)", param.Name)
-		case "float":
+		case phpFloat:
 			return fmt.Sprintf("\n        Z_PARAM_DOUBLE(%s)", param.Name)
-		case "bool":
+		case phpBool:
 			return fmt.Sprintf("\n        Z_PARAM_BOOL(%s)", param.Name)
+		case phpArray:
+			return fmt.Sprintf("\n        Z_PARAM_ARRAY(%s)", param.Name)
 		default:
 			return ""
 		}
@@ -150,27 +156,31 @@ func (pp *ParameterParser) generateGoCallParams(params []phpParameter) string {
 func (pp *ParameterParser) generateSingleGoCallParam(param phpParameter) string {
 	if param.IsNullable {
 		switch param.PhpType {
-		case "string":
+		case phpString:
 			return fmt.Sprintf("%s_is_null ? NULL : %s", param.Name, param.Name)
-		case "int":
+		case phpInt:
 			return fmt.Sprintf("%s_is_null ? NULL : &%s", param.Name, param.Name)
-		case "float":
+		case phpFloat:
 			return fmt.Sprintf("%s_is_null ? NULL : &%s", param.Name, param.Name)
-		case "bool":
+		case phpBool:
 			return fmt.Sprintf("%s_is_null ? NULL : &%s", param.Name, param.Name)
+		case phpArray:
+			return param.Name
 		default:
 			return param.Name
 		}
 	} else {
 		switch param.PhpType {
-		case "string":
+		case phpString:
 			return param.Name
-		case "int":
+		case phpInt:
 			return fmt.Sprintf("(long) %s", param.Name)
-		case "float":
+		case phpFloat:
 			return fmt.Sprintf("(double) %s", param.Name)
-		case "bool":
+		case phpBool:
 			return fmt.Sprintf("(int) %s", param.Name)
+		case phpArray:
+			return param.Name
 		default:
 			return param.Name
 		}
