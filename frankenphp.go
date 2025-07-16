@@ -481,14 +481,43 @@ func go_apache_request_headers(threadIndex C.uintptr_t) (*C.go_string, C.size_t)
 }
 
 func addHeader(fc *frankenPHPContext, cString *C.char, length C.int) {
-	parts := strings.SplitN(C.GoStringN(cString, length), ": ", 2)
-	if len(parts) != 2 {
-		fc.logger.LogAttrs(context.Background(), slog.LevelDebug, "invalid header", slog.String("header", parts[0]))
-
+	key, val := splitRawHeader(cString, int(length))
+	if key == "" {
+		fc.logger.LogAttrs(context.Background(), slog.LevelDebug, "invalid header", slog.String("header", C.GoStringN(cString, length)))
 		return
 	}
+	fc.responseWriter.Header().Add(key, val)
+}
 
-	fc.responseWriter.Header().Add(parts[0], parts[1])
+// split the raw header coming from C with minimal allocations
+func splitRawHeader(rawHeader *C.char, length int) (string, string) {
+	buf := unsafe.Slice((*byte)(unsafe.Pointer(rawHeader)), length)
+
+	// Search for the colon in 'Header-Key: value'
+	var i int
+	for i = 0; i < length; i++ {
+		if buf[i] == ':' {
+			break
+		}
+	}
+
+	if i == length {
+		return "", "" // No colon found, invalid header
+	}
+
+	headerKey := C.GoStringN(rawHeader, C.int(i))
+
+	// skip whitespaces after the colon
+	j := i + 1
+	for j < length && buf[j] == ' ' {
+		j++
+	}
+
+	// anything left is the header value
+	valuePtr := (*C.char)(unsafe.Pointer(uintptr(unsafe.Pointer(rawHeader)) + uintptr(j)))
+	headerValue := C.GoStringN(valuePtr, C.int(length-j))
+
+	return headerKey, headerValue
 }
 
 //export go_write_headers
