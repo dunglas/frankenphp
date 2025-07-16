@@ -80,10 +80,10 @@ RUN git clone https://github.com/e-dant/watcher . && \
 	ldconfig
 
 WORKDIR /go/src/app
-COPY . .
+COPY --link . ./
 
 WORKDIR /go/src/app/caddy/frankenphp
-RUN go build -buildvcs=false -tags 'nobadger,nomysql,nopgx'
+RUN ../../go.sh build -buildvcs=false
 
 WORKDIR /go/src/app
 CMD [ "zsh" ]
