@@ -14,12 +14,6 @@ package frankenphp
 
 // #cgo nocallback frankenphp_update_server_context
 // #cgo noescape frankenphp_update_server_context
-// #cgo darwin pkg-config: libxml-2.0
-// #cgo CFLAGS: -Wall -Werror
-// #cgo linux CFLAGS: -D_GNU_SOURCE
-// #cgo LDFLAGS: -lphp -lm -lutil
-// #cgo linux LDFLAGS: -ldl -lresolv
-// #cgo darwin LDFLAGS: -Wl,-rpath,/usr/local/lib -liconv -ldl
 // #include <stdlib.h>
 // #include <stdint.h>
 // #include <php_variables.h>

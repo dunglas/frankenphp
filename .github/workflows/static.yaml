@@ -8,13 +8,14 @@ on:
     branches:
       - main
     paths:
-      - "*.c"
-      - "*.h"
-      - "*.stub.php"
-      - "*Dockerfile"
       - "docker-bake.hcl"
-      - "*.sh"
-      - ".github/workflows/static.yaml"
+      - ".github/workflows/docker.yaml"
+      - "**cgo.go"
+      - "**Dockerfile"
+      - "**.c"
+      - "**.h"
+      - "**.sh"
+      - "**.stub.php"
   push:
     branches:
       - main

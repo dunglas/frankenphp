@@ -2,7 +2,6 @@
 
 package watcher
 
-// #cgo LDFLAGS: -lwatcher-c -lstdc++
 // #include <stdint.h>
 // #include <stdlib.h>
 // #include "watcher.h"

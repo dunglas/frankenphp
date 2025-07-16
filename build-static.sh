@@ -90,9 +90,6 @@ fi
 if [ "${os}" = "linux" ] && { [[ "${arch}" =~ "aarch" ]] || [[ "${arch}" =~ "arm" ]]; }; then
 	fpic="-fPIC"
 	fpie="-fPIE"
-
-	# FIXME: temporary workaround because pre-built poackages aren't compiled wiht -fPIC yet
-	SPC_OPT_DOWNLOAD_ARGS="--ignore-cache-sources=php-src --retry 5"
 else
 	fpic="-fpic"
 	fpie="-fpie"
