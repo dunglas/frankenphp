@@ -19,7 +19,7 @@ package frankenphp
 // #cgo linux CFLAGS: -D_GNU_SOURCE
 // #cgo LDFLAGS: -lphp -lm -lutil
 // #cgo linux LDFLAGS: -ldl -lresolv
-// #cgo darwin LDFLAGS: -liconv -ldl
+// #cgo darwin LDFLAGS: -Wl,-rpath,/usr/local/lib -liconv -ldl
 // #include <stdlib.h>
 // #include <stdint.h>
 // #include <php_variables.h>
