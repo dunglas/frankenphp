@@ -160,8 +160,7 @@ COPY --link internal internal
 COPY --link package package
 
 RUN --mount=type=secret,id=github-token \
-	set -eux; \
-	./build-static.sh && \
+	GITHUB_TOKEN=$(cat /run/secrets/github-token) ./build-static.sh && \
 	if [ -n "${BUILD_PACKAGES}" ]; then \
 		./build-packages.sh; \
 	fi; \
