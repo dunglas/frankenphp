@@ -1,0 +1,34 @@
+# Maintainer: Kévin Dunglas <kevin@dunglas.dev>
+pkgname=frankenphp
+pkgver=0.0.0
+pkgrel=0
+pkgdesc="Modern PHP app server"
+url="https://frankenphp.dev"
+arch="all"
+license="MIT"
+depends="libstdc++"
+makedepends=""
+source="
+	frankenphp
+	frankenphp.service
+	frankenphp.openrc
+	Caddyfile
+	index.php
+	php.ini
+	"
+install="$pkgname.pre-install $pkgname.post-install $pkgname.pre-deinstall $pkgname.post-deinstall"
+options="!check"
+
+package() {
+	install -Dm755 "$srcdir/frankenphp" "$pkgdir/usr/bin/frankenphp"
+	install -Dm644 "$srcdir/frankenphp.service" "$pkgdir/usr/lib/systemd/system/frankenphp.service"
+	install -Dm755 "$srcdir/frankenphp.openrc" "$pkgdir/etc/init.d/frankenphp"
+	install -Dm644 "$srcdir/Caddyfile" "$pkgdir/etc/frankenphp/Caddyfile"
+	install -Dm644 "$srcdir/index.php" "$pkgdir/usr/share/frankenphp/index.php"
+	install -Dm644 "$srcdir/php.ini" "$pkgdir/etc/frankenphp/php.ini"
+
+	install -dm755 "$pkgdir/etc/frankenphp/php.d"
+	install -dm755 "$pkgdir/usr/lib/frankenphp/modules"
+	install -dm755 "$pkgdir/var/lib/frankenphp"
+	install -dm755 "$pkgdir/var/log/frankenphp"
+}
