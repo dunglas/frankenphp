@@ -17,7 +17,7 @@ if ! command -v ruby &>/dev/null; then
 fi
 
 if ! command -v fpm &>/dev/null; then
-	echo "Error: FPM (rubygem-fpm) is required to create RPM packages."
+	echo "Error: FPM (rubygem-fpm) is required to create RPM and DEB packages."
 	echo "Install it with: sudo gem install fpm"
 	exit 1
 fi
@@ -115,5 +115,28 @@ fpm -s dir -t deb -n frankenphp -v "${frankenphp_version}" \
 
 [ "$user_preexists" -eq 0 ] && sudo userdel frankenphp
 [ "$group_preexists" -eq 0 ] && (sudo groupdel frankenphp || true)
+
+if command -v apk &>/dev/null; then
+	echo "Creating APK package for Alpine Linux..."
+	mkdir -p ../package/alpine/src
+
+	cp "${bin}" ../package/alpine/src/frankenphp
+	cp ../package/rhel/frankenphp.service ../package/alpine/src/frankenphp.service
+	cp ../package/alpine/frankenphp.openrc ../package/alpine/src/frankenphp.openrc
+	cp ../package/Caddyfile ../package/alpine/src/Caddyfile
+	cp ../package/content/index.php ../package/alpine/src/index.php
+	[ -f ../package/etc/php.ini ] && cp ../package/etc/php.ini ../package/alpine/src/php.ini
+	
+	sed -i "s/pkgver=0.0.0/pkgver=${frankenphp_version}/" ../package/alpine/APKBUILD
+	
+	if command -v abuild &>/dev/null; then
+		cd ../package/alpine
+		abuild -r
+		cd ../../dist
+	else
+		echo "abuild not found. APK package creation skipped."
+		echo "To build APK packages, install alpine-sdk: apk add alpine-sdk"
+	fi
+fi
 
 cd ..
