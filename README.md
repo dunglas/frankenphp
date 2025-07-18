@@ -84,6 +84,7 @@ frankenphp php-server
 - [Real-time](https://frankenphp.dev/docs/mercure/)
 - [Efficiently Serving Large Static Files](https://frankenphp.dev/docs/x-sendfile/)
 - [Configuration](https://frankenphp.dev/docs/config/)
+- [Writing PHP Extensions in Go](https://frankenphp.dev/docs/extensions/)
 - [Docker images](https://frankenphp.dev/docs/docker/)
 - [Deploy in production](https://frankenphp.dev/docs/production/)
 - [Performance optimization](https://frankenphp.dev/docs/performance/)
