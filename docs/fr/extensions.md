@@ -1,4 +1,4 @@
-# Écrire des Extensions PHP en Go
+# Écrire des extensions PHP en Go
 
 Avec FrankenPHP, vous pouvez **écrire des extensions PHP en Go**, ce qui vous permet de créer des **fonctions natives haute performance** qui peuvent être appelées directement depuis PHP. Vos applications peuvent tirer parti de toute bibliothèque Go existante ou nouvelle, ainsi que du célèbre modèle de concurrence des **goroutines directement depuis votre code PHP**.
 

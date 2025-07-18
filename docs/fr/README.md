@@ -83,6 +83,7 @@ frankenphp php-server
 - [Temps réel](mercure.md)
 - [Servir efficacement les fichiers statiques volumineux](x-sendfile.md)
 - [Configuration](config.md)
+- [Écrire des extensions PHP en Go](extensions.md)
 - [Images Docker](docker.md)
 - [Déploiement en production](production.md)
 - [Optimisation des performances](performance.md)
