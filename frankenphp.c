@@ -775,6 +775,11 @@ static void frankenphp_register_variables(zval *track_vars_array) {
   /* In worker mode we cache the os environment */
   if (os_environment == NULL) {
     os_environment = malloc(sizeof(zval));
+    if (os_environment == NULL) {
+      php_error(E_ERROR, "Failed to allocate memory for os_environment");
+
+      return;
+    }
     array_init(os_environment);
     get_full_env(os_environment);
     // php_import_environment_variables(os_environment);
