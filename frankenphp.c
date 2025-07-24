@@ -1215,16 +1215,15 @@ void register_extensions(zend_module_entry *m, int len) {
 }
 
 /* EXPERIMENTAL */
-PHP_FUNCTION(frankenphp_info)
-{
-	if (zend_parse_parameters_none() == FAILURE) {
-        RETURN_THROWS();
-    }
+PHP_FUNCTION(frankenphp_info) {
+  if (zend_parse_parameters_none() == FAILURE) {
+    RETURN_THROWS();
+  }
 
-	zend_array *result = go_frankenphp_info(thread_index);
-    if (result) {
-        RETURN_ARR(result);
-    }
+  zend_array *result = go_frankenphp_info(thread_index);
+  if (result) {
+    RETURN_ARR(result);
+  }
 
-    RETURN_EMPTY_ARRAY();
+  RETURN_EMPTY_ARRAY();
 }
