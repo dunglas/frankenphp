@@ -1,5 +1,5 @@
-#ifndef _FRANKENPPHP_H
-#define _FRANKENPPHP_H
+#ifndef _FRANKENPHP_H
+#define _FRANKENPHP_H
 
 #include <Zend/zend_modules.h>
 #include <Zend/zend_types.h>
