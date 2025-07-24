@@ -1221,9 +1221,5 @@ PHP_FUNCTION(frankenphp_info) {
   }
 
   zend_array *result = go_frankenphp_info(thread_index);
-  if (result) {
-    RETURN_ARR(result);
-  }
-
-  RETURN_EMPTY_ARRAY();
+  RETURN_ARR(result);
 }
