@@ -56,16 +56,19 @@ func threadDebugState(thread *phpThread) ThreadDebugState {
 //export go_frankenphp_info
 func go_frankenphp_info(threadIndex C.uintptr_t) unsafe.Pointer {
 	thread := phpThreads[threadIndex]
+
+	_, isWorker := thread.handler.(*workerThread)
+
 	return PHPArray(&Array{
 		keys: []PHPKey{
 			PHPKey{Type: PHPStringKey, Str: "thread_name"},
 			PHPKey{Type: PHPStringKey, Str: "thread_index"},
-			PHPKey{Type: PHPStringKey, Str: "is_worker"},
+			PHPKey{Type: PHPStringKey, Str: "is_worker_thread"},
 		},
 		values: []interface{}{
 			thread.name(),
 			int(threadIndex),
-			thread.handler.(*workerThread) != nil,
+			isWorker,
 		},
 	})
 }
