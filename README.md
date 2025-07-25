@@ -1,6 +1,6 @@
 # FrankenPHP: Modern App Server for PHP
 
-<h1 style="text-align: center;"><a href="https://frankenphp.dev"><img src="frankenphp.png" alt="FrankenPHP" style="width: 600px;"></a></h1>
+<h1 style="text-align: center;"><a href="https://frankenphp.dev"><img src="frankenphp.png" alt="FrankenPHP" width="600"></a></h1>
 
 FrankenPHP is a modern application server for PHP built on top of the [Caddy](https://caddyserver.com/) web server.
 
@@ -45,9 +45,9 @@ frankenphp php-cli /path/to/your/script.php
 
 ### RPM Packages
 
-We offer rpm packages for Red Hat Enterprise Linux 7 to 10. To install, run
+We offer RPM packages for Red Hat Enterprise Linux 7 to 10. To install, run:
 
-```bash
+```console
 sudo dnf install https://rpm.henderkes.com/static-php-1-0.noarch.rpm
 sudo dnf module enable php-zts:static-8.4 # optional, defaults to 8.4, 8.2-8.4 available
 sudo dnf install frankenphp
