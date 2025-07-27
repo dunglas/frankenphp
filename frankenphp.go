@@ -377,18 +377,16 @@ func updateServerContext(thread *phpThread, fc *frankenPHPContext, isWorkerReque
 	return nil
 }
 
-// ServeHTTP executes a PHP script according to the given context.
-func ServeHTTP(responseWriter http.ResponseWriter, request *http.Request) error {
+// ServeHTTP executes a PHP script according to the given context and options.
+func ServeHTTP(responseWriter http.ResponseWriter, request *http.Request, opts ...RequestOption) error {
 	if !isRunning {
 		return ErrNotRunning
 	}
 
-	fc, ok := fromContext(request.Context())
-	if !ok {
-		return ErrInvalidRequest
+	fc, err := newFrankenPHPContext(responseWriter, request, opts...)
+	if err != nil {
+		return fmt.Errorf("%w: %s", ErrRequestContextCreation, err.Error())
 	}
-
-	fc.responseWriter = responseWriter
 
 	if !fc.validate() {
 		return nil
