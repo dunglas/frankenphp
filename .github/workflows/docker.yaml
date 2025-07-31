@@ -128,6 +128,10 @@ jobs:
             platform: linux/arm/v6
           - variant: php-${{ needs.prepare.outputs.php83_version }}-bookworm
             platform: linux/arm/v6
+          - variant: php-${{ needs.prepare.outputs.php82_version }}-trixie
+            platform: linux/arm/v6
+          - variant: php-${{ needs.prepare.outputs.php83_version }}-trixie
+            platform: linux/arm/v6
     steps:
       - name: Prepare
         id: prepare
