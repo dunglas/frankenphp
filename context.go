@@ -61,37 +61,9 @@ func newFrankenPHPContext(rw http.ResponseWriter, r *http.Request, opts ...Reque
 		}
 	}
 
-	if fc.splitPath == nil {
-		fc.splitPath = []string{".php"}
-	}
-
-	if fc.env == nil {
-		fc.env = make(map[string]string)
-	}
-
-	if splitPos := splitPos(fc, r.URL.Path); splitPos > -1 {
-		fc.docURI = r.URL.Path[:splitPos]
-		fc.pathInfo = r.URL.Path[splitPos:]
-
-		// Strip PATH_INFO from SCRIPT_NAME
-		fc.scriptName = strings.TrimSuffix(r.URL.Path, fc.pathInfo)
-
-		// Ensure the SCRIPT_NAME has a leading slash for compliance with RFC3875
-		// Info: https://tools.ietf.org/html/rfc3875#section-4.1.13
-		if fc.scriptName != "" && !strings.HasPrefix(fc.scriptName, "/") {
-			fc.scriptName = "/" + fc.scriptName
-		}
-	}
-
-	// if a worker is assigned explicitly, use its filename
-	// determine if the filename belongs to a worker otherwise
-	if fc.worker != nil {
-		fc.scriptFilename = fc.worker.fileName
-	} else {
-		// SCRIPT_FILENAME is the absolute path of SCRIPT_NAME
-		fc.scriptFilename = sanitizedPathJoin(fc.documentRoot, fc.scriptName)
-		fc.worker = getWorkerByPath(fc.scriptFilename)
-	}
+	// some cgi variables need to already be determined here
+	// this ensures the correct worker is assigned by path if necessary
+	splitCgiPath(fc)
 
 	return fc, nil
 }

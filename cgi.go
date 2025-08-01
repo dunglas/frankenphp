@@ -211,18 +211,52 @@ func go_register_variables(threadIndex C.uintptr_t, trackVarsArray *C.zval) {
 	addPreparedEnvToServer(fc, trackVarsArray)
 }
 
+// splitCgiPath splits the request path into SCRIPT_NAME, SCRIPT_FILENAME, PATH_INFO, DOCUMENT_URI
+func splitCgiPath(fc *frankenPHPContext) {
+	path := fc.request.URL.Path
+	splitPath := fc.splitPath
+
+	if splitPath == nil {
+		splitPath = []string{".php"}
+	}
+
+	if splitPos := splitPos(path, splitPath); splitPos > -1 {
+		fc.docURI = path[:splitPos]
+		fc.pathInfo = path[splitPos:]
+
+		// Strip PATH_INFO from SCRIPT_NAME
+		fc.scriptName = strings.TrimSuffix(path, fc.pathInfo)
+
+		// Ensure the SCRIPT_NAME has a leading slash for compliance with RFC3875
+		// Info: https://tools.ietf.org/html/rfc3875#section-4.1.13
+		if fc.scriptName != "" && !strings.HasPrefix(fc.scriptName, "/") {
+			fc.scriptName = "/" + fc.scriptName
+		}
+	}
+
+	// if a worker is already assigned explicitly, use its filename
+	if fc.worker != nil {
+		fc.scriptFilename = fc.worker.fileName
+		return
+	}
+
+	// SCRIPT_FILENAME is the absolute path of SCRIPT_NAME
+	fc.scriptFilename = sanitizedPathJoin(fc.documentRoot, fc.scriptName)
+	fc.worker = getWorkerByPath(fc.scriptFilename)
+}
+
 // splitPos returns the index where path should
 // be split based on SplitPath.
 //
 // Adapted from https://github.com/caddyserver/caddy/blob/master/modules/caddyhttp/reverseproxy/fastcgi/fastcgi.go
 // Copyright 2015 Matthew Holt and The Caddy Authors
-func splitPos(fc *frankenPHPContext, path string) int {
-	if len(fc.splitPath) == 0 {
+func splitPos(path string, splitPath []string) int {
+	if len(splitPath) == 0 {
 		return 0
 	}
 
 	lowerPath := strings.ToLower(path)
-	for _, split := range fc.splitPath {
+	for _, split := range splitPath {
 		if idx := strings.Index(lowerPath, strings.ToLower(split)); idx > -1 {
 			return idx + len(split)
 		}
