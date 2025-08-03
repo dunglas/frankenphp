@@ -250,6 +250,7 @@ func splitCgiPath(fc *frankenPHPContext) {
 		return
 	}
 
+	// TODO: is it possible to delay this and avoid saving everything in the context?
 	// SCRIPT_FILENAME is the absolute path of SCRIPT_NAME
 	fc.scriptFilename = sanitizedPathJoin(fc.documentRoot, fc.scriptName)
 	fc.worker = getWorkerByPath(fc.scriptFilename)
@@ -257,6 +258,8 @@ func splitCgiPath(fc *frankenPHPContext) {
 
 // splitPos returns the index where path should
 // be split based on SplitPath.
+// example: if splitPath is [".php"]
+// "/path/to/script.php/some/path" => "/path/to/script.php" + "/some/path"
 //
 // Adapted from https://github.com/caddyserver/caddy/blob/master/modules/caddyhttp/reverseproxy/fastcgi/fastcgi.go
 // Copyright 2015 Matthew Holt and The Caddy Authors
