@@ -101,6 +101,7 @@ func (fc *frankenPHPContext) validate() bool {
 		return false
 	}
 
+	// TODO: Caddy already handles this, is it necessary?
 	contentLengthStr := fc.request.Header.Get("Content-Length")
 	if contentLengthStr != "" {
 		contentLength, err := strconv.Atoi(contentLengthStr)
