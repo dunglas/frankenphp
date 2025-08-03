@@ -267,6 +267,31 @@ $user->updateInfo(null, 25, null);          // Name and active are null
 
 This design ensures that your Go code has complete control over how the object's state is accessed and modified, providing better encapsulation and type safety.
 
+### Module Initialization and Shutdown
+
+The generator supports defining module initialization and shutdown functions using the `//export_php:module` directive.
+This allows you to perform setup and cleanup operations when your extension is loaded and unloaded.
+
+```go
+//export_php:module init=initializeModule, shutdown=cleanupModule
+```
+
+The `init` parameter specifies a function that will be called when the module is initialized, and the `shutdown` parameter specifies a function that will be called when the module is shut down. Both parameters are optional; you can specify either one, both, or none.
+
+The specified functions should be defined in your Go code:
+
+```go
+func initializeModule() {
+// Perform initialization tasks
+// For example, set up global resources, initialize data structures, etc.
+}
+
+func cleanupModule() {
+// Perform cleanup tasks
+// For example, free resources, close connections, etc.
+}
+```
+
 ### Declaring Constants
 
 The generator supports exporting Go constants to PHP using two directives: `//export_php:const` for global constants and `//export_php:classconstant` for class constants. This allows you to share configuration values, status codes, and other constants between Go and PHP code.
