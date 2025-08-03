@@ -27,7 +27,7 @@
 #include <pthread_np.h>
 #endif
 
-#if PHP_VERSION_ID >= 85000
+#if PHP_VERSION_ID >= 80500
 #include <sapi/cli/cli.h>
 #else
 #include "emulate_php_cli.h"
@@ -1031,8 +1031,10 @@ typedef struct {
 
 static void *execute_script_cli(void *arg) {
   cli_exec_args_t *args = (cli_exec_args_t *)arg;
+  volatile int v = PHP_VERSION_ID;
+  (void)v;
 
-#if PHP_VERSION_ID >= 85000
+#if PHP_VERSION_ID >= 80500
   return (void *)(intptr_t)do_php_cli(args->argc, args->argv);
 #else
   return (void *)(intptr_t)emulate_script_cli(args);
