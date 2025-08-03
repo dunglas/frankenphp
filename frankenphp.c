@@ -75,10 +75,11 @@ __thread uintptr_t thread_index;
 __thread bool is_worker_thread = false;
 __thread zval *os_environment = NULL;
 
-static void frankenphp_update_request_context(){
-	// update server context here ?
+static void frankenphp_update_request_context() {
+  /* the server context is stored on the go side, still SG(server_context) needs
+   * to not be NULL */
   SG(server_context) = (void *)1;
-  // It is not reset by zend engine, set it to 200.
+  /* status It is not reset by zend engine, set it to 200. */
   SG(sapi_headers).http_response_code = 200;
 
   go_update_request_info(thread_index, &SG(request_info));
