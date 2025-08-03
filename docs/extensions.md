@@ -272,25 +272,27 @@ This design ensures that your Go code has complete control over how the object's
 The generator supports defining module initialization and shutdown functions using the `//export_php:module` directive.
 This allows you to perform setup and cleanup operations when your extension is loaded and unloaded.
 
-```go
-//export_php:module init=initializeModule, shutdown=cleanupModule
-```
-
-The `init` parameter specifies a function that will be called when the module is initialized, and the `shutdown` parameter specifies a function that will be called when the module is shut down. Both parameters are optional; you can specify either one, both, or none.
-
-The specified functions should be defined in your Go code:
+To define an initialization function, tag it with `//export_php:module init`:
 
 ```go
+//export_php:module init
 func initializeModule() {
-// Perform initialization tasks
-// For example, set up global resources, initialize data structures, etc.
-}
-
-func cleanupModule() {
-// Perform cleanup tasks
-// For example, free resources, close connections, etc.
+    // Perform initialization tasks
+    // For example, set up global resources, initialize data structures, etc.
 }
 ```
+
+To define a shutdown function, tag it with `//export_php:module shutdown`:
+
+```go
+//export_php:module shutdown
+func cleanupModule() {
+    // Perform cleanup tasks
+    // For example, free resources, close connections, etc.
+}
+```
+
+You can define either one, both, or none of these functions. The initialization function will be called when the PHP module is loaded, and the shutdown function will be called when the PHP module is unloaded.
 
 ### Declaring Constants
 

@@ -20,6 +20,18 @@ const {{.Name}} = {{.Value}}
 {{.}}
 {{- end}}
 
+{{- if .Module}}
+{{- if .Module.InitFunc}}
+//export {{.Module.InitFunc}}
+{{.Module.InitCode}}
+{{- end}}
+
+{{- if .Module.ShutdownFunc}}
+//export {{.Module.ShutdownFunc}}
+{{.Module.ShutdownCode}}
+{{- end}}
+{{- end}}
+
 {{- range .Functions}}
 //export {{.Name}}
 {{.GoFunction}}

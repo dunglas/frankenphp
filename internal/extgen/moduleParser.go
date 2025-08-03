@@ -2,17 +2,20 @@ package extgen
 
 import (
 	"bufio"
+	"fmt"
 	"os"
 	"regexp"
 	"strings"
 )
 
-var phpModuleParser = regexp.MustCompile(`//\s*export_php:module\s*(.*)`)
+var phpModuleParser = regexp.MustCompile(`//\s*export_php:module\s+(init|shutdown)`)
 
 // phpModule represents a PHP module with optional init and shutdown functions
 type phpModule struct {
 	InitFunc     string // Name of the init function
+	InitCode     string // Code of the init function
 	ShutdownFunc string // Name of the shutdown function
+	ShutdownCode string // Code of the shutdown function
 }
 
 // ModuleParser parses PHP module directives from Go source files
@@ -27,47 +30,93 @@ func (mp *ModuleParser) parse(filename string) (*phpModule, error) {
 	defer file.Close()
 
 	scanner := bufio.NewScanner(file)
+	module := &phpModule{}
+	var currentDirective string
+	var lineNumber int
+
 	for scanner.Scan() {
+		lineNumber++
 		line := strings.TrimSpace(scanner.Text())
+		
 		if matches := phpModuleParser.FindStringSubmatch(line); matches != nil {
-			moduleInfo := strings.TrimSpace(matches[1])
-			return mp.parseModuleInfo(moduleInfo)
+			directiveType := matches[1]
+			currentDirective = directiveType
+			continue
+		}
+
+		// If we have a current directive and encounter a non-comment line
+		// that doesn't start with "func ", reset the current directive
+		if currentDirective != "" && (line == "" || (!strings.HasPrefix(line, "//") && !strings.HasPrefix(line, "func "))) {
+			currentDirective = ""
+			continue
+		}
+
+		if currentDirective != "" && strings.HasPrefix(line, "func ") {
+			funcName, funcCode, err := mp.extractGoFunction(scanner, line)
+			if err != nil {
+				return nil, fmt.Errorf("extracting Go function at line %d: %w", lineNumber, err)
+			}
+
+			switch currentDirective {
+			case "init":
+				module.InitFunc = funcName
+				module.InitCode = funcCode
+			case "shutdown":
+				module.ShutdownFunc = funcName
+				module.ShutdownCode = funcCode
+			}
+
+			currentDirective = ""
 		}
 	}
 
-	// No module directive found
-	return nil, nil
+	// If we found no module functions, return nil
+	if module.InitFunc == "" && module.ShutdownFunc == "" {
+		return nil, nil
+	}
+
+	return module, scanner.Err()
 }
 
-// parseModuleInfo parses the module info string to extract init and shutdown function names
-func (mp *ModuleParser) parseModuleInfo(moduleInfo string) (*phpModule, error) {
-	module := &phpModule{}
+// extractGoFunction extracts the function name and code from a function declaration
+func (mp *ModuleParser) extractGoFunction(scanner *bufio.Scanner, firstLine string) (string, string, error) {
+	// Extract function name from the first line
+	funcNameRegex := regexp.MustCompile(`func\s+([a-zA-Z0-9_]+)`)
+	matches := funcNameRegex.FindStringSubmatch(firstLine)
+	if len(matches) < 2 {
+		return "", "", fmt.Errorf("could not extract function name from line: %s", firstLine)
+	}
+	funcName := matches[1]
 	
-	// Split the module info by commas
-	parts := strings.Split(moduleInfo, ",")
+	// Collect the function code
+	goFunc := firstLine + "\n"
+	braceCount := 0
 	
-	for _, part := range parts {
-		part = strings.TrimSpace(part)
-		if part == "" {
-			continue
-		}
-		
-		// Split each part by equals sign
-		keyValue := strings.SplitN(part, "=", 2)
-		if len(keyValue) != 2 {
-			continue
-		}
-		
-		key := strings.TrimSpace(keyValue[0])
-		value := strings.TrimSpace(keyValue[1])
-		
-		switch key {
-		case "init":
-			module.InitFunc = value
-		case "shutdown":
-			module.ShutdownFunc = value
+	// Count opening braces in the first line
+	for _, char := range firstLine {
+		if char == '{' {
+			braceCount++
 		}
 	}
 	
-	return module, nil
+	// Continue reading until we find the matching closing brace
+	for braceCount > 0 && scanner.Scan() {
+		line := scanner.Text()
+		goFunc += line + "\n"
+		
+		for _, char := range line {
+			switch char {
+			case '{':
+				braceCount++
+			case '}':
+				braceCount--
+			}
+		}
+		
+		if braceCount == 0 {
+			break
+		}
+	}
+	
+	return funcName, goFunc, nil
 }

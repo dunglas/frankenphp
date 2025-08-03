@@ -1,9 +1,11 @@
 package extgen
 
 import (
+	"bufio"
 	"github.com/stretchr/testify/require"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -19,11 +21,12 @@ func TestModuleParser(t *testing.T) {
 			name: "both init and shutdown",
 			input: `package main
 
-//export_php:module init=initializeModule, shutdown=cleanupModule
+//export_php:module init
 func initializeModule() {
 	// Initialization code
 }
 
+//export_php:module shutdown
 func cleanupModule() {
 	// Cleanup code
 }`,
@@ -36,7 +39,7 @@ func cleanupModule() {
 			name: "only init function",
 			input: `package main
 
-//export_php:module init=initializeModule
+//export_php:module init
 func initializeModule() {
 	// Initialization code
 }`,
@@ -49,7 +52,7 @@ func initializeModule() {
 			name: "only shutdown function",
 			input: `package main
 
-//export_php:module shutdown=cleanupModule
+//export_php:module shutdown
 func cleanupModule() {
 	// Cleanup code
 }`,
@@ -62,11 +65,12 @@ func cleanupModule() {
 			name: "with extra whitespace",
 			input: `package main
 
-//export_php:module   init = initModule ,  shutdown = shutdownModule  
+//export_php:module   init  
 func initModule() {
 	// Initialization code
 }
 
+//export_php:module   shutdown  
 func shutdownModule() {
 	// Cleanup code
 }`,
@@ -85,51 +89,63 @@ func regularFunction() {
 			expected: nil,
 		},
 		{
-			name: "empty module directive",
+			name: "functions with braces",
 			input: `package main
 
-//export_php:module
-func someFunction() {
-	// Some code
+//export_php:module init
+func initModule() {
+	if true {
+		// Do something
+	}
+	for i := 0; i < 10; i++ {
+		// Loop
+	}
+}
+
+//export_php:module shutdown
+func shutdownModule() {
+	if true {
+		// Do something else
+	}
 }`,
 			expected: &phpModule{
-				InitFunc:     "",
-				ShutdownFunc: "",
+				InitFunc:     "initModule",
+				ShutdownFunc: "shutdownModule",
 			},
 		},
 		{
-			name: "invalid module directive format",
+			name: "multiple functions between directives",
 			input: `package main
 
-//export_php:module init:initFunc, shutdown:shutdownFunc
-func initFunc() {
-	// Initialization code
+//export_php:module init
+func initModule() {
+	// Init code
 }
 
-func shutdownFunc() {
-	// Cleanup code
+func someOtherFunction() {
+	// This should be ignored
+}
+
+//export_php:module shutdown
+func shutdownModule() {
+	// Shutdown code
 }`,
 			expected: &phpModule{
-				InitFunc:     "",
-				ShutdownFunc: "",
+				InitFunc:     "initModule",
+				ShutdownFunc: "shutdownModule",
 			},
 		},
 		{
-			name: "unrecognized keys",
+			name: "directive without function",
 			input: `package main
 
-//export_php:module start=startFunc, stop=stopFunc
-func startFunc() {
-	// Start code
-}
+//export_php:module init
+// No function follows
 
-func stopFunc() {
-	// Stop code
+func regularFunction() {
+	// This should be ignored
 }`,
-			expected: &phpModule{
-				InitFunc:     "",
-				ShutdownFunc: "",
-			},
+			expected: nil,
 		},
 	}
 
@@ -149,108 +165,69 @@ func stopFunc() {
 				assert.NotNil(t, module, "parse() should not return nil")
 				assert.Equal(t, tt.expected.InitFunc, module.InitFunc, "InitFunc mismatch")
 				assert.Equal(t, tt.expected.ShutdownFunc, module.ShutdownFunc, "ShutdownFunc mismatch")
+				
+				// Check that function code was extracted
+				if tt.expected.InitFunc != "" {
+					assert.Contains(t, module.InitCode, "func "+tt.expected.InitFunc, "InitCode should contain function declaration")
+					assert.True(t, strings.HasSuffix(module.InitCode, "}\n"), "InitCode should end with closing brace")
+				}
+				
+				if tt.expected.ShutdownFunc != "" {
+					assert.Contains(t, module.ShutdownCode, "func "+tt.expected.ShutdownFunc, "ShutdownCode should contain function declaration")
+					assert.True(t, strings.HasSuffix(module.ShutdownCode, "}\n"), "ShutdownCode should end with closing brace")
+				}
 			}
 		})
 	}
 }
 
-func TestParseModuleInfo(t *testing.T) {
+func TestExtractGoFunction(t *testing.T) {
 	tests := []struct {
-		name     string
-		info     string
-		expected *phpModule
+		name           string
+		input          string
+		firstLine      string
+		expectedName   string
+		expectedPrefix string
+		expectedSuffix string
 	}{
 		{
-			name: "both init and shutdown",
-			info: "init=initializeModule, shutdown=cleanupModule",
-			expected: &phpModule{
-				InitFunc:     "initializeModule",
-				ShutdownFunc: "cleanupModule",
-			},
+			name:           "simple function",
+			input:          "func testFunc() {\n\t// Some code\n}\n",
+			firstLine:      "func testFunc() {",
+			expectedName:   "testFunc",
+			expectedPrefix: "func testFunc() {",
+			expectedSuffix: "}\n",
 		},
 		{
-			name: "only init",
-			info: "init=initializeModule",
-			expected: &phpModule{
-				InitFunc:     "initializeModule",
-				ShutdownFunc: "",
-			},
+			name:           "function with parameters",
+			input:          "func initModule(param1 string, param2 int) {\n\t// Init code\n}\n",
+			firstLine:      "func initModule(param1 string, param2 int) {",
+			expectedName:   "initModule",
+			expectedPrefix: "func initModule(param1 string, param2 int) {",
+			expectedSuffix: "}\n",
 		},
 		{
-			name: "only shutdown",
-			info: "shutdown=cleanupModule",
-			expected: &phpModule{
-				InitFunc:     "",
-				ShutdownFunc: "cleanupModule",
-			},
-		},
-		{
-			name: "with extra whitespace",
-			info: "  init = initModule ,  shutdown = shutdownModule  ",
-			expected: &phpModule{
-				InitFunc:     "initModule",
-				ShutdownFunc: "shutdownModule",
-			},
-		},
-		{
-			name: "empty string",
-			info: "",
-			expected: &phpModule{
-				InitFunc:     "",
-				ShutdownFunc: "",
-			},
-		},
-		{
-			name: "invalid format - no equals sign",
-			info: "init initFunc, shutdown shutdownFunc",
-			expected: &phpModule{
-				InitFunc:     "",
-				ShutdownFunc: "",
-			},
-		},
-		{
-			name: "invalid format - wrong separator",
-			info: "init=initFunc; shutdown=shutdownFunc",
-			expected: &phpModule{
-				InitFunc:     "initFunc",
-				ShutdownFunc: "",
-			},
-		},
-		{
-			name: "unrecognized keys",
-			info: "start=startFunc, stop=stopFunc",
-			expected: &phpModule{
-				InitFunc:     "",
-				ShutdownFunc: "",
-			},
-		},
-		{
-			name: "mixed valid and invalid",
-			info: "init=initFunc, invalid, shutdown=shutdownFunc",
-			expected: &phpModule{
-				InitFunc:     "initFunc",
-				ShutdownFunc: "shutdownFunc",
-			},
-		},
-		{
-			name: "reversed order",
-			info: "shutdown=shutdownFunc, init=initFunc",
-			expected: &phpModule{
-				InitFunc:     "initFunc",
-				ShutdownFunc: "shutdownFunc",
-			},
+			name:           "function with nested braces",
+			input:          "func complexFunc() {\n\tif true {\n\t\t// Nested code\n\t}\n}\n",
+			firstLine:      "func complexFunc() {",
+			expectedName:   "complexFunc",
+			expectedPrefix: "func complexFunc() {",
+			expectedSuffix: "}\n",
 		},
 	}
 
-	parser := &ModuleParser{}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			module, err := parser.parseModuleInfo(tt.info)
+			parser := &ModuleParser{}
+			scanner := bufio.NewScanner(strings.NewReader(tt.input))
+			scanner.Scan() // Read the first line
 			
-			assert.NoError(t, err, "parseModuleInfo() unexpected error")
-			assert.NotNil(t, module, "parseModuleInfo() should not return nil")
-			assert.Equal(t, tt.expected.InitFunc, module.InitFunc, "InitFunc mismatch")
-			assert.Equal(t, tt.expected.ShutdownFunc, module.ShutdownFunc, "ShutdownFunc mismatch")
+			name, code, err := parser.extractGoFunction(scanner, tt.firstLine)
+			
+			assert.NoError(t, err)
+			assert.Equal(t, tt.expectedName, name)
+			assert.True(t, strings.HasPrefix(code, tt.expectedPrefix), "Function code should start with the declaration")
+			assert.True(t, strings.HasSuffix(code, tt.expectedSuffix), "Function code should end with closing brace")
 		})
 	}
 }

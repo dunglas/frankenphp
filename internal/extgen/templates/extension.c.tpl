@@ -169,7 +169,7 @@ PHP_MINIT_FUNCTION({{.BaseName}}) {
     {{- end}}
     
     {{if and .Module .Module.InitFunc}}
-    {{.Module.InitFunc}}_wrapper();
+    {{.Module.InitFunc}}();
     {{end}}
     
     return SUCCESS;
@@ -178,7 +178,7 @@ PHP_MINIT_FUNCTION({{.BaseName}}) {
 {{if .Module}}
 {{if .Module.ShutdownFunc}}
 PHP_MSHUTDOWN_FUNCTION({{.BaseName}}) {
-    {{.Module.ShutdownFunc}}_wrapper();
+    {{.Module.ShutdownFunc}}();
     return SUCCESS;
 }
 {{end}}

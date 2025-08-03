@@ -25,6 +25,7 @@ type goTemplateData struct {
 	InternalFunctions []string
 	Functions         []phpFunction
 	Classes           []phpClass
+	Module            *phpModule
 }
 
 func (gg *GoFileGenerator) generate() error {
@@ -62,6 +63,7 @@ func (gg *GoFileGenerator) buildContent() (string, error) {
 		InternalFunctions: internalFunctions,
 		Functions:         gg.generator.Functions,
 		Classes:           classes,
+		Module:            gg.generator.Module,
 	})
 
 	if err != nil {
