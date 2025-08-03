@@ -21,6 +21,16 @@ import (
 	"github.com/dunglas/frankenphp/internal/phpheaders"
 )
 
+// Map of supported protocols to Apache ssl_mod format
+// Note that these are slightly different from SupportedProtocols in caddytls/config.go
+var tlsProtocolStrings = map[uint16]string{
+	tls.VersionTLS10: "TLSv1",
+	tls.VersionTLS11: "TLSv1.1",
+	tls.VersionTLS12: "TLSv1.2",
+	tls.VersionTLS13: "TLSv1.3",
+}
+
+// List of all keys in the $_SERVER array excluding headers and environment variables.
 var knownServerKeys = []string{
 	"CONTENT_LENGTH",
 	"DOCUMENT_ROOT",
@@ -264,13 +274,47 @@ func splitPos(path string, splitPath []string) int {
 	return -1
 }
 
-// Map of supported protocols to Apache ssl_mod format
-// Note that these are slightly different from SupportedProtocols in caddytls/config.go
-var tlsProtocolStrings = map[uint16]string{
-	tls.VersionTLS10: "TLSv1",
-	tls.VersionTLS11: "TLSv1.1",
-	tls.VersionTLS12: "TLSv1.2",
-	tls.VersionTLS13: "TLSv1.3",
+// update the sapi_request_info struct
+// see: https://github.com/php/php-src/blob/345e04b619c3bc11ea17ee02cdecad6ae8ce5891/main/SAPI.h#L72
+//
+//export go_update_request_info
+func go_update_request_info(threadIndex C.uintptr_t, info *C.sapi_request_info) {
+	thread := phpThreads[threadIndex]
+	fc := thread.getRequestContext()
+	request := fc.request
+
+	authUser, authPassword, ok := request.BasicAuth()
+	if ok && authPassword != "" {
+		info.auth_password = thread.pinCString(authPassword)
+	}
+	if ok && authUser != "" {
+		info.auth_user = thread.pinCString(authUser)
+	}
+
+	info.request_method = thread.pinCString(request.Method)
+	info.query_string = thread.pinCString(request.URL.RawQuery)
+	info.content_length = C.zend_long(request.ContentLength)
+
+	contentType := request.Header.Get("Content-Type")
+	if contentType != "" {
+		info.content_type = thread.pinCString(contentType)
+	}
+
+	if fc.pathInfo != "" {
+		info.path_translated = thread.pinCString(sanitizedPathJoin(fc.documentRoot, fc.pathInfo)) // Info: http://www.oreilly.com/openbook/cgi/ch02_04.html
+	}
+
+	info.request_uri = thread.pinCString(request.URL.RequestURI())
+
+	info.proto_num = C.int(request.ProtoMajor*1000 + request.ProtoMinor)
+}
+
+//export go_is_worker_request
+func go_is_worker_request(threadIndex C.uintptr_t) C.bool {
+	thread := phpThreads[threadIndex]
+	fc := thread.getRequestContext()
+
+	return C.bool(fc.worker != nil)
 }
 
 // SanitizedPathJoin performs filepath.Join(root, reqPath) that
