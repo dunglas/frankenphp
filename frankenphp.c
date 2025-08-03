@@ -13,6 +13,7 @@
 #include <php_main.h>
 #include <php_output.h>
 #include <php_variables.h>
+#include <php_version.h>
 #include <pthread.h>
 #include <sapi/embed/php_embed.h>
 #include <signal.h>
@@ -25,7 +26,12 @@
 #elif defined(__FreeBSD__) || defined(__OpenBSD__)
 #include <pthread_np.h>
 #endif
+
+#if PHP_VERSION_ID >= 85000
 #include <sapi/cli/cli.h>
+#else
+#include "emulate_php_cli.h"
+#endif
 
 #include "_cgo_export.h"
 #include "frankenphp_arginfo.h"
@@ -1022,7 +1028,11 @@ static int cli_argc;
 static char **cli_argv;
 
 static void *execute_script_cli(void *arg) {
+#if PHP_VERSION_ID >= 85000
   return (void *)(intptr_t)do_php_cli(cli_argc, cli_argv);
+#else
+  return emulate_php_cli(arg);
+#endif
 }
 
 int frankenphp_execute_script_cli(char *script, int argc, char **argv,
