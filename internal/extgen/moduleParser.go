@@ -22,22 +22,27 @@ type phpModule struct {
 type ModuleParser struct{}
 
 // parse parses the source file for PHP module directives
-func (mp *ModuleParser) parse(filename string) (*phpModule, error) {
+func (mp *ModuleParser) parse(filename string) (module *phpModule, err error) {
 	file, err := os.Open(filename)
 	if err != nil {
 		return nil, err
 	}
-	defer file.Close()
+	defer func() {
+		e := file.Close()
+		if err == nil {
+			err = e
+		}
+	}()
 
 	scanner := bufio.NewScanner(file)
-	module := &phpModule{}
+	module = &phpModule{}
 	var currentDirective string
 	var lineNumber int
 
 	for scanner.Scan() {
 		lineNumber++
 		line := strings.TrimSpace(scanner.Text())
-		
+
 		if matches := phpModuleParser.FindStringSubmatch(line); matches != nil {
 			directiveType := matches[1]
 			currentDirective = directiveType
@@ -87,23 +92,23 @@ func (mp *ModuleParser) extractGoFunction(scanner *bufio.Scanner, firstLine stri
 		return "", "", fmt.Errorf("could not extract function name from line: %s", firstLine)
 	}
 	funcName := matches[1]
-	
+
 	// Collect the function code
 	goFunc := firstLine + "\n"
 	braceCount := 0
-	
+
 	// Count opening braces in the first line
 	for _, char := range firstLine {
 		if char == '{' {
 			braceCount++
 		}
 	}
-	
+
 	// Continue reading until we find the matching closing brace
 	for braceCount > 0 && scanner.Scan() {
 		line := scanner.Text()
 		goFunc += line + "\n"
-		
+
 		for _, char := range line {
 			switch char {
 			case '{':
@@ -112,11 +117,11 @@ func (mp *ModuleParser) extractGoFunction(scanner *bufio.Scanner, firstLine stri
 				braceCount--
 			}
 		}
-		
+
 		if braceCount == 0 {
 			break
 		}
 	}
-	
+
 	return funcName, goFunc, nil
 }
