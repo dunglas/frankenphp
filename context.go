@@ -4,6 +4,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -95,13 +96,22 @@ func (fc *frankenPHPContext) closeContext() {
 
 // validate checks if the request should be outright rejected
 func (fc *frankenPHPContext) validate() bool {
-	if !strings.Contains(fc.request.URL.Path, "\x00") {
-		return true
+	if strings.Contains(fc.request.URL.Path, "\x00") {
+		fc.rejectBadRequest("Invalid request path")
+		return false
 	}
 
-	fc.rejectBadRequest("Invalid request path")
+	contentLengthStr := fc.request.Header.Get("Content-Length")
+	if contentLengthStr != "" {
+		contentLength, err := strconv.Atoi(contentLengthStr)
+		if err != nil || contentLength < 0 {
+			fc.rejectBadRequest("invalid Content-Length header: " + contentLengthStr)
 
-	return false
+			return false
+		}
+	}
+
+	return true
 }
 
 func (fc *frankenPHPContext) clientHasClosed() bool {
