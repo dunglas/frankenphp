@@ -10,9 +10,11 @@ import "runtime/cgo"
 import {{.}}
 {{- end}}
 
+{{if not .HasInitFunction}}
 func init() {
 	frankenphp.RegisterExtension(unsafe.Pointer(&C.ext_module_entry))
 }
+{{end}}
 {{range .Constants}}
 const {{.Name}} = {{.Value}}
 {{- end}}

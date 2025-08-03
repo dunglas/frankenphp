@@ -5,6 +5,7 @@ import (
 	_ "embed"
 	"fmt"
 	"path/filepath"
+	"strings"
 	"text/template"
 
 	"github.com/Masterminds/sprig/v3"
@@ -26,6 +27,7 @@ type goTemplateData struct {
 	Functions         []phpFunction
 	Classes           []phpClass
 	Module            *phpModule
+	HasInitFunction   bool
 }
 
 func (gg *GoFileGenerator) generate() error {
@@ -55,6 +57,16 @@ func (gg *GoFileGenerator) buildContent() (string, error) {
 	classes := make([]phpClass, len(gg.generator.Classes))
 	copy(classes, gg.generator.Classes)
 
+	// Check if there's already an init() function in the source file
+	hasInitFunction := false
+	for _, fn := range internalFunctions {
+		if strings.HasPrefix(fn, "func init()") {
+			hasInitFunction = true
+			fmt.Printf("Warning: An init() function already exists in the source file. Make sure to call frankenphp.RegisterExtension(unsafe.Pointer(&C.ext_module_entry)) in your init function.\n")
+			break
+		}
+	}
+
 	templateContent, err := gg.getTemplateContent(goTemplateData{
 		PackageName:       SanitizePackageName(gg.generator.BaseName),
 		BaseName:          gg.generator.BaseName,
@@ -64,6 +76,7 @@ func (gg *GoFileGenerator) buildContent() (string, error) {
 		Functions:         gg.generator.Functions,
 		Classes:           classes,
 		Module:            gg.generator.Module,
+		HasInitFunction:   hasInitFunction,
 	})
 
 	if err != nil {
