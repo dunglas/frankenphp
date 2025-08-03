@@ -755,7 +755,7 @@ void frankenphp_register_variable_safe(char *key, char *val, size_t val_len,
   }
 }
 
-static inline void register_server_variable_filtered(const char *key,
+void register_server_variable_filtered(const char *key,
                                                      char **val,
                                                      size_t *val_len,
                                                      zval *track_vars_array) {
@@ -1022,16 +1022,20 @@ int frankenphp_execute_script(char *file_name) {
   return status;
 }
 
-/* Use global variables to store CLI arguments to prevent useless allocations */
-static char *cli_script;
-static int cli_argc;
-static char **cli_argv;
+typedef struct {
+  char *script;
+  int argc;
+  char **argv;
+  bool eval;
+} cli_exec_args_t;
 
 static void *execute_script_cli(void *arg) {
+  cli_exec_args_t *args = (cli_exec_args_t *)arg;
+
 #if PHP_VERSION_ID >= 85000
-  return (void *)(intptr_t)do_php_cli(cli_argc, cli_argv);
+  return (void *)(intptr_t)do_php_cli(args->argc, args->argv);
 #else
-  return emulate_php_cli(arg);
+  return (void *)(intptr_t)emulate_script_cli(args);
 #endif
 }
 
@@ -1041,15 +1045,15 @@ int frankenphp_execute_script_cli(char *script, int argc, char **argv,
   int err;
   void *exit_status;
 
-  cli_script = script;
-  cli_argc = argc;
-  cli_argv = argv;
+  cli_exec_args_t args = {
+      .script = script, .argc = argc, .argv = argv, .eval = eval
+  };
 
   /*
    * Start the script in a dedicated thread to prevent conflicts between Go and
    * PHP signal handlers
    */
-  err = pthread_create(&thread, NULL, execute_script_cli, (void *)eval);
+  err = pthread_create(&thread, NULL, execute_script_cli, &args);
   if (err != 0) {
     return err;
   }

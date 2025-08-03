@@ -14,6 +14,29 @@
 #include <php_output.h>
 #include <php_variables.h>
 #include <php_version.h>
+#include <pthread.h>
+#include <sapi/embed/php_embed.h>
+#include <signal.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#if defined(__linux__)
+#include <sys/prctl.h>
+#elif defined(__FreeBSD__) || defined(__OpenBSD__)
+#include <pthread_np.h>
+#endif
+
+typedef struct {
+  char *script;
+  int argc;
+  char **argv;
+  bool eval;
+} cli_exec_args_t;
+cli_exec_args_t *cli_args;
+
+/* Function declaration to avoid implicit declaration error */
+void register_server_variable_filtered(const char *key, char **val, size_t *val_len, zval *track_vars_array);
 
 /*
  * CLI code is adapted from
@@ -71,7 +94,7 @@ static void cli_register_file_handles(bool no_close) /* {{{ */
 
 static void sapi_cli_register_variables(zval *track_vars_array) /* {{{ */
 {
-  size_t len = strlen(cli_script);
+  size_t len = strlen(cli_args->script);
   char *docroot = "";
 
   /*
@@ -81,15 +104,15 @@ static void sapi_cli_register_variables(zval *track_vars_array) /* {{{ */
   php_import_environment_variables(track_vars_array);
 
   /* Build the special-case PHP_SELF variable for the CLI version */
-  register_server_variable_filtered("PHP_SELF", &cli_script, &len,
+  register_server_variable_filtered("PHP_SELF", &cli_args->script, &len,
                                     track_vars_array);
-  register_server_variable_filtered("SCRIPT_NAME", &cli_script, &len,
+  register_server_variable_filtered("SCRIPT_NAME", &cli_args->script, &len,
                                     track_vars_array);
 
   /* filenames are empty for stdin */
-  register_server_variable_filtered("SCRIPT_FILENAME", &cli_script, &len,
+  register_server_variable_filtered("SCRIPT_FILENAME", &cli_args->script, &len,
                                     track_vars_array);
-  register_server_variable_filtered("PATH_TRANSLATED", &cli_script, &len,
+  register_server_variable_filtered("PATH_TRANSLATED", &cli_args->script, &len,
                                     track_vars_array);
 
   /* just make it available */
@@ -101,7 +124,9 @@ static void sapi_cli_register_variables(zval *track_vars_array) /* {{{ */
 
 void *emulate_script_cli(void *arg) {
   void *exit_status;
-  bool eval = (bool)arg;
+  cli_exec_args_t* args = arg;
+  cli_args = args;
+  bool eval = args->eval;
 
   /*
    * The SAPI name "cli" is hardcoded into too many programs... let's usurp it.
@@ -110,16 +135,16 @@ void *emulate_script_cli(void *arg) {
   php_embed_module.pretty_name = "PHP CLI embedded in FrankenPHP";
   php_embed_module.register_server_variables = sapi_cli_register_variables;
 
-  php_embed_init(cli_argc, cli_argv);
+  php_embed_init(cli_args->argc, cli_args->argv);
 
   cli_register_file_handles(false);
   zend_first_try {
     if (eval) {
-      /* evaluate the cli_script as literal PHP code (php-cli -r "...") */
-      zend_eval_string_ex(cli_script, NULL, "Command line code", 1);
+      /* evaluate the cli_args->script as literal PHP code (php-cli -r "...") */
+      zend_eval_string_ex(cli_args->script, NULL, "Command line code", 1);
     } else {
       zend_file_handle file_handle;
-      zend_stream_init_filename(&file_handle, cli_script);
+      zend_stream_init_filename(&file_handle, cli_args->script);
 
       CG(skip_shebang) = 1;
       php_execute_script(&file_handle);
