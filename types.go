@@ -179,8 +179,9 @@ func PHPArray(arr *Array) unsafe.Pointer {
 		zval := convertGoToZval(arr.values[i])
 
 		if k.Type == PHPStringKey {
-			keyStr := PHPString(k.Str, false)
-			C.zend_hash_update(zendArray, (*C.zend_string)(keyStr), zval)
+			keyStr := k.Str
+			keyData := (*C.char)(unsafe.Pointer(unsafe.StringData(keyStr)))
+			C.zend_hash_str_add(zendArray, keyData, C.size_t(len(keyStr)), zval)
 
 			continue
 		}
@@ -229,47 +230,36 @@ func convertZvalToGo(zval *C.zval) interface{} {
 
 // convertGoToZval converts a Go interface{} to a PHP zval
 func convertGoToZval(value interface{}) *C.zval {
-	zval := (*C.zval)(C.__emalloc__(C.size_t(unsafe.Sizeof(C.zval{}))))
-	u1 := (*C.uint8_t)(unsafe.Pointer(&zval.u1[0]))
-	v0 := unsafe.Pointer(&zval.value[0])
+	var zval C.zval
 
 	switch v := value.(type) {
 	case nil:
-		*u1 = C.IS_NULL
+		C.__zval_null__(&zval)
 	case bool:
-		if v {
-			*u1 = C.IS_TRUE
-		} else {
-			*u1 = C.IS_FALSE
-		}
+		C.__zval_bool__(&zval, C._Bool(v))
 	case int:
-		*u1 = C.IS_LONG
-		*(*C.zend_long)(v0) = C.zend_long(v)
+		C.__zval_long__(&zval, C.zend_long(v))
 	case int64:
-		*u1 = C.IS_LONG
-		*(*C.zend_long)(v0) = C.zend_long(v)
+		C.__zval_long__(&zval, C.zend_long(v))
 	case float64:
-		*u1 = C.IS_DOUBLE
-		*(*C.double)(v0) = C.double(v)
+		C.__zval_double__(&zval, C.double(v))
 	case string:
-		*u1 = C.IS_STRING
-		*(**C.zend_string)(v0) = (*C.zend_string)(PHPString(v, false))
+		str := (*C.zend_string)(PHPString(v, false))
+		C.__zval_string__(&zval, str)
 	case *Array:
-		*u1 = C.IS_ARRAY
-		*(**C.zend_array)(v0) = (*C.zend_array)(PHPArray(v))
+		arr := (*C.zend_array)(PHPArray(v))
+		C.__zval_arr__(&zval, arr)
 	default:
-		*u1 = C.IS_NULL
+		C.__zval_null__(&zval)
 	}
 
-	return zval
+	return &zval
 }
 
 // createNewArray creates a new zend_array with the specified size.
 func createNewArray(size uint32) *C.HashTable {
-	ht := C.__emalloc__(C.size_t(unsafe.Sizeof(C.HashTable{})))
-	C.__zend_hash_init__((*C.struct__zend_array)(ht), C.uint32_t(size), nil, C._Bool(false))
-
-	return (*C.HashTable)(ht)
+	arr := C.__zend_new_array__(C.uint32_t(size))
+	return (*C.HashTable)(unsafe.Pointer(arr))
 }
 
 // htIsPacked checks if a HashTable is a list (packed) or hashmap (not packed).
