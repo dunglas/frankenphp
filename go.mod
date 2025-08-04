@@ -7,7 +7,7 @@ retract v1.0.0-rc.1 // Human error
 require (
 	github.com/Masterminds/sprig/v3 v3.3.0
 	github.com/maypok86/otter v1.2.4
-	github.com/prometheus/client_golang v1.22.0
+	github.com/prometheus/client_golang v1.23.0
 	github.com/stretchr/testify v1.10.0
 	go.uber.org/zap v1.27.0
 	go.uber.org/zap/exp v0.3.0
