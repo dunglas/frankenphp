@@ -91,7 +91,7 @@ func runTest(t *testing.T, test func(func(http.ResponseWriter, *http.Request), *
 
 	var ts *httptest.Server
 	if opts.realServer {
-		ts = httptest.NewServer(http.HandlerFunc(handler, t))
+		ts = httptest.NewServer(http.HandlerFunc(handler))
 		defer ts.Close()
 	}
 
@@ -547,6 +547,7 @@ func testLargeRequest(t *testing.T, opts *testOptions) {
 			fmt.Sprintf("http://example.com/large-request.php?i=%d", i),
 			strings.Repeat("f", 6_048_576),
 			handler,
+			t,
 		)
 
 		assert.Contains(t, body, fmt.Sprintf("Request body size: 6048576 (%d)", i))
