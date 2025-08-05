@@ -91,7 +91,7 @@ func runTest(t *testing.T, test func(func(http.ResponseWriter, *http.Request), *
 
 	var ts *httptest.Server
 	if opts.realServer {
-		ts = httptest.NewServer(http.HandlerFunc(handler))
+		ts = httptest.NewServer(http.HandlerFunc(handler, t))
 		defer ts.Close()
 	}
 
@@ -107,26 +107,32 @@ func runTest(t *testing.T, test func(func(http.ResponseWriter, *http.Request), *
 	wg.Wait()
 }
 
-func testRequest(req *http.Request, handler func(http.ResponseWriter, *http.Request)) (string, *http.Response) {
+func testRequest(req *http.Request, handler func(http.ResponseWriter, *http.Request), t *testing.T) (string, *http.Response) {
+	t.Helper()
 	w := httptest.NewRecorder()
 	handler(w, req)
 	resp := w.Result()
-	body, _ := io.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Errorf("failed to read response body: %v", err)
+	}
 
 	return string(body), resp
 }
 
-func testGet(url string, handler func(http.ResponseWriter, *http.Request)) (string, *http.Response) {
+func testGet(url string, handler func(http.ResponseWriter, *http.Request), t *testing.T) (string, *http.Response) {
+	t.Helper()
 	req := httptest.NewRequest(http.MethodGet, url, nil)
 
-	return testRequest(req, handler)
+	return testRequest(req, handler, t)
 }
 
-func testPost(url string, body string, handler func(http.ResponseWriter, *http.Request)) (string, *http.Response) {
+func testPost(url string, body string, handler func(http.ResponseWriter, *http.Request), t *testing.T) (string, *http.Response) {
+	t.Helper()
 	req := httptest.NewRequest(http.MethodPost, url, nil)
 	req.Body = io.NopCloser(strings.NewReader(body))
 
-	return testRequest(req, handler)
+	return testRequest(req, handler, t)
 }
 
 func TestHelloWorld_module(t *testing.T) { testHelloWorld(t, nil) }
@@ -135,7 +141,7 @@ func TestHelloWorld_worker(t *testing.T) {
 }
 func testHelloWorld(t *testing.T, opts *testOptions) {
 	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
-		body, _ := testGet(fmt.Sprintf("http://example.com/index.php?i=%d", i), handler)
+		body, _ := testGet(fmt.Sprintf("http://example.com/index.php?i=%d", i), handler, t)
 		assert.Equal(t, fmt.Sprintf("I am by birth a Genevese (%d)", i), body)
 	}, opts)
 }
@@ -146,7 +152,7 @@ func TestFinishRequest_worker(t *testing.T) {
 }
 func testFinishRequest(t *testing.T, opts *testOptions) {
 	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
-		body, _ := testGet(fmt.Sprintf("http://example.com/finish-request.php?i=%d", i), handler)
+		body, _ := testGet(fmt.Sprintf("http://example.com/finish-request.php?i=%d", i), handler, t)
 		assert.Equal(t, fmt.Sprintf("This is output %d\n", i), body)
 	}, opts)
 }
@@ -162,7 +168,7 @@ func testServerVariable(t *testing.T, opts *testOptions) {
 		req := httptest.NewRequest("POST", fmt.Sprintf("http://example.com/server-variable.php/baz/bat?foo=a&bar=b&i=%d#hash", i), strings.NewReader("foo"))
 		req.SetBasicAuth(strings.Clone("kevin"), strings.Clone("password"))
 		req.Header.Add(strings.Clone("Content-Type"), strings.Clone("text/plain"))
-		body, _ := testRequest(req, handler)
+		body, _ := testRequest(req, handler, t)
 
 		assert.Contains(t, body, "[REMOTE_HOST]")
 		assert.Contains(t, body, "[REMOTE_USER] => kevin")
@@ -216,7 +222,7 @@ func testPathInfo(t *testing.T, opts *testOptions) {
 			assert.NoError(t, err)
 		}
 
-		body, _ := testGet(fmt.Sprintf("http://example.com/pathinfo/%d", i), handler)
+		body, _ := testGet(fmt.Sprintf("http://example.com/pathinfo/%d", i), handler, t)
 
 		assert.Contains(t, body, "[PATH_INFO] => /pathinfo")
 		assert.Contains(t, body, fmt.Sprintf("[REQUEST_URI] => /pathinfo/%d", i))
@@ -230,7 +236,7 @@ func TestHeaders_module(t *testing.T) { testHeaders(t, nil) }
 func TestHeaders_worker(t *testing.T) { testHeaders(t, &testOptions{workerScript: "headers.php"}) }
 func testHeaders(t *testing.T, opts *testOptions) {
 	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
-		body, resp := testGet(fmt.Sprintf("http://example.com/headers.php?i=%d", i), handler)
+		body, resp := testGet(fmt.Sprintf("http://example.com/headers.php?i=%d", i), handler, t)
 
 		assert.Equal(t, "Hello", body)
 		assert.Equal(t, 201, resp.StatusCode)
@@ -248,7 +254,7 @@ func TestResponseHeaders_worker(t *testing.T) {
 }
 func testResponseHeaders(t *testing.T, opts *testOptions) {
 	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
-		body, resp := testGet(fmt.Sprintf("http://example.com/response-headers.php?i=%d", i), handler)
+		body, resp := testGet(fmt.Sprintf("http://example.com/response-headers.php?i=%d", i), handler, t)
 
 		if i%3 != 0 {
 			assert.Equal(t, i+100, resp.StatusCode)
@@ -268,7 +274,7 @@ func TestInput_module(t *testing.T) { testInput(t, nil) }
 func TestInput_worker(t *testing.T) { testInput(t, &testOptions{workerScript: "input.php"}) }
 func testInput(t *testing.T, opts *testOptions) {
 	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
-		body, resp := testPost("http://example.com/input.php", fmt.Sprintf("post data %d", i), handler)
+		body, resp := testPost("http://example.com/input.php", fmt.Sprintf("post data %d", i), handler, t)
 
 		assert.Equal(t, fmt.Sprintf("post data %d", i), body)
 		assert.Equal(t, "bar", resp.Header.Get("Foo"))
@@ -284,7 +290,7 @@ func testPostSuperGlobals(t *testing.T, opts *testOptions) {
 		formData := url.Values{"baz": {"bat"}, "i": {fmt.Sprintf("%d", i)}}
 		req := httptest.NewRequest("POST", fmt.Sprintf("http://example.com/super-globals.php?foo=bar&iG=%d", i), strings.NewReader(formData.Encode()))
 		req.Header.Set("Content-Type", strings.Clone("application/x-www-form-urlencoded"))
-		body, _ := testRequest(req, handler)
+		body, _ := testRequest(req, handler, t)
 
 		assert.Contains(t, body, "'foo' => 'bar'")
 		assert.Contains(t, body, fmt.Sprintf("'i' => '%d'", i))
@@ -300,7 +306,7 @@ func testCookies(t *testing.T, opts *testOptions) {
 		req := httptest.NewRequest("GET", "http://example.com/cookies.php", nil)
 		req.AddCookie(&http.Cookie{Name: "foo", Value: "bar"})
 		req.AddCookie(&http.Cookie{Name: "i", Value: fmt.Sprintf("%d", i)})
-		body, _ := testRequest(req, handler)
+		body, _ := testRequest(req, handler, t)
 
 		assert.Contains(t, body, "'foo' => 'bar'")
 		assert.Contains(t, body, fmt.Sprintf("'i' => '%d'", i))
@@ -313,7 +319,7 @@ func TestMalformedCookie(t *testing.T) {
 		req.Header.Add("Cookie", "foo =bar; ===;;==;  .dot.=val  ;\x00 ; PHPSESSID=1234")
 		// Multiple Cookie header should be joined https://www.rfc-editor.org/rfc/rfc7540#section-8.1.2.5
 		req.Header.Add("Cookie", "secondCookie=test; secondCookie=overwritten")
-		body, _ := testRequest(req, handler)
+		body, _ := testRequest(req, handler, t)
 
 		assert.Contains(t, body, "'foo_' => 'bar'")
 		assert.Contains(t, body, "'_dot_' => 'val  '")
@@ -363,7 +369,7 @@ func TestPhpInfo_worker(t *testing.T) { testPhpInfo(t, &testOptions{workerScript
 func testPhpInfo(t *testing.T, opts *testOptions) {
 	var logOnce sync.Once
 	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
-		body, _ := testGet(fmt.Sprintf("http://example.com/phpinfo.php?i=%d", i), handler)
+		body, _ := testGet(fmt.Sprintf("http://example.com/phpinfo.php?i=%d", i), handler, t)
 
 		logOnce.Do(func() {
 			t.Log(body)
@@ -380,7 +386,7 @@ func TestPersistentObject_worker(t *testing.T) {
 }
 func testPersistentObject(t *testing.T, opts *testOptions) {
 	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
-		body, _ := testGet(fmt.Sprintf("http://example.com/persistent-object.php?i=%d", i), handler)
+		body, _ := testGet(fmt.Sprintf("http://example.com/persistent-object.php?i=%d", i), handler, t)
 
 		assert.Equal(t, fmt.Sprintf(`request: %d
 class exists: 1
@@ -395,7 +401,7 @@ func TestAutoloader_worker(t *testing.T) {
 }
 func testAutoloader(t *testing.T, opts *testOptions) {
 	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
-		body, _ := testGet(fmt.Sprintf("http://example.com/autoloader.php?i=%d", i), handler)
+		body, _ := testGet(fmt.Sprintf("http://example.com/autoloader.php?i=%d", i), handler, t)
 
 		assert.Equal(t, fmt.Sprintf(`request %d
 my_autoloader`, i), body)
@@ -455,7 +461,7 @@ func TestException_worker(t *testing.T) {
 }
 func testException(t *testing.T, opts *testOptions) {
 	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
-		body, _ := testGet(fmt.Sprintf("http://example.com/exception.php?i=%d", i), handler)
+		body, _ := testGet(fmt.Sprintf("http://example.com/exception.php?i=%d", i), handler, t)
 
 		assert.Contains(t, body, "hello")
 		assert.Contains(t, body, fmt.Sprintf(`Uncaught Exception: request %d`, i))
@@ -563,7 +569,7 @@ func TestFiberNonCgo_worker(t *testing.T) {
 }
 func testFiberNoCgo(t *testing.T, opts *testOptions) {
 	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
-		body, _ := testGet(fmt.Sprintf("http://example.com/fiber-no-cgo.php?i=%d", i), handler)
+		body, _ := testGet(fmt.Sprintf("http://example.com/fiber-no-cgo.php?i=%d", i), handler, t)
 		assert.Equal(t, body, fmt.Sprintf("Fiber %d", i))
 	}, opts)
 }
@@ -574,7 +580,7 @@ func TestFiberBasic_worker(t *testing.T) {
 }
 func testFiberBasic(t *testing.T, opts *testOptions) {
 	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
-		body, _ := testGet(fmt.Sprintf("http://example.com/fiber-basic.php?i=%d", i), handler)
+		body, _ := testGet(fmt.Sprintf("http://example.com/fiber-basic.php?i=%d", i), handler, t)
 		assert.Equal(t, body, fmt.Sprintf("Fiber %d", i))
 	}, opts)
 }
@@ -588,7 +594,7 @@ func testRequestHeaders(t *testing.T, opts *testOptions) {
 		req := httptest.NewRequest("GET", fmt.Sprintf("http://example.com/request-headers.php?i=%d", i), nil)
 		req.Header.Add(strings.Clone("Content-Type"), strings.Clone("text/plain"))
 		req.Header.Add(strings.Clone("Frankenphp-I"), strings.Clone(strconv.Itoa(i)))
-		body, _ := testRequest(req, handler)
+		body, _ := testRequest(req, handler, t)
 
 		assert.Contains(t, body, "[Content-Type] => text/plain")
 		assert.Contains(t, body, fmt.Sprintf("[Frankenphp-I] => %d", i))
@@ -597,7 +603,7 @@ func testRequestHeaders(t *testing.T, opts *testOptions) {
 
 func TestFailingWorker(t *testing.T) {
 	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
-		body, _ := testGet("http://example.com/failing-worker.php", handler)
+		body, _ := testGet("http://example.com/failing-worker.php", handler, t)
 		assert.Contains(t, body, "ok")
 	}, &testOptions{workerScript: "failing-worker.php"})
 }
@@ -614,7 +620,7 @@ func testEnv(t *testing.T, opts *testOptions) {
 	assert.NoError(t, os.Setenv("EMPTY", ""))
 
 	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
-		body, _ := testGet(fmt.Sprintf("http://example.com/env/test-env.php?var=%d", i), handler)
+		body, _ := testGet(fmt.Sprintf("http://example.com/env/test-env.php?var=%d", i), handler, t)
 
 		// execute the script as regular php script
 		cmd := exec.Command("php", "testdata/env/test-env.php", strconv.Itoa(i))
@@ -631,11 +637,11 @@ func testEnv(t *testing.T, opts *testOptions) {
 func TestEnvIsResetInNonWorkerMode(t *testing.T) {
 	assert.NoError(t, os.Setenv("test", ""))
 	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
-		putResult, _ := testGet(fmt.Sprintf("http://example.com/env/putenv.php?key=test&put=%d", i), handler)
+		putResult, _ := testGet(fmt.Sprintf("http://example.com/env/putenv.php?key=test&put=%d", i), handler, t)
 
 		assert.Equal(t, fmt.Sprintf("test=%d", i), putResult, "putenv and then echo getenv")
 
-		getResult, _ := testGet("http://example.com/env/putenv.php?key=test", handler)
+		getResult, _ := testGet("http://example.com/env/putenv.php?key=test", handler, t)
 
 		assert.Equal(t, "test=", getResult, "putenv should be reset across requests")
 	}, &testOptions{})
@@ -645,11 +651,11 @@ func TestEnvIsResetInNonWorkerMode(t *testing.T) {
 func TestEnvIsNotResetInWorkerMode(t *testing.T) {
 	assert.NoError(t, os.Setenv("index", ""))
 	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
-		putResult, _ := testGet(fmt.Sprintf("http://example.com/env/remember-env.php?index=%d", i), handler)
+		putResult, _ := testGet(fmt.Sprintf("http://example.com/env/remember-env.php?index=%d", i), handler, t)
 
 		assert.Equal(t, "success", putResult, "putenv and then echo getenv")
 
-		getResult, _ := testGet("http://example.com/env/remember-env.php", handler)
+		getResult, _ := testGet("http://example.com/env/remember-env.php", handler, t)
 
 		assert.Equal(t, "success", getResult, "putenv should not be reset across worker requests")
 	}, &testOptions{workerScript: "env/remember-env.php"})
@@ -659,7 +665,7 @@ func TestEnvIsNotResetInWorkerMode(t *testing.T) {
 func TestModificationsToEnvPersistAcrossRequests(t *testing.T) {
 	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
 		for j := 0; j < 3; j++ {
-			result, _ := testGet("http://example.com/env/overwrite-env.php", handler)
+			result, _ := testGet("http://example.com/env/overwrite-env.php", handler, t)
 			assert.Equal(t, "custom_value", result, "a var directly added to $_ENV should persist")
 		}
 	}, &testOptions{
@@ -685,7 +691,7 @@ func testFileUpload(t *testing.T, opts *testOptions) {
 		req := httptest.NewRequest("POST", "http://example.com/file-upload.php", requestBody)
 		req.Header.Add("Content-Type", writer.FormDataContentType())
 
-		body, _ := testRequest(req, handler)
+		body, _ := testRequest(req, handler, t)
 
 		assert.Contains(t, string(body), "Upload OK")
 	}, opts)
@@ -931,7 +937,7 @@ func testRejectInvalidHeaders(t *testing.T, opts *testOptions) {
 		runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, _ int) {
 			req := httptest.NewRequest("GET", "http://example.com/headers.php", nil)
 			req.Header.Add(header[0], header[1])
-			body, resp := testRequest(req, handler)
+			body, resp := testRequest(req, handler, t)
 
 			assert.Equal(t, 400, resp.StatusCode)
 			assert.Contains(t, body, "invalid")
@@ -946,7 +952,7 @@ func TestFlushEmptyRespnse_worker(t *testing.T) {
 
 func testFlushEmptyResponse(t *testing.T, opts *testOptions) {
 	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, _ int) {
-		_, resp := testGet("http://example.com/only-headers.php", handler)
+		_, resp := testGet("http://example.com/only-headers.php", handler, t)
 		assert.Equal(t, 204, resp.StatusCode)
 	}, opts)
 }
@@ -955,13 +961,13 @@ func testFlushEmptyResponse(t *testing.T, opts *testOptions) {
 // Make sure referenced streams are not cleaned up
 func TestFileStreamInWorkerMode(t *testing.T) {
 	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, _ int) {
-		resp1, _ := testGet("http://example.com/file-stream.php", handler)
+		resp1, _ := testGet("http://example.com/file-stream.php", handler, t)
 		assert.Equal(t, resp1, "word1")
 
-		resp2, _ := testGet("http://example.com/file-stream.php", handler)
+		resp2, _ := testGet("http://example.com/file-stream.php", handler, t)
 		assert.Equal(t, resp2, "word2")
 
-		resp3, _ := testGet("http://example.com/file-stream.php", handler)
+		resp3, _ := testGet("http://example.com/file-stream.php", handler, t)
 		assert.Equal(t, resp3, "word3")
 	}, &testOptions{workerScript: "file-stream.php", nbParallelRequests: 1, nbWorkers: 1})
 }
@@ -981,7 +987,7 @@ func FuzzRequest(f *testing.F) {
 			req.URL = &url.URL{RawQuery: "test=" + fuzzedString, Path: "/server-variable.php/" + fuzzedString}
 			req.Header.Add(strings.Clone("Fuzzed"), strings.Clone(fuzzedString))
 			req.Header.Add(strings.Clone("Content-Type"), fuzzedString)
-			body, resp := testRequest(req, handler)
+			body, resp := testRequest(req, handler, t)
 
 			// The response status must be 400 if the request path contains null bytes
 			if strings.Contains(req.URL.Path, "\x00") {
