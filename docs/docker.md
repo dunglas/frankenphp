@@ -180,8 +180,8 @@ RUN \
 	useradd ${USER}; \
 	# Remove default capability
 	setcap -r /usr/local/bin/frankenphp; \
-	# Give write access to /data/caddy and /config/caddy
-	chown -R ${USER}:${USER} /data/caddy && chown -R ${USER}:${USER} /config/caddy
+	# Give write access to /config/caddy and /data/caddy
+	chown -R ${USER}:${USER} /config/caddy /data/caddy 
 
 USER ${USER}
 ```
