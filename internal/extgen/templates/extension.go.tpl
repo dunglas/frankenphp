@@ -5,7 +5,6 @@ package {{.PackageName}}
 #include "{{.BaseName}}.h"
 */
 import "C"
-import "runtime/cgo"
 {{- range .Imports}}
 import {{.}}
 {{- end}}
