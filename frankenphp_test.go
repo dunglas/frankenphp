@@ -113,9 +113,7 @@ func testRequest(req *http.Request, handler func(http.ResponseWriter, *http.Requ
 	handler(w, req)
 	resp := w.Result()
 	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		t.Errorf("failed to read response body: %v", err)
-	}
+	require.NoError(t, err)
 
 	return string(body), resp
 }
