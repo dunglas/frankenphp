@@ -13,7 +13,7 @@ require (
 	github.com/dunglas/frankenphp v1.9.0
 	github.com/dunglas/mercure/caddy v0.20.0
 	github.com/dunglas/vulcain/caddy v1.2.0
-	github.com/prometheus/client_golang v1.22.0
+	github.com/prometheus/client_golang v1.23.0
 	github.com/spf13/cobra v1.9.1
 	github.com/stretchr/testify v1.10.0
 )
