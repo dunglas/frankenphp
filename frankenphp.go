@@ -309,6 +309,7 @@ func Shutdown() {
 
 	drainWatcher()
 	drainAutoScaling()
+	drainExternalWorkerPipes()
 	drainPHPThreads()
 
 	metrics.Shutdown()
