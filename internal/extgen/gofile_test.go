@@ -516,9 +516,8 @@ type ArrayStruct struct {
 //export_php:method ArrayClass::processArray(array $items): array
 func (as *ArrayStruct) ProcessArray(items *frankenphp.Array) *frankenphp.Array {
 	result := &frankenphp.Array{}
-	for i := uint32(0); i < items.Len(); i++ {
-		key, value := items.At(i)
-		result.SetString(fmt.Sprintf("processed_%d", i), value)
+	for i, entry := range items.Entries() {
+		result.Set(fmt.Sprintf("processed_%d", i), value)
 	}
 	return result
 }
@@ -545,9 +544,8 @@ func (as *ArrayStruct) FilterData(data *frankenphp.Array, filter string) *franke
 			},
 			GoFunction: `func (as *ArrayStruct) ProcessArray(items *frankenphp.Array) *frankenphp.Array {
 	result := &frankenphp.Array{}
-	for i := uint32(0); i < items.Len(); i++ {
-		key, value := items.At(i)
-		result.SetString(fmt.Sprintf("processed_%d", i), value)
+	for i, entry := range items.Entries() {
+		result.Set(fmt.Sprintf("processed_%d", i), value)
 	}
 	return result
 }`,
@@ -617,7 +615,7 @@ func (nas *NullableArrayStruct) ProcessOptionalArray(items *frankenphp.Array, na
 	if items == nil {
 		return "No items: " + name
 	}
-	return fmt.Sprintf("Processing %d items for %s", items.Len(), name)
+	return fmt.Sprintf("Processing %d items for %s", len(items.Entries()), name)
 }`
 
 	sourceFile := filepath.Join(tmpDir, "test.go")
@@ -638,7 +636,7 @@ func (nas *NullableArrayStruct) ProcessOptionalArray(items *frankenphp.Array, na
 	if items == nil {
 		return "No items: " + name
 	}
-	return fmt.Sprintf("Processing %d items for %s", items.Len(), name)
+	return fmt.Sprintf("Processing %d items for %s", len(items.Entries()), name)
 }`,
 		},
 	}

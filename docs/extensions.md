@@ -112,45 +112,68 @@ func process_data(arr *C.zval) unsafe.Pointer {
     // Convert PHP array to Go
     goArray := frankenphp.GoArray(unsafe.Pointer(arr))
 	
-	result := &frankenphp.Array{}
+	result := NewArray(
+        KeyValuePair{"firstName", "John"},
+        KeyValuePair{"lastName", "Doe"},
+    )
     
-    result.SetInt(0, "first")
-    result.SetInt(1, "second")
-    result.Append("third") // Automatically assigns next integer key
+    result.Set("age", 25")
     
-    result.SetString("name", "John")
-    result.SetString("age", int64(30))
-    
-    for i := uint32(0); i < goArray.Len(); i++ {
-        key, value := goArray.At(i)
-        if key.Type == frankenphp.PHPStringKey {
-            result.SetString("processed_"+key.Str, value)
-        } else {
-            result.SetInt(key.Int+100, value)
-        }
+    // loop over the entries
+    for _, entry := range goArray.Entries() {
+        result.Set("processed_"+entry.key, entry.value)
     }
     
-    // Convert back to PHP array
+    // Convert back to PHP array (*zval)
     return frankenphp.PHPArray(result)
+}
+
+//export_php:function process_data(array $input): array
+func example_packed_array(arr *C.zval) unsafe.Pointer {
+	packedArray := NewPackedArray(
+	    "first",
+	    "second",
+	    "third",
+	)
+
+    for i, value := range packedArray.Values() {
+        // This will return a error if the array is not packed
+        _ := packedArray.SetAtIndex(i, value+"-processed")
+    }
+    
+    // Convert back to a PHP packed array (*zval)
+    return frankenphp.PHPArray(packedArray)
 }
 ```
 
 **Key features of `frankenphp.Array`:**
 
 * **Ordered key-value pairs** - Maintains insertion order like PHP arrays
-* **Mixed key types** - Supports both integer and string keys in the same array
-* **Type safety** - The `PHPKey` type ensures proper key handling
+* **Optimized based on keys** - The array will automatically be associative or packed based on the keys used
 * **Automatic list detection** - When converting to PHP, automatically detects if array should be a packed list or hashmap
 * **Objects are not supported** - Currently, only scalar types and arrays can be used as values. Providing an object will result in a `null` value in the PHP array.
 
 **Available methods:**
 
-* `SetInt(key int64, value interface{})` - Set value with integer key
-* `SetString(key string, value interface{})` - Set value with string key  
-* `Append(value interface{})` - Add value with next available integer key
-* `Len() uint32` - Get number of elements
-* `At(index uint32) (PHPKey, interface{})` - Get key-value pair at index
-* `frankenphp.PHPArray(arr *frankenphp.Array) unsafe.Pointer` - Convert to PHP array
+**Packed and associative**
+
+* `Entries() []KeyValuePair` - Get all entries by key-value (recommended for associative array, but also works for packed array)
+* `Values() []interface{}` - Get values (recommended for packed array, but also works for associative array)
+* `IsPacked() bool` - Weather packed array (list) or associative array (hashmap)
+* `frankenphp.PHPArray(arr *frankenphp.Array) unsafe.Pointer` - Convert to PHP array (*zval)
+
+**Associative array only**
+
+* `NewArray(entries ...KeyValuePair) *frankenphp.Array` - Create a new associative array with key-value pairs
+* `Set(key string, value interface{})` - Set value with key (associative array), will convert a packed array to associative
+* `Get(key string) interface{}` - Get value with O(1) (associative array)
+
+**Packed array only**
+
+* `NewPackedArray(values ...interface{}) *frankenphp.Array` - Create a new packed array with values
+* `SetAtIndex(index int64, value interface{}) error` - Set value at index (packed array)
+* `GetAtIndex(index int64) (value interface{} error)` - Get value at index (packed array)
+* `Append(value interface{}) error` - Add value at the end (packed array)
 
 ### Declaring a Native PHP Class
 
