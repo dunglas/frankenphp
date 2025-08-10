@@ -112,7 +112,7 @@ func process_data(arr *C.zval) unsafe.Pointer {
     // Convert PHP array to Go
     goArray := frankenphp.GoArray(unsafe.Pointer(arr))
 	
-	result := NewArray(
+	result := NewAssociativeArray(
         KeyValuePair{"firstName", "John"},
         KeyValuePair{"lastName", "Doe"},
     )
@@ -164,7 +164,7 @@ func example_packed_array(arr *C.zval) unsafe.Pointer {
 
 **Associative array only**
 
-* `NewArray(entries ...KeyValuePair) *frankenphp.Array` - Create a new associative array with key-value pairs
+* `NewAssociativeArray(entries ...KeyValuePair) *frankenphp.Array` - Create a new associative array with key-value pairs
 * `Set(key string, value interface{})` - Set value with key (associative array), will convert a packed array to associative
 * `Get(key string) interface{}` - Get value with O(1) (associative array)
 

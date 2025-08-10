@@ -51,8 +51,8 @@ type Array struct {
 	packedValues []interface{}
 }
 
-// EXPERIMENTAL: NewArray creates a new associative array
-func NewArray(entries ...KeyValuePair) Array {
+// EXPERIMENTAL: NewAssociativeArray creates a new associative array
+func NewAssociativeArray(entries ...KeyValuePair) Array {
 	arr := Array{
 		pairs:   make(map[string]KeyValuePair),
 		entries: entries,

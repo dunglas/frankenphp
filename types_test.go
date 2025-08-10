@@ -36,7 +36,7 @@ func TestGoString(t *testing.T) {
 
 func TestPHPArray(t *testing.T) {
 	testOnDummyPHPThread(t, func() {
-		originalArray := NewArray(
+		originalArray := NewAssociativeArray(
 			KeyValuePair{"foo1", "bar1"},
 			KeyValuePair{"foo2", "bar2"},
 		)
@@ -79,8 +79,8 @@ func TestPHPPackedArray(t *testing.T) {
 
 func TestNestedMixedArray(t *testing.T) {
 	testOnDummyPHPThread(t, func() {
-		originalArray := NewArray(
-			KeyValuePair{"array", NewArray(
+		originalArray := NewAssociativeArray(
+			KeyValuePair{"array", NewAssociativeArray(
 				KeyValuePair{"foo", "bar"},
 			)},
 			KeyValuePair{"packedArray", NewPackedArray(
@@ -122,7 +122,7 @@ func TestArrayShouldBeCorrectlyPacked(t *testing.T) {
 	originalArray.Set("hello", "world")
 	assert.False(t, originalArray.IsPacked(), "Array should not be packed anymore after setting a string offset")
 
-	assert.Equal(t, NewArray(
+	assert.Equal(t, NewAssociativeArray(
 		KeyValuePair{"0", "bar1"},
 		KeyValuePair{"1", "newBar2"},
 		KeyValuePair{"2", "bar3"},
