@@ -153,22 +153,20 @@ func example_packed_array(arr *C.zval) unsafe.Pointer {
 * **Automatic list detection** - When converting to PHP, automatically detects if array should be a packed list or hashmap
 * **Objects are not supported** - Currently, only scalar types and arrays can be used as values. Providing an object will result in a `null` value in the PHP array.
 
-**Available methods:**
-
-**Packed and associative**
+##### Available methods - packed and associative
 
 * `Entries() []KeyValuePair` - Get all entries by key-value (recommended for associative array, but also works for packed array)
 * `Values() []interface{}` - Get values (recommended for packed array, but also works for associative array)
 * `IsPacked() bool` - Weather packed array (list) or associative array (hashmap)
 * `frankenphp.PHPArray(arr *frankenphp.Array) unsafe.Pointer` - Convert to PHP array (*zval)
 
-**Associative array only**
+##### Associative only
 
 * `NewAssociativeArray(entries ...KeyValuePair) *frankenphp.Array` - Create a new associative array with key-value pairs
 * `Set(key string, value interface{})` - Set value with key (associative array), will convert a packed array to associative
 * `Get(key string) interface{}` - Get value with O(1) (associative array)
 
-**Packed array only**
+##### Packed only
 
 * `NewPackedArray(values ...interface{}) *frankenphp.Array` - Create a new packed array with values
 * `SetAtIndex(index int64, value interface{}) error` - Set value at index (packed array)
