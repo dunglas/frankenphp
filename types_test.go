@@ -61,10 +61,11 @@ func TestPHPPackedArray(t *testing.T) {
 			"bar1",
 			"bar2",
 		)
-		originalArray.Append("bar3")
+		err := originalArray.Append("bar3")
 
 		goArray := GoArray(PHPArray(originalArray))
 
+		assert.NoError(t, err)
 		assert.Equal(t, originalArray, goArray, "packed array should be equal after conversion")
 		bar1, err := goArray.GetAtIndex(0)
 		assert.NoError(t, err, "GetAtIndex should not return an error for packed arrays")
@@ -108,12 +109,13 @@ func TestArrayShouldBeCorrectlyPacked(t *testing.T) {
 
 	assert.True(t, originalArray.IsPacked(), "Array should be packed")
 
-	originalArray.Append("bar3")
+	err := originalArray.Append("bar3")
 
+	assert.NoError(t, err)
 	assert.Equal(t, 3, len(originalArray.packedValues), "Packed array should have 3 elements after appending")
 	assert.True(t, originalArray.IsPacked(), "Array should be packed after Append")
 
-	err := originalArray.SetAtIndex(1, "newBar2")
+	err = originalArray.SetAtIndex(1, "newBar2")
 
 	assert.NoError(t, err, "SetAtIndex should not return an error for packed arrays")
 	assert.Equal(t, "newBar2", originalArray.Values()[1], "Second element should be updated to 'newBar2'")

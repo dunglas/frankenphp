@@ -109,11 +109,11 @@ func (arr *Array) Set(key string, value interface{}) {
 // Set value at index (for packed arrays)
 func (arr *Array) SetAtIndex(index int, value interface{}) error {
 	if !arr.isPacked {
-		return fmt.Errorf("SetAtIndex is only supported for packed arrays, use Set instead")
+		return fmt.Errorf("method is only supported for packed arrays, use Set instead")
 	}
 
 	if index < 0 || index >= len(arr.packedValues) {
-		return fmt.Errorf("Index %d out of bounds for packed array with length %d", index, len(arr.packedValues))
+		return fmt.Errorf("index %d out of bounds for packed array with length %d", index, len(arr.packedValues))
 	}
 	arr.packedValues[index] = value
 
@@ -123,11 +123,11 @@ func (arr *Array) SetAtIndex(index int, value interface{}) error {
 // Get value at index (for packed arrays)
 func (arr *Array) GetAtIndex(index int) (interface{}, error) {
 	if !arr.isPacked {
-		return nil, fmt.Errorf("GetAtIndex is only supported for packed arrays, use Get instead")
+		return nil, fmt.Errorf("method is only supported for packed arrays, use Get instead")
 	}
 
 	if index < 0 || index >= len(arr.packedValues) {
-		return nil, fmt.Errorf("Index %d out of bounds for packed array with length %d", index, len(arr.packedValues))
+		return nil, fmt.Errorf("index %d out of bounds for packed array with length %d", index, len(arr.packedValues))
 	}
 
 	return arr.packedValues[index], nil
