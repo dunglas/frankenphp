@@ -764,6 +764,9 @@ static void frankenphp_register_variables(zval *track_vars_array) {
    * variables.
    */
 
+   zval_ptr_dtor_nogc(&PG(http_globals)[TRACK_VARS_ENV]);
+   array_init(&PG(http_globals)[TRACK_VARS_ENV]);
+
   /* in non-worker mode we import the os environment regularly */
   if (!is_worker_thread) {
     get_full_env(track_vars_array);
