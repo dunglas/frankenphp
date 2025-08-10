@@ -7,6 +7,7 @@ package frankenphp
 // #cgo noescape frankenphp_register_bulk
 // #cgo noescape frankenphp_register_variables_from_request_info
 // #cgo noescape frankenphp_register_variable_safe
+// #cgo noescape frankenphp_register_env_safe
 // #cgo noescape frankenphp_register_single
 // #include <php_variables.h>
 // #include "frankenphp.h"
@@ -195,6 +196,7 @@ func addHeadersToServer(fc *frankenPHPContext, trackVarsArray *C.zval) {
 func addPreparedEnvToServer(fc *frankenPHPContext, trackVarsArray *C.zval) {
 	for k, v := range fc.env {
 		C.frankenphp_register_variable_safe(toUnsafeChar(k), toUnsafeChar(v), C.size_t(len(v)), trackVarsArray)
+		C.frankenphp_register_env_safe(toUnsafeChar(k), toUnsafeChar(v), C.size_t(len(v)))
 	}
 	fc.env = nil
 }

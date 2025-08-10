@@ -748,6 +748,17 @@ void frankenphp_register_variable_safe(char *key, char *val, size_t val_len,
   }
 }
 
+void frankenphp_register_env_safe(char *key, char *val, size_t val_len) {
+  bool should_filter_var = sapi_module.input_filter != NULL;
+  size_t new_val_len = val_len;
+  if (!should_filter_var ||
+      sapi_module.input_filter(PARSE_ENV, key, &val, new_val_len,
+                               &new_val_len)) {
+    php_register_variable_safe(key, val, new_val_len,
+                               &PG(http_globals)[TRACK_VARS_ENV]);
+  }
+}
+
 static inline void register_server_variable_filtered(const char *key,
                                                      char **val,
                                                      size_t *val_len,
@@ -764,13 +775,13 @@ static void frankenphp_register_variables(zval *track_vars_array) {
    * variables.
    */
 
-   zval_ptr_dtor_nogc(&PG(http_globals)[TRACK_VARS_ENV]);
-   array_init(&PG(http_globals)[TRACK_VARS_ENV]);
+  zval_ptr_dtor_nogc(&PG(http_globals)[TRACK_VARS_ENV]);
+  array_init(&PG(http_globals)[TRACK_VARS_ENV]);
 
   /* in non-worker mode we import the os environment regularly */
   if (!is_worker_thread) {
     get_full_env(track_vars_array);
-    // php_import_environment_variables(track_vars_array);
+    get_full_env(&PG(http_globals)[TRACK_VARS_ENV]);
     go_register_variables(thread_index, track_vars_array);
     return;
   }
@@ -789,6 +800,8 @@ static void frankenphp_register_variables(zval *track_vars_array) {
   }
   zend_hash_copy(Z_ARR_P(track_vars_array), Z_ARR_P(os_environment),
                  (copy_ctor_func_t)zval_add_ref);
+  zend_hash_copy(Z_ARR_P(&PG(http_globals)[TRACK_VARS_ENV]),
+                 Z_ARR_P(os_environment), (copy_ctor_func_t)zval_add_ref);
 
   go_register_variables(thread_index, track_vars_array);
 }
