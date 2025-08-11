@@ -165,13 +165,13 @@ func regularFunction() {
 				assert.NotNil(t, module, "parse() should not return nil")
 				assert.Equal(t, tt.expected.InitFunc, module.InitFunc, "InitFunc mismatch")
 				assert.Equal(t, tt.expected.ShutdownFunc, module.ShutdownFunc, "ShutdownFunc mismatch")
-				
+
 				// Check that function code was extracted
 				if tt.expected.InitFunc != "" {
 					assert.Contains(t, module.InitCode, "func "+tt.expected.InitFunc, "InitCode should contain function declaration")
 					assert.True(t, strings.HasSuffix(module.InitCode, "}\n"), "InitCode should end with closing brace")
 				}
-				
+
 				if tt.expected.ShutdownFunc != "" {
 					assert.Contains(t, module.ShutdownCode, "func "+tt.expected.ShutdownFunc, "ShutdownCode should contain function declaration")
 					assert.True(t, strings.HasSuffix(module.ShutdownCode, "}\n"), "ShutdownCode should end with closing brace")
@@ -221,9 +221,9 @@ func TestExtractGoFunction(t *testing.T) {
 			parser := &ModuleParser{}
 			scanner := bufio.NewScanner(strings.NewReader(tt.input))
 			scanner.Scan() // Read the first line
-			
+
 			name, code, err := parser.extractGoFunction(scanner, tt.firstLine)
-			
+
 			assert.NoError(t, err)
 			assert.Equal(t, tt.expectedName, name)
 			assert.True(t, strings.HasPrefix(code, tt.expectedPrefix), "Function code should start with the declaration")
@@ -234,7 +234,7 @@ func TestExtractGoFunction(t *testing.T) {
 
 func TestModuleParserFileErrors(t *testing.T) {
 	parser := &ModuleParser{}
-	
+
 	// Test with non-existent file
 	module, err := parser.parse("non_existent_file.go")
 	assert.Error(t, err, "parse() should return error for non-existent file")
