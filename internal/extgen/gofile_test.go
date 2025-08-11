@@ -103,7 +103,9 @@ func test() {
 				{
 					Name:       "test",
 					ReturnType: phpVoid,
-					GoFunction: "func test() {\n\t// simple function\n}",
+					GoFunction: `func test() {
+	// simple function
+}`,
 				},
 			},
 			contains: []string{
@@ -213,7 +215,9 @@ func TestGoFileGenerator_PackageNameSanitization(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.baseName, func(t *testing.T) {
-			sourceFile := createTempSourceFile(t, "package main\n//export_php: test(): void\nfunc test() {}")
+			sourceFile := createTempSourceFile(t, `package main
+//export_php: test(): void
+func test() {}`)
 
 			generator := &Generator{
 				BaseName:   tt.baseName,
@@ -251,7 +255,8 @@ func TestGoFileGenerator_ErrorHandling(t *testing.T) {
 		},
 		{
 			name:       "valid file",
-			sourceFile: createTempSourceFile(t, "package main\nfunc test() {}"),
+			sourceFile: createTempSourceFile(t, `package main
+func test() {}`),
 			expectErr:  false,
 		},
 	}
@@ -756,7 +761,9 @@ func simpleFunc() {
 				{
 					Name:       "simpleFunc",
 					ReturnType: phpVoid,
-					GoFunction: "func simpleFunc() {\n\t// simple function\n}",
+					GoFunction: `func simpleFunc() {
+	// simple function
+}`,
 				},
 			},
 			classes:         nil,
@@ -790,7 +797,9 @@ func (ts *TestStruct) GetName() string {
 							Signature:  "getName(): string",
 							ReturnType: phpString,
 							Params:     []phpParameter{},
-							GoFunction: "func (ts *TestStruct) GetName() string {\n\treturn ts.name\n}",
+							GoFunction: `func (ts *TestStruct) GetName() string {
+	return ts.name
+}`,
 						},
 					},
 				},
@@ -821,7 +830,9 @@ func (ms *MixedStruct) GetValue() int {
 				{
 					Name:       "utilFunc",
 					ReturnType: phpString,
-					GoFunction: "func utilFunc() string {\n\treturn \"utility\"\n}",
+					GoFunction: `func utilFunc() string {
+	return "utility"
+}`,
 				},
 			},
 			classes: []phpClass{
@@ -836,7 +847,9 @@ func (ms *MixedStruct) GetValue() int {
 							Signature:  "getValue(): int",
 							ReturnType: phpInt,
 							Params:     []phpParameter{},
-							GoFunction: "func (ms *MixedStruct) GetValue() int {\n\treturn ms.value\n}",
+							GoFunction: `func (ms *MixedStruct) GetValue() int {
+	return ms.value
+}`,
 						},
 					},
 				},
