@@ -8,7 +8,10 @@ import (
 	"strings"
 )
 
-var phpModuleParser = regexp.MustCompile(`//\s*export_php:module\s+(init|shutdown)`)
+var (
+	phpModuleParser = regexp.MustCompile(`//\s*export_php:module\s+(init|shutdown)`)
+	funcNameRegex   = regexp.MustCompile(`func\s+([a-zA-Z0-9_]+)`)
+)
 
 // phpModule represents a PHP module with optional init and shutdown functions
 type phpModule struct {
@@ -86,7 +89,6 @@ func (mp *ModuleParser) parse(filename string) (module *phpModule, err error) {
 // extractGoFunction extracts the function name and code from a function declaration
 func (mp *ModuleParser) extractGoFunction(scanner *bufio.Scanner, firstLine string) (string, string, error) {
 	// Extract function name from the first line
-	funcNameRegex := regexp.MustCompile(`func\s+([a-zA-Z0-9_]+)`)
 	matches := funcNameRegex.FindStringSubmatch(firstLine)
 	if len(matches) < 2 {
 		return "", "", fmt.Errorf("could not extract function name from line: %s", firstLine)
