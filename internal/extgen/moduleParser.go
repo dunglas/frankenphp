@@ -39,8 +39,10 @@ func (mp *ModuleParser) parse(filename string) (module *phpModule, err error) {
 
 	scanner := bufio.NewScanner(file)
 	module = &phpModule{}
-	var currentDirective string
-	var lineNumber int
+	var (
+		currentDirective string
+		lineNumber       int
+	)
 
 	for scanner.Scan() {
 		lineNumber++
