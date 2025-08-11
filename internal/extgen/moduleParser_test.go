@@ -232,6 +232,85 @@ func TestExtractGoFunction(t *testing.T) {
 	}
 }
 
+func TestModuleParserErrors(t *testing.T) {
+	tests := []struct {
+		name        string
+		input       string
+		expectedErr string
+	}{
+		{
+			name: "duplicate init directives",
+			input: `package main
+
+//export_php:module init
+func firstInit() {
+	// First init function
+}
+
+//export_php:module init
+func secondInit() {
+	// Second init function - should error
+}`,
+			expectedErr: "duplicate init directive",
+		},
+		{
+			name: "duplicate shutdown directives",
+			input: `package main
+
+//export_php:module shutdown
+func firstShutdown() {
+	// First shutdown function
+}
+
+//export_php:module shutdown
+func secondShutdown() {
+	// Second shutdown function - should error
+}`,
+			expectedErr: "duplicate shutdown directive",
+		},
+		{
+			name: "multiple duplicates",
+			input: `package main
+
+//export_php:module init
+func firstInit() {
+	// First init function
+}
+
+//export_php:module init
+func secondInit() {
+	// Duplicate init - should error
+}
+
+//export_php:module shutdown
+func firstShutdown() {
+	// First shutdown function
+}
+
+//export_php:module shutdown
+func secondShutdown() {
+	// Duplicate shutdown - should error
+}`,
+			expectedErr: "duplicate init directive",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tmpDir := t.TempDir()
+			fileName := filepath.Join(tmpDir, tt.name+".go")
+			require.NoError(t, os.WriteFile(fileName, []byte(tt.input), 0644))
+
+			parser := &ModuleParser{}
+			module, err := parser.parse(fileName)
+			
+			assert.Error(t, err, "parse() should return error for duplicate directives")
+			assert.Contains(t, err.Error(), tt.expectedErr, "error message should contain expected text")
+			assert.Nil(t, module, "parse() should return nil when there's an error")
+		})
+	}
+}
+
 func TestModuleParserFileErrors(t *testing.T) {
 	parser := &ModuleParser{}
 

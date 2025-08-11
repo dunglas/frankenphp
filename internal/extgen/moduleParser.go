@@ -69,9 +69,15 @@ func (mp *ModuleParser) parse(filename string) (module *phpModule, err error) {
 
 			switch currentDirective {
 			case "init":
+				if module.InitFunc != "" {
+					return nil, fmt.Errorf("duplicate init directive found at line %d: init function '%s' already defined", lineNumber, module.InitFunc)
+				}
 				module.InitFunc = funcName
 				module.InitCode = funcCode
 			case "shutdown":
+				if module.ShutdownFunc != "" {
+					return nil, fmt.Errorf("duplicate shutdown directive found at line %d: shutdown function '%s' already defined", lineNumber, module.ShutdownFunc)
+				}
 				module.ShutdownFunc = funcName
 				module.ShutdownCode = funcCode
 			}
