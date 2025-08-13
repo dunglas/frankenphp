@@ -5,7 +5,7 @@ package frankenphp
 */
 import "C"
 import (
-	"fmt"
+	"errors"
 	"strconv"
 	"unsafe"
 )
@@ -38,171 +38,50 @@ func PHPString(s string, persistent bool) unsafe.Pointer {
 	return unsafe.Pointer(zendStr)
 }
 
-type KeyValuePair struct {
-	key   string
-	value interface{}
+// AssociativeArray represents a PHP array with ordered key-value pairs
+type AssociativeArray struct {
+	Map   map[string]interface{}
+	Order []string
 }
 
-// Array represents a PHP array with ordered key-value pairs
-type Array struct {
-	isPacked     bool
-	pairs        map[string]KeyValuePair
-	entries      []KeyValuePair
-	packedValues []interface{}
-}
+// PackedArray represents a 'packed' PHP array as an indexed list
+type PackedArray = []interface{}
 
-// EXPERIMENTAL: NewAssociativeArray creates a new associative array
-func NewAssociativeArray(entries ...KeyValuePair) Array {
-	arr := Array{
-		pairs:   make(map[string]KeyValuePair),
-		entries: entries,
-	}
-	for _, pair := range entries {
-		arr.pairs[pair.key] = pair
-	}
+type ZendArray = unsafe.Pointer
 
-	return arr
-}
-
-// EXPERIMENTAL: NewPackedArray creates a new packed array
-func NewPackedArray(values ...interface{}) Array {
-	arr := Array{
-		isPacked:     true,
-		packedValues: values,
-	}
-
-	return arr
-}
-
-// Get value (for associative arrays)
-func (arr *Array) Get(key string) (interface{}, bool) {
-	if pair, exists := arr.pairs[key]; exists {
-		return pair.value, true
-	}
-	return nil, false
-}
-
-// Set value (for associative arrays)
-func (arr *Array) Set(key string, value interface{}) {
-	if pair, exists := arr.pairs[key]; exists {
-		pair.value = value
-		return
-	}
-
-	// setting a key in a packed array will make it an associative array
-	if arr.isPacked {
-		arr.isPacked = false
-		for i, v := range arr.packedValues {
-			arr.Set(strconv.Itoa(i), v)
-		}
-		arr.packedValues = nil
-	}
-
-	newPair := KeyValuePair{key: key, value: value}
-	arr.entries = append(arr.entries, newPair)
-	if arr.pairs == nil {
-		arr.pairs = make(map[string]KeyValuePair)
-	}
-	arr.pairs[key] = newPair
-}
-
-// Set value at index (for packed arrays)
-func (arr *Array) SetAtIndex(index int, value interface{}) error {
-	if !arr.isPacked {
-		return fmt.Errorf("method is only supported for packed arrays, use Set instead")
-	}
-
-	if index < 0 || index >= len(arr.packedValues) {
-		return fmt.Errorf("index %d out of bounds for packed array with length %d", index, len(arr.packedValues))
-	}
-	arr.packedValues[index] = value
-
-	return nil
-}
-
-// Get value at index (for packed arrays)
-func (arr *Array) GetAtIndex(index int) (interface{}, error) {
-	if !arr.isPacked {
-		return nil, fmt.Errorf("method is only supported for packed arrays, use Get instead")
-	}
-
-	if index < 0 || index >= len(arr.packedValues) {
-		return nil, fmt.Errorf("index %d out of bounds for packed array with length %d", index, len(arr.packedValues))
-	}
-
-	return arr.packedValues[index], nil
-}
-
-// Append to the array (only for packed arrays)
-func (arr *Array) Append(value interface{}) error {
-	if !arr.isPacked {
-		return fmt.Errorf("Append is not supported for associative arrays, use Set instead")
-	}
-
-	arr.packedValues = append(arr.packedValues, value)
-
-	return nil
-}
-
-func (arr *Array) IsPacked() bool {
-	return arr.isPacked
-}
-
-// Entries returns all ordered key-value pairs, best performance for associative arrays
-func (arr *Array) Entries() []KeyValuePair {
-	if !arr.isPacked {
-		return arr.entries
-	}
-	entries := make([]KeyValuePair, 0, len(arr.packedValues))
-	for i, value := range arr.packedValues {
-		entries = append(entries, KeyValuePair{key: strconv.Itoa(i), value: value})
-	}
-
-	return entries
-}
-
-// Values returns all values, best performance for packed arrays
-func (arr *Array) Values() []interface{} {
-	if arr.isPacked {
-		return arr.packedValues
-	}
-	values := make([]interface{}, 0, len(arr.entries))
-	for _, pair := range arr.entries {
-		values = append(values, pair.value)
-	}
-
-	return values
-}
-
-// EXPERIMENTAL: GoArray converts a zend_array to a Go Array
-func GoArray(arr unsafe.Pointer) Array {
+// EXPERIMENTAL: GoAssociativeArray converts a zend_array to a Go AssociativeArray
+func GoAssociativeArray(arr unsafe.Pointer, ordered bool) (AssociativeArray, error) {
 	if arr == nil {
-		fmt.Println("GoArray received a nil pointer")
-		return Array{}
+		return AssociativeArray{}, errors.New("GoAssociativeArray received a nil pointer")
 	}
 
 	zval := (*C.zval)(arr)
 	hashTable := (*C.HashTable)(castZval(zval, C.IS_ARRAY))
 
 	if hashTable == nil {
-		fmt.Println("GoArray received a nil pointer")
-		return Array{}
+		return AssociativeArray{}, errors.New("GoAssociativeArray received a zval that was not a HashTable")
 	}
 
 	nNumUsed := hashTable.nNumUsed
-	result := Array{}
+	result := AssociativeArray{Map: make(map[string]interface{})}
+	if ordered {
+		result.Order = make([]string, 0, nNumUsed)
+	}
 
 	if htIsPacked(hashTable) {
-		result.isPacked = true
-		result.packedValues = make([]interface{}, 0, nNumUsed)
+		// if the HashTable is packed, convert all integer keys to strings
 		for i := C.uint32_t(0); i < nNumUsed; i++ {
 			v := C.get_ht_packed_data(hashTable, i)
 			if v != nil && C.zval_get_type(v) != C.IS_UNDEF {
-				result.packedValues = append(result.packedValues, convertZvalToGo(v))
+				strIndex := strconv.Itoa(int(i))
+				result.Map[strIndex] = convertZvalToGo(v)
+				if ordered {
+					result.Order = append(result.Order, strIndex)
+				}
 			}
 		}
 
-		return result
+		return result, nil
 	}
 
 	for i := C.uint32_t(0); i < nNumUsed; i++ {
@@ -215,34 +94,96 @@ func GoArray(arr unsafe.Pointer) Array {
 
 		if bucket.key != nil {
 			keyStr := GoString(unsafe.Pointer(bucket.key))
-			result.Set(keyStr, v)
+			result.Map[keyStr] = v
+			if ordered {
+				result.Order = append(result.Order, keyStr)
+			}
 
 			continue
 		}
 
 		// as fallback convert the bucket index to a string key
-		result.Set(strconv.Itoa(int(bucket.h)), v)
+		strIndex := strconv.Itoa(int(bucket.h))
+		result.Map[strIndex] = v
+		if ordered {
+			result.Order = append(result.Order, strIndex)
+		}
 	}
 
-	return result
+	return result, nil
 }
 
-// PHPArray converts a Go Array to a PHP zend_array.
-func PHPArray(arr Array) unsafe.Pointer {
-	zendArray := createNewArray((uint32)(len(arr.entries)))
+// EXPERIMENTAL: GoPackedArray converts a zend_array to a Go slice
+func GoPackedArray(arr unsafe.Pointer) (PackedArray, error) {
+	if arr == nil {
+		return PackedArray{}, errors.New("GoPackedArray received a nil pointer")
+	}
 
-	if arr.isPacked {
-		for _, v := range arr.packedValues {
-			zval := convertGoToZval(v)
-			C.zend_hash_next_index_insert(zendArray, zval)
+	zval := (*C.zval)(arr)
+	hashTable := (*C.HashTable)(castZval(zval, C.IS_ARRAY))
+
+	if hashTable == nil {
+		return PackedArray{}, errors.New("GoPackedArray received zval that wasn'T a HashTable")
+	}
+
+	nNumUsed := hashTable.nNumUsed
+	result := make(PackedArray, 0, nNumUsed)
+
+	if htIsPacked(hashTable) {
+		for i := C.uint32_t(0); i < nNumUsed; i++ {
+			v := C.get_ht_packed_data(hashTable, i)
+			if v != nil && C.zval_get_type(v) != C.IS_UNDEF {
+				result = append(result, convertZvalToGo(v))
+			}
 		}
-	} else {
-		for _, pair := range arr.entries {
-			zval := convertGoToZval(pair.value)
 
-			keyStr := PHPString(pair.key, false)
+		return result, nil
+	}
+
+	// fallback if ht isn't packed - equivalent to array_values()
+	for i := C.uint32_t(0); i < nNumUsed; i++ {
+		bucket := C.get_ht_bucket_data(hashTable, i)
+		if bucket != nil && C.zval_get_type(&bucket.val) != C.IS_UNDEF {
+			result = append(result, convertZvalToGo(&bucket.val))
+		}
+	}
+
+	return result, nil
+}
+
+// PHPAssociativeArray converts a Go AssociativeArray to a PHP zend_array.
+func PHPAssociativeArray(arr AssociativeArray) ZendArray {
+	var zendArray *C.HashTable
+
+	if len(arr.Order) != 0 {
+		zendArray = createNewArray((uint32)(len(arr.Order)))
+		for _, key := range arr.Order {
+			val, _ := arr.Map[key]
+			zval := convertGoToZval(val)
+			keyStr := PHPString(key, false)
 			C.zend_hash_update(zendArray, (*C.zend_string)(keyStr), zval)
 		}
+	} else {
+		zendArray = createNewArray((uint32)(len(arr.Map)))
+		for key, val := range arr.Map {
+			zval := convertGoToZval(val)
+			keyStr := PHPString(key, false)
+			C.zend_hash_update(zendArray, (*C.zend_string)(keyStr), zval)
+		}
+	}
+
+	var zval C.zval
+	C.__zval_arr__(&zval, zendArray)
+
+	return unsafe.Pointer(&zval)
+}
+
+// PHPPackedArray converts a Go PHPPackedArray to a PHP zend_array.
+func PHPPackedArray(arr PackedArray) ZendArray {
+	zendArray := createNewArray((uint32)(len(arr)))
+	for _, val := range arr {
+		zval := convertGoToZval(val)
+		C.zend_hash_next_index_insert(zendArray, zval)
 	}
 
 	var zval C.zval
@@ -281,7 +222,15 @@ func convertZvalToGo(zval *C.zval) interface{} {
 
 		return GoString(unsafe.Pointer(str))
 	case C.IS_ARRAY:
-		return GoArray(unsafe.Pointer(zval))
+		hashTable := (*C.HashTable)(castZval(zval, C.IS_ARRAY))
+		if hashTable != nil && htIsPacked(hashTable) {
+			packedArray, _ := GoPackedArray(unsafe.Pointer(zval))
+
+			return packedArray
+		}
+		associativeArray, _ := GoAssociativeArray(unsafe.Pointer(zval), true)
+
+		return associativeArray
 	default:
 		return nil
 	}
@@ -305,8 +254,12 @@ func convertGoToZval(value interface{}) *C.zval {
 	case string:
 		str := (*C.zend_string)(PHPString(v, false))
 		C.__zval_string__(&zval, str)
-	case Array:
-		return (*C.zval)(PHPArray(v))
+	case PackedArray:
+		return (*C.zval)(PHPPackedArray(v))
+	case AssociativeArray:
+		return (*C.zval)(PHPAssociativeArray(v))
+	case map[string]interface{}:
+		return (*C.zval)(PHPAssociativeArray(AssociativeArray{Map: v}))
 	default:
 		C.__zval_null__(&zval)
 	}
