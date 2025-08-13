@@ -47,8 +47,6 @@ type AssociativeArray struct {
 // PackedArray represents a 'packed' PHP array as an indexed list
 type PackedArray = []interface{}
 
-type ZendArray = unsafe.Pointer
-
 // EXPERIMENTAL: GoAssociativeArray converts a zend_array to a Go AssociativeArray
 func GoAssociativeArray(arr unsafe.Pointer, ordered bool) (AssociativeArray, error) {
 	if arr == nil {
@@ -152,7 +150,7 @@ func GoPackedArray(arr unsafe.Pointer) (PackedArray, error) {
 }
 
 // PHPAssociativeArray converts a Go AssociativeArray to a PHP zend_array.
-func PHPAssociativeArray(arr AssociativeArray) ZendArray {
+func PHPAssociativeArray(arr AssociativeArray) unsafe.Pointer {
 	var zendArray *C.HashTable
 
 	if len(arr.Order) != 0 {
@@ -179,7 +177,7 @@ func PHPAssociativeArray(arr AssociativeArray) ZendArray {
 }
 
 // PHPPackedArray converts a Go PHPPackedArray to a PHP zend_array.
-func PHPPackedArray(arr PackedArray) ZendArray {
+func PHPPackedArray(arr PackedArray) unsafe.Pointer {
 	zendArray := createNewArray((uint32)(len(arr)))
 	for _, val := range arr {
 		zval := convertGoToZval(val)
