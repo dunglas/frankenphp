@@ -103,9 +103,10 @@ If you refer to the code snippet of the previous section, you can see that helpe
 
 #### Working with Arrays
 
-FrankenPHP provides native support for PHP arrays through the `frankenphp.AssociativeArray` array amd `frankenphp.PackedArray` types.
+FrankenPHP provides native support for PHP arrays through `frankenphp.AssociativeArray` and `frankenphp.PackedArray`.
 
-`AssociativeArray` represents an associative hashmap and is composed of a `Map: map[string]interface{}` and an optional order `[]string`.
+`AssociativeArray` represents an associative hashmap and is composed of a `Map: map[string]interface{}` and an optional `Order: []string`.
+For unordered arrays, `Order` will be left empty.
 
 `PackedArray` is just an alias for a go slice `[]interface{}`
 
@@ -124,6 +125,7 @@ func process_data_ordered(arr *C.zval) unsafe.Pointer {
 	}
 
 	// return an ordered array
+	// if 'Order' is not empty, only the key-value paris in 'Order' will be respected
 	return frankenphp.PHPAssociativeArray(AssociativeArray{
 		Map: map[string]interface{}{
 			"key1": "value1",
