@@ -93,10 +93,15 @@ static void frankenphp_free_request_context() {
 
 static void frankenphp_destroy_super_globals() {
   zend_try {
-    for (int i = 0; i < NUM_TRACK_VARS; i++) {
-      zval_ptr_dtor_nogc(&PG(http_globals)[i]);
-    }
+    zval_ptr_dtor_nogc(&PG(http_globals)[TRACK_VARS_POST]);
+    zval_ptr_dtor_nogc(&PG(http_globals)[TRACK_VARS_GET]);
+    zval_ptr_dtor_nogc(&PG(http_globals)[TRACK_VARS_COOKIE]);
+    zval_ptr_dtor_nogc(&PG(http_globals)[TRACK_VARS_SERVER]);
+    //zval_ptr_dtor_nogc(&PG(http_globals)[TRACK_VARS_ENV]); not flushed, unchanging between requests
+    zval_ptr_dtor_nogc(&PG(http_globals)[TRACK_VARS_FILES]);
+    //zval_ptr_dtor_nogc(&PG(http_globals)[TRACK_VARS_REQUEST]); not flushed (not supported)
   }
+
   zend_end_try();
 }
 
@@ -502,11 +507,6 @@ static zend_module_entry frankenphp_module = {
     STANDARD_MODULE_PROPERTIES};
 
 static void frankenphp_request_shutdown() {
-  if (is_worker_thread) {
-    /* ensure $_ENV is not in an invalid state before shutdown */
-    zval_ptr_dtor_nogc(&PG(http_globals)[TRACK_VARS_ENV]);
-    array_init(&PG(http_globals)[TRACK_VARS_ENV]);
-  }
   php_request_shutdown((void *)0);
   frankenphp_free_request_context();
 }
