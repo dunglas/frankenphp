@@ -103,7 +103,9 @@ func test() {
 				{
 					Name:       "test",
 					ReturnType: phpVoid,
-					GoFunction: "func test() {\n\t// simple function\n}",
+					GoFunction: `func test() {
+	// simple function
+}`,
 				},
 			},
 			contains: []string{
@@ -213,7 +215,9 @@ func TestGoFileGenerator_PackageNameSanitization(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.baseName, func(t *testing.T) {
-			sourceFile := createTempSourceFile(t, "package main\n//export_php: test(): void\nfunc test() {}")
+			sourceFile := createTempSourceFile(t, `package main
+//export_php: test(): void
+func test() {}`)
 
 			generator := &Generator{
 				BaseName:   tt.baseName,
@@ -251,7 +255,8 @@ func TestGoFileGenerator_ErrorHandling(t *testing.T) {
 		},
 		{
 			name:       "valid file",
-			sourceFile: createTempSourceFile(t, "package main\nfunc test() {}"),
+			sourceFile: createTempSourceFile(t, `package main
+func test() {}`),
 			expectErr:  false,
 		},
 	}
@@ -730,5 +735,172 @@ func testGoFileInternalFunctions(t *testing.T, content string) {
 
 	if !foundInternal {
 		t.Log("No internal functions found (this may be expected)")
+	}
+}
+
+func TestGoFileGenerator_RuntimeCgoImportGating(t *testing.T) {
+	tests := []struct {
+		name            string
+		baseName        string
+		sourceFile      string
+		functions       []phpFunction
+		classes         []phpClass
+		expectCgoImport bool
+		description     string
+	}{
+		{
+			name:     "extension without classes should not include runtime/cgo import",
+			baseName: "no_classes",
+			sourceFile: createTempSourceFile(t, `package main
+
+//export_php: simpleFunc(): void
+func simpleFunc() {
+	// simple function
+}`),
+			functions: []phpFunction{
+				{
+					Name:       "simpleFunc",
+					ReturnType: phpVoid,
+					GoFunction: `func simpleFunc() {
+	// simple function
+}`,
+				},
+			},
+			classes:         nil,
+			expectCgoImport: false,
+			description:     "Extensions with only functions should not import runtime/cgo",
+		},
+		{
+			name:     "extension with classes should include runtime/cgo import",
+			baseName: "with_classes",
+			sourceFile: createTempSourceFile(t, `package main
+
+//export_php:class TestClass
+type TestStruct struct {
+	name string
+}
+
+//export_php:method TestClass::getName(): string
+func (ts *TestStruct) GetName() string {
+	return ts.name
+}`),
+			functions: nil,
+			classes: []phpClass{
+				{
+					Name:     "TestClass",
+					GoStruct: "TestStruct",
+					Methods: []phpClassMethod{
+						{
+							Name:       "GetName",
+							PhpName:    "getName",
+							ClassName:  "TestClass",
+							Signature:  "getName(): string",
+							ReturnType: phpString,
+							Params:     []phpParameter{},
+							GoFunction: `func (ts *TestStruct) GetName() string {
+	return ts.name
+}`,
+						},
+					},
+				},
+			},
+			expectCgoImport: true,
+			description:     "Extensions with classes should import runtime/cgo for handle management",
+		},
+		{
+			name:     "extension with functions and classes should include runtime/cgo import",
+			baseName: "mixed",
+			sourceFile: createTempSourceFile(t, `package main
+
+//export_php: utilFunc(): string
+func utilFunc() string {
+	return "utility"
+}
+
+//export_php:class MixedClass
+type MixedStruct struct {
+	value int
+}
+
+//export_php:method MixedClass::getValue(): int
+func (ms *MixedStruct) GetValue() int {
+	return ms.value
+}`),
+			functions: []phpFunction{
+				{
+					Name:       "utilFunc",
+					ReturnType: phpString,
+					GoFunction: `func utilFunc() string {
+	return "utility"
+}`,
+				},
+			},
+			classes: []phpClass{
+				{
+					Name:     "MixedClass",
+					GoStruct: "MixedStruct",
+					Methods: []phpClassMethod{
+						{
+							Name:       "GetValue",
+							PhpName:    "getValue",
+							ClassName:  "MixedClass",
+							Signature:  "getValue(): int",
+							ReturnType: phpInt,
+							Params:     []phpParameter{},
+							GoFunction: `func (ms *MixedStruct) GetValue() int {
+	return ms.value
+}`,
+						},
+					},
+				},
+			},
+			expectCgoImport: true,
+			description:     "Extensions with both functions and classes should import runtime/cgo",
+		},
+		{
+			name:     "empty extension should not include runtime/cgo import",
+			baseName: "empty",
+			sourceFile: createTempSourceFile(t, `package main
+
+// Empty extension for testing
+`),
+			functions:       nil,
+			classes:         nil,
+			expectCgoImport: false,
+			description:     "Empty extensions should not import runtime/cgo",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			generator := &Generator{
+				BaseName:   tt.baseName,
+				SourceFile: tt.sourceFile,
+				Functions:  tt.functions,
+				Classes:    tt.classes,
+			}
+
+			goGen := GoFileGenerator{generator}
+			content, err := goGen.buildContent()
+			require.NoError(t, err)
+
+			cgoImportPresent := strings.Contains(content, `import "runtime/cgo"`)
+
+			if tt.expectCgoImport {
+				assert.True(t, cgoImportPresent, "Extension should import runtime/cgo: %s", tt.description)
+				// Verify that cgo functions are also present when import is included
+				assert.Contains(t, content, "cgo.NewHandle", "Should contain cgo.NewHandle usage when runtime/cgo is imported")
+				assert.Contains(t, content, "cgo.Handle", "Should contain cgo.Handle usage when runtime/cgo is imported")
+			} else {
+				assert.False(t, cgoImportPresent, "Extension should not import runtime/cgo: %s", tt.description)
+				// Verify that cgo functions are not present when import is not included
+				assert.NotContains(t, content, "cgo.NewHandle", "Should not contain cgo.NewHandle usage when runtime/cgo is not imported")
+				assert.NotContains(t, content, "cgo.Handle", "Should not contain cgo.Handle usage when runtime/cgo is not imported")
+			}
+
+			// Ensure exactly one C import is always present
+			cImportCount := strings.Count(content, `import "C"`)
+			assert.Equal(t, 1, cImportCount, "Should have exactly one C import")
+		})
 	}
 }
