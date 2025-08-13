@@ -156,7 +156,7 @@ func PHPAssociativeArray(arr AssociativeArray) unsafe.Pointer {
 	if len(arr.Order) != 0 {
 		zendArray = createNewArray((uint32)(len(arr.Order)))
 		for _, key := range arr.Order {
-			val, _ := arr.Map[key]
+			val := arr.Map[key]
 			zval := convertGoToZval(val)
 			keyStr := PHPString(key, false)
 			C.zend_hash_update(zendArray, (*C.zend_string)(keyStr), zval)

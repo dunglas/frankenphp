@@ -103,7 +103,7 @@ If you refer to the code snippet of the previous section, you can see that helpe
 
 #### Working with Arrays
 
-FrankenPHP provides native support for PHP arrays through the `frankenphp.AssociativeArray` array amd `frankenphp.PackedArray` types. 
+FrankenPHP provides native support for PHP arrays through the `frankenphp.AssociativeArray` array amd `frankenphp.PackedArray` types.
 
 `AssociativeArray` represents an associative hashmap and is composed of a `Map: map[string]interface{}` and an optional order `[]string`.
 
@@ -177,7 +177,7 @@ func process_data_packed(arr *C.zval) unsafe.Pointer {
 
 ##### Available methods - packed and associative
 
-* `frankenphp.PHPAssociativeArray(arr frankenphp.AssociativeArray) unsafe.Pointer` - Convert to a PHP array with key value pairs, optionally pass a specific order
+* `frankenphp.PHPAssociativeArray(arr frankenphp.AssociativeArray) unsafe.Pointer` - Convert to a PHP array with key-value pairs, optionally pass a specific order
 * `frankenphp.PHPPackedArray(arr frankenphp.PackedArray) unsafe.Pointer` - Convert to a PHP packed array with indexed values only
 * `frankenphp.GoAssociativeArray(arr unsafe.Pointer, ordered bool) (frankenphp.AssociativeArray, error)` - Convert a PHP array to a Go map and optionally keep the order
 * `frankenphp.GoPackedArray(arr unsafe.Pointer) (frankenphp.PackedArray, error)` - Convert a PHP array to a go slice
