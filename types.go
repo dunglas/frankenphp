@@ -158,15 +158,13 @@ func PHPAssociativeArray(arr AssociativeArray) unsafe.Pointer {
 		for _, key := range arr.Order {
 			val := arr.Map[key]
 			zval := convertGoToZval(val)
-			keyStr := PHPString(key, false)
-			C.zend_hash_update(zendArray, (*C.zend_string)(keyStr), zval)
+			C.zend_hash_str_update(zendArray, toUnsafeChar(key), C.size_t(len(key)), zval)
 		}
 	} else {
 		zendArray = createNewArray((uint32)(len(arr.Map)))
 		for key, val := range arr.Map {
 			zval := convertGoToZval(val)
-			keyStr := PHPString(key, false)
-			C.zend_hash_update(zendArray, (*C.zend_string)(keyStr), zval)
+			C.zend_hash_str_update(zendArray, toUnsafeChar(key), C.size_t(len(key)), zval)
 		}
 	}
 
