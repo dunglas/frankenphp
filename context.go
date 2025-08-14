@@ -29,7 +29,7 @@ type frankenPHPContext struct {
 
 	responseWriter http.ResponseWriter
 
-	done      chan interface{}
+	done      chan any
 	startedAt time.Time
 }
 
@@ -42,7 +42,7 @@ func fromContext(ctx context.Context) (fctx *frankenPHPContext, ok bool) {
 // NewRequestWithContext creates a new FrankenPHP request context.
 func NewRequestWithContext(r *http.Request, opts ...RequestOption) (*http.Request, error) {
 	fc := &frankenPHPContext{
-		done:      make(chan interface{}),
+		done:      make(chan any),
 		startedAt: time.Now(),
 		request:   r,
 	}

@@ -267,7 +267,7 @@ func (f *FrankenPHPApp) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 	return nil
 }
 
-func parseGlobalOption(d *caddyfile.Dispenser, _ interface{}) (interface{}, error) {
+func parseGlobalOption(d *caddyfile.Dispenser, _ any) (any, error) {
 	app := &FrankenPHPApp{}
 	if err := app.UnmarshalCaddyfile(d); err != nil {
 		return nil, err

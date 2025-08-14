@@ -112,9 +112,9 @@ func TestAutoScaleWorkerThreads(t *testing.T) {
 	amountOfThreads := len(getDebugState(t, tester).ThreadDebugStates)
 
 	// try to spawn the additional threads by spamming the server
-	for tries := 0; tries < maxTries; tries++ {
+	for range maxTries {
 		wg.Add(requestsPerTry)
-		for i := 0; i < requestsPerTry; i++ {
+		for range requestsPerTry {
 			go func() {
 				tester.AssertGetResponse(endpoint, http.StatusOK, "slept for 2 ms and worked for 1000 iterations")
 				wg.Done()
@@ -164,9 +164,9 @@ func TestAutoScaleRegularThreadsOnAutomaticThreadLimit(t *testing.T) {
 	amountOfThreads := len(getDebugState(t, tester).ThreadDebugStates)
 
 	// try to spawn the additional threads by spamming the server
-	for tries := 0; tries < maxTries; tries++ {
+	for range maxTries {
 		wg.Add(requestsPerTry)
-		for i := 0; i < requestsPerTry; i++ {
+		for range requestsPerTry {
 			go func() {
 				tester.AssertGetResponse(endpoint, http.StatusOK, "slept for 2 ms and worked for 1000 iterations")
 				wg.Done()

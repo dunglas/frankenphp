@@ -371,8 +371,7 @@ func internalTwo() {
 
 	analyzer := &SourceAnalyzer{}
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_, _, err := analyzer.analyze(filename)
 		require.NoError(b, err)
 	}
@@ -391,8 +390,7 @@ func test3() {
 
 	analyzer := &SourceAnalyzer{}
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		analyzer.extractInternalFunctions(content)
 	}
 }

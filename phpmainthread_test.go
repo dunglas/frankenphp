@@ -111,7 +111,7 @@ func TestTransitionThreadsWhileDoingRequests(t *testing.T) {
 
 	// try all possible permutations of transition, transition every ms
 	transitions := allPossibleTransitions(worker1Path, worker2Path)
-	for i := 0; i < numThreads; i++ {
+	for i := range numThreads {
 		go func(thread *phpThread, start int) {
 			for {
 				for j := start; j < len(transitions); j++ {
@@ -128,9 +128,9 @@ func TestTransitionThreadsWhileDoingRequests(t *testing.T) {
 
 	// randomly do requests to the 3 endpoints
 	wg.Add(numThreads)
-	for i := 0; i < numThreads; i++ {
+	for i := range numThreads {
 		go func(i int) {
-			for j := 0; j < numRequestsPerThread; j++ {
+			for range numRequestsPerThread {
 				switch rand.IntN(3) {
 				case 0:
 					assertRequestBody(t, "http://localhost/transition-worker-1.php", "Hello from worker 1")
