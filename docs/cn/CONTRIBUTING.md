@@ -17,7 +17,7 @@ docker run --cap-add=SYS_PTRACE --security-opt seccomp=unconfined -p 8080:8080 -
 - 附加配置文件: `/etc/frankenphp/php.d/*.ini`
 - php 扩展: `/usr/lib/frankenphp/modules/`
 
-如果你的 docker 版本低于 23.0，则会因为 dockerignore [pattern issue](https://github.com/moby/moby/pull/42676) 而导致构建失败。将目录添加到 `.dockerignore`。
+如果你的 Docker 版本低于 23.0，则会因为 dockerignore [pattern issue](https://github.com/moby/moby/pull/42676) 而导致构建失败。将目录添加到 `.dockerignore`。
 
 ```patch
  !testdata/*.php
@@ -195,7 +195,7 @@ docker buildx bake -f docker-bake.hcl --pull --no-cache --push
 ## Docker 相关资源
 
 - [Bake 文件定义](https://docs.docker.com/build/customize/bake/file-definition/)
-- [docker buildx 构建](https://docs.docker.com/engine/reference/commandline/buildx_build/)
+- [`docker buildx build`](https://docs.docker.com/engine/reference/commandline/buildx_build/)
 
 ## 有用的命令
 
