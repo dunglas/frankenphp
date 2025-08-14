@@ -4,7 +4,6 @@ import (
 	"sync"
 )
 
-// EXPERIMENTAL (only used in tests)
 // representation of a thread that handles tasks directly assigned by go
 // implements the threadHandler interface
 type taskThread struct {
