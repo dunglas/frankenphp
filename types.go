@@ -40,12 +40,12 @@ func PHPString(s string, persistent bool) unsafe.Pointer {
 
 // AssociativeArray represents a PHP array with ordered key-value pairs
 type AssociativeArray struct {
-	Map   map[string]interface{}
+	Map   map[string]any
 	Order []string
 }
 
 // PackedArray represents a 'packed' PHP array as a Go slice
-type PackedArray = []interface{}
+type PackedArray = []any
 
 // EXPERIMENTAL: GoAssociativeArray converts a zend_array to a Go AssociativeArray
 func GoAssociativeArray(arr unsafe.Pointer, ordered bool) (AssociativeArray, error) {
@@ -61,7 +61,7 @@ func GoAssociativeArray(arr unsafe.Pointer, ordered bool) (AssociativeArray, err
 	}
 
 	nNumUsed := hashTable.nNumUsed
-	result := AssociativeArray{Map: make(map[string]interface{})}
+	result := AssociativeArray{Map: make(map[string]any)}
 	if ordered {
 		result.Order = make([]string, 0, nNumUsed)
 	}
@@ -190,8 +190,8 @@ func PHPPackedArray(arr PackedArray) unsafe.Pointer {
 	return unsafe.Pointer(&zval)
 }
 
-// convertZvalToGo converts a PHP zval to a Go interface{}
-func convertZvalToGo(zval *C.zval) interface{} {
+// convertZvalToGo converts a PHP zval to a Go any
+func convertZvalToGo(zval *C.zval) any {
 	t := C.zval_get_type(zval)
 	switch t {
 	case C.IS_NULL:
@@ -234,8 +234,8 @@ func convertZvalToGo(zval *C.zval) interface{} {
 	}
 }
 
-// convertGoToZval converts a Go interface{} to a PHP zval
-func convertGoToZval(value interface{}) *C.zval {
+// convertGoToZval converts a Go any to a PHP zval
+func convertGoToZval(value any) *C.zval {
 	var zval C.zval
 
 	switch v := value.(type) {
@@ -256,7 +256,7 @@ func convertGoToZval(value interface{}) *C.zval {
 		return (*C.zval)(PHPPackedArray(v))
 	case AssociativeArray:
 		return (*C.zval)(PHPAssociativeArray(v))
-	case map[string]interface{}:
+	case map[string]any:
 		return (*C.zval)(PHPAssociativeArray(AssociativeArray{Map: v}))
 	default:
 		C.__zval_null__(&zval)
