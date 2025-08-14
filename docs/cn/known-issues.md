@@ -23,7 +23,7 @@
 
 ## 独立的二进制和基于 Alpine 的 Docker 镜像
 
-独立的二进制文件和基于 Alpine 的 docker 镜像 (`dunglas/frankenphp:*-alpine`) 使用的是 [musl libc](https://musl.libc.org/) 而不是 [glibc and friends](https://www.etalabs.net/compare_libcs.html)，为的是保持较小的二进制大小。这可能会导致一些兼容性问题。特别是，glob 标志 `GLOB_BRACE` [不可用](https://www.php.net/manual/en/function.glob.php)。
+独立的二进制文件和基于 Alpine 的 Docker 镜像 (`dunglas/frankenphp:*-alpine`) 使用的是 [musl libc](https://musl.libc.org/) 而不是 [glibc and friends](https://www.etalabs.net/compare_libcs.html)，为的是保持较小的二进制大小。这可能会导致一些兼容性问题。特别是，glob 标志 `GLOB_BRACE` [不可用](https://www.php.net/manual/en/function.glob.php)。
 
 ## 在 Docker 中使用 `https://127.0.0.1`
 
