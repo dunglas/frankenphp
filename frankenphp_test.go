@@ -522,7 +522,7 @@ func testFlush(t *testing.T, opts *testOptions) {
 			if j == 0 {
 				assert.Equal(t, []byte("He"), buf)
 			} else {
-				assert.Equal(t, []byte(fmt.Sprintf("llo %d", i)), buf)
+				assert.Equal(t, fmt.Appendf(nil, "llo %d", i), buf)
 			}
 
 			j++
@@ -663,7 +663,7 @@ func TestEnvIsNotResetInWorkerMode(t *testing.T) {
 // reproduction of https://github.com/php/frankenphp/issues/1061
 func TestModificationsToEnvPersistAcrossRequests(t *testing.T) {
 	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
-		for j := 0; j < 3; j++ {
+		for range 3 {
 			result, _ := testGet("http://example.com/env/overwrite-env.php", handler, t)
 			assert.Equal(t, "custom_value", result, "a var directly added to $_ENV should persist")
 		}
@@ -780,8 +780,7 @@ func BenchmarkHelloWorld(b *testing.B) {
 	req := httptest.NewRequest("GET", "http://example.com/index.php", nil)
 	w := httptest.NewRecorder()
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		handler(w, req)
 	}
 }
@@ -846,8 +845,7 @@ func BenchmarkEcho(b *testing.B) {
 	req := httptest.NewRequest("POST", "http://example.com/echo.php", r)
 	w := httptest.NewRecorder()
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		r.Reset(body)
 		handler(w, req)
 	}
@@ -917,8 +915,7 @@ func BenchmarkServerSuperGlobal(b *testing.B) {
 	req := httptest.NewRequest("GET", "http://example.com/server-variable.php", nil)
 	w := httptest.NewRecorder()
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		handler(w, req)
 	}
 }
