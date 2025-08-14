@@ -44,7 +44,7 @@ type AssociativeArray struct {
 	Order []string
 }
 
-// PackedArray represents a 'packed' PHP array as an indexed list
+// PackedArray represents a 'packed' PHP array as a Go slice
 type PackedArray = []interface{}
 
 // EXPERIMENTAL: GoAssociativeArray converts a zend_array to a Go AssociativeArray
@@ -68,6 +68,8 @@ func GoAssociativeArray(arr unsafe.Pointer, ordered bool) (AssociativeArray, err
 
 	if htIsPacked(hashTable) {
 		// if the HashTable is packed, convert all integer keys to strings
+		// this is probably a bug by the dev using this function
+		// still, we'll (inefficiently) convert to an associative array
 		for i := C.uint32_t(0); i < nNumUsed; i++ {
 			v := C.get_ht_packed_data(hashTable, i)
 			if v != nil && C.zval_get_type(v) != C.IS_UNDEF {
