@@ -41,9 +41,8 @@ func TestPHPAssociativeArray(t *testing.T) {
 			"foo2": "bar2",
 		}}
 
-		convertedArray, err := GoAssociativeArray(PHPAssociativeArray(originalArray), false)
+		convertedArray := GoAssociativeArray(PHPAssociativeArray(originalArray), false)
 
-		assert.NoError(t, err)
 		assert.Equal(t, originalArray, convertedArray, "associative array should be equal after conversion")
 	})
 }
@@ -58,9 +57,8 @@ func TestOrderedPHPAssociativeArray(t *testing.T) {
 			Order: []string{"foo2", "foo1"},
 		}
 
-		convertedArray, err := GoAssociativeArray(PHPAssociativeArray(originalArray), true)
+		convertedArray := GoAssociativeArray(PHPAssociativeArray(originalArray), true)
 
-		assert.NoError(t, err)
 		assert.Equal(t, originalArray, convertedArray, "associative array should be equal after conversion")
 	})
 }
@@ -69,9 +67,8 @@ func TestPHPPackedArray(t *testing.T) {
 	testOnDummyPHPThread(t, func() {
 		originalArray := PackedArray{"bar1", "bar2"}
 
-		convertedArray, err := GoPackedArray(PHPPackedArray(originalArray))
+		convertedArray := GoPackedArray(PHPPackedArray(originalArray))
 
-		assert.NoError(t, err)
 		assert.Equal(t, originalArray, convertedArray, "packed array should be equal after conversion")
 	})
 }
@@ -84,9 +81,8 @@ func TestPHPPackedArrayToAssociative(t *testing.T) {
 			"1": "bar2",
 		}}
 
-		convertedArray, err := GoAssociativeArray(PHPPackedArray(originalArray), false)
+		convertedArray := GoAssociativeArray(PHPPackedArray(originalArray), false)
 
-		assert.NoError(t, err)
 		assert.Equal(t, expectedArray, convertedArray, "convert a packed to an associative array")
 	})
 }
@@ -102,9 +98,8 @@ func TestPHPAssociativeArrayToPacked(t *testing.T) {
 		}
 		expectedArray := PackedArray{"bar1", "bar2"}
 
-		convertedArray, err := GoPackedArray(PHPAssociativeArray(originalArray))
+		convertedArray := GoPackedArray(PHPAssociativeArray(originalArray))
 
-		assert.NoError(t, err)
 		assert.Equal(t, expectedArray, convertedArray, "convert an associative to a packed array")
 	})
 }
@@ -127,9 +122,8 @@ func TestNestedMixedArray(t *testing.T) {
 			},
 		}
 
-		convertedArray, err := GoAssociativeArray(PHPAssociativeArray(originalArray), false)
+		convertedArray := GoAssociativeArray(PHPAssociativeArray(originalArray), false)
 
-		assert.NoError(t, err)
 		assert.Equal(t, originalArray, convertedArray, "nested mixed array should be equal after conversion")
 	})
 }

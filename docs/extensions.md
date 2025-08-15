@@ -181,8 +181,8 @@ func process_data_packed(arr *C.zval) unsafe.Pointer {
 
 * `frankenphp.PHPAssociativeArray(arr frankenphp.AssociativeArray) unsafe.Pointer` - Convert to a PHP array with key-value pairs, optionally pass a specific order
 * `frankenphp.PHPPackedArray(arr frankenphp.PackedArray) unsafe.Pointer` - Convert to a PHP packed array with indexed values only
-* `frankenphp.GoAssociativeArray(arr unsafe.Pointer, ordered bool) (frankenphp.AssociativeArray, error)` - Convert a PHP array to a Go map and optionally keep the order
-* `frankenphp.GoPackedArray(arr unsafe.Pointer) (frankenphp.PackedArray, error)` - Convert a PHP array to a go slice
+* `frankenphp.GoAssociativeArray(arr unsafe.Pointer, ordered bool) frankenphp.AssociativeArray` - Convert a PHP array to a Go map and optionally keep the order
+* `frankenphp.GoPackedArray(arr unsafe.Pointer) frankenphp.PackedArray` - Convert a PHP array to a go slice
 
 ### Declaring a Native PHP Class
 

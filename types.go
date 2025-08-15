@@ -5,7 +5,6 @@ package frankenphp
 */
 import "C"
 import (
-	"errors"
 	"strconv"
 	"unsafe"
 )
@@ -48,16 +47,16 @@ type AssociativeArray struct {
 type PackedArray = []any
 
 // EXPERIMENTAL: GoAssociativeArray converts a zend_array to a Go AssociativeArray
-func GoAssociativeArray(arr unsafe.Pointer, ordered bool) (AssociativeArray, error) {
+func GoAssociativeArray(arr unsafe.Pointer, ordered bool) AssociativeArray {
 	if arr == nil {
-		return AssociativeArray{}, errors.New("GoAssociativeArray received a nil pointer")
+		panic("GoAssociativeArray received a nil pointer")
 	}
 
 	zval := (*C.zval)(arr)
 	hashTable := (*C.HashTable)(castZval(zval, C.IS_ARRAY))
 
 	if hashTable == nil {
-		return AssociativeArray{}, errors.New("GoAssociativeArray received a zval that was not a HashTable")
+		panic("GoAssociativeArray received a *zval that wasn't a HashTable")
 	}
 
 	nNumUsed := hashTable.nNumUsed
@@ -81,7 +80,7 @@ func GoAssociativeArray(arr unsafe.Pointer, ordered bool) (AssociativeArray, err
 			}
 		}
 
-		return result, nil
+		return result
 	}
 
 	for i := C.uint32_t(0); i < nNumUsed; i++ {
@@ -110,20 +109,20 @@ func GoAssociativeArray(arr unsafe.Pointer, ordered bool) (AssociativeArray, err
 		}
 	}
 
-	return result, nil
+	return result
 }
 
 // EXPERIMENTAL: GoPackedArray converts a zend_array to a Go slice
-func GoPackedArray(arr unsafe.Pointer) (PackedArray, error) {
+func GoPackedArray(arr unsafe.Pointer) PackedArray {
 	if arr == nil {
-		return PackedArray{}, errors.New("GoPackedArray received a nil pointer")
+		panic("GoPackedArray received a nil pointer")
 	}
 
 	zval := (*C.zval)(arr)
 	hashTable := (*C.HashTable)(castZval(zval, C.IS_ARRAY))
 
 	if hashTable == nil {
-		return PackedArray{}, errors.New("GoPackedArray received zval that wasn'T a HashTable")
+		panic("GoPackedArray received *zval that wasn't a HashTable")
 	}
 
 	nNumUsed := hashTable.nNumUsed
@@ -137,7 +136,7 @@ func GoPackedArray(arr unsafe.Pointer) (PackedArray, error) {
 			}
 		}
 
-		return result, nil
+		return result
 	}
 
 	// fallback if ht isn't packed - equivalent to array_values()
@@ -148,7 +147,7 @@ func GoPackedArray(arr unsafe.Pointer) (PackedArray, error) {
 		}
 	}
 
-	return result, nil
+	return result
 }
 
 // PHPAssociativeArray converts a Go AssociativeArray to a PHP zend_array.
@@ -222,13 +221,10 @@ func convertZvalToGo(zval *C.zval) any {
 	case C.IS_ARRAY:
 		hashTable := (*C.HashTable)(castZval(zval, C.IS_ARRAY))
 		if hashTable != nil && htIsPacked(hashTable) {
-			packedArray, _ := GoPackedArray(unsafe.Pointer(zval))
-
-			return packedArray
+			return GoPackedArray(unsafe.Pointer(zval))
 		}
-		associativeArray, _ := GoAssociativeArray(unsafe.Pointer(zval), true)
 
-		return associativeArray
+		return GoAssociativeArray(unsafe.Pointer(zval), true)
 	default:
 		return nil
 	}
