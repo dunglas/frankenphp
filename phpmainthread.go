@@ -177,17 +177,6 @@ func (mainThread *phpMainThread) setAutomaticMaxThreads() {
 //export go_frankenphp_shutdown_main_thread
 func go_frankenphp_shutdown_main_thread() {
 	mainThread.state.set(stateReserved)
-
-	// free all permanent interned strings
-	for _, zendString := range mainThread.commonHeaders {
-		C.frankenphp_free_persistent_string(zendString)
-	}
-	for _, zendString := range mainThread.knownServerKeys {
-		C.frankenphp_free_persistent_string(zendString)
-	}
-	for _, zendString := range mainThread.sandboxedEnv {
-		C.frankenphp_free_persistent_string(zendString)
-	}
 }
 
 //export go_get_custom_php_ini
