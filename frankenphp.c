@@ -97,7 +97,7 @@ static void frankenphp_destroy_super_globals() {
     zval_ptr_dtor_nogc(&PG(http_globals)[TRACK_VARS_GET]);
     zval_ptr_dtor_nogc(&PG(http_globals)[TRACK_VARS_COOKIE]);
     zval_ptr_dtor_nogc(&PG(http_globals)[TRACK_VARS_SERVER]);
-    //zval_ptr_dtor_nogc(&PG(http_globals)[TRACK_VARS_ENV]); not flushed, unchanging between requests
+    //zval_ptr_dtor_nogc(&PG(http_globals)[TRACK_VARS_ENV]); //not flushed, unchanging between requests
     zval_ptr_dtor_nogc(&PG(http_globals)[TRACK_VARS_FILES]);
     //zval_ptr_dtor_nogc(&PG(http_globals)[TRACK_VARS_REQUEST]); not flushed (not supported)
   }
@@ -218,21 +218,22 @@ static int frankenphp_worker_request_startup() {
       php_output_set_implicit_flush(1);
     }
 
-    php_hash_environment();
+	zval previous_env = PG(http_globals)[TRACK_VARS_ENV];
+    memset(PG(http_globals), 0, sizeof(PG(http_globals)));
+    zend_auto_global *auto_global;
+
+    ZEND_HASH_MAP_FOREACH_PTR(CG(auto_globals), auto_global) {
+        if (auto_global->auto_global_callback) {
+            auto_global->armed = auto_global->auto_global_callback(auto_global->name);
+        } else {
+            auto_global->armed = 0;
+        }
+    } ZEND_HASH_FOREACH_END();
+
+    PG(http_globals)[TRACK_VARS_ENV] = previous_env;
 
     /* zend_is_auto_global will force a re-import of the $_SERVER global */
     zend_is_auto_global(ZSTR_KNOWN(ZEND_STR_AUTOGLOBAL_SERVER));
-
-    /* disarm the $_ENV auto_global to prevent it from being reloaded in worker
-     * mode */
-    if (zend_hash_str_exists(&EG(symbol_table), "_ENV", 4)) {
-      zend_auto_global *env_global;
-      if ((env_global = zend_hash_find_ptr(
-               CG(auto_globals), ZSTR_KNOWN(ZEND_STR_AUTOGLOBAL_ENV))) !=
-          NULL) {
-        env_global->armed = 0;
-      }
-    }
 
     const char **module_name;
     zend_module_entry *module;
