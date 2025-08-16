@@ -109,7 +109,7 @@ func TestAutoScaleWorkerThreads(t *testing.T) {
 
 	// spam an endpoint that simulates IO
 	endpoint := "http://localhost:" + testPort + "/?sleep=2&work=1000"
-	amountOfThreads := len(getDebugState(t, tester).ThreadDebugStates)
+	amountOfThreads := getNumThreads(t, tester)
 
 	// try to spawn the additional threads by spamming the server
 	for range maxTries {
@@ -122,7 +122,7 @@ func TestAutoScaleWorkerThreads(t *testing.T) {
 		}
 		wg.Wait()
 
-		amountOfThreads = len(getDebugState(t, tester).ThreadDebugStates)
+		amountOfThreads = getNumThreads(t, tester)
 		if amountOfThreads > 2 {
 			break
 		}
@@ -161,7 +161,7 @@ func TestAutoScaleRegularThreadsOnAutomaticThreadLimit(t *testing.T) {
 
 	// spam an endpoint that simulates IO
 	endpoint := "http://localhost:" + testPort + "/sleep.php?sleep=2&work=1000"
-	amountOfThreads := len(getDebugState(t, tester).ThreadDebugStates)
+	amountOfThreads := getNumThreads(t, tester)
 
 	// try to spawn the additional threads by spamming the server
 	for range maxTries {
@@ -174,7 +174,7 @@ func TestAutoScaleRegularThreadsOnAutomaticThreadLimit(t *testing.T) {
 		}
 		wg.Wait()
 
-		amountOfThreads = len(getDebugState(t, tester).ThreadDebugStates)
+		amountOfThreads = getNumThreads(t, tester)
 		if amountOfThreads > 1 {
 			break
 		}
@@ -208,6 +208,7 @@ func getAdminResponseBody(t *testing.T, tester *caddytest.Tester, method string,
 }
 
 func getDebugState(t *testing.T, tester *caddytest.Tester) frankenphp.FrankenPHPDebugState {
+	t.Helper()
 	threadStates := getAdminResponseBody(t, tester, "GET", "threads")
 
 	var debugStates frankenphp.FrankenPHPDebugState
@@ -215,6 +216,11 @@ func getDebugState(t *testing.T, tester *caddytest.Tester) frankenphp.FrankenPHP
 	assert.NoError(t, err)
 
 	return debugStates
+}
+
+func getNumThreads(t *testing.T, tester *caddytest.Tester) int {
+	t.Helper()
+	return len(getDebugState(t, tester).ThreadDebugStates)
 }
 
 func TestAddModuleWorkerViaAdminApi(t *testing.T) {
