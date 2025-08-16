@@ -79,7 +79,7 @@ WORKDIR /go/src/app
 COPY . .
 
 WORKDIR /go/src/app/caddy/frankenphp
-RUN go build
+RUN ../../go.sh build -buildvcs=false
 
 WORKDIR /go/src/app
 CMD [ "zsh" ]

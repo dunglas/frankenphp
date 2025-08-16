@@ -29,14 +29,14 @@ type frankenPHPContext struct {
 
 	responseWriter http.ResponseWriter
 
-	done      chan interface{}
+	done      chan any
 	startedAt time.Time
 }
 
 // newFrankenPHPContext creates a new FrankenPHP request context.
 func newFrankenPHPContext(rw http.ResponseWriter, r *http.Request, opts ...RequestOption) (*frankenPHPContext, error) {
 	fc := &frankenPHPContext{
-		done:           make(chan interface{}),
+		done:           make(chan any),
 		startedAt:      time.Now(),
 		request:        r,
 		responseWriter: rw,

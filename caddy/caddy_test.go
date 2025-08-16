@@ -42,7 +42,7 @@ func TestPHP(t *testing.T) {
 		}
 		`, "caddyfile")
 
-	for i := 0; i < 100; i++ {
+	for i := range 100 {
 		wg.Add(1)
 
 		go func(i int) {
@@ -105,7 +105,7 @@ func TestWorker(t *testing.T) {
 		}
 		`, "caddyfile")
 
-	for i := 0; i < 100; i++ {
+	for i := range 100 {
 		wg.Add(1)
 
 		go func(i int) {
@@ -157,7 +157,7 @@ func TestGlobalAndModuleWorker(t *testing.T) {
 		}
 		`, "caddyfile")
 
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		wg.Add(1)
 
 		go func(i int) {
@@ -209,7 +209,7 @@ func TestNamedModuleWorkers(t *testing.T) {
 		}
 		`, "caddyfile")
 
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		wg.Add(1)
 
 		go func(i int) {
@@ -456,7 +456,7 @@ func TestMetrics(t *testing.T) {
 	`, "caddyfile")
 
 	// Make some requests
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		wg.Add(1)
 		go func(i int) {
 			tester.AssertGetResponse(fmt.Sprintf("http://localhost:"+testPort+"/index.php?i=%d", i), http.StatusOK, fmt.Sprintf("I am by birth a Genevese (%d)", i))
@@ -529,7 +529,7 @@ func TestWorkerMetrics(t *testing.T) {
 	workerName, _ := fastabs.FastAbs("../testdata/index.php")
 
 	// Make some requests
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		wg.Add(1)
 		go func(i int) {
 			tester.AssertGetResponse(fmt.Sprintf("http://localhost:"+testPort+"/index.php?i=%d", i), http.StatusOK, fmt.Sprintf("I am by birth a Genevese (%d)", i))
@@ -621,7 +621,7 @@ func TestNamedWorkerMetrics(t *testing.T) {
 	`, "caddyfile")
 
 	// Make some requests
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		wg.Add(1)
 		go func(i int) {
 			tester.AssertGetResponse(fmt.Sprintf("http://localhost:"+testPort+"/index.php?i=%d", i), http.StatusOK, fmt.Sprintf("I am by birth a Genevese (%d)", i))
@@ -712,7 +712,7 @@ func TestAutoWorkerConfig(t *testing.T) {
 	workerName, _ := fastabs.FastAbs("../testdata/index.php")
 
 	// Make some requests
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		wg.Add(1)
 		go func(i int) {
 			tester.AssertGetResponse(fmt.Sprintf("http://localhost:"+testPort+"/index.php?i=%d", i), http.StatusOK, fmt.Sprintf("I am by birth a Genevese (%d)", i))
@@ -872,7 +872,7 @@ func TestPHPIniBlockConfiguration(t *testing.T) {
 
 func testSingleIniConfiguration(tester *caddytest.Tester, key string, value string) {
 	// test twice to ensure the ini setting is not lost
-	for i := 0; i < 2; i++ {
+	for range 2 {
 		tester.AssertGetResponse(
 			"http://localhost:"+testPort+"/ini.php?key="+key,
 			http.StatusOK,
@@ -940,7 +940,7 @@ func TestMaxWaitTime(t *testing.T) {
 	wg := sync.WaitGroup{}
 	success := atomic.Bool{}
 	wg.Add(10)
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		go func() {
 			statusCode := getStatusCode("http://localhost:"+testPort+"/sleep.php?sleep=10", t)
 			if statusCode == http.StatusGatewayTimeout {
@@ -987,7 +987,7 @@ func TestMaxWaitTimeWorker(t *testing.T) {
 	wg := sync.WaitGroup{}
 	success := atomic.Bool{}
 	wg.Add(10)
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		go func() {
 			statusCode := getStatusCode("http://localhost:"+testPort+"/sleep.php?sleep=10000&iteration=1", t)
 			if statusCode == http.StatusGatewayTimeout {
@@ -1074,7 +1074,7 @@ func TestMultiWorkersMetrics(t *testing.T) {
 	`, "caddyfile")
 
 	// Make some requests
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		wg.Add(1)
 		go func(i int) {
 			tester.AssertGetResponse(fmt.Sprintf("http://localhost:"+testPort+"/index.php?i=%d", i), http.StatusOK, fmt.Sprintf("I am by birth a Genevese (%d)", i))
@@ -1180,7 +1180,7 @@ func TestDisabledMetrics(t *testing.T) {
 	`, "caddyfile")
 
 	// Make some requests
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		wg.Add(1)
 		go func(i int) {
 			tester.AssertGetResponse(fmt.Sprintf("http://localhost:"+testPort+"/index.php?i=%d", i), http.StatusOK, fmt.Sprintf("I am by birth a Genevese (%d)", i))
@@ -1285,7 +1285,7 @@ func TestWorkerRestart(t *testing.T) {
 		))
 
 	// Make some requests
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		wg.Add(1)
 		go func(i int) {
 			tester.AssertGetResponse(fmt.Sprintf("http://localhost:"+testPort+"/worker-restart.php?i=%d", i), http.StatusOK, fmt.Sprintf("Counter (%d)", i))
