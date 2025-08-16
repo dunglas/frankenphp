@@ -102,15 +102,20 @@ static void frankenphp_destroy_super_globals() {
     // skip TRACK_VARS_REQUEST (not supported)
   }
 
-  /* set PG(http_globals) to its default state, which is all 0 bits (except _ENV)
-    see: php_hash_environment()
+  /* set PG(http_globals) to its default state, which is all 0 bits (except
+    _ENV) see: php_hash_environment()
   */
-  memset(&PG(http_globals)[TRACK_VARS_POST], 0, sizeof(PG(http_globals)[TRACK_VARS_POST]));
-  memset(&PG(http_globals)[TRACK_VARS_GET], 0, sizeof(PG(http_globals)[TRACK_VARS_GET]));
-  memset(&PG(http_globals)[TRACK_VARS_COOKIE], 0, sizeof(PG(http_globals)[TRACK_VARS_COOKIE]));
-  memset(&PG(http_globals)[TRACK_VARS_SERVER], 0, sizeof(PG(http_globals)[TRACK_VARS_SERVER]));
+  memset(&PG(http_globals)[TRACK_VARS_POST], 0,
+         sizeof(PG(http_globals)[TRACK_VARS_POST]));
+  memset(&PG(http_globals)[TRACK_VARS_GET], 0,
+         sizeof(PG(http_globals)[TRACK_VARS_GET]));
+  memset(&PG(http_globals)[TRACK_VARS_COOKIE], 0,
+         sizeof(PG(http_globals)[TRACK_VARS_COOKIE]));
+  memset(&PG(http_globals)[TRACK_VARS_SERVER], 0,
+         sizeof(PG(http_globals)[TRACK_VARS_SERVER]));
   // skip ENV
-  memset(&PG(http_globals)[TRACK_VARS_FILES], 0, sizeof(PG(http_globals)[TRACK_VARS_FILES]));
+  memset(&PG(http_globals)[TRACK_VARS_FILES], 0,
+         sizeof(PG(http_globals)[TRACK_VARS_FILES]));
   // skip REQUEST, not supported
 
   zend_end_try();
@@ -229,21 +234,24 @@ static int frankenphp_worker_request_startup() {
       php_output_set_implicit_flush(1);
     }
 
-	/* activate all 'auto globals' except of _ENV, see: zend_activate_auto_globals() */
+    /* activate all 'auto globals' except of _ENV, see:
+     * zend_activate_auto_globals() */
     zend_auto_global *auto_global;
     zend_string *_env = ZSTR_KNOWN(ZEND_STR_AUTOGLOBAL_ENV);
-	ZEND_HASH_MAP_FOREACH_PTR(CG(auto_globals), auto_global) {
-		if (auto_global->name == _env){
-			continue;
-		}
-        if (auto_global->jit) {
-            auto_global->armed = 1;
-        } else if (auto_global->auto_global_callback) {
-            auto_global->armed = auto_global->auto_global_callback(auto_global->name);
-        } else {
-            auto_global->armed = 0;
-        }
-    } ZEND_HASH_FOREACH_END();
+    ZEND_HASH_MAP_FOREACH_PTR(CG(auto_globals), auto_global) {
+      if (auto_global->name == _env) {
+        continue;
+      }
+      if (auto_global->jit) {
+        auto_global->armed = 1;
+      } else if (auto_global->auto_global_callback) {
+        auto_global->armed =
+            auto_global->auto_global_callback(auto_global->name);
+      } else {
+        auto_global->armed = 0;
+      }
+    }
+    ZEND_HASH_FOREACH_END();
 
     /* zend_is_auto_global will force a re-import of the $_SERVER global */
     zend_is_auto_global(ZSTR_KNOWN(ZEND_STR_AUTOGLOBAL_SERVER));
