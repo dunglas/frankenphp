@@ -14,7 +14,6 @@ import (
 
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddytest"
-	"github.com/dunglas/frankenphp"
 	"github.com/dunglas/frankenphp/internal/fastabs"
 	"github.com/prometheus/client_golang/prometheus/testutil"
 	"github.com/stretchr/testify/require"
@@ -475,7 +474,7 @@ func TestMetrics(t *testing.T) {
 	_, err = metrics.ReadFrom(resp.Body)
 	require.NoError(t, err, "failed to read metrics")
 
-	cpus := fmt.Sprintf("%d", frankenphp.MaxThreads)
+	cpus := strconv.Itoa(getNumThreads(t, tester))
 
 	// Check metrics
 	expectedMetrics := `
@@ -548,7 +547,7 @@ func TestWorkerMetrics(t *testing.T) {
 	_, err = metrics.ReadFrom(resp.Body)
 	require.NoError(t, err, "failed to read metrics")
 
-	cpus := fmt.Sprintf("%d", frankenphp.MaxThreads)
+	cpus := strconv.Itoa(getNumThreads(t, tester))
 
 	// Check metrics
 	expectedMetrics := `
@@ -640,7 +639,7 @@ func TestNamedWorkerMetrics(t *testing.T) {
 	_, err = metrics.ReadFrom(resp.Body)
 	require.NoError(t, err, "failed to read metrics")
 
-	cpus := fmt.Sprintf("%d", frankenphp.MaxThreads)
+	cpus := strconv.Itoa(getNumThreads(t, tester))
 
 	// Check metrics
 	expectedMetrics := `
@@ -731,8 +730,9 @@ func TestAutoWorkerConfig(t *testing.T) {
 	_, err = metrics.ReadFrom(resp.Body)
 	require.NoError(t, err, "failed to read metrics")
 
-	cpus := fmt.Sprintf("%d", frankenphp.MaxThreads)
-	workers := fmt.Sprintf("%d", frankenphp.MaxThreads-1)
+	numThreads := getNumThreads(t, tester)
+	cpus := strconv.Itoa(numThreads)
+	workers := strconv.Itoa(numThreads - 1)
 
 	// Check metrics
 	expectedMetrics := `
@@ -1093,7 +1093,7 @@ func TestMultiWorkersMetrics(t *testing.T) {
 	_, err = metrics.ReadFrom(resp.Body)
 	require.NoError(t, err, "failed to read metrics")
 
-	cpus := fmt.Sprintf("%d", frankenphp.MaxThreads)
+	cpus := strconv.Itoa(getNumThreads(t, tester))
 
 	// Check metrics
 	expectedMetrics := `
