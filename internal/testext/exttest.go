@@ -31,7 +31,10 @@ func testRegisterExtension(t *testing.T) {
 	req := httptest.NewRequest("GET", "http://example.com/index.php", nil)
 	w := httptest.NewRecorder()
 
-	err = frankenphp.ServeHTTP(w, req, frankenphp.WithRequestDocumentRoot("./testdata", false))
+	req, err = frankenphp.NewRequestWithContext(req, frankenphp.WithRequestDocumentRoot("./testdata", false))
+	assert.NoError(t, err)
+
+	err = frankenphp.ServeHTTP(w, req)
 	assert.NoError(t, err)
 
 	resp := w.Result()

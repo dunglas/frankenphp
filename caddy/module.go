@@ -185,15 +185,16 @@ func (f *FrankenPHPModule) ServeHTTP(w http.ResponseWriter, r *http.Request, _ c
 		}
 	}
 
-	if err := frankenphp.ServeHTTP(
-		w,
+	fr, err := frankenphp.NewRequestWithContext(
 		r,
 		documentRootOption,
 		frankenphp.WithRequestSplitPath(f.SplitPath),
 		frankenphp.WithRequestPreparedEnv(env),
 		frankenphp.WithOriginalRequest(&origReq),
 		frankenphp.WithWorkerName(workerName),
-	); err != nil {
+	)
+
+	if err = frankenphp.ServeHTTP(w, fr); err != nil {
 		return caddyhttp.Error(http.StatusInternalServerError, err)
 	}
 

@@ -1,6 +1,7 @@
 package frankenphp
 
 import (
+	"context"
 	"log/slog"
 	"net/http"
 	"os"
@@ -33,13 +34,18 @@ type frankenPHPContext struct {
 	startedAt time.Time
 }
 
-// newFrankenPHPContext creates a new FrankenPHP request context.
-func newFrankenPHPContext(rw http.ResponseWriter, r *http.Request, opts ...RequestOption) (*frankenPHPContext, error) {
+// fromContext extracts the frankenPHPContext from a context.
+func fromContext(ctx context.Context) (fctx *frankenPHPContext, ok bool) {
+	fctx, ok = ctx.Value(contextKey).(*frankenPHPContext)
+	return
+}
+
+// NewRequestWithContext creates a new FrankenPHP request context.
+func NewRequestWithContext(r *http.Request, opts ...RequestOption) (*http.Request, error) {
 	fc := &frankenPHPContext{
-		done:           make(chan any),
-		startedAt:      time.Now(),
-		request:        r,
-		responseWriter: rw,
+		done:      make(chan any),
+		startedAt: time.Now(),
+		request:   r,
 	}
 	for _, o := range opts {
 		if err := o(fc); err != nil {
@@ -66,20 +72,24 @@ func newFrankenPHPContext(rw http.ResponseWriter, r *http.Request, opts ...Reque
 	// this ensures the correct worker is assigned by path if necessary
 	splitCgiPath(fc)
 
-	return fc, nil
+	c := context.WithValue(r.Context(), contextKey, fc)
+
+	return r.WithContext(c), nil
 }
 
-// newDummyContext creates a fake context from just a request path.
+// newDummyContext creates a fake context from a request path.
 func newDummyContext(requestPath string, opts ...RequestOption) (*frankenPHPContext, error) {
 	r, err := http.NewRequest(http.MethodGet, requestPath, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	fc, err := newFrankenPHPContext(nil, r, opts...)
+	fr, err := NewRequestWithContext(r, opts...)
 	if err != nil {
 		return nil, err
 	}
+
+	fc, _ := fromContext(fr.Context())
 
 	return fc, nil
 }
