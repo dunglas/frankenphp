@@ -314,10 +314,7 @@ func go_update_request_info(threadIndex C.uintptr_t, info *C.sapi_request_info) 
 
 //export go_is_worker_request
 func go_is_worker_request(threadIndex C.uintptr_t) C.bool {
-	thread := phpThreads[threadIndex]
-	fc := thread.getRequestContext()
-
-	return C.bool(fc.worker != nil)
+	return C.bool(phpThreads[threadIndex].getRequestContext().worker != nil)
 }
 
 // SanitizedPathJoin performs filepath.Join(root, reqPath) that
