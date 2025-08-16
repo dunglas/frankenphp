@@ -93,10 +93,31 @@ static void frankenphp_free_request_context() {
 
 static void frankenphp_destroy_super_globals() {
   zend_try {
-    for (int i = 0; i < NUM_TRACK_VARS; i++) {
-      zval_ptr_dtor_nogc(&PG(http_globals)[i]);
-    }
+    zval_ptr_dtor_nogc(&PG(http_globals)[TRACK_VARS_POST]);
+    zval_ptr_dtor_nogc(&PG(http_globals)[TRACK_VARS_GET]);
+    zval_ptr_dtor_nogc(&PG(http_globals)[TRACK_VARS_COOKIE]);
+    zval_ptr_dtor_nogc(&PG(http_globals)[TRACK_VARS_SERVER]);
+    // skip TRACK_VARS_ENV
+    zval_ptr_dtor_nogc(&PG(http_globals)[TRACK_VARS_FILES]);
+    // skip TRACK_VARS_REQUEST (not supported)
   }
+
+  /* set PG(http_globals) to its default state, which is all 0 bits (except
+    _ENV) see: php_hash_environment()
+  */
+  memset(&PG(http_globals)[TRACK_VARS_POST], 0,
+         sizeof(PG(http_globals)[TRACK_VARS_POST]));
+  memset(&PG(http_globals)[TRACK_VARS_GET], 0,
+         sizeof(PG(http_globals)[TRACK_VARS_GET]));
+  memset(&PG(http_globals)[TRACK_VARS_COOKIE], 0,
+         sizeof(PG(http_globals)[TRACK_VARS_COOKIE]));
+  memset(&PG(http_globals)[TRACK_VARS_SERVER], 0,
+         sizeof(PG(http_globals)[TRACK_VARS_SERVER]));
+  // skip ENV
+  memset(&PG(http_globals)[TRACK_VARS_FILES], 0,
+         sizeof(PG(http_globals)[TRACK_VARS_FILES]));
+  // skip REQUEST, not supported
+
   zend_end_try();
 }
 
@@ -213,21 +234,27 @@ static int frankenphp_worker_request_startup() {
       php_output_set_implicit_flush(1);
     }
 
-    php_hash_environment();
+    /* activate all 'auto globals' except of _ENV, see:
+     * zend_activate_auto_globals() */
+    zend_auto_global *auto_global;
+    zend_string *_env = ZSTR_KNOWN(ZEND_STR_AUTOGLOBAL_ENV);
+    ZEND_HASH_MAP_FOREACH_PTR(CG(auto_globals), auto_global) {
+      if (auto_global->name == _env) {
+        continue;
+      }
+      if (auto_global->jit) {
+        auto_global->armed = 1;
+      } else if (auto_global->auto_global_callback) {
+        auto_global->armed =
+            auto_global->auto_global_callback(auto_global->name);
+      } else {
+        auto_global->armed = 0;
+      }
+    }
+    ZEND_HASH_FOREACH_END();
 
     /* zend_is_auto_global will force a re-import of the $_SERVER global */
     zend_is_auto_global(ZSTR_KNOWN(ZEND_STR_AUTOGLOBAL_SERVER));
-
-    /* disarm the $_ENV auto_global to prevent it from being reloaded in worker
-     * mode */
-    if (zend_hash_str_exists(&EG(symbol_table), "_ENV", 4)) {
-      zend_auto_global *env_global;
-      if ((env_global = zend_hash_find_ptr(
-               CG(auto_globals), ZSTR_KNOWN(ZEND_STR_AUTOGLOBAL_ENV))) !=
-          NULL) {
-        env_global->armed = 0;
-      }
-    }
 
     const char **module_name;
     zend_module_entry *module;
@@ -502,11 +529,6 @@ static zend_module_entry frankenphp_module = {
     STANDARD_MODULE_PROPERTIES};
 
 static void frankenphp_request_shutdown() {
-  if (is_worker_thread) {
-    /* ensure $_ENV is not in an invalid state before shutdown */
-    zval_ptr_dtor_nogc(&PG(http_globals)[TRACK_VARS_ENV]);
-    array_init(&PG(http_globals)[TRACK_VARS_ENV]);
-  }
   php_request_shutdown((void *)0);
   frankenphp_free_request_context();
 }
