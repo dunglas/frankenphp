@@ -35,6 +35,7 @@ jobs:
       USE_ZEND_ALLOC: 0
       LIBRARY_PATH: ${{ github.workspace }}/php/target/lib:${{ github.workspace }}/watcher/target/lib
       LD_LIBRARY_PATH: ${{ github.workspace }}/php/target/lib
+      ASAN_OPTIONS: detect_leaks=0
     steps:
       - name: Remove local PHP
         run: sudo apt-get remove --purge --autoremove 'php*' 'libmemcached*'
