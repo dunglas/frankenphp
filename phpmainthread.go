@@ -177,7 +177,9 @@ func (mainThread *phpMainThread) setAutomaticMaxThreads() {
 //export go_frankenphp_shutdown_main_thread
 func go_frankenphp_shutdown_main_thread() {
 	mainThread.state.set(stateReserved)
-	mainThread = nil
+	mainThread.knownServerKeys = nil
+	mainThread.commonHeaders = nil
+	mainThread.sandboxedEnv = nil
 }
 
 //export go_get_custom_php_ini
