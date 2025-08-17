@@ -34,14 +34,14 @@ func TestGoString(t *testing.T) {
 	})
 }
 
-func TestPHPAssociativeArray(t *testing.T) {
+func TestPHPMap(t *testing.T) {
 	testOnDummyPHPThread(t, func() {
-		originalArray := AssociativeArray{Map: map[string]any{
+		originalArray := map[string]any{
 			"foo1": "bar1",
 			"foo2": "bar2",
-		}}
+		}
 
-		convertedArray := GoAssociativeArray(PHPAssociativeArray(originalArray), false)
+		convertedArray := GoMap(PHPMap(originalArray))
 
 		assert.Equal(t, originalArray, convertedArray, "associative array should be equal after conversion")
 	})
@@ -57,7 +57,7 @@ func TestOrderedPHPAssociativeArray(t *testing.T) {
 			Order: []string{"foo2", "foo1"},
 		}
 
-		convertedArray := GoAssociativeArray(PHPAssociativeArray(originalArray), true)
+		convertedArray := GoAssociativeArray(PHPAssociativeArray(originalArray))
 
 		assert.Equal(t, originalArray, convertedArray, "associative array should be equal after conversion")
 	})
@@ -73,15 +73,15 @@ func TestPHPPackedArray(t *testing.T) {
 	})
 }
 
-func TestPHPPackedArrayToAssociative(t *testing.T) {
+func TestPHPPackedArrayToGoMap(t *testing.T) {
 	testOnDummyPHPThread(t, func() {
 		originalArray := PackedArray{"bar1", "bar2"}
-		expectedArray := AssociativeArray{Map: map[string]any{
+		expectedArray := map[string]any{
 			"0": "bar1",
 			"1": "bar2",
-		}}
+		}
 
-		convertedArray := GoAssociativeArray(PHPPackedArray(originalArray), false)
+		convertedArray := GoMap(PHPPackedArray(originalArray))
 
 		assert.Equal(t, expectedArray, convertedArray, "convert a packed to an associative array")
 	})
@@ -106,23 +106,21 @@ func TestPHPAssociativeArrayToPacked(t *testing.T) {
 
 func TestNestedMixedArray(t *testing.T) {
 	testOnDummyPHPThread(t, func() {
-		originalArray := AssociativeArray{
-			Map: map[string]any{
-				"foo":         "bar",
-				"int":         int64(123),
-				"float":       float64(1.2),
-				"true":        true,
-				"false":       false,
-				"nil":         nil,
-				"packedArray": PackedArray{"bar1", "bar2"},
-				"associativeArray": AssociativeArray{
-					Map:   map[string]any{"foo1": "bar1", "foo2": "bar2"},
-					Order: []string{"foo2", "foo1"},
-				},
+		originalArray := map[string]any{
+			"string":      "value",
+			"int":         int64(123),
+			"float":       float64(1.2),
+			"true":        true,
+			"false":       false,
+			"nil":         nil,
+			"packedArray": PackedArray{"bar1", "bar2"},
+			"associativeArray": AssociativeArray{
+				Map:   map[string]any{"foo1": "bar1", "foo2": "bar2"},
+				Order: []string{"foo2", "foo1"},
 			},
 		}
 
-		convertedArray := GoAssociativeArray(PHPAssociativeArray(originalArray), false)
+		convertedArray := GoMap(PHPMap(originalArray))
 
 		assert.Equal(t, originalArray, convertedArray, "nested mixed array should be equal after conversion")
 	})

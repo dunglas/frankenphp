@@ -47,22 +47,34 @@ type AssociativeArray struct {
 type PackedArray = []any
 
 // EXPERIMENTAL: GoAssociativeArray converts a zend_array to a Go AssociativeArray
-func GoAssociativeArray(arr unsafe.Pointer, ordered bool) AssociativeArray {
+func GoAssociativeArray(arr unsafe.Pointer) AssociativeArray {
+	entries, order := goArray(arr, true)
+	return AssociativeArray{entries, order}
+}
+
+// EXPERIMENTAL: GoMap converts a zend_array to an unordered Go map
+func GoMap(arr unsafe.Pointer) map[string]any {
+	entries, _ := goArray(arr, false)
+	return entries
+}
+
+func goArray(arr unsafe.Pointer, ordered bool) (map[string]any, []string) {
 	if arr == nil {
-		panic("GoAssociativeArray received a nil pointer")
+		panic("received a nil pointer on array conversion")
 	}
 
 	zval := (*C.zval)(arr)
 	hashTable := (*C.HashTable)(castZval(zval, C.IS_ARRAY))
 
 	if hashTable == nil {
-		panic("GoAssociativeArray received a *zval that wasn't a HashTable")
+		panic("received a *zval that wasn't a HashTable on array conversion")
 	}
 
 	nNumUsed := hashTable.nNumUsed
-	result := AssociativeArray{Map: make(map[string]any)}
+	entries := make(map[string]any)
+	var order []string
 	if ordered {
-		result.Order = make([]string, 0, nNumUsed)
+		order = make([]string, 0, nNumUsed)
 	}
 
 	if htIsPacked(hashTable) {
@@ -73,14 +85,14 @@ func GoAssociativeArray(arr unsafe.Pointer, ordered bool) AssociativeArray {
 			v := C.get_ht_packed_data(hashTable, i)
 			if v != nil && C.zval_get_type(v) != C.IS_UNDEF {
 				strIndex := strconv.Itoa(int(i))
-				result.Map[strIndex] = convertZvalToGo(v)
+				entries[strIndex] = convertZvalToGo(v)
 				if ordered {
-					result.Order = append(result.Order, strIndex)
+					order = append(order, strIndex)
 				}
 			}
 		}
 
-		return result
+		return entries, order
 	}
 
 	for i := C.uint32_t(0); i < nNumUsed; i++ {
@@ -93,9 +105,9 @@ func GoAssociativeArray(arr unsafe.Pointer, ordered bool) AssociativeArray {
 
 		if bucket.key != nil {
 			keyStr := GoString(unsafe.Pointer(bucket.key))
-			result.Map[keyStr] = v
+			entries[keyStr] = v
 			if ordered {
-				result.Order = append(result.Order, keyStr)
+				order = append(order, keyStr)
 			}
 
 			continue
@@ -103,13 +115,13 @@ func GoAssociativeArray(arr unsafe.Pointer, ordered bool) AssociativeArray {
 
 		// as fallback convert the bucket index to a string key
 		strIndex := strconv.Itoa(int(bucket.h))
-		result.Map[strIndex] = v
+		entries[strIndex] = v
 		if ordered {
-			result.Order = append(result.Order, strIndex)
+			order = append(order, strIndex)
 		}
 	}
 
-	return result
+	return entries, order
 }
 
 // EXPERIMENTAL: GoPackedArray converts a zend_array to a Go slice
@@ -150,20 +162,29 @@ func GoPackedArray(arr unsafe.Pointer) PackedArray {
 	return result
 }
 
-// PHPAssociativeArray converts a Go AssociativeArray to a PHP zend_array.
+// EXPERIMENTAL: PHPMap converts an unordered Go map to a PHP zend_array.
+func PHPMap(arr map[string]any) unsafe.Pointer {
+	return phpArray(arr, nil)
+}
+
+// EXPERIMENTAL: PHPAssociativeArray converts a Go AssociativeArray to a PHP zend_array.
 func PHPAssociativeArray(arr AssociativeArray) unsafe.Pointer {
+	return phpArray(arr.Map, arr.Order)
+}
+
+func phpArray(entries map[string]any, order []string) unsafe.Pointer {
 	var zendArray *C.HashTable
 
-	if len(arr.Order) != 0 {
-		zendArray = createNewArray((uint32)(len(arr.Order)))
-		for _, key := range arr.Order {
-			val := arr.Map[key]
+	if len(order) != 0 {
+		zendArray = createNewArray((uint32)(len(order)))
+		for _, key := range order {
+			val := entries[key]
 			zval := convertGoToZval(val)
 			C.zend_hash_str_update(zendArray, toUnsafeChar(key), C.size_t(len(key)), zval)
 		}
 	} else {
-		zendArray = createNewArray((uint32)(len(arr.Map)))
-		for key, val := range arr.Map {
+		zendArray = createNewArray((uint32)(len(entries)))
+		for key, val := range entries {
 			zval := convertGoToZval(val)
 			C.zend_hash_str_update(zendArray, toUnsafeChar(key), C.size_t(len(key)), zval)
 		}
@@ -175,7 +196,7 @@ func PHPAssociativeArray(arr AssociativeArray) unsafe.Pointer {
 	return unsafe.Pointer(&zval)
 }
 
-// PHPPackedArray converts a Go PHPPackedArray to a PHP zend_array.
+// EXPERIMENTAL: PHPPackedArray converts a Go slice to a PHP zend_array.
 func PHPPackedArray(arr PackedArray) unsafe.Pointer {
 	zendArray := createNewArray((uint32)(len(arr)))
 	for _, val := range arr {
@@ -224,7 +245,7 @@ func convertZvalToGo(zval *C.zval) any {
 			return GoPackedArray(unsafe.Pointer(zval))
 		}
 
-		return GoAssociativeArray(unsafe.Pointer(zval), true)
+		return GoAssociativeArray(unsafe.Pointer(zval))
 	default:
 		return nil
 	}
