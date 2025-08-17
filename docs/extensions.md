@@ -175,7 +175,7 @@ func process_data_packed(arr *C.zval) unsafe.Pointer {
 * **Nested Arrays** - Arrays can be nested and will convert all support types automatically (int64,float64,string,bool,nil,AssociativeArray,PackedArray)
 * **Objects are not supported** - Currently, only scalar types and arrays can be used as values. Providing an object will result in a `null` value in the PHP array.
 
-##### Available methods - packed and associative
+##### Available methods: Packed and Associative
 
 * `frankenphp.PHPAssociativeArray(arr frankenphp.AssociativeArray) unsafe.Pointer` - Convert to an ordered PHP array with key-value pairs
 * `frankenphp.PHPMap(arr map[string]any) unsafe.Pointer` - Convert to an unordered PHP array with key-value pairs
