@@ -35,7 +35,7 @@ jobs:
       USE_ZEND_ALLOC: 0
       LIBRARY_PATH: ${{ github.workspace }}/php/target/lib:${{ github.workspace }}/watcher/target/lib
       LD_LIBRARY_PATH: ${{ github.workspace }}/php/target/lib
-      # PHP doesn't free some memory on purpose, we have to disable leak detection: https://go.dev/doc/go1.25#go-command
+      # PHP doesn't free some memory on purpose, we have to disable leaks detection: https://go.dev/doc/go1.25#go-command
       ASAN_OPTIONS: detect_leaks=0
     steps:
       - name: Remove local PHP
