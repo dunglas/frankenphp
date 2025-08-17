@@ -180,7 +180,7 @@ func process_data_packed(arr *C.zval) unsafe.Pointer {
 * `frankenphp.PHPAssociativeArray(arr frankenphp.AssociativeArray) unsafe.Pointer` - Convert to an ordered PHP array with key-value pairs
 * `frankenphp.PHPMap(arr map[string]any) unsafe.Pointer` - Convert to an unordered PHP array with key-value pairs
 * `frankenphp.PHPPackedArray(arr frankenphp.PackedArray) unsafe.Pointer` - Convert to a PHP packed array with indexed values only
-* `frankenphp.GoAssociativeArray(arr unsafe.Pointer, ordered bool) frankenphp.AssociativeArray` - Convert a PHP array to a Go map and optionally keep the order
+* `frankenphp.GoAssociativeArray(arr unsafe.Pointer, ordered bool) frankenphp.AssociativeArray` - Convert a PHP array to an ordered Go AssociativeArray (map with order)
 * `frankenphp.GoMap(arr unsafe.Pointer) map[string]any` - Convert a PHP array to an unordered go map
 * `frankenphp.GoPackedArray(arr unsafe.Pointer) frankenphp.PackedArray` - Convert a PHP array to a go slice
 
