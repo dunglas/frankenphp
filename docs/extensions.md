@@ -91,7 +91,6 @@ While some variable types have the same memory representation between C/PHP and 
 | `?bool`            | `*bool`                        | ✅                 | -                               | -                                | ✅                     |
 | `string`/`?string` | `*C.zend_string`               | ❌                 | frankenphp.GoString()           | frankenphp.PHPString()           | ✅                     |
 | `array`            | `*frankenphp.AssociativeArray` | ❌                 | frankenphp.GoAssociativeArray() | frankenphp.PHPAssociativeArray() | ✅                     |
-| `array (packed)`   | `*frankenphp.PackedArray`      | ❌                 | frankenphp.GoPackedArray()      | frankenphp.PHPPackedArray()      | ✅                     |
 | `object`           | `struct`                       | ❌                 | _Not yet implemented_           | _Not yet implemented_            | ❌                     |
 
 > [!NOTE]
@@ -103,17 +102,17 @@ If you refer to the code snippet of the previous section, you can see that helpe
 
 #### Working with Arrays
 
-FrankenPHP provides native support for PHP arrays through `frankenphp.AssociativeArray` and `frankenphp.PackedArray`.
+FrankenPHP provides native support for PHP arrays through `frankenphp.AssociativeArray` or direct conversion to a map or slice.
 
 `AssociativeArray` represents a [hash map](https://en.wikipedia.org/wiki/Hash_table) composed of a `Map: map[string]any`field and an optional `Order: []string` field (unlike PHP "associative arrays", Go maps aren't ordered).
 
-PackedArray` is an alias for a Go slice `[]any`
+If order or association are not needed, it's also possible to directly convert to a slice `[]any` or unordered map `map[string]any`.
 
 **Creating and manipulating arrays in Go:**
 
 ```go
 // export_php:function process_data_ordered(array $input): array
-func process_data_ordered(arr *C.zval) unsafe.Pointer {
+func process_data_ordered_map(arr *C.zval) unsafe.Pointer {
 	// Convert PHP associative array to Go while keeping the order
 	associativeArray := frankenphp.GoAssociativeArray(unsafe.Pointer(arr))
 
@@ -155,34 +154,34 @@ func process_data_unordered_map(arr *C.zval) unsafe.Pointer {
 // export_php:function process_data_packed(array $input): array
 func process_data_packed(arr *C.zval) unsafe.Pointer {
 	// Convert PHP packed array to Go
-	packedArray := frankenphp.GoPackedArray(unsafe.Pointer(arr), false)
+	goSlice := frankenphp.GoPackedArray(unsafe.Pointer(arr), false)
 
 	// loop over the slice in order
-	for index, value := range packedArray {
+	for index, value := range goSlice {
 		// do something with index and value
 	}
 
 	// return a packed array
-	return frankenphp.PHPackedArray{"value1", "value2", "value3"}
+	return frankenphp.PHPackedArray([]any{"value1", "value2", "value3"})
 }
 ```
 
-**Key features of `frankenphp.PackedArray` and `frankenphp.AssociativeArray`:**
+**Key features of array conversion:**
 
 * **Ordered key-value pairs** - Option to keep the order of the associative array
 * **Optimized for multiple cases** - Option to ditch the order for better performance or convert straight to a slice
 * **Automatic list detection** - When converting to PHP, automatically detects if array should be a packed list or hashmap
-* **Nested Arrays** - Arrays can be nested and will convert all support types automatically (int64,float64,string,bool,nil,AssociativeArray,PackedArray)
+* **Nested Arrays** - Arrays can be nested and will convert all support types automatically (`int64`,`float64`,`string`,`bool`,`nil`,`AssociativeArray`,`map[string]any`,`[]any`)
 * **Objects are not supported** - Currently, only scalar types and arrays can be used as values. Providing an object will result in a `null` value in the PHP array.
 
 ##### Available methods: Packed and Associative
 
 * `frankenphp.PHPAssociativeArray(arr frankenphp.AssociativeArray) unsafe.Pointer` - Convert to an ordered PHP array with key-value pairs
-* `frankenphp.PHPMap(arr map[string]any) unsafe.Pointer` - Convert to an unordered PHP array with key-value pairs
-* `frankenphp.PHPPackedArray(arr frankenphp.PackedArray) unsafe.Pointer` - Convert to a PHP packed array with indexed values only
+* `frankenphp.PHPMap(arr map[string]any) unsafe.Pointer` - Convert a map to an unordered PHP array with key-value pairs
+* `frankenphp.PHPPackedArray(slice []any) unsafe.Pointer` - Convert a slice to a PHP packed array with indexed values only
 * `frankenphp.GoAssociativeArray(arr unsafe.Pointer, ordered bool) frankenphp.AssociativeArray` - Convert a PHP array to an ordered Go AssociativeArray (map with order)
 * `frankenphp.GoMap(arr unsafe.Pointer) map[string]any` - Convert a PHP array to an unordered go map
-* `frankenphp.GoPackedArray(arr unsafe.Pointer) frankenphp.PackedArray` - Convert a PHP array to a go slice
+* `frankenphp.GoPackedArray(arr unsafe.Pointer) []any` - Convert a PHP array to a go slice
 
 ### Declaring a Native PHP Class
 

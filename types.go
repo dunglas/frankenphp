@@ -43,9 +43,6 @@ type AssociativeArray struct {
 	Order []string
 }
 
-// PackedArray represents a 'packed' PHP array as a Go slice
-type PackedArray = []any
-
 // EXPERIMENTAL: GoAssociativeArray converts a zend_array to a Go AssociativeArray
 func GoAssociativeArray(arr unsafe.Pointer) AssociativeArray {
 	entries, order := goArray(arr, true)
@@ -125,7 +122,7 @@ func goArray(arr unsafe.Pointer, ordered bool) (map[string]any, []string) {
 }
 
 // EXPERIMENTAL: GoPackedArray converts a zend_array to a Go slice
-func GoPackedArray(arr unsafe.Pointer) PackedArray {
+func GoPackedArray(arr unsafe.Pointer) []any {
 	if arr == nil {
 		panic("GoPackedArray received a nil pointer")
 	}
@@ -138,7 +135,7 @@ func GoPackedArray(arr unsafe.Pointer) PackedArray {
 	}
 
 	nNumUsed := hashTable.nNumUsed
-	result := make(PackedArray, 0, nNumUsed)
+	result := make([]any, 0, nNumUsed)
 
 	if htIsPacked(hashTable) {
 		for i := C.uint32_t(0); i < nNumUsed; i++ {
@@ -197,9 +194,9 @@ func phpArray(entries map[string]any, order []string) unsafe.Pointer {
 }
 
 // EXPERIMENTAL: PHPPackedArray converts a Go slice to a PHP zend_array.
-func PHPPackedArray(arr PackedArray) unsafe.Pointer {
-	zendArray := createNewArray((uint32)(len(arr)))
-	for _, val := range arr {
+func PHPPackedArray(slice []any) unsafe.Pointer {
+	zendArray := createNewArray((uint32)(len(slice)))
+	for _, val := range slice {
 		zval := convertGoToZval(val)
 		C.zend_hash_next_index_insert(zendArray, zval)
 	}
@@ -269,12 +266,12 @@ func convertGoToZval(value any) *C.zval {
 	case string:
 		str := (*C.zend_string)(PHPString(v, false))
 		C.__zval_string__(&zval, str)
-	case PackedArray:
-		return (*C.zval)(PHPPackedArray(v))
 	case AssociativeArray:
 		return (*C.zval)(PHPAssociativeArray(v))
 	case map[string]any:
 		return (*C.zval)(PHPAssociativeArray(AssociativeArray{Map: v}))
+	case []any:
+		return (*C.zval)(PHPPackedArray(v))
 	default:
 		C.__zval_null__(&zval)
 	}

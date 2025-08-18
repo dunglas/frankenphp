@@ -36,14 +36,14 @@ func TestGoString(t *testing.T) {
 
 func TestPHPMap(t *testing.T) {
 	testOnDummyPHPThread(t, func() {
-		originalArray := map[string]any{
+		originalMap := map[string]any{
 			"foo1": "bar1",
 			"foo2": "bar2",
 		}
 
-		convertedArray := GoMap(PHPMap(originalArray))
+		convertedMap := GoMap(PHPMap(originalMap))
 
-		assert.Equal(t, originalArray, convertedArray, "associative array should be equal after conversion")
+		assert.Equal(t, originalMap, convertedMap, "associative array should be equal after conversion")
 	})
 }
 
@@ -65,25 +65,25 @@ func TestOrderedPHPAssociativeArray(t *testing.T) {
 
 func TestPHPPackedArray(t *testing.T) {
 	testOnDummyPHPThread(t, func() {
-		originalArray := PackedArray{"bar1", "bar2"}
+		originalSlice := []any{"bar1", "bar2"}
 
-		convertedArray := GoPackedArray(PHPPackedArray(originalArray))
+		convertedSlice := GoPackedArray(PHPPackedArray(originalSlice))
 
-		assert.Equal(t, originalArray, convertedArray, "packed array should be equal after conversion")
+		assert.Equal(t, originalSlice, convertedSlice, "slice should be equal after conversion")
 	})
 }
 
 func TestPHPPackedArrayToGoMap(t *testing.T) {
 	testOnDummyPHPThread(t, func() {
-		originalArray := PackedArray{"bar1", "bar2"}
-		expectedArray := map[string]any{
+		originalSlice := []any{"bar1", "bar2"}
+		expectedMap := map[string]any{
 			"0": "bar1",
 			"1": "bar2",
 		}
 
-		convertedArray := GoMap(PHPPackedArray(originalArray))
+		convertedMap := GoMap(PHPPackedArray(originalSlice))
 
-		assert.Equal(t, expectedArray, convertedArray, "convert a packed to an associative array")
+		assert.Equal(t, expectedMap, convertedMap, "convert a packed to an associative array")
 	})
 }
 
@@ -96,11 +96,11 @@ func TestPHPAssociativeArrayToPacked(t *testing.T) {
 			},
 			Order: []string{"foo1", "foo2"},
 		}
-		expectedArray := PackedArray{"bar1", "bar2"}
+		expectedSlice := []any{"bar1", "bar2"}
 
-		convertedArray := GoPackedArray(PHPAssociativeArray(originalArray))
+		convertedSlice := GoPackedArray(PHPAssociativeArray(originalArray))
 
-		assert.Equal(t, expectedArray, convertedArray, "convert an associative to a packed array")
+		assert.Equal(t, expectedSlice, convertedSlice, "convert an associative array to a slice")
 	})
 }
 
@@ -113,7 +113,7 @@ func TestNestedMixedArray(t *testing.T) {
 			"true":        true,
 			"false":       false,
 			"nil":         nil,
-			"packedArray": PackedArray{"bar1", "bar2"},
+			"packedArray": []any{"bar1", "bar2"},
 			"associativeArray": AssociativeArray{
 				Map:   map[string]any{"foo1": "bar1", "foo2": "bar2"},
 				Order: []string{"foo2", "foo1"},
