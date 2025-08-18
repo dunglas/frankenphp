@@ -137,9 +137,6 @@ func Config() PHPConfig {
 	}
 }
 
-// MaxThreads is internally used during tests. It is written to, but never read and may go away in the future.
-var MaxThreads int
-
 func calculateMaxThreads(opt *opt) (int, int, int, error) {
 	maxProcs := runtime.GOMAXPROCS(0) * 2
 
@@ -250,7 +247,6 @@ func Init(options ...Option) error {
 	}
 
 	metrics.TotalThreads(totalThreadCount)
-	MaxThreads = totalThreadCount
 
 	config := Config()
 
