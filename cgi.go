@@ -244,12 +244,6 @@ func splitCgiPath(fc *frankenPHPContext) {
 		}
 	}
 
-	// if a worker is already assigned explicitly, use its filename
-	if fc.worker != nil {
-		fc.scriptFilename = fc.worker.fileName
-		return
-	}
-
 	// TODO: is it possible to delay this and avoid saving everything in the context?
 	// SCRIPT_FILENAME is the absolute path of SCRIPT_NAME
 	fc.scriptFilename = sanitizedPathJoin(fc.documentRoot, fc.scriptName)
