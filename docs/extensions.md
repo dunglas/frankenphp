@@ -81,17 +81,19 @@ While the first point speaks for itself, the second may be harder to apprehend. 
 
 While some variable types have the same memory representation between C/PHP and Go, some types require more logic to be directly used. This is maybe the hardest part when it comes to writing extensions because it requires understanding internals of the Zend Engine and how variables are stored internally in PHP. This table summarizes what you need to know:
 
-| PHP type           | Go type                        | Direct conversion | C to Go helper                  | Go to C helper                   | Class Methods Support |
-|--------------------|--------------------------------|-------------------|---------------------------------|----------------------------------|-----------------------|
-| `int`              | `int64`                        | ✅                 | -                               | -                                | ✅                     |
-| `?int`             | `*int64`                       | ✅                 | -                               | -                                | ✅                     |
-| `float`            | `float64`                      | ✅                 | -                               | -                                | ✅                     |
-| `?float`           | `*float64`                     | ✅                 | -                               | -                                | ✅                     |
-| `bool`             | `bool`                         | ✅                 | -                               | -                                | ✅                     |
-| `?bool`            | `*bool`                        | ✅                 | -                               | -                                | ✅                     |
-| `string`/`?string` | `*C.zend_string`               | ❌                 | frankenphp.GoString()           | frankenphp.PHPString()           | ✅                     |
-| `array`            | `*frankenphp.AssociativeArray` | ❌                 | frankenphp.GoAssociativeArray() | frankenphp.PHPAssociativeArray() | ✅                     |
-| `object`           | `struct`                       | ❌                 | _Not yet implemented_           | _Not yet implemented_            | ❌                     |
+| PHP type           | Go type                       | Direct conversion | C to Go helper                  | Go to C helper                   | Class Methods Support |
+|--------------------|-------------------------------|-------------------|---------------------------------|----------------------------------|-----------------------|
+| `int`              | `int64`                       | ✅                 | -                               | -                                | ✅                     |
+| `?int`             | `*int64`                      | ✅                 | -                               | -                                | ✅                     |
+| `float`            | `float64`                     | ✅                 | -                               | -                                | ✅                     |
+| `?float`           | `*float64`                    | ✅                 | -                               | -                                | ✅                     |
+| `bool`             | `bool`                        | ✅                 | -                               | -                                | ✅                     |
+| `?bool`            | `*bool`                       | ✅                 | -                               | -                                | ✅                     |
+| `string`/`?string` | `*C.zend_string`              | ❌                 | frankenphp.GoString()           | frankenphp.PHPString()           | ✅                     |
+| `array`            | `frankenphp.AssociativeArray` | ❌                 | frankenphp.GoAssociativeArray() | frankenphp.PHPAssociativeArray() | ✅                     |
+| `array`            | `map[string]any`              | ❌                 | frankenphp.GoMap()              | frankenphp.PHPMap()              | ✅                     |
+| `array`            | `[]any`                       | ❌                 | frankenphp.GoPackedArray()      | frankenphp.PHPPackedArray()      | ✅                     |
+| `object`           | `struct`                      | ❌                 | _Not yet implemented_           | _Not yet implemented_            | ❌                     |
 
 > [!NOTE]
 > This table is not exhaustive yet and will be completed as the FrankenPHP types API gets more complete.
