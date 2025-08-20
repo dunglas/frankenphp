@@ -45,7 +45,7 @@ frankenphp php-cli /path/to/your/script.php
 
 ### RPM Packages
 
-We offer RPM packages for Red Hat Enterprise Linux 7 to 10. To install, run:
+We offer RPM packages for Red Hat Enterprise Linux 8 to 10. To install, run:
 
 ```console
 sudo dnf install https://rpm.henderkes.com/static-php-1-0.noarch.rpm
