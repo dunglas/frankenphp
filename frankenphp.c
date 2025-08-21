@@ -72,6 +72,7 @@ frankenphp_config frankenphp_get_config() {
 
 bool should_filter_var = 0;
 __thread uintptr_t thread_index;
+__thread bool is_worker_thread = false;
 __thread zval *os_environment = NULL;
 
 static void frankenphp_update_request_context() {
@@ -81,7 +82,7 @@ static void frankenphp_update_request_context() {
   /* status It is not reset by zend engine, set it to 200. */
   SG(sapi_headers).http_response_code = 200;
 
-  go_update_request_info(thread_index, &SG(request_info));
+  is_worker_thread = go_update_request_info(thread_index, &SG(request_info));
 }
 
 static void frankenphp_free_request_context() {
@@ -402,7 +403,7 @@ PHP_FUNCTION(frankenphp_handle_request) {
   Z_PARAM_FUNC(fci, fcc)
   ZEND_PARSE_PARAMETERS_END();
 
-  if (!go_is_worker_request(thread_index)) {
+  if (!is_worker_thread) {
     /* not a worker, throw an error */
     zend_throw_exception(
         spl_ce_RuntimeException,
@@ -513,7 +514,7 @@ static zend_module_entry frankenphp_module = {
     STANDARD_MODULE_PROPERTIES};
 
 static void frankenphp_request_shutdown() {
-  if (go_is_worker_request(thread_index)) {
+  if (is_worker_thread) {
     /* ensure $_ENV is not in an invalid state before shutdown */
     zval_ptr_dtor_nogc(&PG(http_globals)[TRACK_VARS_ENV]);
     array_init(&PG(http_globals)[TRACK_VARS_ENV]);
@@ -748,7 +749,7 @@ static void frankenphp_register_variables(zval *track_vars_array) {
    */
 
   /* in non-worker mode we import the os environment regularly */
-  if (!go_is_worker_request(thread_index)) {
+  if (!is_worker_thread) {
     get_full_env(track_vars_array);
     // php_import_environment_variables(track_vars_array);
     go_register_variables(thread_index, track_vars_array);
