@@ -91,34 +91,60 @@ static void frankenphp_free_request_context() {
   SG(request_info).request_uri = NULL;
 }
 
-static void frankenphp_destroy_super_globals() {
+/* soft reset super globals in worker mode */
+static void frankenphp_reset_super_globals() {
+  zval *post = &PG(http_globals)[TRACK_VARS_POST];
+  zval *get = &PG(http_globals)[TRACK_VARS_GET];
+  zval *cookie = &PG(http_globals)[TRACK_VARS_COOKIE];
+  zval *server = &PG(http_globals)[TRACK_VARS_SERVER];
+  zval *files = &PG(http_globals)[TRACK_VARS_FILES];
+  size_t zval_size = sizeof(zval);
   zend_try {
-    zval_ptr_dtor_nogc(&PG(http_globals)[TRACK_VARS_POST]);
-    zval_ptr_dtor_nogc(&PG(http_globals)[TRACK_VARS_GET]);
-    zval_ptr_dtor_nogc(&PG(http_globals)[TRACK_VARS_COOKIE]);
-    zval_ptr_dtor_nogc(&PG(http_globals)[TRACK_VARS_SERVER]);
+    zval_ptr_dtor_nogc(post);
+    memset(post, 0, zval_size);
+
+    zval_ptr_dtor_nogc(get);
+    memset(get, 0, zval_size);
+
+    zval_ptr_dtor_nogc(cookie);
+    memset(cookie, 0, zval_size);
+
+    zval_ptr_dtor_nogc(server);
+    memset(server, 0, zval_size);
+
     // skip TRACK_VARS_ENV
-    zval_ptr_dtor_nogc(&PG(http_globals)[TRACK_VARS_FILES]);
+
+    zval_ptr_dtor_nogc(files);
+    memset(files, 0, zval_size);
+
     // skip TRACK_VARS_REQUEST (not supported)
   }
-
-  /* set PG(http_globals) to its default state, which is all 0 bits (except
-    _ENV) see: php_hash_environment()
-  */
-  memset(&PG(http_globals)[TRACK_VARS_POST], 0,
-         sizeof(PG(http_globals)[TRACK_VARS_POST]));
-  memset(&PG(http_globals)[TRACK_VARS_GET], 0,
-         sizeof(PG(http_globals)[TRACK_VARS_GET]));
-  memset(&PG(http_globals)[TRACK_VARS_COOKIE], 0,
-         sizeof(PG(http_globals)[TRACK_VARS_COOKIE]));
-  memset(&PG(http_globals)[TRACK_VARS_SERVER], 0,
-         sizeof(PG(http_globals)[TRACK_VARS_SERVER]));
-  // skip ENV
-  memset(&PG(http_globals)[TRACK_VARS_FILES], 0,
-         sizeof(PG(http_globals)[TRACK_VARS_FILES]));
-  // skip REQUEST, not supported
-
   zend_end_try();
+}
+
+/* re-import all 'auto globals' in worker mode except of _ENV, see:
+       * php_hash_environment() */
+static void frankenphp_import_super_globals(){
+  zend_auto_global *auto_global;
+  zend_string *_env = ZSTR_KNOWN(ZEND_STR_AUTOGLOBAL_ENV);
+  zend_string *_server = ZSTR_KNOWN(ZEND_STR_AUTOGLOBAL_SERVER);
+  ZEND_HASH_MAP_FOREACH_PTR(CG(auto_globals), auto_global) {
+    if (auto_global->name == _env) {
+      /* skip $_ENV */
+      continue;
+    }
+    if (auto_global->name == _server) {
+      /* always re-import $_SERVER event if it has "jit" */
+    auto_global->auto_global_callback(auto_global->name);
+    continue;
+  }
+    if (auto_global->auto_global_callback) {
+      auto_global->armed = auto_global->auto_global_callback(auto_global->name);
+    } else {
+      auto_global->armed = 0;
+    }
+  }
+  ZEND_HASH_FOREACH_END();
 }
 
 /*
@@ -196,7 +222,7 @@ static int frankenphp_worker_request_startup() {
   int retval = SUCCESS;
 
   zend_try {
-    frankenphp_destroy_super_globals();
+    frankenphp_reset_super_globals();
     frankenphp_release_temporary_streams();
     php_output_activate();
 
@@ -234,27 +260,7 @@ static int frankenphp_worker_request_startup() {
       php_output_set_implicit_flush(1);
     }
 
-    /* activate all 'auto globals' except of _ENV, see:
-     * zend_activate_auto_globals() */
-    zend_auto_global *auto_global;
-    zend_string *_env = ZSTR_KNOWN(ZEND_STR_AUTOGLOBAL_ENV);
-    ZEND_HASH_MAP_FOREACH_PTR(CG(auto_globals), auto_global) {
-      if (auto_global->name == _env) {
-        continue;
-      }
-      if (auto_global->jit) {
-        auto_global->armed = 1;
-      } else if (auto_global->auto_global_callback) {
-        auto_global->armed =
-            auto_global->auto_global_callback(auto_global->name);
-      } else {
-        auto_global->armed = 0;
-      }
-    }
-    ZEND_HASH_FOREACH_END();
-
-    /* zend_is_auto_global will force a re-import of the $_SERVER global */
-    zend_is_auto_global(ZSTR_KNOWN(ZEND_STR_AUTOGLOBAL_SERVER));
+    frankenphp_import_super_globals();
 
     const char **module_name;
     zend_module_entry *module;
