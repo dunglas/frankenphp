@@ -91,14 +91,18 @@ static void frankenphp_free_request_context() {
   SG(request_info).request_uri = NULL;
 }
 
-/* reimport all 'auto globals' in worker mode except of _ENV, see:
- * php_hash_environment() */
+/* reimport all 'auto globals' in worker mode except of _ENV
+ * see: php_hash_environment() */
 static void frankenphp_reset_super_globals() {
-  zval *files = &PG(http_globals)[TRACK_VARS_FILES];
   zend_try {
-    // $_FILES needs to be flushed explicitly
+    /* only $_FILES needs to be flushed explicitly
+     * $_GET, $_POST, $_COOKIE and $_SERVER are flushed on reimport
+     * $_ENV is not flushed
+     * for more info see: php_startup_auto_globals()
+     */
+    zval *files = &PG(http_globals)[TRACK_VARS_FILES];
     zval_ptr_dtor_nogc(files);
-    memset(files, 0, sizeof(zval));
+    memset(files, 0, sizeof(*files));
   }
   zend_end_try();
 
@@ -111,17 +115,22 @@ static void frankenphp_reset_super_globals() {
       continue;
     }
     if (auto_global->name == _server) {
-      /* always reimport $_SERVER event if it has "jit" */
-      auto_global->auto_global_callback(auto_global->name);
+      /* always reimport $_SERVER  */
+      auto_global->armed = auto_global->auto_global_callback(auto_global->name);
       continue;
     }
     if (auto_global->jit) {
-      /* skip JIT auto globals, they will stay armed */
+      /* globals with jit are: $_SERVER, $_ENV, $_REQUEST, $GLOBALS,
+       * jit will only trigger on compilation and therefore behaves
+       * differently in worker mode. We will skip all jit globals
+       */
       continue;
     }
     if (auto_global->auto_global_callback) {
+      /* $_GET, $_POST, $_COOKIE, $_FILES are reimported here */
       auto_global->armed = auto_global->auto_global_callback(auto_global->name);
     } else {
+      /* $_SESSION will land here (not an http_global) */
       auto_global->armed = 0;
     }
   }
