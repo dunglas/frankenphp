@@ -93,12 +93,15 @@ static void frankenphp_free_request_context() {
 
 /* soft reset super globals in worker mode */
 static void frankenphp_reset_super_globals() {
+  size_t zval_size = sizeof(zval);
   zval *post = &PG(http_globals)[TRACK_VARS_POST];
   zval *get = &PG(http_globals)[TRACK_VARS_GET];
   zval *cookie = &PG(http_globals)[TRACK_VARS_COOKIE];
   zval *server = &PG(http_globals)[TRACK_VARS_SERVER];
   zval *files = &PG(http_globals)[TRACK_VARS_FILES];
-  size_t zval_size = sizeof(zval);
+  // zval *env = &PG(http_globals)[TRACK_VARS_ENV];
+  // zval *request = &PG(http_globals)[TRACK_VARS_REQUEST];
+
   zend_try {
     zval_ptr_dtor_nogc(post);
     memset(post, 0, zval_size);
@@ -117,14 +120,14 @@ static void frankenphp_reset_super_globals() {
     zval_ptr_dtor_nogc(files);
     memset(files, 0, zval_size);
 
-    // skip TRACK_VARS_REQUEST (not supported)
+    // skip TRACK_VARS_REQUEST (does not need to be flushed)
   }
   zend_end_try();
 }
 
-/* re-import all 'auto globals' in worker mode except of _ENV, see:
-       * php_hash_environment() */
-static void frankenphp_import_super_globals(){
+/* reimport all 'auto globals' in worker mode except of _ENV, see:
+ * php_hash_environment() */
+static void frankenphp_import_super_globals() {
   zend_auto_global *auto_global;
   zend_string *_env = ZSTR_KNOWN(ZEND_STR_AUTOGLOBAL_ENV);
   zend_string *_server = ZSTR_KNOWN(ZEND_STR_AUTOGLOBAL_SERVER);
@@ -134,10 +137,14 @@ static void frankenphp_import_super_globals(){
       continue;
     }
     if (auto_global->name == _server) {
-      /* always re-import $_SERVER event if it has "jit" */
-    auto_global->auto_global_callback(auto_global->name);
-    continue;
-  }
+      /* always reimport $_SERVER event if it has "jit" */
+      auto_global->auto_global_callback(auto_global->name);
+      continue;
+    }
+    if (auto_global->jit) {
+      /* skip JIT auto globals, they will stay armed */
+      continue;
+    }
     if (auto_global->auto_global_callback) {
       auto_global->armed = auto_global->auto_global_callback(auto_global->name);
     } else {
