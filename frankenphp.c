@@ -91,7 +91,7 @@ static void frankenphp_free_request_context() {
   SG(request_info).request_uri = NULL;
 }
 
-/* reimport all 'auto globals' in worker mode except of _ENV
+/* reset all 'auto globals' in worker mode except of $_ENV
  * see: php_hash_environment() */
 static void frankenphp_reset_super_globals() {
   zend_try {
@@ -121,7 +121,7 @@ static void frankenphp_reset_super_globals() {
     }
     if (auto_global->jit) {
       /* globals with jit are: $_SERVER, $_ENV, $_REQUEST, $GLOBALS,
-       * jit will only trigger on compilation and therefore behaves
+       * jit will only trigger on script parsing and therefore behaves
        * differently in worker mode. We will skip all jit globals
        */
       continue;
