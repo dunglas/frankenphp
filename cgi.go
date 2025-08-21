@@ -294,13 +294,12 @@ func go_update_request_info(threadIndex C.uintptr_t, info *C.sapi_request_info) 
 	info.query_string = thread.pinCString(request.URL.RawQuery)
 	info.content_length = C.zend_long(request.ContentLength)
 
-	contentType := request.Header.Get("Content-Type")
-	if contentType != "" {
+	if contentType := request.Header.Get("Content-Type"); contentType != "" {
 		info.content_type = thread.pinCString(contentType)
 	}
 
 	if fc.pathInfo != "" {
-		info.path_translated = thread.pinCString(sanitizedPathJoin(fc.documentRoot, fc.pathInfo)) // Info: http://www.oreilly.com/openbook/cgi/ch02_04.html
+		info.path_translated = thread.pinCString(sanitizedPathJoin(fc.documentRoot, fc.pathInfo)) // See: http://www.oreilly.com/openbook/cgi/ch02_04.html
 	}
 
 	info.request_uri = thread.pinCString(request.URL.RequestURI())
