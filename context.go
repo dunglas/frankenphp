@@ -82,7 +82,7 @@ func NewRequestWithContext(r *http.Request, opts ...RequestOption) (*http.Reques
 	return r.WithContext(c), nil
 }
 
-// newDummyContext creates a fake context from a request path.
+// newDummyContext creates a fake context from a request path
 func newDummyContext(requestPath string, opts ...RequestOption) (*frankenPHPContext, error) {
 	r, err := http.NewRequest(http.MethodGet, requestPath, nil)
 	if err != nil {
@@ -113,14 +113,13 @@ func (fc *frankenPHPContext) closeContext() {
 func (fc *frankenPHPContext) validate() bool {
 	if strings.Contains(fc.request.URL.Path, "\x00") {
 		fc.rejectBadRequest("Invalid request path")
+
 		return false
 	}
 
-	// TODO: Caddy already does this, probably unnecessary
 	contentLengthStr := fc.request.Header.Get("Content-Length")
 	if contentLengthStr != "" {
-		contentLength, err := strconv.Atoi(contentLengthStr)
-		if err != nil || contentLength < 0 {
+		if contentLength, err := strconv.Atoi(contentLengthStr); err != nil || contentLength < 0 {
 			fc.rejectBadRequest("invalid Content-Length header: " + contentLengthStr)
 
 			return false

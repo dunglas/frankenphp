@@ -21,7 +21,7 @@ import (
 	"github.com/dunglas/frankenphp/internal/phpheaders"
 )
 
-// Map of supported protocols to Apache ssl_mod format
+// Protocol versions, in Apache mod_ssl format: https://httpd.apache.org/docs/current/mod/mod_ssl.html
 // Note that these are slightly different from SupportedProtocols in caddytls/config.go
 var tlsProtocolStrings = map[uint16]string{
 	tls.VersionTLS10: "TLSv1",
@@ -30,7 +30,7 @@ var tlsProtocolStrings = map[uint16]string{
 	tls.VersionTLS13: "TLSv1.3",
 }
 
-// List of all keys in the $_SERVER array excluding headers and environment variables.
+// Known $_SERVER keys
 var knownServerKeys = []string{
 	"CONTENT_LENGTH",
 	"DOCUMENT_ROOT",
@@ -253,7 +253,7 @@ func splitCgiPath(fc *frankenPHPContext) {
 // splitPos returns the index where path should
 // be split based on SplitPath.
 // example: if splitPath is [".php"]
-// "/path/to/script.php/some/path" => "/path/to/script.php" + "/some/path"
+// "/path/to/script.php/some/path": ("/path/to/script.php", "/some/path")
 //
 // Adapted from https://github.com/caddyserver/caddy/blob/master/modules/caddyhttp/reverseproxy/fastcgi/fastcgi.go
 // Copyright 2015 Matthew Holt and The Caddy Authors
@@ -271,8 +271,8 @@ func splitPos(path string, splitPath []string) int {
 	return -1
 }
 
-// update the sapi_request_info struct
-// see: https://github.com/php/php-src/blob/345e04b619c3bc11ea17ee02cdecad6ae8ce5891/main/SAPI.h#L72
+// go_update_request_info updates the sapi_request_info struct
+// See: https://github.com/php/php-src/blob/345e04b619c3bc11ea17ee02cdecad6ae8ce5891/main/SAPI.h#L72
 //
 //export go_update_request_info
 func go_update_request_info(threadIndex C.uintptr_t, info *C.sapi_request_info) {
@@ -281,11 +281,13 @@ func go_update_request_info(threadIndex C.uintptr_t, info *C.sapi_request_info) 
 	request := fc.request
 
 	authUser, authPassword, ok := request.BasicAuth()
-	if ok && authPassword != "" {
-		info.auth_password = thread.pinCString(authPassword)
-	}
-	if ok && authUser != "" {
-		info.auth_user = thread.pinCString(authUser)
+	if ok {
+		if authPassword != "" {
+			info.auth_password = thread.pinCString(authPassword)
+		}
+		if authUser != "" {
+			info.auth_user = thread.pinCString(authUser)
+		}
 	}
 
 	info.request_method = thread.pinCString(request.Method)
