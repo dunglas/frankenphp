@@ -91,43 +91,17 @@ static void frankenphp_free_request_context() {
   SG(request_info).request_uri = NULL;
 }
 
-/* soft reset super globals in worker mode */
-static void frankenphp_reset_super_globals() {
-  size_t zval_size = sizeof(zval);
-  zval *post = &PG(http_globals)[TRACK_VARS_POST];
-  zval *get = &PG(http_globals)[TRACK_VARS_GET];
-  zval *cookie = &PG(http_globals)[TRACK_VARS_COOKIE];
-  zval *server = &PG(http_globals)[TRACK_VARS_SERVER];
-  zval *files = &PG(http_globals)[TRACK_VARS_FILES];
-  // zval *env = &PG(http_globals)[TRACK_VARS_ENV];
-  // zval *request = &PG(http_globals)[TRACK_VARS_REQUEST];
-
-  zend_try {
-    zval_ptr_dtor_nogc(post);
-    memset(post, 0, zval_size);
-
-    zval_ptr_dtor_nogc(get);
-    memset(get, 0, zval_size);
-
-    zval_ptr_dtor_nogc(cookie);
-    memset(cookie, 0, zval_size);
-
-    zval_ptr_dtor_nogc(server);
-    memset(server, 0, zval_size);
-
-    // skip TRACK_VARS_ENV
-
-    zval_ptr_dtor_nogc(files);
-    memset(files, 0, zval_size);
-
-    // skip TRACK_VARS_REQUEST (does not need to be flushed)
-  }
-  zend_end_try();
-}
-
 /* reimport all 'auto globals' in worker mode except of _ENV, see:
  * php_hash_environment() */
-static void frankenphp_import_super_globals() {
+static void frankenphp_reset_super_globals() {
+  zval *files = &PG(http_globals)[TRACK_VARS_FILES];
+  zend_try {
+    // $_FILES needs to be flushed explicitly
+    zval_ptr_dtor_nogc(files);
+    memset(files, 0, sizeof(zval));
+  }
+  zend_end_try();
+
   zend_auto_global *auto_global;
   zend_string *_env = ZSTR_KNOWN(ZEND_STR_AUTOGLOBAL_ENV);
   zend_string *_server = ZSTR_KNOWN(ZEND_STR_AUTOGLOBAL_SERVER);
@@ -229,7 +203,6 @@ static int frankenphp_worker_request_startup() {
   int retval = SUCCESS;
 
   zend_try {
-    frankenphp_reset_super_globals();
     frankenphp_release_temporary_streams();
     php_output_activate();
 
@@ -267,7 +240,7 @@ static int frankenphp_worker_request_startup() {
       php_output_set_implicit_flush(1);
     }
 
-    frankenphp_import_super_globals();
+    frankenphp_reset_super_globals();
 
     const char **module_name;
     zend_module_entry *module;
