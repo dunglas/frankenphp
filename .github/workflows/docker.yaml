@@ -85,7 +85,7 @@ jobs:
             echo ref="${FRANKENPHP_LATEST_TAG}"
             echo skip=false
           } >> "${GITHUB_OUTPUT}"
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         if: ${{ !fromJson(steps.check.outputs.skip) }}
         with:
           ref: ${{ steps.check.outputs.ref }}
@@ -134,7 +134,7 @@ jobs:
         run: |
           platform=${{ matrix.platform }}
           echo "sanitized_platform=${platform//\//-}" >> "${GITHUB_OUTPUT}"
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           ref: ${{ needs.prepare.outputs.ref }}
       - name: Set up Docker Buildx
