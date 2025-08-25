@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/dunglas/frankenphp/internal/phpheaders"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -232,6 +233,21 @@ func allPossibleTransitions(worker1Path string, worker2Path string) []func(*phpT
 		convertToInactiveThread,
 		func(thread *phpThread) { convertToWorkerThread(thread, getWorkerByPath(worker2Path)) },
 		convertToInactiveThread,
+	}
+}
+
+func TestAllCommonHeadersAreCorrect(t *testing.T) {
+	fakeRequest := httptest.NewRequest("GET", "http://localhost", nil)
+
+	for header, phpHeader := range phpheaders.CommonRequestHeaders {
+		// verify that common and uncommon headers return the same result
+		expectedPHPHeader := phpheaders.GetUnCommonHeader(header)
+		assert.Equal(t, phpHeader+"\x00", expectedPHPHeader, "header is not well formed: "+phpHeader)
+
+		// net/http will capitalize lowercase headers, verify that headers are capitalized
+		fakeRequest.Header.Add(header, "foo")
+		_, ok := fakeRequest.Header[header]
+		assert.True(t, ok, "header is not correctly capitalized: "+header)
 	}
 }
 
