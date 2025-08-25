@@ -4,25 +4,25 @@
 
 ## For Windows: WSL2 Setup
 
+FrankenPHP cannot be compiled natively on Windows, so to build and debug code, you need to run your IDE's in WSL.
+
 1. Install WSL2:
 
    ```powershell
    wsl --install
    ```
 
-2. Install a Linux distribution (example: AlmaLinux 10) via e.g. `wsl --install AlmaLinux-10`.
-
 ---
 
 ## Initial setup
 
-Follow the guide on [compiling from sources](compile.md).
-We will assume you installed these things into the following paths:
+Follow the instructions in [compiling from sources](compile.md).
+The steps assume the following environment:
 
-- go: `/usr/local/go`
-- cloned `~/php-src`
-- php: `/usr/local/bin/php`
-- cloned `~/frankenphp`
+- Go installed at `/usr/local/go`
+- PHP source cloned to `~/php-src`
+- PHP built at: `/usr/local/bin/php`
+- FrankenPHP source cloned to `~/frankenphp`
 
 ## CLion Setup for CGO glue/PHP Source Development
 
