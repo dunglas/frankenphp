@@ -17,7 +17,7 @@
 ## Initial setup
 
 Follow the guide on [compiling from sources](compile.md).
-We will assume you installed these things into the following paths: 
+We will assume you installed these things into the following paths:
 
 - go: `/usr/local/go`
 - cloned `~/php-src`
@@ -58,12 +58,12 @@ go build -tags=nobadger,nomysql,nopgx
 - Go to **Run → Edit Configurations**
 - Create:
 
-   - **frankenphp**:
+    - **frankenphp**:
 
-      - Type: Native Application
-      - Target: select the `go build` target you created
-      - Executable: `~/frankenphp/caddy/frankenphp/frankenphp`
-      - Arguments: the arguments you want to start frankenphp with, e.g. `php-cli test.php`
+        - Type: Native Application
+        - Target: select the `go build` target you created
+        - Executable: `~/frankenphp/caddy/frankenphp/frankenphp`
+        - Arguments: the arguments you want to start frankenphp with, e.g. `php-cli test.php`
 
 ### 4. Debug Go files from CLion
 
@@ -72,7 +72,8 @@ go build -tags=nobadger,nomysql,nopgx
 - C/C++
 
 Now you can place breakpoints in C, C++ and Go files.
-To get syntax highlighting for imports from php-src, you may need to tell CLion about the include paths. Create a `compile_flags.txt` file in `~/frankenphp` with the following contents:
+To get syntax highlighting for imports from php-src, you may need to tell CLion about the include paths. Create a
+`compile_flags.txt` file in `~/frankenphp` with the following contents:
 
 ```gcc
 -I/usr/local/include/php
@@ -106,17 +107,19 @@ Use GoLand for primary Go development, but the debugger cannot debug C code.
 ### Go Configuration
 
 - Select Go Build
-   - Name `frankenphp`
-   - Run kind: Directory
+    - Name `frankenphp`
+    - Run kind: Directory
 
 - Directory: `~/frankenphp/caddy/frankenphp`
 - Output directory: `~/frankenphp/caddy/frankenphp`
 - Working directory: `~/frankenphp/caddy/frankenphp`
-- Environment (adjust for your $(php-config ...) output): `CGO_CFLAGS=-O0 -g -I/usr/local/include/php -I/usr/local/include/php/main -I/usr/local/include/php/TSRM -I/usr/local/include/php/Zend -I/usr/local/include/php/ext -I/usr/local/include/php/ext/date/lib;CGO_LDFLAGS=-lm -lpthread -lsqlite3 -lxml2 -lbrotlienc -lbrotlidec -lbrotlicommon -lwatcher`
+- Environment (adjust for your $(php-config ...) output):
+  `CGO_CFLAGS=-O0 -g -I/usr/local/include/php -I/usr/local/include/php/main -I/usr/local/include/php/TSRM -I/usr/local/include/php/Zend -I/usr/local/include/php/ext -I/usr/local/include/php/ext/date/lib;CGO_LDFLAGS=-lm -lpthread -lsqlite3 -lxml2 -lbrotlienc -lbrotlidec -lbrotlicommon -lwatcher`
 - Go tool arguments: `-tags=nobadger,nomysql,nopgx`
 - Program arguments: e.g. `php-cli -i`
 
-You can now place breakpoints and debug through Go code when you debug the `frankenphp` configuration, but breakpoints in C code will not work.
+You can now place breakpoints and debug through Go code when you debug the `frankenphp` configuration, but breakpoints
+in C code will not work.
 
 ---
 
@@ -124,6 +127,7 @@ You can now place breakpoints and debug through Go code when you debug the `fran
 
 - Use **CLion** for debugging PHP internals and `cgo` glue code
 - Use **GoLand** for primary Go development and debugging
-- FrankenPHP can be added as a run configuration in CLion for unified C/Go debugging if needed, but syntax highlighting won't work in Go files
+- FrankenPHP can be added as a run configuration in CLion for unified C/Go debugging if needed, but syntax highlighting
+  won't work in Go files
 
 ---
