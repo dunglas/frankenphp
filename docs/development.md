@@ -10,11 +10,6 @@
    wsl --install
    ```
 2. Install a Linux distribution (example: AlmaLinux 10) via e.g. `wsl --install AlmaLinux-10`.
-3. Install X11 dependencies to run GUI-based IDEs from within WSL2:
-
-   ```bash
-   sudo dnf install libXtst libXi libXrender libXrandr libXcursor libXinerama libXcomposite libXdamage libXext libXfixes
-   ```
 
 ---
 
@@ -29,19 +24,14 @@ We will assume you installed these things into the following paths:
 
 ## CLion Setup for CGO glue/PHP Source Development
 
-### 1. Install CLion
+### 1. Install CLion (on your host OS)
 
 * Download from: [https://www.jetbrains.com/clion/download/](https://www.jetbrains.com/clion/download/)
-* Extract and install:
+
+* Launch (if on Windows, in WSL):
 
   ```bash
-  tar -xzf CLion-*.tar.gz
-  sudo mv clion-* /opt/clion
-  ```
-* Launch:
-
-  ```bash
-  /opt/clion/bin/clion &>/dev/null
+  clion &>/dev/null
   ```
 
 ### 2. Open Project in CLion
@@ -95,19 +85,14 @@ To get syntax highlighting for imports from php-src, you may need to tell CLion 
 
 Use GoLand for primary Go development, but the debugger cannot debug C code.
 
-### 1. Install GoLand
+### 1. Install GoLand (on your host OS)
 
 * Download from: [https://www.jetbrains.com/go/download/](https://www.jetbrains.com/go/download/)
-* Extract and install:
+
+* Launch (if on Windows, in WSL):
 
   ```bash
-  tar -xzf goland-*.tar.gz
-  sudo mv GoLand-* /opt/goland
-  ```
-* Launch:
-
-  ```bash
-  /opt/goland/bin/goland &>/dev/null
+  goland &>/dev/null
   ```
 
 ### 2. Open in GoLand
