@@ -211,7 +211,7 @@ The steps assume the following environment:
 
 1. Install CLion (on your host OS)
 
-   - Download from: https://www.jetbrains.com/clion/download/
+   - Download from [JetBrains](https://www.jetbrains.com/clion/download/)
    - Launch (if on Windows, in WSL):
 
      ```bash
@@ -269,7 +269,7 @@ Use GoLand for primary Go development, but the debugger cannot debug C code.
 
 1. Install GoLand (on your host OS)
 
-   - Download from: https://www.jetbrains.com/go/download/
+   - Download from [JetBrains](https://www.jetbrains.com/go/download/)
    - Launch (if on Windows, in WSL):
 
      ```bash
