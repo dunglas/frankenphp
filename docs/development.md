@@ -2,7 +2,7 @@
 
 ---
 
-## For Windows: WSL2 Setup with X11 GUI Support
+## For Windows: WSL2 Setup
 
 1. Install WSL2:
 
