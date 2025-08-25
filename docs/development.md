@@ -58,12 +58,12 @@ go build -tags=nobadger,nomysql,nopgx
 - Go to **Run → Edit Configurations**
 - Create:
 
-    - **frankenphp**:
+  - **frankenphp**:
 
-        - Type: Native Application
-        - Target: select the `go build` target you created
-        - Executable: `~/frankenphp/caddy/frankenphp/frankenphp`
-        - Arguments: the arguments you want to start frankenphp with, e.g. `php-cli test.php`
+    - Type: Native Application
+    - Target: select the `go build` target you created
+    - Executable: `~/frankenphp/caddy/frankenphp/frankenphp`
+    - Arguments: the arguments you want to start frankenphp with, e.g. `php-cli test.php`
 
 ### 4. Debug Go files from CLion
 
