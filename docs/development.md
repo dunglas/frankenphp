@@ -107,8 +107,8 @@ Use GoLand for primary Go development, but the debugger cannot debug C code.
 ### Go Configuration
 
 - Select Go Build
-    - Name `frankenphp`
-    - Run kind: Directory
+  - Name `frankenphp`
+  - Run kind: Directory
 
 - Directory: `~/frankenphp/caddy/frankenphp`
 - Output directory: `~/frankenphp/caddy/frankenphp`
