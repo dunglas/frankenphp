@@ -168,8 +168,7 @@ func (handler *workerThread) waitForWorkerRequest() bool {
 		handler.state.set(stateReady)
 	}
 
-	// restart thread if 'max requests' has been reached
-	logger.Info("request count", slog.String("worker", handler.worker.name), slog.Int("thread", handler.thread.threadIndex), slog.Int("count", handler.requestCount), slog.Int("max_requests", handler.worker.maxRequests))
+	// restart the worker if 'max requests' has been reached
 	if handler.worker.maxRequests > 0 && handler.requestCount >= handler.worker.maxRequests {
 		logger.LogAttrs(ctx, slog.LevelDebug, "max requests reached, restarting", slog.String("worker", handler.worker.name), slog.Int("thread", handler.thread.threadIndex), slog.Int("max_requests", handler.worker.maxRequests))
 		return false
