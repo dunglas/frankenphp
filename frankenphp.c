@@ -123,8 +123,7 @@ static void frankenphp_reset_super_globals() {
     if (auto_global->name == _env) {
       /* skip $_ENV */
       continue;
-    }
-    if (auto_global->name == _server) {
+    } else if (auto_global->name == _server) {
       /* always reimport $_SERVER  */
       auto_global->armed = auto_global->auto_global_callback(auto_global->name);
       continue;
