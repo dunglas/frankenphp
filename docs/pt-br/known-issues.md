@@ -170,7 +170,7 @@ neste local.
 > Certifique-se de executar `openssl_get_cert_locations()` no contexto
 > apropriado.
 
-[Certificados CA extraídos do Mozilla podem ser baixados no site do curl](https://curl.se/docs/caextract.html).
+[Certificados CA extraídos do Mozilla podem ser baixados no site do cURL](https://curl.se/docs/caextract.html).
 
 Como alternativa, muitas distribuições, incluindo Debian, Ubuntu e Alpine,
 fornecem pacotes chamados `ca-certificates` que contêm esses certificados.
