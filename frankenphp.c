@@ -122,20 +122,15 @@ static void frankenphp_reset_super_globals() {
   ZEND_HASH_MAP_FOREACH_PTR(CG(auto_globals), auto_global) {
     if (auto_global->name == _env) {
       /* skip $_ENV */
-      continue;
     } else if (auto_global->name == _server) {
       /* always reimport $_SERVER  */
       auto_global->armed = auto_global->auto_global_callback(auto_global->name);
-      continue;
-    }
-    if (auto_global->jit) {
+    } else if (auto_global->jit) {
       /* globals with jit are: $_SERVER, $_ENV, $_REQUEST, $GLOBALS,
        * jit will only trigger on script parsing and therefore behaves
        * differently in worker mode. We will skip all jit globals
        */
-      continue;
-    }
-    if (auto_global->auto_global_callback) {
+    } else if (auto_global->auto_global_callback) {
       /* $_GET, $_POST, $_COOKIE, $_FILES are reimported here */
       auto_global->armed = auto_global->auto_global_callback(auto_global->name);
     } else {

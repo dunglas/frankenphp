@@ -246,8 +246,7 @@ func TestAllCommonHeadersAreCorrect(t *testing.T) {
 
 		// net/http will capitalize lowercase headers, verify that headers are capitalized
 		fakeRequest.Header.Add(header, "foo")
-		_, ok := fakeRequest.Header[header]
-		assert.True(t, ok, "header is not correctly capitalized: "+header)
+		assert.Contains(t, fakeRequest.Header, header, "header is not correctly capitalized: "+header)
 	}
 }
 
