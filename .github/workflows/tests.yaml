@@ -38,6 +38,8 @@ jobs:
       LIBRARY_PATH: ${{ github.workspace }}/watcher/target/lib
     steps:
       - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
       - uses: actions/setup-go@v5
         with:
           go-version: "1.25"
@@ -92,6 +94,8 @@ jobs:
       HOMEBREW_NO_AUTO_UPDATE: 1
     steps:
       - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
       - uses: actions/setup-go@v5
         with:
           go-version: "1.25"

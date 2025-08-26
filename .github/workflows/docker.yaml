@@ -89,6 +89,7 @@ jobs:
         if: ${{ !fromJson(steps.check.outputs.skip) }}
         with:
           ref: ${{ steps.check.outputs.ref }}
+          persist-credentials: false
       - name: Set up Docker Buildx
         if: ${{ !fromJson(steps.check.outputs.skip) }}
         uses: docker/setup-buildx-action@v3
@@ -135,12 +136,13 @@ jobs:
     steps:
       - name: Prepare
         id: prepare
-        run: |
-          platform=${{ matrix.platform }}
-          echo "sanitized_platform=${platform//\//-}" >> "${GITHUB_OUTPUT}"
+        run: echo "sanitized_platform=${PLATFORM//\//-}" >> "${GITHUB_OUTPUT}"
+        env:
+          PLATFORM: ${{ matrix.platform }}
       - uses: actions/checkout@v5
         with:
           ref: ${{ needs.prepare.outputs.ref }}
+          persist-credentials: false
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
         with:
@@ -182,13 +184,14 @@ jobs:
         run: |
           mkdir -p /tmp/metadata/builder /tmp/metadata/runner
 
-          builderDigest=$(jq -r '."builder-${{ matrix.variant }}"."containerimage.digest"' <<< "${METADATA}")
+          builderDigest=$(jq -r ".\"builder-${VARIANT}\".\"containerimage.digest\"" <<< "${METADATA}")
           touch "/tmp/metadata/builder/${builderDigest#sha256:}"
 
-          runnerDigest=$(jq -r '."runner-${{ matrix.variant }}"."containerimage.digest"' <<< "${METADATA}")
+          runnerDigest=$(jq -r ".\"runner-${VARIANT}\".\"containerimage.digest\"" <<< "${METADATA}")
           touch "/tmp/metadata/runner/${runnerDigest#sha256:}"
         env:
           METADATA: ${{ steps.build.outputs.metadata }}
+          VARIANT: ${{ matrix.variant }}
       - name: Upload builder metadata
         if: fromJson(needs.prepare.outputs.push)
         uses: actions/upload-artifact@v4
@@ -208,11 +211,15 @@ jobs:
       - name: Run tests
         if: ${{ !fromJson(needs.prepare.outputs.push) }}
         run: |
-          docker run --platform=${{ matrix.platform }} --rm \
-            "$(jq -r '."builder-${{ matrix.variant }}"."containerimage.config.digest"' <<< "${METADATA}")" \
-            sh -c './go.sh test -tags ${{ matrix.race }} -v $(./go.sh list ./... | grep -v github.com/dunglas/frankenphp/internal/testext | grep -v github.com/dunglas/frankenphp/internal/extgen) && cd caddy && ../go.sh test ${{ matrix.race }} -v ./...'
+          docker run --platform="${PLATFORM}" --rm \
+            "$(jq -r ".\"builder-${VARIANT}\".\"containerimage.config.digest\"" <<< "${METADATA}")" \
+            sh -c "./go.sh test ${RACE} -v $(./go.sh list ./... | grep -v github.com/dunglas/frankenphp/internal/testext | grep -v github.com/dunglas/frankenphp/internal/extgen | tr '\n' ' ') && cd caddy && ../go.sh test ${RACE} -v ./..."
         env:
           METADATA: ${{ steps.build.outputs.metadata }}
+          PLATFORM: ${{ matrix.platform }}
+          VARIANT: ${{ matrix.variant }}
+          RACE: ${{ matrix.race }}
+
   # Adapted from https://docs.docker.com/build/ci/github-actions/multi-platform/
   push:
     runs-on: ubuntu-24.04
@@ -245,13 +252,17 @@ jobs:
         run: |
           set -x
           # shellcheck disable=SC2046,SC2086
-          docker buildx imagetools create $(jq -cr '.target."${{ matrix.target }}-${{ matrix.variant }}".tags | map("-t " + .) | join(" ")' <<< ${METADATA}) \
+          docker buildx imagetools create $(jq -cr ".target.\"${TARGET}-${VARIANT}\".tags | map(\"-t \" + .) | join(\" \")" <<< ${METADATA}) \
             $(printf "${IMAGE_NAME}@sha256:%s " *)
         env:
           METADATA: ${{ needs.prepare.outputs.metadata }}
+          TARGET: ${{ matrix.target }}
+          VARIANT: ${{ matrix.variant }}
       - name: Inspect image
         run: |
           # shellcheck disable=SC2046,SC2086
-          docker buildx imagetools inspect $(jq -cr '.target."${{ matrix.target }}-${{ matrix.variant }}".tags | first' <<< ${METADATA})
+          docker buildx imagetools inspect $(jq -cr ".target.\"${TARGET}-${VARIANT}\".tags | first" <<< ${METADATA})
         env:
           METADATA: ${{ needs.prepare.outputs.metadata }}
+          TARGET: ${{ matrix.target }}
+          VARIANT: ${{ matrix.variant }}
