@@ -113,7 +113,7 @@ If order or association are not needed, it's also possible to directly convert t
 **Creating and manipulating arrays in Go:**
 
 ```go
-//export_php:function process_data_ordered(array $input): array
+// export_php:function process_data_ordered(array $input): array
 func process_data_ordered_map(arr *C.zval) unsafe.Pointer {
 	// Convert PHP associative array to Go while keeping the order
 	associativeArray := frankenphp.GoAssociativeArray(unsafe.Pointer(arr))
@@ -135,7 +135,7 @@ func process_data_ordered_map(arr *C.zval) unsafe.Pointer {
 	})
 }
 
-//export_php:function process_data_unordered(array $input): array
+// export_php:function process_data_unordered(array $input): array
 func process_data_unordered_map(arr *C.zval) unsafe.Pointer {
 	// Convert PHP associative array to a Go map without keeping the order
 	// ignoring the order will be more performant
@@ -153,7 +153,7 @@ func process_data_unordered_map(arr *C.zval) unsafe.Pointer {
 	})
 }
 
-//export_php:function process_data_packed(array $input): array
+// export_php:function process_data_packed(array $input): array
 func process_data_packed(arr *C.zval) unsafe.Pointer {
 	// Convert PHP packed array to Go
 	goSlice := frankenphp.GoPackedArray(unsafe.Pointer(arr), false)
