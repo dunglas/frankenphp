@@ -114,7 +114,7 @@ o Caddy, bem como os módulos
 > Se você personalizar o valor de `XCADDY_ARGS`, deverá incluí-los
 > explicitamente se desejar que sejam incluídos.
 
-Veja também como [personalizar a compilação](#personalizando-a-compilacao).
+Veja também como [personalizar a compilação](#personalizando-a-compilação).
 
 ### Token do GitHub
 
