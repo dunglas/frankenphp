@@ -975,6 +975,7 @@ static int frankenphp_request_startup() {
     return SUCCESS;
   }
 
+  frankenphp_free_request_context();
   php_request_shutdown((void *)0);
 
   return FAILURE;
