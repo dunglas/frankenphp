@@ -12,10 +12,10 @@ require (
 	github.com/dunglas/caddy-cbrotli v1.0.1
 	github.com/dunglas/frankenphp v1.9.0
 	github.com/dunglas/mercure/caddy v0.20.2
-	github.com/dunglas/vulcain/caddy v1.2.0
+	github.com/dunglas/vulcain/caddy v1.2.1
 	github.com/prometheus/client_golang v1.23.0
 	github.com/spf13/cobra v1.9.1
-	github.com/stretchr/testify v1.11.0
+	github.com/stretchr/testify v1.11.1
 )
 
 require github.com/smallstep/go-attestation v0.4.4-0.20241119153605-2306d5b464ca // indirect
@@ -61,20 +61,20 @@ require (
 	github.com/dolthub/maphash v0.1.0 // indirect
 	github.com/dunglas/httpsfv v1.1.0 // indirect
 	github.com/dunglas/mercure v0.20.2 // indirect
-	github.com/dunglas/vulcain v1.2.0 // indirect
+	github.com/dunglas/vulcain v1.2.1 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/francoispqt/gojay v1.2.13 // indirect
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
 	github.com/fxamacker/cbor/v2 v2.9.0 // indirect
 	github.com/gammazero/deque v1.1.0 // indirect
-	github.com/getkin/kin-openapi v0.132.0 // indirect
-	github.com/go-chi/chi/v5 v5.2.2 // indirect
+	github.com/getkin/kin-openapi v0.133.0 // indirect
+	github.com/go-chi/chi/v5 v5.2.3 // indirect
 	github.com/go-jose/go-jose/v3 v3.0.4 // indirect
 	github.com/go-jose/go-jose/v4 v4.1.2 // indirect
 	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
-	github.com/go-openapi/jsonpointer v0.21.1 // indirect
+	github.com/go-openapi/jsonpointer v0.21.2 // indirect
 	github.com/go-openapi/swag v0.23.1 // indirect
 	github.com/go-sql-driver/mysql v1.9.3 // indirect
 	github.com/go-viper/mapstructure/v2 v2.4.0 // indirect
@@ -84,7 +84,7 @@ require (
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/golang/snappy v1.0.0 // indirect
 	github.com/google/brotli/go/cbrotli v1.1.0 // indirect
-	github.com/google/cel-go v0.26.0 // indirect
+	github.com/google/cel-go v0.26.1 // indirect
 	github.com/google/certificate-transparency-go v1.3.2 // indirect
 	github.com/google/go-tpm v0.9.5 // indirect
 	github.com/google/go-tspi v0.3.0 // indirect
@@ -163,6 +163,7 @@ require (
 	github.com/tidwall/sjson v1.2.5 // indirect
 	github.com/unrolled/secure v1.17.0 // indirect
 	github.com/urfave/cli v1.22.17 // indirect
+	github.com/woodsbury/decimal128 v1.4.0 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	github.com/yosida95/uritemplate/v3 v3.0.2 // indirect
 	github.com/yuin/goldmark v1.7.13 // indirect
@@ -190,7 +191,7 @@ require (
 	go.uber.org/zap v1.27.0 // indirect
 	go.uber.org/zap/exp v0.3.0 // indirect
 	golang.org/x/crypto v0.41.0 // indirect
-	golang.org/x/crypto/x509roots/fallback v0.0.0-20250819201203-a4d1237429d6 // indirect
+	golang.org/x/crypto/x509roots/fallback v0.0.0-20250826074233-8f580defa01d // indirect
 	golang.org/x/exp v0.0.0-20250819193227-8b4c13bb791b // indirect
 	golang.org/x/mod v0.27.0 // indirect
 	golang.org/x/net v0.43.0 // indirect
@@ -202,8 +203,8 @@ require (
 	golang.org/x/time v0.12.0 // indirect
 	golang.org/x/tools v0.36.0 // indirect
 	google.golang.org/api v0.248.0 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20250818200422-3122310a409c // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20250818200422-3122310a409c // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20250826171959-ef028d996bc1 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20250826171959-ef028d996bc1 // indirect
 	google.golang.org/grpc v1.75.0 // indirect
 	google.golang.org/grpc/cmd/protoc-gen-go-grpc v1.5.1 // indirect
 	google.golang.org/protobuf v1.36.8 // indirect
