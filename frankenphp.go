@@ -494,9 +494,12 @@ func shutdown() {
 		fn()
 	}
 
+	unregisterServers()
+	for _, w := range workers {
+		w.drainRequests()
+	}
 	drainWatchers()
 	drainPHPThreads()
-	unregisterServers()
 
 	metrics.Shutdown()
 

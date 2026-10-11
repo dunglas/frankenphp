@@ -5,8 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"maps"
 	"net/http"
 	"path/filepath"
+	"reflect"
 	"runtime"
 	"slices"
 	"strconv"
@@ -18,7 +20,11 @@ import (
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile"
 	"github.com/caddyserver/caddy/v2/modules/caddyhttp"
+	"github.com/caddyserver/caddy/v2/modules/caddyhttp/caddyauth"
 	"github.com/caddyserver/caddy/v2/modules/caddyhttp/fileserver"
+	"github.com/caddyserver/caddy/v2/modules/caddyhttp/headers"
+	"github.com/caddyserver/caddy/v2/modules/caddyhttp/intercept"
+	"github.com/caddyserver/caddy/v2/modules/caddyhttp/reverseproxy"
 	"github.com/caddyserver/caddy/v2/modules/caddyhttp/rewrite"
 	"github.com/dunglas/frankenphp"
 	"github.com/dunglas/frankenphp/internal/fastabs"
@@ -36,6 +42,7 @@ import (
 type FrankenPHPModule struct {
 	mercureContext
 	hotReloadContext
+	GeneratedRewrite bool `json:"generated_rewrite,omitempty"` // Marks the php_server try_files pipeline.
 
 	// Root sets the root folder to the site. Default: `root` directive, or the path of the public directory of the embed app it exists.
 	Root string `json:"root,omitempty"`
@@ -187,10 +194,13 @@ func needReplacement(s string) bool {
 // ServeHTTP implements caddyhttp.MiddlewareHandler.
 func (f *FrankenPHPModule) ServeHTTP(w http.ResponseWriter, r *http.Request, _ caddyhttp.Handler) error {
 	if !f.app.hasStarted.Load() {
-		// stall any incoming request if FrankenPHP has not started yet, blocking for up to 10 seconds
 		select {
 		case <-f.app.started:
-		case <-time.After(10 * time.Second):
+		case <-f.app.ctx.Done():
+		case <-r.Context().Done():
+			return r.Context().Err()
+		}
+		if !f.app.hasStarted.Load() || f.app.ctx.Err() != nil {
 			return caddyhttp.Error(http.StatusServiceUnavailable, frankenphp.ErrNotRunning)
 		}
 	}
@@ -227,11 +237,238 @@ func (f *FrankenPHPModule) ServeHTTP(w http.ResponseWriter, r *http.Request, _ c
 
 	err := f.server.ServeHTTP(w, r, opts...)
 
+	if err != nil && errors.Is(err, frankenphp.ErrNotRunning) {
+		return f.requestReload(w, r, f.app.next.Load())
+	}
 	if _, rejected := errors.AsType[frankenphp.ErrRejected](err); err != nil && !rejected {
 		return caddyhttp.Error(http.StatusInternalServerError, err)
 	}
 
 	return nil
+}
+
+func (f *FrankenPHPModule) requestReload(w http.ResponseWriter, r *http.Request, app *FrankenPHPApp) error {
+	unavailable := caddyhttp.Error(http.StatusServiceUnavailable, frankenphp.ErrNotRunning)
+	for ; app != nil && app != f.app; app = app.next.Load() {
+		select {
+		case <-app.started:
+		case <-app.ctx.Done():
+		case <-r.Context().Done():
+			return r.Context().Err()
+		}
+		if app.next.Load() == nil {
+			key, _ := f.reloadKey()
+			for _, target := range app.modules {
+				if other, srv := target.reloadKey(); key != "" && other == key {
+					for wrapper, ok := w.(interface {
+						Unwrap() http.ResponseWriter
+					}); ok; wrapper, ok = w.(interface {
+						Unwrap() http.ResponseWriter
+					}) {
+						w = wrapper.Unwrap()
+					}
+					r, original, rec :=
+						r.Clone(r.Context()),
+						r.Context().Value(caddyhttp.OriginalRequestCtxKey).(http.Request),
+						caddyhttp.NewResponseRecorder(w, nil, nil)
+					r.Method, r.RequestURI, r.RemoteAddr, r.URL =
+						original.Method, original.RequestURI,
+						original.RemoteAddr, new(*original.URL)
+					replay, r :=
+						srv.Routes.Compile(caddyhttp.HandlerFunc(
+							func(http.ResponseWriter, *http.Request) error {
+								return unavailable
+							},
+						)),
+						caddyhttp.PrepareRequest(r, caddy.NewReplacer(), rec, srv)
+					if (!app.hasStarted.Load() ||
+						app.ctx.Err() != nil ||
+						replay.ServeHTTP(rec, r) != nil) && rec.Status() < 200 {
+						w.WriteHeader(http.StatusServiceUnavailable)
+					}
+					return nil
+				}
+			}
+		}
+	}
+	return unavailable
+}
+
+func (f *FrankenPHPModule) reloadKey() (string, *caddyhttp.Server) {
+	if httpApp := f.app.httpApp; httpApp != nil {
+		for _, srv := range httpApp.Servers {
+			lists, callers, v :=
+				map[string]caddyhttp.RouteList{"routes": srv.Routes},
+				[]string{},
+				reflect.ValueOf(srv).Elem().FieldByName("trustedProxies")
+			if srv.Errors != nil {
+				lists["errors"+reloadRouteKeys(
+					srv.Routes, "", "", make(map[*FrankenPHPModule][2]string), false, f.app,
+				)] = srv.Errors.Routes
+			}
+			for name, route := range srv.NamedRoutes {
+				lists["named:"+name+reloadRouteKeys(
+					srv.Routes, "", "", make(map[*FrankenPHPModule][2]string), false, f.app,
+				)], callers = caddyhttp.RouteList{*route}, append(callers, reloadRouteKeys(
+					caddyhttp.RouteList{*route}, "", "",
+					make(map[*FrankenPHPModule][2]string), false, f.app,
+				))
+			}
+			for name, routes := range lists {
+				keys := make(map[*FrankenPHPModule][2]string)
+				reloadRouteKeys(routes, "", "", keys, true, f.app)
+				if pair, found := keys[f]; found {
+					if !v.IsValid() || slices.ContainsFunc(
+						f.app.modules,
+						func(module *FrankenPHPModule) bool {
+							return module != f && keys[module] == pair
+						},
+					) {
+						return "", nil // Empty keys also fail closed on Caddy field renames.
+					}
+					return string(caddyconfig.JSON([]any{
+						slices.Sorted(slices.Values(srv.Listen)),
+						name,
+						pair,
+						slices.Sorted(slices.Values(callers)),
+						srv.ExpectedUnderscoreHeaders,
+						srv.ExpectedDotHeaders,
+						srv.StrictSNIHost,
+						srv.TrustedProxiesRaw,
+						fmt.Sprintf("%#v", v.Elem()),
+						srv.ClientIPHeaders,
+						srv.TrustedProxiesStrict,
+						srv.TrustedProxiesUnix,
+					}, nil)), srv
+				}
+			}
+		}
+	}
+	return "", nil
+}
+
+func reloadRouteKeys(
+	routes caddyhttp.RouteList,
+	scope, before string,
+	keys map[*FrankenPHPModule][2]string,
+	allowConsume bool,
+	app *FrankenPHPApp,
+) (prefix string) {
+	cut := ^uint(0) // No pending consumable rewrite.
+	for i, route := range routes {
+		b, _ := json.Marshal(reloadMatchers(route.MatcherSets))
+		var owner *FrankenPHPModule
+		if i+1 < len(routes) && len(routes[i+1].Handlers) == 1 {
+			owner, _ = routes[i+1].Handlers[0].(*FrankenPHPModule)
+		}
+		for _, h := range route.Handlers {
+			config, err := json.Marshal(h)
+			signature := string(b) + string(config)
+			rw, isRewrite := h.(*rewrite.Rewrite)
+			if owner != nil && (isRewrite && owner.GeneratedRewrite &&
+				rw.URI == "{http.matchers.file.relative}{http.matchers.file.remainder}" ||
+				owner.ServerIndex != 0 && slices.ContainsFunc(owner.Workers, func(w workerConfig) bool {
+					return len(w.MatchPath) != 0
+				}) && caddy.GetModuleName(h) == "file_server") {
+				signature = strings.ReplaceAll(
+					signature,
+					`"root":`+string(caddyconfig.JSON(owner.Root, nil)),
+					`"root":"{php.root}"`,
+				)
+			}
+			if isRewrite {
+				if allowConsume && len(route.Handlers) == 1 && owner != nil &&
+					routes[i+1].Group == "" && strings.HasPrefix(rw.URI, "/") &&
+					!strings.ContainsAny(rw.URI, "{}?#%\\*[]\x00\r\n\t") &&
+					caddyhttp.CleanPath(rw.URI, !strings.Contains(rw.URI, "//")) == rw.URI &&
+					string(config) == `{"uri":`+string(caddyconfig.JSON(rw.URI, nil))+`}` &&
+					(len(routes[i+1].MatcherSets) == 0 ||
+						string(caddyconfig.JSON(
+							reloadMatchers(routes[i+1].MatcherSets), nil,
+						)) == `[{"path":[`+string(caddyconfig.JSON(
+							strings.ToLower(rw.URI), nil,
+						))+`]}]`) {
+					cut = uint(len(prefix))
+				}
+				prefix += signature
+			} else if module, ok := h.(*FrankenPHPModule); ok {
+				keys[module] = [2]string{scope + prefix + string(b), before + prefix + string(b)}
+				prefix, cut = prefix[:min(cut, uint(len(prefix)))], ^uint(0)
+			} else if fs, ok := h.(*fileserver.FileServer); ok && allowConsume &&
+				len(route.MatcherSets) == 0 && route.Group == "" && !fs.PassThru {
+				prefix = ""
+			} else if sub, ok := h.(*caddyhttp.Subroute); ok {
+				if key := reloadRouteKeys(
+					sub.Routes,
+					scope+string(b),
+					before+prefix+string(b),
+					keys,
+					allowConsume && sub.Errors == nil,
+					app,
+				); key != "" {
+					prefix += string(b) + key
+				}
+				if sub.Errors != nil {
+					reloadRouteKeys(
+						sub.Errors.Routes,
+						scope+string(b)+"errors",
+						before+prefix+string(b)+"errors",
+						keys,
+						false,
+						app,
+					)
+				}
+			} else if auth, _ := h.(*caddyauth.Authentication); !slices.Contains(
+				[]string{"vars", "static_response", "invoke"}, caddy.GetModuleName(h),
+			) && (auth == nil || slices.ContainsFunc(
+				slices.Collect(maps.Keys(auth.Providers)),
+				func(name string) bool {
+					return name != "http_basic"
+				},
+			)) {
+				hdr, _ := h.(*headers.Handler)
+				inter, _ := h.(*intercept.Intercept)
+				if proxy, ok := h.(*reverseproxy.Handler); err != nil ||
+					ok && len(proxy.HandleResponse) > 0 ||
+					auth != nil ||
+					inter != nil && slices.ContainsFunc(
+						inter.HandleResponse,
+						func(rh caddyhttp.ResponseHandler) bool {
+							return rh.Routes != nil
+						},
+					) ||
+					hdr != nil && hdr.Request != nil ||
+					caddy.GetModuleName(h) == "tracing" ||
+					reflect.ValueOf(h).Kind() != reflect.Pointer ||
+					caddy.GetModuleName(h) == "request_body" &&
+						reflect.ValueOf(h).Elem().FieldByName("Set").String() != "" {
+					signature = fmt.Sprintf("%p:%T", app, h)
+				}
+				prefix += caddy.GetModuleName(h) + signature
+			}
+		}
+	}
+	return
+}
+
+func reloadMatchers(sets caddyhttp.MatcherSets) []map[string]any {
+	config := make([]map[string]any, len(sets))
+	for i, set := range sets {
+		config[i] = make(map[string]any, len(set))
+		for _, m := range set {
+			switch m := m.(type) {
+			case *caddyhttp.MatchNot:
+				config[i]["not"] = reloadMatchers(m.MatcherSets)
+			case *caddyhttp.MatchHost:
+				config[i]["host"] = slices.Sorted(slices.Values(*m))
+			case caddyhttp.MatchHost:
+				config[i]["host"] = slices.Sorted(slices.Values(m))
+			default:
+				config[i][caddy.GetModuleName(m)] = m
+			}
+		}
+	}
+	return config
 }
 
 // UnmarshalCaddyfile implements caddyfile.Unmarshaler.
@@ -573,6 +810,7 @@ func parsePhpServer(h httpcaddyfile.Helper) ([]httpcaddyfile.ConfigValue, error)
 			HandlersRaw:    []json.RawMessage{caddyconfig.JSONModuleObject(rewriteHandler, "handler", "rewrite", nil)},
 		}
 
+		phpsrv.GeneratedRewrite = true
 		routes = append(routes, rewriteRoute)
 	}
 
