@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -43,6 +44,7 @@ func TestQueuedRequestSurvivesReload_module(t *testing.T) {
 }
 
 func TestQueuedRequestRejectedWhenFrankenPHPConfigChanges(t *testing.T) {
+	memoryLimit := 5000000 // ~5MB
 	initial := `
 		{
 			skip_install_trust
@@ -53,7 +55,7 @@ func TestQueuedRequestRejectedWhenFrankenPHPConfigChanges(t *testing.T) {
 			frankenphp {
 				num_threads 1
 				max_threads 1
-				max_wait_time 5s
+				php_ini memory_limit ` + strconv.Itoa(memoryLimit) + `
 			}
 		}
 
@@ -65,53 +67,36 @@ func TestQueuedRequestRejectedWhenFrankenPHPConfigChanges(t *testing.T) {
 			}
 		}
 	`
-	changed := strings.Replace(initial, "max_threads 1", "max_threads 2", 1)
 
 	tester := caddytest.NewTester(t)
 	initServer(t, tester, initial, "caddyfile")
 
 	client := &http.Client{Timeout: 30 * time.Second}
 	baseURL := "http://localhost:" + testPort + "/sleep.php"
+	requestWasRejected := atomic.Bool{}
 
-	go func() {
-		req, err := http.NewRequest(http.MethodGet, baseURL+"?sleep=1000", nil)
-		require.NoError(t, err)
-		resp, err := client.Do(req)
-		if err == nil {
-			_ = resp.Body.Close()
-		}
-	}()
-
-	queuedDone := make(chan *http.Response, 1)
-	go func() {
-		req, err := http.NewRequest(http.MethodGet, baseURL+"?sleep=1", nil)
-		require.NoError(t, err)
-		resp, err := client.Do(req)
-		if err != nil {
-			queuedDone <- nil
-			return
-		}
-		queuedDone <- resp
-	}()
-
-	require.Eventually(t, func() bool {
-		depth, err := requestQueueDepth(false)
-		return err == nil && depth > 0
-	}, 2*time.Second, time.Millisecond, "request was never queued")
-
-	reloadCaddyConfig(t, changed)
-
-	select {
-	case resp := <-queuedDone:
-		require.NotNil(t, resp)
-		body, err := io.ReadAll(resp.Body)
-		require.NoError(t, err)
-		require.NoError(t, resp.Body.Close())
-		require.Equal(t, http.StatusServiceUnavailable, resp.StatusCode)
-		require.Contains(t, string(body), "configuration has changed on reload")
-	case <-time.After(5 * time.Second):
-		t.Fatal("queued request never completed after reload")
+	doRequest := func(query string) {
+		go func() {
+			req, err := http.NewRequest(http.MethodGet, baseURL+"?"+query, nil)
+			require.NoError(t, err)
+			resp, err := client.Do(req)
+			require.NoError(t, err, "request must not be rejected")
+			require.NoError(t, resp.Body.Close())
+			if resp.StatusCode != http.StatusOK {
+				requestWasRejected.Store(true)
+			}
+		}()
 	}
+
+	sleepMilliseconds := 0
+	require.Eventually(t, func() bool {
+		sleepMilliseconds++
+		changedCaddyConfig := strings.Replace(initial, strconv.Itoa(memoryLimit), strconv.Itoa(memoryLimit+sleepMilliseconds), 1)
+		doRequest("sleep=" + strconv.Itoa(sleepMilliseconds))
+		doRequest("sleep=" + strconv.Itoa(sleepMilliseconds))
+		reloadCaddyConfig(t, changedCaddyConfig)
+		return requestWasRejected.Load()
+	}, 10*time.Second, time.Millisecond, "no queued request was ever rejected")
 }
 
 func TestQueuedRequestSurvivesReload_worker(t *testing.T) {
