@@ -263,7 +263,7 @@ func (newMainThread *phpMainThread) reQueueRequests(oldMainThread *phpMainThread
 			select {
 			case <-newMainThread.done:
 				return
-			case <-time.After(5 * time.Second):
+			case <-time.After(15 * time.Second):
 				return
 			case fc := <-oldMainThread.regularRequestChan:
 				if isSameConfiguration {
@@ -276,26 +276,30 @@ func (newMainThread *phpMainThread) reQueueRequests(oldMainThread *phpMainThread
 	}()
 
 	for _, oldWorker := range oldMainThread.workers {
-		for _, newWorker := range newMainThread.workers {
-			if oldWorker.name == newWorker.name {
-				go func() {
-					for {
-						select {
-						case <-newMainThread.done:
-							return
-						case <-time.After(5 * time.Second):
-							return
-						case fc := <-oldWorker.requestChan:
-							if isSameConfiguration {
-								newWorker.requestChan <- fc
-							} else {
-								fc.reject(ErrConfigurationChangedOnReload)
-							}
-						}
-					}
-				}()
+		var newWorker *worker
+		for _, w := range newMainThread.workers {
+			if oldWorker.name == w.name {
+				newWorker = w
+				break
 			}
 		}
+
+		go func() {
+			for {
+				select {
+				case <-newMainThread.done:
+					return
+				case <-time.After(15 * time.Second):
+					return
+				case fc := <-oldWorker.requestChan:
+					if newWorker && isSameConfiguration {
+						newWorker.requestChan <- fc
+					} else {
+						fc.reject(ErrConfigurationChangedOnReload)
+					}
+				}
+			}
+		}()
 	}
 }
 
