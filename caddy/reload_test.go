@@ -105,7 +105,8 @@ func TestReloadHandoffPreservesConcurrentBodiesAndServerScope(t *testing.T) {
 	}
 	for _, workerMode := range []bool{false, true} {
 		t.Run(fmt.Sprintf("worker=%t", workerMode), func(t *testing.T) {
-			root := t.TempDir()
+			root, err := filepath.EvalSymlinks(t.TempDir())
+			require.NoError(t, err)
 			script := `<?php
 $handler = static function (): void {
     echo $_SERVER['SITE'] . ':' . $_SERVER['REQUEST_URI'] . ':' . file_get_contents('php://input');
@@ -259,7 +260,8 @@ func TestReloadHandoffKeepsIdenticalWorkersInTheirRoutes(t *testing.T) {
 	if testing.Short() {
 		t.Skip("requires the PHP runtime")
 	}
-	root := t.TempDir()
+	root, rootErr := filepath.EvalSymlinks(t.TempDir())
+	require.NoError(t, rootErr)
 	script := `<?php
 $count = 0;
 while (frankenphp_handle_request(static function () use (&$count): void { echo ++$count; })) {}
@@ -1478,7 +1480,7 @@ func TestReloadHandoffEarlyHintsRefusal(t *testing.T) {
 					request.Host = "example.com"
 					response, err := client.Do(request)
 					require.NoError(t, err, "a retired interceptor must not panic and abort the connection")
-					defer response.Body.Close()
+					defer func() { require.NoError(t, response.Body.Close()) }()
 					body, err := io.ReadAll(response.Body)
 					require.NoError(t, err)
 					t.Logf("wire statuses: %v then %d, body %q", hints, response.StatusCode, body)
@@ -1697,7 +1699,7 @@ func TestReloadHandoffRejectsEarlyHintsInterceptDisclosure(t *testing.T) {
 			request.Host = "example.com"
 			response, err := client.Do(request)
 			require.NoError(t, err)
-			defer response.Body.Close()
+			defer func() { require.NoError(t, response.Body.Close()) }()
 			body, err := io.ReadAll(response.Body)
 			require.NoError(t, err)
 			t.Logf("wire hints %v, status %d, body %q", hints, response.StatusCode, body)
@@ -1940,7 +1942,7 @@ func TestReloadHandoffTemplatesBelowRouteTimeouts(t *testing.T) {
 		request.Header.Set("X-Template", payload)
 		response, err := client.Do(request)
 		require.NoError(t, err)
-		defer response.Body.Close()
+		defer func() { require.NoError(t, response.Body.Close()) }()
 		body, err := io.ReadAll(response.Body)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, response.StatusCode)
