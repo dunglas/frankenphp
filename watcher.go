@@ -21,6 +21,10 @@ func validateWatchers(*opt) error {
 	return nil
 }
 
+func (o *hotReloadOpt) hasHotReload() bool {
+	return len(o.hotReload) != 0
+}
+
 func initWatchers(o *opt) error {
 	watchPatterns := make([]*watcher.PatternGroup, 0, len(o.hotReload))
 
