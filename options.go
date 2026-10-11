@@ -37,6 +37,7 @@ type opt struct {
 	maxIdleTime time.Duration
 	maxRequests int
 	servers     []*Server
+	fingerprint string
 }
 
 type workerOpt struct {
@@ -171,6 +172,16 @@ func WithMaxWaitTime(maxWaitTime time.Duration) Option {
 func WithMaxIdleTime(maxIdleTime time.Duration) Option {
 	return func(o *opt) error {
 		o.maxIdleTime = maxIdleTime
+
+		return nil
+	}
+}
+
+// WithFingerprint sets a fingerprint of the FrankenPHP configuration.
+// This determines if requests should be queued on reload.
+func WithFingerprint(fingerprint string) Option {
+	return func(o *opt) error {
+		o.fingerprint = fingerprint
 
 		return nil
 	}

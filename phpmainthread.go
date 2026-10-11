@@ -20,17 +20,18 @@ import (
 // represents the main PHP thread
 // the thread needs to keep running as long as all other threads are running
 type phpMainThread struct {
-	state              *state.ThreadState
-	done               chan struct{}
-	numThreads         int
-	maxThreads         int
-	phpIni             map[string]string
-	isRebooting        atomic.Bool
+	state       *state.ThreadState
+	done        chan struct{}
+	numThreads  int
+	maxThreads  int
+	phpIni      map[string]string
+	isRebooting atomic.Bool
+	fingerprint string
+
 	regularRequestChan chan *frankenPHPContext
 	workers            []*worker
-
-	fallbackServer *Server
-	servers        []*Server
+	fallbackServer     *Server
+	servers            []*Server
 }
 
 var (
@@ -256,6 +257,7 @@ func getInactivePHPThread() *phpThread {
 }
 
 func (newMainThread *phpMainThread) reQueueRequests(oldMainThread *phpMainThread) {
+	isSameConfiguration := oldMainThread.fingerprint != "" && oldMainThread.fingerprint == newMainThread.fingerprint
 	go func() {
 		for {
 			select {
@@ -264,7 +266,11 @@ func (newMainThread *phpMainThread) reQueueRequests(oldMainThread *phpMainThread
 			case <-time.After(5 * time.Second):
 				return
 			case fc := <-oldMainThread.regularRequestChan:
-				newMainThread.regularRequestChan <- fc
+				if isSameConfiguration {
+					newMainThread.regularRequestChan <- fc
+				} else {
+					fc.reject(ErrConfigurationChangedOnReload)
+				}
 			}
 		}
 	}()
@@ -280,7 +286,11 @@ func (newMainThread *phpMainThread) reQueueRequests(oldMainThread *phpMainThread
 						case <-time.After(5 * time.Second):
 							return
 						case fc := <-oldWorker.requestChan:
-							newWorker.requestChan <- fc
+							if isSameConfiguration {
+								newWorker.requestChan <- fc
+							} else {
+								fc.reject(ErrConfigurationChangedOnReload)
+							}
 						}
 					}
 				}()

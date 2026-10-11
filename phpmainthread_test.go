@@ -3,6 +3,7 @@ package frankenphp
 import (
 	"io"
 	"math/rand/v2"
+	"net/http"
 	"net/http/httptest"
 	"path/filepath"
 	"runtime"
@@ -14,6 +15,7 @@ import (
 
 	"github.com/dunglas/frankenphp/internal/state"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var testDataPath, _ = filepath.Abs("./testdata")
@@ -175,6 +177,7 @@ func TestQueuedRequestSurvivesReload_module(t *testing.T) {
 		WithNumThreads(1),
 		WithMaxThreads(1),
 		WithMaxWaitTime(5 * time.Second),
+		WithFingerprint("test"),
 	})
 }
 
@@ -184,6 +187,7 @@ func TestQueuedRequestSurvivesReload_worker(t *testing.T) {
 		WithMaxThreads(2),
 		WithMaxWaitTime(5 * time.Second),
 		WithWorkers("worker-1", filepath.Join(testDataPath, "sleep.php"), 1),
+		WithFingerprint("test"),
 	})
 }
 
@@ -238,6 +242,53 @@ func testQueuedRequestSurvivesReload(t *testing.T, opts []Option) {
 	case <-time.After(15 * time.Second):
 		t.Fatal("the queued request never completed after the reload")
 	}
+}
+
+func TestQueuedRequestRejectedWhenConfigChangesOnReload(t *testing.T) {
+	t.Cleanup(Shutdown)
+
+	base := []Option{
+		WithNumThreads(1),
+		WithMaxThreads(1),
+		WithMaxWaitTime(5 * time.Second),
+	}
+	assert.NoError(t, Init(append(base, WithFingerprint("before"))...))
+
+	go serveSleepRequest(t, "sleep=10000")
+
+	queuedStatus := make(chan int, 1)
+	go func() {
+		r := httptest.NewRequest("GET", "http://localhost/sleep.php?sleep=1", nil)
+		w := httptest.NewRecorder()
+		req, err := NewRequestWithContext(r, WithRequestDocumentRoot(testDataPath, false))
+		require.NoError(t, err)
+		require.NoError(t, ServeHTTP(w, req))
+		queuedStatus <- w.Result().StatusCode
+	}()
+
+	require.Eventually(t, func() bool {
+		return queuedRegularThreads.Load() != 0
+	}, 2*time.Second, time.Millisecond, "request was never queued")
+
+	Shutdown()
+	assert.NoError(t, Init(append(base, WithFingerprint("after"))...))
+
+	select {
+	case status := <-queuedStatus:
+		assert.Equal(t, http.StatusServiceUnavailable, status)
+	case <-time.After(5 * time.Second):
+		t.Fatal("queued request never completed after reload")
+	}
+}
+
+func serveSleepRequest(t *testing.T, query string) {
+	t.Helper()
+
+	r := httptest.NewRequest("GET", "http://localhost/sleep.php?"+query, nil)
+	w := httptest.NewRecorder()
+	req, err := NewRequestWithContext(r, WithRequestDocumentRoot(testDataPath, false))
+	require.NoError(t, err)
+	require.NoError(t, ServeHTTP(w, req))
 }
 
 func TestFinishBootingAWorkerScript(t *testing.T) {

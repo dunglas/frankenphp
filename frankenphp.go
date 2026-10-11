@@ -51,9 +51,10 @@ var (
 	ErrScriptExecution    = errors.New("error during PHP script execution")
 	ErrNotRunning         = errors.New("server is not registered, you must first call frankenphp.Init() with the WithServer() option")
 
-	ErrInvalidRequestPath         = ErrRejected{"invalid request path", http.StatusBadRequest}
-	ErrInvalidContentLengthHeader = ErrRejected{"invalid Content-Length header", http.StatusBadRequest}
-	ErrMaxWaitTimeExceeded        = ErrRejected{"maximum request handling time exceeded", http.StatusServiceUnavailable}
+	ErrInvalidRequestPath           = ErrRejected{"invalid request path", http.StatusBadRequest}
+	ErrInvalidContentLengthHeader   = ErrRejected{"invalid Content-Length header", http.StatusBadRequest}
+	ErrMaxWaitTimeExceeded          = ErrRejected{"maximum request handling time exceeded", http.StatusServiceUnavailable}
+	ErrConfigurationChangedOnReload = ErrRejected{"configuration has changed on reload", http.StatusServiceUnavailable}
 
 	contextKey   = contextKeyStruct{}
 	serverHeader = []string{"FrankenPHP"}
@@ -474,6 +475,7 @@ func Init(options ...Option) error {
 		}
 	}
 
+	mainThread.fingerprint = opt.fingerprint
 	if oldMainThread != nil {
 		mainThread.reQueueRequests(oldMainThread)
 	}

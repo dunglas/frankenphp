@@ -2,6 +2,7 @@ package caddy
 
 import (
 	"context"
+	"crypto/sha256"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -159,7 +160,19 @@ func (f *FrankenPHPApp) collectOptions(repl *caddy.Replacer, keep bool) ([]frank
 		return nil, err
 	}
 
-	return append(opts, moduleOpts...), nil
+	opts = append(opts, moduleOpts...)
+
+	// add a fingerprint of the current configuration to the options to detect a reload
+	if keep {
+		fingerprint := sha256.New()
+		fingerprint.Write(caddyconfig.JSON(f, nil))
+		for _, m := range f.modules {
+			fingerprint.Write(caddyconfig.JSON(m, nil))
+		}
+		opts = append(opts, frankenphp.WithFingerprint(fmt.Sprintf("%x", fingerprint.Sum(nil))))
+	}
+
+	return opts, nil
 }
 
 func (f *FrankenPHPApp) Start() error {
