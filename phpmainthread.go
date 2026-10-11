@@ -258,16 +258,24 @@ func getInactivePHPThread() *phpThread {
 
 func (newMainThread *phpMainThread) reQueueRequests(oldMainThread *phpMainThread) {
 	isSameConfiguration := oldMainThread.fingerprint != "" && oldMainThread.fingerprint == newMainThread.fingerprint
+	hardReloadTimeout := time.Duration(maxWaitTime.Load()) * time.Second
+	if hardReloadTimeout == 0 {
+		hardReloadTimeout = 15 * time.Second
+	}
+
 	go func() {
 		for {
 			select {
 			case <-newMainThread.done:
 				return
-			case <-time.After(15 * time.Second):
-				return
 			case fc := <-oldMainThread.regularRequestChan:
 				if isSameConfiguration {
-					newMainThread.regularRequestChan <- fc
+					select {
+					case newMainThread.regularRequestChan <- fc:
+						break
+					case <-time.After(hardReloadTimeout):
+						fc.reject(ErrConfigurationChangedOnReload)
+					}
 				} else {
 					fc.reject(ErrConfigurationChangedOnReload)
 				}
@@ -289,11 +297,14 @@ func (newMainThread *phpMainThread) reQueueRequests(oldMainThread *phpMainThread
 				select {
 				case <-newMainThread.done:
 					return
-				case <-time.After(15 * time.Second):
-					return
 				case fc := <-oldWorker.requestChan:
-					if newWorker && isSameConfiguration {
-						newWorker.requestChan <- fc
+					if newWorker != nil && isSameConfiguration {
+						select {
+						case newWorker.requestChan <- fc:
+							break
+						case <-time.After(hardReloadTimeout):
+							fc.reject(ErrConfigurationChangedOnReload)
+						}
 					} else {
 						fc.reject(ErrConfigurationChangedOnReload)
 					}

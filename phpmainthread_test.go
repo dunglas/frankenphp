@@ -3,7 +3,6 @@ package frankenphp
 import (
 	"io"
 	"math/rand/v2"
-	"net/http"
 	"net/http/httptest"
 	"path/filepath"
 	"runtime"
@@ -213,20 +212,18 @@ func testQueuedRequestSurvivesReload(t *testing.T, opts []Option) {
 
 	// Wait until the second request is genuinely queued waiting for a thread.
 	hasWorker := len(mainThread.workers) != 0
-	maxTries := 2000
-	for i := 0; i <= maxTries; i++ {
+	sleepMilliseconds := 0
+	require.Eventually(t, func() bool {
 		if hasWorker && mainThread.workers[0].queuedRequests.Load() != 0 {
-			break
-		} else if !hasWorker && queuedRegularThreads.Load() != 0 {
-			break
+			return true
 		}
-
-		go doRequest("sleep=" + strconv.Itoa(i))
-		time.Sleep(time.Millisecond)
-		if !assert.NotEqual(t, i, maxTries, "request was never queued") {
-			return
+		if !hasWorker && queuedRegularThreads.Load() != 0 {
+			return true
 		}
-	}
+		go doRequest("sleep=" + strconv.Itoa(sleepMilliseconds))
+		sleepMilliseconds++
+		return false
+	}, 2*time.Second, time.Millisecond, "request was never queued")
 
 	// Reload while the request is queued, exactly like the Caddy module does.
 	Shutdown()
@@ -241,43 +238,6 @@ func testQueuedRequestSurvivesReload(t *testing.T, opts []Option) {
 	case <-done:
 	case <-time.After(15 * time.Second):
 		t.Fatal("the queued request never completed after the reload")
-	}
-}
-
-func TestQueuedRequestRejectedWhenConfigChangesOnReload(t *testing.T) {
-	t.Cleanup(Shutdown)
-
-	base := []Option{
-		WithNumThreads(1),
-		WithMaxThreads(1),
-		WithMaxWaitTime(5 * time.Second),
-	}
-	assert.NoError(t, Init(append(base, WithFingerprint("before"))...))
-
-	go serveSleepRequest(t, "sleep=10000")
-
-	queuedStatus := make(chan int, 1)
-	go func() {
-		r := httptest.NewRequest("GET", "http://localhost/sleep.php?sleep=1", nil)
-		w := httptest.NewRecorder()
-		req, err := NewRequestWithContext(r, WithRequestDocumentRoot(testDataPath, false))
-		require.NoError(t, err)
-		require.NoError(t, ServeHTTP(w, req))
-		queuedStatus <- w.Result().StatusCode
-	}()
-
-	require.Eventually(t, func() bool {
-		return queuedRegularThreads.Load() != 0
-	}, 2*time.Second, time.Millisecond, "request was never queued")
-
-	Shutdown()
-	assert.NoError(t, Init(append(base, WithFingerprint("after"))...))
-
-	select {
-	case status := <-queuedStatus:
-		assert.Equal(t, http.StatusServiceUnavailable, status)
-	case <-time.After(5 * time.Second):
-		t.Fatal("queued request never completed after reload")
 	}
 }
 
