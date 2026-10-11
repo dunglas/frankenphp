@@ -532,6 +532,10 @@ func ServeHTTP(responseWriter http.ResponseWriter, request *http.Request) error 
 		return ErrInvalidRequest
 	}
 
+	if mainThread == nil {
+		return ErrNotRunning
+	}
+
 	return mainThread.fallbackServer.ServeHTTP(responseWriter, request, opts...)
 }
 
