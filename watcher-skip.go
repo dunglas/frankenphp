@@ -7,6 +7,10 @@ import "errors"
 type hotReloadOpt struct {
 }
 
+func (*hotReloadOpt) hasHotReload() bool {
+	return false
+}
+
 var errWatcherNotEnabled = errors.New("watcher support is not enabled")
 
 // validateWatchers reports what initWatchers() would refuse, so Validate()
