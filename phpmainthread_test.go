@@ -6,7 +6,6 @@ import (
 	"net/http/httptest"
 	"path/filepath"
 	"runtime"
-	"strconv"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -14,7 +13,6 @@ import (
 
 	"github.com/dunglas/frankenphp/internal/state"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 var testDataPath, _ = filepath.Abs("./testdata")
