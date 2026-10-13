@@ -221,4 +221,6 @@ typedef enum {
 
 void register_extensions(zend_module_entry **m, int len);
 
+uintptr_t frankenphp_thread_index(void);
+
 #endif
