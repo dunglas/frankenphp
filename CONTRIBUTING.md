@@ -113,22 +113,21 @@ curl -v http://127.0.0.1:8080/phpinfo.php
    .\vcpkg\bootstrap-vcpkg.bat
    ```
 
-4. [Download the latest version of the watcher library for Windows](https://github.com/e-dant/watcher/releases) and extract it to a directory named `C:\watcher`
-5. [Download the latest **Thread Safe** version of PHP and of the PHP SDK for Windows](https://windows.php.net/download/), extract them in directories named `C:\php` and `C:\php-devel`
-6. Clone the FrankenPHP Git repository:
+4. [Download the latest **Thread Safe** version of PHP and of the PHP SDK for Windows](https://windows.php.net/download/), extract them in directories named `C:\php` and `C:\php-devel`
+5. Clone the FrankenPHP Git repository:
 
    ```powershell
    git clone https://github.com/php/frankenphp C:\frankenphp
    cd C:\frankenphp
    ```
 
-7. Install the dependencies:
+6. Install the dependencies:
 
    ```powershell
    C:\vcpkg\vcpkg.exe install
    ```
 
-8. Configure the needed environment variables (PowerShell):
+7. Configure the needed environment variables (PowerShell):
 
    ```powershell
    $env:PATH += ';C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\Llvm\bin'
@@ -138,7 +137,7 @@ curl -v http://127.0.0.1:8080/phpinfo.php
    $env:CGO_LDFLAGS = '-LC:\frankenphp\vcpkg_installed\x64-windows\lib -lbrotlienc -LC:\watcher -llibwatcher-c -LC:\php -LC:\php-devel\lib -lphp8ts -lphp8embed'
    ```
 
-9. Run the tests:
+8. Run the tests:
 
    ```powershell
    go test -race -ldflags '-extldflags="-fuse-ld=lld"' ./...
@@ -147,7 +146,7 @@ curl -v http://127.0.0.1:8080/phpinfo.php
    cd ..
    ```
 
-10. Build the binary:
+9. Build the binary:
 
     ```powershell
     cd caddy/frankenphp

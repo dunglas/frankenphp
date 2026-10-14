@@ -59,7 +59,6 @@ func collectPHPInfoEntries(buildInfo *debug.BuildInfo) (entries, modules []phpin
 	modules = buildGoModuleEntries(buildInfo)
 	moduleAliases := map[string]string{
 		"github.com/dunglas/mercure":       "dunglas/mercure",
-		"github.com/e-dant/watcher":        "e-dant/watcher",
 		"github.com/dunglas/caddy-cbrotli": "dunglas/caddy-cbrotli",
 	}
 	for _, module := range modules {

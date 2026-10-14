@@ -98,18 +98,6 @@ jobs:
         working-directory: frankenphp
         run: "vcpkg install"
 
-      - name: Download Watcher
-        run: |
-          $latestTag = gh release list --repo e-dant/watcher --limit 1 --exclude-drafts --exclude-pre-releases --json tagName --jq '.[0].tagName'
-          Write-Host "Latest Watcher version: $latestTag"
-
-          gh release download $latestTag --repo e-dant/watcher --pattern "*x86_64-pc-windows-msvc.tar" -O watcher.tar
-
-          tar -xf "watcher.tar" -C "$env:GITHUB_WORKSPACE"
-          Rename-Item -Path "$env:GITHUB_WORKSPACE\x86_64-pc-windows-msvc" -NewName "watcher"
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Download PHP
         run: |
           $webContent = Invoke-WebRequest -Uri $env:PHP_DOWNLOAD_BASE

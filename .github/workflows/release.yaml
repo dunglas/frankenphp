@@ -162,9 +162,6 @@ jobs:
       - if: steps.state.outputs.resume != 'true'
         uses: ./.github/actions/setup-php
       - if: steps.state.outputs.resume != 'true'
-        name: Install e-dant/watcher
-        uses: ./.github/actions/watcher
-      - if: steps.state.outputs.resume != 'true'
         name: Set CGO flags
         run: echo "CGO_CFLAGS=-I${PWD}/watcher/target/include $(php-config --includes)" >> "${GITHUB_ENV}"
       - if: steps.state.outputs.resume != 'true'

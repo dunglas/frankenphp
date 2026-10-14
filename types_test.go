@@ -295,7 +295,6 @@ func TestCollectPHPInfoEntries(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			entries, modules := collectPHPInfoEntries(&debug.BuildInfo{
 				GoVersion: "go1.26.0",
-				Main:      debug.Module{Path: "github.com/e-dant/watcher", Version: "v3.0.0"},
 				Deps: []*debug.Module{
 					{Path: path, Version: "v1.2.3", Replace: tt.replace},
 					{Path: "example.com/other", Version: "v4.0.0"},
@@ -303,11 +302,11 @@ func TestCollectPHPInfoEntries(t *testing.T) {
 				},
 			})
 			require.Equal(t, []phpinfoEntry{
-				{"custom", "value"}, {"Go", "go1.26.0"}, {"e-dant/watcher", "v3.0.0"}, {key, tt.want},
+				{"custom", "value"}, {"Go", "go1.26.0"}, {key, tt.want},
 				{"dunglas/caddy-cbrotli", "v1.0.0"},
 			}, entries)
 			require.Equal(t, []phpinfoEntry{
-				{"github.com/e-dant/watcher", "v3.0.0"}, {path, tt.want}, {"example.com/other", "v4.0.0"},
+				{path, tt.want}, {"example.com/other", "v4.0.0"},
 				{"github.com/dunglas/caddy-cbrotli", "v1.0.0"},
 			}, modules)
 		})

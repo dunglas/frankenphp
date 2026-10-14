@@ -248,8 +248,6 @@ where the FrankenPHP process was started. You can instead also specify one or mo
 - If you have multiple workers defined, all of them will be restarted when a file changes
 - Be wary about watching files that are created at runtime (like logs) since they might cause unwanted worker restarts.
 
-The file watcher is based on [e-dant/watcher](https://github.com/e-dant/watcher).
-
 ## Matching the worker to a path
 
 In traditional PHP applications, scripts are always placed in the public directory.

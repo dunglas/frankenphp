@@ -91,7 +91,7 @@ Alternatively, these features can be disabled by passing build tags to the Go co
 | Feature                        | Dependency                                                                                                   | Build tag to disable it |
 | ------------------------------ | ------------------------------------------------------------------------------------------------------------ | ----------------------- |
 | Brotli compression             | [Brotli](https://github.com/google/brotli)                                                                   | nobrotli                |
-| Restart workers on file change | [Watcher C](https://github.com/e-dant/watcher/tree/release/watcher-c)                                        | nowatcher               |
+| Restart workers on file change | [Watcher C](https://github.com/sgtdi/fswatcher)                                        | nowatcher               |
 | [Mercure](mercure.md)          | [Mercure Go library](https://pkg.go.dev/github.com/dunglas/mercure) (automatically installed, AGPL licensed) | nomercure               |
 
 ## Compile the Go app

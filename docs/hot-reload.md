@@ -149,7 +149,7 @@ php_server {
 
 ## How FrankenPHP hot reload works
 
-1. **Watch**: FrankenPHP monitors the filesystem for modifications using [the `e-dant/watcher` library](https://github.com/e-dant/watcher) under the hood (we contributed the Go binding).
+1. **Watch**: FrankenPHP monitors the filesystem for modifications using [the `sgtdi/fswatcher` library](https://github.com/sgtdi/fswatcher) under the hood.
 2. **Restart (Worker Mode)**: if `watch` is enabled in the worker config, the PHP worker is restarted to load the new code.
 3. **Push**: a JSON payload containing the list of changed files is sent to the built-in [Mercure hub](https://mercure.rocks).
 4. **Receive**: The browser, listening via the JavaScript library, receives the Mercure event.

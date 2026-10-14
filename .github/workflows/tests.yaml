@@ -47,8 +47,6 @@ jobs:
       - uses: ./.github/actions/setup-php
         with:
           php-version: ${{ matrix.php-versions }}
-      - name: Install e-dant/watcher
-        uses: ./.github/actions/watcher
       - name: Reinstall libbrotli-dev
         # TODO: remove this workaround when fixed upstream
         run: sudo apt-get install --reinstall -y libbrotli-dev

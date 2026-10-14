@@ -70,15 +70,6 @@ RUN git clone --branch=PHP-8.5 https://github.com/php/php-src.git . && \
 			echo "opcache.enable=1" >> /etc/frankenphp/php.ini && \
 	php --version
 
-# Install e-dant/watcher (necessary for file watching)
-WORKDIR /usr/local/src/watcher
-RUN git clone https://github.com/e-dant/watcher . && \
-	cmake -S . -B build -DCMAKE_BUILD_TYPE=Release && \
-	cmake --build build/ && \
-	cmake --install build && \
-	cp build/libwatcher-c.so /usr/local/lib/libwatcher-c.so && \
-	ldconfig
-
 WORKDIR /go/src/app
 COPY --link . ./
 
