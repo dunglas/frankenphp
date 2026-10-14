@@ -51,12 +51,12 @@ func InitWatcher(ct context.Context, slogger *slog.Logger, groups []*PatternGrou
 		return nil
 	}
 
-	if watcherIsActive.Load() {
+	if !watcherIsActive.CompareAndSwap(false, true) {
 		return ErrAlreadyStarted
 	}
 
-	watcherIsActive.Store(true)
-	activeWatcher = &globalWatcher{groups: groups, ctx: context.Background()}
+	activeWatcher = &globalWatcher{groups: groups}
+	globalContext = ct
 	globalLogger = slogger
 
 	for _, pg := range groups {
@@ -74,8 +74,6 @@ func DrainWatcher() {
 		return
 	}
 
-	watcherIsActive.Store(false)
-
 	if globalLogger.Enabled(globalContext, slog.LevelDebug) {
 		globalLogger.LogAttrs(globalContext, slog.LevelDebug, "stopping watcher")
 	}
@@ -84,6 +82,8 @@ func DrainWatcher() {
 		pg.fsw.Close()
 		close(pg.done)
 	}
+
+	watcherIsActive.Store(false)
 	activeWatcher.mu.Lock()
 	activeWatcher.mu.Unlock()
 	globalLogger.Info("waiting for watcher to finish")
@@ -101,7 +101,7 @@ func (pg *PatternGroup) startWatching() {
 	for _, pattern := range pg.Patterns {
 		dir, regex, err := extractRootAndRegex(pattern)
 		if err != nil {
-			globalLogger.Error("invalid watcher pattern, unable to watch directory", "error", err, "pattern", pattern)
+			globalLogger.Error("invalid watcher pattern, unable to watch", "error", err, "pattern", pattern)
 			continue
 		}
 
@@ -121,6 +121,7 @@ func (pg *PatternGroup) startWatching() {
 	}
 
 	pg.fsw = fsw
+	activeWatcher.waitGroup.Add(1)
 	go pg.runWatcher()
 	go pg.listenForFileEvents()
 }
@@ -133,20 +134,20 @@ func (pg *PatternGroup) runWatcher() {
 }
 
 func (pg *PatternGroup) listenForFileEvents() {
-	activeWatcher.waitGroup.Add(1)
 	defer activeWatcher.waitGroup.Done()
 
-	eventChan := pg.fsw.Events()
-
 	for {
+		globalLogger.Warn("listening for file events")
+		eventChan := pg.fsw.Events()
 		debouncedEvents := make([]fswatcher.WatchEvent, 0)
 		select {
 		case event := <-eventChan:
+			globalLogger.Warn("file event detected", "event", event)
 			debouncedEvents = append(debouncedEvents, event)
 		case <-pg.done:
 			return
 		}
-
+		
 		// drain the event channel to send events back as a group
 	DrainLoop:
 		for {
@@ -172,10 +173,9 @@ func (pg *PatternGroup) listenForFileEvents() {
 
 func (pg *PatternGroup) triggerCallbacks(events []fswatcher.WatchEvent) {
 	activeWatcher.mu.Lock()
+	defer activeWatcher.mu.Unlock()
 
 	if watcherIsActive.Load() {
 		pg.Callback(events)
 	}
-
-	activeWatcher.mu.Unlock()
 }
