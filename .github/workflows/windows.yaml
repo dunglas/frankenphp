@@ -138,7 +138,7 @@ jobs:
           "$phpBin" >> $env:GITHUB_PATH
 
           "CGO_CFLAGS=-DFRANKENPHP_VERSION=$env:FRANKENPHP_VERSION -I$vcpkgRoot\include -I$watcherRoot -I$phpDevel\include -I$phpDevel\include\main -I$phpDevel\include\TSRM -I$phpDevel\include\Zend -I$phpDevel\include\ext" >> $env:GITHUB_ENV
-          "CGO_LDFLAGS=-L$vcpkgRoot\lib -lbrotlienc -L$watcherRoot -llibwatcher-c -L$phpBin -L$phpDevel\lib -lphp8ts -lphp8embed" >> $env:GITHUB_ENV
+          "CGO_LDFLAGS=-L$vcpkgRoot\lib -lbrotlienc -L$phpBin -L$phpDevel\lib -lphp8ts -lphp8embed" >> $env:GITHUB_ENV
         env:
           FRANKENPHP_VERSION: ${{ steps.version.outputs.version }}
 
@@ -194,7 +194,6 @@ jobs:
         if: env.BUILD_RELEASE == 'true'
         run: |
           Copy-Item frankenphp\caddy\frankenphp\frankenphp.exe $env:DIR_NAME
-          Copy-Item watcher\libwatcher-c.dll $env:DIR_NAME
           Copy-Item frankenphp\vcpkg_installed\x64-windows\bin\brotlienc.dll $env:DIR_NAME
           Copy-Item frankenphp\vcpkg_installed\x64-windows\bin\brotlidec.dll $env:DIR_NAME
           Copy-Item frankenphp\vcpkg_installed\x64-windows\bin\brotlicommon.dll $env:DIR_NAME

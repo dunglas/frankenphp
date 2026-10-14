@@ -1,3 +1,5 @@
+//go:build !nowatcher
+
 package watcher
 
 import (
