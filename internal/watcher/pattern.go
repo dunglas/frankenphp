@@ -1,13 +1,12 @@
 package watcher
 
 import (
+	"fmt"
+	"path/filepath"
 	"regexp"
 	"strings"
-	"path/filepath"
-	"fmt"
 
 	"github.com/dunglas/frankenphp/internal/fastabs"
-
 )
 
 func extractRootAndRegex(pattern string) (string, string, error) {
@@ -54,13 +53,13 @@ func extractRootAndRegex(pattern string) (string, string, error) {
 //
 // Supported syntax:
 //
-//	*        any chars except '/'
-//	?        exactly one char except '/'
-//	**       any chars including '/' (when it forms a full path segment)
-//	/**/     zero or more directories
-//	{a,b,c}  alternation (can be nested)
-//	[abc]    character class, [!abc] / [^abc] negated
-//	\x       literal x
+//   - any chars except '/'
+//     ?        exactly one char except '/'
+//     **       any chars including '/' (when it forms a full path segment)
+//     /**/     zero or more directories
+//     {a,b,c}  alternation (can be nested)
+//     [abc]    character class, [!abc] / [^abc] negated
+//     \x       literal x
 func wildcardToRegex(pattern string) (string, error) {
 	pattern, err := fastabs.FastAbs(pattern)
 	if err != nil {

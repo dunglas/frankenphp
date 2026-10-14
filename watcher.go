@@ -3,8 +3,6 @@
 package frankenphp
 
 import (
-	"sync/atomic"
-
 	"github.com/dunglas/frankenphp/internal/watcher"
 	"github.com/sgtdi/fswatcher"
 )
@@ -12,8 +10,6 @@ import (
 type hotReloadOpt struct {
 	hotReload []*watcher.PatternGroup
 }
-
-var restartWorkers atomic.Bool
 
 // validateWatchers has nothing to refuse where the watcher is compiled in:
 // the patterns are only known to be good once the watcher took them
@@ -26,7 +22,12 @@ func (o *hotReloadOpt) hasHotReload() bool {
 }
 
 func initWatchers(o *opt) error {
-	watchPatterns := make([]*watcher.PatternGroup, 0, len(o.hotReload))
+	allPatterns := make([]*watcher.PatternGroup, 0, len(o.hotReload))
+	workerPattern := &watcher.PatternGroup{
+		Callback: func(_ []fswatcher.WatchEvent) {
+			RestartWorkers()
+		},
+	}
 
 	for _, o := range o.workers {
 		if len(o.watch) == 0 {
@@ -34,22 +35,14 @@ func initWatchers(o *opt) error {
 		}
 
 		watcherIsEnabled = true
-		watchPatterns = append(watchPatterns, &watcher.PatternGroup{Patterns: o.watch, Callback: func(_ []fswatcher.WatchEvent) {
-			restartWorkers.Store(true)
-		}})
+		workerPattern.Patterns = append(workerPattern.Patterns, o.watch...)
 	}
 
 	if watcherIsEnabled {
-		watchPatterns = append(watchPatterns, &watcher.PatternGroup{
-			Callback: func(_ []fswatcher.WatchEvent) {
-				if restartWorkers.Swap(false) {
-					RestartWorkers()
-				}
-			},
-		})
+		allPatterns = append(allPatterns, workerPattern)
 	}
 
-	return watcher.InitWatcher(globalCtx, globalLogger, append(watchPatterns, o.hotReload...))
+	return watcher.InitWatcher(globalCtx, globalLogger, append(allPatterns, o.hotReload...))
 }
 
 func drainWatchers() {
