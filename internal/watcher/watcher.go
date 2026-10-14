@@ -6,19 +6,14 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"regexp"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
 
+	"github.com/dunglas/frankenphp/internal/fastabs"
 	"github.com/sgtdi/fswatcher"
-)
-
-const (
-	// duration to wait before triggering a reload after a file change
-	debounceDuration = 150 * time.Millisecond
-	// times to retry watching if the watcher was closed prematurely
-	maxFailureCount      = 5
-	failureResetDuration = 5 * time.Second
 )
 
 var (
@@ -33,15 +28,22 @@ var (
 	globalContext context.Context
 )
 
+type compiledPattern struct {
+	root  string
+	regex *regexp.Regexp // nil: match any path under root
+}
+
 type PatternGroup struct {
 	Patterns []string
 	Callback func([]fswatcher.WatchEvent)
-	fsw      fswatcher.Watcher
-	done     chan any
+
+	matchers []compiledPattern
 }
 
 type globalWatcher struct {
 	groups    []*PatternGroup
+	fsw       fswatcher.Watcher
+	done      chan any
 	mu        sync.Mutex
 	waitGroup sync.WaitGroup
 }
@@ -59,11 +61,10 @@ func InitWatcher(ct context.Context, slogger *slog.Logger, groups []*PatternGrou
 	globalContext = ct
 	globalLogger = slogger
 
-	for _, pg := range groups {
-		if len(pg.Patterns) > 0 {
-			pg.done = make(chan any)
-			pg.startWatching()
-		}
+	if err := activeWatcher.start(); err != nil {
+		activeWatcher = nil
+		watcherIsActive.Store(false)
+		return err
 	}
 
 	return nil
@@ -78,11 +79,13 @@ func DrainWatcher() {
 		globalLogger.LogAttrs(globalContext, slog.LevelDebug, "stopping watcher")
 	}
 
-	for _, pg := range activeWatcher.groups {
-		if pg.fsw != nil {
-			pg.fsw.Close()
+	if activeWatcher != nil {
+		if activeWatcher.fsw != nil {
+			activeWatcher.fsw.Close()
 		}
-		close(pg.done)
+		if activeWatcher.done != nil {
+			close(activeWatcher.done)
+		}
 	}
 
 	watcherIsActive.Store(false)
@@ -95,62 +98,109 @@ func DrainWatcher() {
 	activeWatcher = nil
 }
 
-func (pg *PatternGroup) startWatching() {
-	opts := []fswatcher.WatcherOpt{
-		fswatcher.WithSeverity(fswatcher.SeverityDebug),
-		fswatcher.WithCooldown(150 * time.Millisecond),
-	}
+func (pg *PatternGroup) compileMatchers() {
 	for _, pattern := range pg.Patterns {
-		dir, regex, err := extractRootAndRegex(pattern)
+		root, regexStr, err := extractRootAndRegex(pattern)
 		if err != nil {
 			globalLogger.Error("invalid watcher pattern, unable to watch", "error", err, "pattern", pattern)
 			continue
 		}
 
-		// pattern is a concrete directory, just watch it without any regex filtering
-		if regex == "" {
-			opts = append(opts, fswatcher.WithPath(dir))
-		} else {
-			opts = append(opts, fswatcher.WithPath(dir, fswatcher.WithPathIncRegex(regex)))
+		cp := compiledPattern{root: root}
+		if regexStr != "" {
+			re, err := regexp.Compile(regexStr)
+			if err != nil {
+				globalLogger.Error("invalid watcher pattern regex", "error", err, "pattern", pattern)
+				continue
+			}
+			cp.regex = re
 		}
+		pg.matchers = append(pg.matchers, cp)
+	}
+}
+
+func (pg *PatternGroup) matchesPath(path string) bool {
+	absPath, err := fastabs.FastAbs(path)
+	if err != nil {
+		return false
+	}
+
+	for _, m := range pg.matchers {
+		if m.regex == nil {
+			if strings.HasPrefix(absPath, m.root) {
+				return true
+			}
+			continue
+		}
+		if m.regex.MatchString(absPath) {
+			return true
+		}
+	}
+
+	return false
+}
+
+func (gw *globalWatcher) start() error {
+	opts := []fswatcher.WatcherOpt{
+		fswatcher.WithSeverity(fswatcher.SeverityDebug),
+		fswatcher.WithCooldown(150 * time.Millisecond),
+	}
+
+	watchedDirs := make(map[string]struct{})
+	for _, pg := range gw.groups {
+		if len(pg.Patterns) == 0 {
+			continue
+		}
+		pg.compileMatchers()
+		for _, m := range pg.matchers {
+			if _, ok := watchedDirs[m.root]; ok {
+				continue
+			}
+			watchedDirs[m.root] = struct{}{}
+			opts = append(opts, fswatcher.WithPath(m.root))
+		}
+	}
+
+	if len(watchedDirs) == 0 {
+		return errors.New("no valid watch patterns")
 	}
 
 	fsw, err := fswatcher.New(opts...)
-
 	if err != nil {
 		globalLogger.Error("failed to create watcher", "error", err)
-		return
+		return err
 	}
 
-	pg.fsw = fsw
-	activeWatcher.waitGroup.Add(1)
-	go pg.runWatcher()
-	go pg.listenForFileEvents()
+	gw.fsw = fsw
+	gw.done = make(chan any)
+	gw.waitGroup.Add(1)
+	go gw.runWatcher()
+	go gw.listenForFileEvents()
+
+	return nil
 }
 
-func (pg *PatternGroup) runWatcher() {
-	err := pg.fsw.Watch(globalContext)
+func (gw *globalWatcher) runWatcher() {
+	err := gw.fsw.Watch(globalContext)
 	if err != nil {
-		globalLogger.Error("failed to start watching", "error", err, "patternGroup", pg.Patterns)
+		globalLogger.Error("failed to start watching", "error", err)
 	}
 }
 
-func (pg *PatternGroup) listenForFileEvents() {
-	defer activeWatcher.waitGroup.Done()
+func (gw *globalWatcher) listenForFileEvents() {
+	defer gw.waitGroup.Done()
+
+	eventChan := gw.fsw.Events()
 
 	for {
-		globalLogger.Warn("listening for file events")
-		eventChan := pg.fsw.Events()
 		debouncedEvents := make([]fswatcher.WatchEvent, 0)
 		select {
 		case event := <-eventChan:
-			globalLogger.Warn("file event detected", "event", event)
 			debouncedEvents = append(debouncedEvents, event)
-		case <-pg.done:
+		case <-gw.done:
 			return
 		}
 
-		// drain the event channel to send events back as a group
 	DrainLoop:
 		for {
 			select {
@@ -161,13 +211,27 @@ func (pg *PatternGroup) listenForFileEvents() {
 			}
 		}
 
-		if globalLogger.Enabled(globalContext, slog.LevelInfo) {
-			globalLogger.LogAttrs(globalContext, slog.LevelInfo, "filesystem changes detected", slog.Any("events", debouncedEvents))
+		changesDetected := false
+		for _, pg := range gw.groups {
+			if len(pg.matchers) == 0 {
+				continue
+			}
+			matched := make([]fswatcher.WatchEvent, 0)
+			for _, event := range debouncedEvents {
+				if pg.matchesPath(event.Path) {
+					matched = append(matched, event)
+				}
+			}
+			if len(matched) > 0 {
+				if !changesDetected && globalLogger.Enabled(globalContext, slog.LevelInfo) {
+					globalLogger.LogAttrs(globalContext, slog.LevelInfo, "filesystem changes detected", slog.Any("events", debouncedEvents))
+				}
+				changesDetected = true
+				pg.triggerCallbacks(matched)
+			}
 		}
 
-		pg.triggerCallbacks(debouncedEvents)
-
-		if !pg.fsw.IsRunning() || !watcherIsActive.Load() {
+		if !gw.fsw.IsRunning() || !watcherIsActive.Load() {
 			break
 		}
 	}
