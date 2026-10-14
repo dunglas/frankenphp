@@ -93,13 +93,13 @@ func wildcardToRegex(pattern string) (string, error) {
 			switch {
 			case !isDouble:
 				// plain "*" -> anything except a separator
-				sb.WriteString(fmt.Sprintf("[^%s]*", sepRegex))
+				fmt.Fprintf(&sb, "[^%s]*", sepRegex)
 
 			case i+1 < len(runes) && runes[i+1] == '/' &&
 				(start == 0 || runes[start-1] == '/'):
 				// "**/" at a segment start -> zero or more directories
 				i++ // consume the slash
-				sb.WriteString(fmt.Sprintf("(?:.*%s)?", sepRegex))
+				fmt.Fprintf(&sb, "(?:.*%s)?", sepRegex)
 
 			default:
 				// any other "**" -> anything, including separators
@@ -107,7 +107,7 @@ func wildcardToRegex(pattern string) (string, error) {
 			}
 
 		case '?':
-			sb.WriteString(fmt.Sprintf("[^%s]", sepRegex))
+			fmt.Fprintf(&sb, "[^%s]", sepRegex)
 
 		case '/':
 			sb.WriteString(sepRegex)
