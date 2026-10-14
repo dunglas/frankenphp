@@ -6,7 +6,7 @@ import (
 	"sync/atomic"
 
 	"github.com/dunglas/frankenphp/internal/watcher"
-	watcherGo "github.com/e-dant/watcher/watcher-go"
+	"github.com/sgtdi/fswatcher"
 )
 
 type hotReloadOpt struct {
@@ -34,14 +34,14 @@ func initWatchers(o *opt) error {
 		}
 
 		watcherIsEnabled = true
-		watchPatterns = append(watchPatterns, &watcher.PatternGroup{Patterns: o.watch, Callback: func(_ []*watcherGo.Event) {
+		watchPatterns = append(watchPatterns, &watcher.PatternGroup{Patterns: o.watch, Callback: func(_ []fswatcher.WatchEvent) {
 			restartWorkers.Store(true)
 		}})
 	}
 
 	if watcherIsEnabled {
 		watchPatterns = append(watchPatterns, &watcher.PatternGroup{
-			Callback: func(_ []*watcherGo.Event) {
+			Callback: func(_ []fswatcher.WatchEvent) {
 				if restartWorkers.Swap(false) {
 					RestartWorkers()
 				}

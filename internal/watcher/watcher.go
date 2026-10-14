@@ -10,7 +10,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/e-dant/watcher/watcher-go"
+	"github.com/sgtdi/fswatcher"
+	"github.com/dunglas/frankenphp/internal/fastabs"
 )
 
 const (
@@ -31,27 +32,22 @@ var (
 	activeWatcher *globalWatcher
 	// after stopping the watcher we will wait for eventual reloads to finish
 	reloadWaitGroup sync.WaitGroup
+	reloadMutex sync.Mutex
 	// we are passing the context from the main package to the watcher
 	globalCtx context.Context
+	globalCancel context.CancelFunc
 	// we are passing the globalLogger from the main package to the watcher
 	globalLogger *slog.Logger
 )
 
 type PatternGroup struct {
 	Patterns []string
-	Callback func([]*watcher.Event)
-}
-
-type eventHolder struct {
-	patternGroup *PatternGroup
-	event        *watcher.Event
+	Callback func([]fswatcher.WatchEvent)
+	fsw      fswatcher.Watcher
 }
 
 type globalWatcher struct {
 	groups   []*PatternGroup
-	watchers []*pattern
-	events   chan eventHolder
-	stop     chan struct{}
 }
 
 func InitWatcher(ct context.Context, slogger *slog.Logger, groups []*PatternGroup) error {
@@ -64,23 +60,14 @@ func InitWatcher(ct context.Context, slogger *slog.Logger, groups []*PatternGrou
 	}
 
 	watcherIsActive.Store(true)
-	globalCtx = ct
+	globalCtx, globalCancel = context.WithCancel(ct)
 	globalLogger = slogger
 
 	activeWatcher = &globalWatcher{groups: groups}
 
-	for _, g := range groups {
-		if len(g.Patterns) == 0 {
-			continue
-		}
-
-		for _, p := range g.Patterns {
-			activeWatcher.watchers = append(activeWatcher.watchers, &pattern{patternGroup: g, value: p})
-		}
-	}
-
-	if err := activeWatcher.startWatching(); err != nil {
-		return err
+	for _, pg := range groups {
+		globalLogger.Warn("starting watcher", "patternGroup", pg.Patterns)
+		pg.startWatcher()
 	}
 
 	return nil
@@ -97,125 +84,88 @@ func DrainWatcher() {
 		globalLogger.LogAttrs(globalCtx, slog.LevelDebug, "stopping watcher")
 	}
 
-	activeWatcher.stopWatching()
+	globalCancel()
 	reloadWaitGroup.Wait()
 	activeWatcher = nil
 }
 
-// TODO: how to test this?
-func (p *pattern) retryWatching() {
-	failureMu.Lock()
-	defer failureMu.Unlock()
-
-	if p.failureCount >= maxFailureCount {
-		if globalLogger.Enabled(globalCtx, slog.LevelWarn) {
-			globalLogger.LogAttrs(globalCtx, slog.LevelWarn, "giving up watching", slog.String("pattern", p.value))
+func (pg *PatternGroup) startWatcher() {
+	opts := []fswatcher.WatcherOpt{
+		fswatcher.WithSeverity(fswatcher.SeverityDebug),
+		fswatcher.WithCooldown(150*time.Millisecond),
+	}
+	for _, pattern := range pg.Patterns {
+		absPattern, err := fastabs.FastAbs(pattern)
+		if err != nil {
+			globalLogger.Error("invalid watcher pattern", "error", err, "pattern", pattern)
+			continue
+		}
+		regex, err := wildcardToRegex(absPattern)
+		globalLogger.Warn("converted wildcard to regex", "pattern", absPattern, "regex", regex)
+		if err != nil {
+			globalLogger.Error("failed to convert wildcard to regex", "error", err)
+			continue
 		}
 
+		opts = append(opts, fswatcher.WithIncRegex(regex))
+	}
+
+	fsw, err := fswatcher.New(opts...)
+
+	if err != nil {
+		globalLogger.Error("failed to create watcher", "error", err)
 		return
 	}
 
-	if globalLogger.Enabled(globalCtx, slog.LevelInfo) {
-		globalLogger.LogAttrs(globalCtx, slog.LevelInfo, "watcher was closed prematurely, retrying...", slog.String("pattern", p.value))
-	}
+	pg.fsw = fsw
+    go pg.runWatcher()
+	go pg.listenForFileEvents()
+}
 
-	p.failureCount++
-
-	p.startSession()
-
-	// reset the failure-count if the watcher hasn't reached max failures after 5 seconds
-	go func() {
-		time.Sleep(failureResetDuration)
-
-		failureMu.Lock()
-		if p.failureCount < maxFailureCount {
-			p.failureCount = 0
+func (pg *PatternGroup) runWatcher() {
+	err := pg.fsw.Watch(globalCtx)
+		if err != nil {
+			globalLogger.Error("failed to start watching", "error", err, "patternGroup", pg.Patterns)
 		}
-		failureMu.Unlock()
-	}()
 }
 
-func (g *globalWatcher) startWatching() error {
-	g.events = make(chan eventHolder)
-	g.stop = make(chan struct{})
+func (pg *PatternGroup) listenForFileEvents() {
+	eventChan := pg.fsw.Events()
 
-	if err := g.parseFilePatterns(); err != nil {
-		return err
-	}
-
-	for _, w := range g.watchers {
-		w.events = g.events
-		w.startSession()
-	}
-
-	go g.listenForFileEvents()
-
-	return nil
-}
-
-func (g *globalWatcher) parseFilePatterns() error {
-	for _, w := range g.watchers {
-		if err := w.parse(); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func (g *globalWatcher) stopWatching() {
-	close(g.stop)
-	for _, w := range g.watchers {
-		w.stop()
-	}
-}
-
-func (g *globalWatcher) listenForFileEvents() {
-	timer := time.NewTimer(debounceDuration)
-	timer.Stop()
-
-	eventsPerGroup := make(map[*PatternGroup][]*watcher.Event, len(g.groups))
-
-	defer timer.Stop()
 	for {
-		select {
-		case <-g.stop:
-			return
-		case eh := <-g.events:
-			timer.Reset(debounceDuration)
+		debouncedEvents := make([]fswatcher.WatchEvent, 0)
+		event := <-eventChan
+		debouncedEvents = append(debouncedEvents, event)
 
-			eventsPerGroup[eh.patternGroup] = append(eventsPerGroup[eh.patternGroup], eh.event)
-		case <-timer.C:
-			timer.Stop()
-
-			if globalLogger.Enabled(globalCtx, slog.LevelInfo) {
-				var events []*watcher.Event
-				for _, eventList := range eventsPerGroup {
-					events = append(events, eventList...)
-				}
-
-				globalLogger.LogAttrs(globalCtx, slog.LevelInfo, "filesystem changes detected", slog.Any("events", events))
+		// drain the event channel to send events back as a group
+	DrainLoop:
+		for {
+			select {
+			case event := <-eventChan:
+				debouncedEvents = append(debouncedEvents, event)
+			default:
+				break DrainLoop
 			}
+		}
 
-			g.scheduleReload(eventsPerGroup)
-			eventsPerGroup = make(map[*PatternGroup][]*watcher.Event, len(g.groups))
+		if globalLogger.Enabled(globalCtx, slog.LevelInfo) {
+			globalLogger.LogAttrs(globalCtx, slog.LevelInfo, "filesystem changes detected", slog.Any("events", debouncedEvents))
+		}
+
+		pg.triggerCallbacks(debouncedEvents)
+
+		if !pg.fsw.IsRunning() {
+			break
 		}
 	}
 }
 
-func (g *globalWatcher) scheduleReload(eventsPerGroup map[*PatternGroup][]*watcher.Event) {
+func (pg *PatternGroup) triggerCallbacks(events []fswatcher.WatchEvent) {
+	reloadMutex.Lock()
 	reloadWaitGroup.Add(1)
 
-	// Call callbacks in order
-	for _, g := range g.groups {
-		if len(g.Patterns) == 0 {
-			g.Callback(nil)
-		}
-
-		if e, ok := eventsPerGroup[g]; ok {
-			g.Callback(e)
-		}
-	}
+	pg.Callback(events)
 
 	reloadWaitGroup.Done()
+	reloadMutex.Unlock()
 }

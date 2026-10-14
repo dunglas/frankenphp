@@ -8,7 +8,7 @@ import (
 
 	"github.com/dunglas/frankenphp/internal/watcher"
 	"github.com/dunglas/mercure"
-	watcherGo "github.com/e-dant/watcher/watcher-go"
+	"github.com/sgtdi/fswatcher"
 )
 
 // WithHotReload sets files to watch for file changes to trigger a hot reload update.
@@ -16,7 +16,7 @@ func WithHotReload(topic string, hub *mercure.Hub, patterns []string) Option {
 	return func(o *opt) error {
 		o.hotReload = append(o.hotReload, &watcher.PatternGroup{
 			Patterns: patterns,
-			Callback: func(events []*watcherGo.Event) {
+			Callback: func(events []fswatcher.WatchEvent) {
 				// Wait for workers to restart before sending the update
 				go func() {
 					data, err := json.Marshal(events)

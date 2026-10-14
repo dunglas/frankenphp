@@ -10,6 +10,7 @@ require (
 	github.com/e-dant/watcher v0.0.0-20260223030516-06f84a1314be
 	github.com/maypok86/otter/v2 v2.3.0
 	github.com/prometheus/client_golang v1.25.0
+	github.com/sgtdi/fswatcher v1.3.0
 	github.com/stretchr/testify v1.12.1
 	golang.org/x/net v0.61.0
 	golang.org/x/sys v0.49.0
