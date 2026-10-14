@@ -32,8 +32,6 @@ RUN apk add --no-cache \
 	zlib-dev \
 	bison \
 	nss-tools \
-	# file watcher \
-	libstdc++ \
 	linux-headers \
 	# Dev tools \
 	git \

@@ -77,8 +77,6 @@ RUN apk add --no-cache --virtual .build-deps \
 	jq \
 	libsodium-dev \
 	# Needed for the file watcher \
-	cmake \
-	libstdc++ \
 	libxml2-dev \
 	linux-headers \
 	oniguruma-dev \
@@ -118,11 +116,6 @@ WORKDIR /go/src/app
 FROM common AS runner
 
 ENV GODEBUG=cgocheck=0
-
-# copy watcher shared library (libgcc and libstdc++ are needed for the watcher)
-COPY --from=builder /usr/local/lib/libwatcher* /usr/local/lib/
-RUN apk add --no-cache libstdc++ && \
-	ldconfig /usr/local/lib
 
 COPY --from=builder /usr/local/bin/frankenphp /usr/local/bin/frankenphp
 RUN setcap cap_net_bind_service=+ep /usr/local/bin/frankenphp && \
