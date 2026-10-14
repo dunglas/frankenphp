@@ -147,7 +147,7 @@ func (pg *PatternGroup) listenForFileEvents() {
 		case <-pg.done:
 			return
 		}
-		
+
 		// drain the event channel to send events back as a group
 	DrainLoop:
 		for {
