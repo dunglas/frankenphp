@@ -95,19 +95,18 @@ func (pg *PatternGroup) startWatcher() {
 		fswatcher.WithCooldown(150*time.Millisecond),
 	}
 	for _, pattern := range pg.Patterns {
-		dir, absPattern, err := extractRootFromPattern(pattern)
-			if err != nil {
-			globalLogger.Error("invalid watcher pattern", "error", err, "pattern", pattern)
-			continue
-		}
-		regex, err := wildcardToRegex(absPattern)
-		globalLogger.Warn("converted wildcard to regex", "pattern", absPattern, "regex", regex)
+		dir, regex, err := extractRootAndRegex(pattern)
 		if err != nil {
-			globalLogger.Error("failed to convert wildcard to regex", "error", err)
+			globalLogger.Error("invalid watcher pattern, unable to watch directory", "error", err, "pattern", pattern)
 			continue
 		}
 
-		opts = append(opts, fswatcher.WithPath(dir, fswatcher.WithPathIncRegex(regex)))
+		// pattern is a concrete directory, just watch it without any regex filtering
+		if regex == "" {
+			opts = append(opts, fswatcher.WithPath(dir))
+		}else{
+			opts = append(opts, fswatcher.WithPath(dir, fswatcher.WithPathIncRegex(regex)))
+		}
 	}
 
 	fsw, err := fswatcher.New(opts...)

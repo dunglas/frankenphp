@@ -1,14 +1,54 @@
 package watcher
 
 import (
-	"fmt"
 	"regexp"
 	"strings"
 	"path/filepath"
+	"fmt"
 
 	"github.com/dunglas/frankenphp/internal/fastabs"
 
 )
+
+func extractRootAndRegex(pattern string) (string, string, error) {
+	forceDir := strings.HasSuffix(pattern, "/") || strings.HasSuffix(pattern, string(filepath.Separator))
+
+	absPattern, err := fastabs.FastAbs(pattern) // joins with cwd if relative, and cleans
+	if err != nil {
+		return "", "", err
+	}
+
+	segs := strings.Split(filepath.ToSlash(absPattern), "/")
+	n := 0
+	for n < len(segs) && !strings.ContainsAny(segs[n], `*?[{\`) {
+		n++
+	}
+
+	// No wildcard anywhere: the pattern is a concrete path.
+	if n == len(segs) {
+		// ".x" counts as an extension, a bare "." (e.g. "foo.") does not.
+		isFile := !forceDir && len(filepath.Ext(absPattern)) > 1
+		if isFile {
+			// Watch the parent so atomic saves (write temp + rename)
+			// don't invalidate the watch; filter events by name.
+			return filepath.Dir(absPattern), absPattern, nil
+		}
+		return absPattern, "", nil
+	}
+
+	// Wildcard present: watch the topmost static directory.
+	dir := strings.Join(segs[:n], "/")
+	if dir == "" {
+		dir = "/"
+	}
+
+	regex, err := wildcardToRegex(absPattern)
+	if err != nil {
+		return "", "", err
+	}
+
+	return filepath.FromSlash(dir), regex, nil
+}
 
 // ToRegex converts a glob pattern to an anchored regular expression string.
 //
@@ -22,6 +62,11 @@ import (
 //	[abc]    character class, [!abc] / [^abc] negated
 //	\x       literal x
 func wildcardToRegex(pattern string) (string, error) {
+	pattern, err := fastabs.FastAbs(pattern)
+	if err != nil {
+		return "", err
+	}
+
 	var sb strings.Builder
 	sb.WriteString("^")
 
@@ -40,23 +85,21 @@ func wildcardToRegex(pattern string) (string, error) {
 			}
 			isDouble := i > start
 
-			// A "**" is a globstar only if it is a whole path segment.
-			atSegStart := start == 0 || runes[start-1] == '/'
-			atSegEnd := i+1 >= len(runes) || runes[i+1] == '/'
-
 			switch {
-			case isDouble && atSegStart && atSegEnd:
-				if i+1 < len(runes) && runes[i+1] == '/' {
-					// "**/" -> zero or more directories
-					i++ // consume the slash
-					sb.WriteString("(?:.*/)?")
-				} else {
-					// trailing "**" -> everything
-					sb.WriteString(".*")
-				}
-			default:
-				// plain "*" (or "**" embedded in a name, treated as "*")
+			case !isDouble:
+				// plain "*" -> anything except '/'
 				sb.WriteString("[^/]*")
+
+			case i+1 < len(runes) && runes[i+1] == '/' &&
+				(start == 0 || runes[start-1] == '/'):
+				// "**/" at a segment start -> zero or more directories,
+				// so "a/**/b" matches "a/b", "a/x/b", "a/x/y/b".
+				i++ // consume the slash
+				sb.WriteString("(?:.*/)?")
+
+			default:
+				// any other "**" -> anything, including '/'
+				sb.WriteString(".*")
 			}
 
 		case '?':
@@ -132,25 +175,4 @@ func wildcardToRegex(pattern string) (string, error) {
 
 	sb.WriteString("$")
 	return sb.String(), nil
-}
-
-
-func extractRootFromPattern(pattern string) (dir, absPattern string, err error) {
-	absPattern, err = fastabs.FastAbs(pattern) // joins with cwd if relative, and cleans
-	if err != nil {
-		return "", "", err
-	}
-
-	segs := strings.Split(filepath.ToSlash(absPattern), "/")
-	n := 0
-	// Keep static segments, but never consume the last one (the file part).
-	for n < len(segs)-1 && !strings.ContainsAny(segs[n], `*?[{\`) {
-		n++
-	}
-
-	dir = strings.Join(segs[:n], "/")
-	if dir == "" {
-		dir = "/"
-	}
-	return filepath.FromSlash(dir), absPattern, nil
 }

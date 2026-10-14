@@ -4,10 +4,11 @@ package watcher
 
 import (
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 
-	"github.com/e-dant/watcher/watcher-go"
+	"github.com/dunglas/frankenphp/internal/fastabs"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -25,31 +26,6 @@ func normalizePath(t *testing.T, path string) string {
 	}
 
 	return path
-}
-
-func newPattern(t *testing.T, value string) pattern {
-	t.Helper()
-
-	p := pattern{value: normalizePath(t, value)}
-	require.NoError(t, p.parse())
-
-	return p
-}
-
-func TestDisallowOnEventTypeBiggerThan3(t *testing.T) {
-	t.Parallel()
-
-	w := newPattern(t, "/some/path")
-
-	assert.False(t, w.allowReload(&watcher.Event{PathName: "/some/path/watch-me.php", EffectType: watcher.EffectTypeOwner}))
-}
-
-func TestDisallowOnPathTypeBiggerThan2(t *testing.T) {
-	t.Parallel()
-
-	w := newPattern(t, "/some/path")
-
-	assert.False(t, w.allowReload(&watcher.Event{PathName: "/some/path/watch-me.php", PathType: watcher.PathTypeSymLink}))
 }
 
 func TestWatchesCorrectDir(t *testing.T) {
@@ -331,7 +307,11 @@ func TestInvalidCurlyBracePatterns(t *testing.T) {
 		{"/path/{dir1,dir2}/**/*.php", "/path/dir1/subpath/file.txt"},
 		{"/path/{dir1,dir2}/{a,b}{a,b}.php", "/path/dir1/ac.php"},
 		{"/path/{}/{a,b}{a,b}.php", "/path/dir1/ac.php"},
-		{"/path/}dir{/{a,b}{a,b}.php", "/path/dir1/aa.php"},
+		
+	}
+
+	errorPatterns := []string{
+		"/path/}dir{/{a,b}{a,b}.php",
 	}
 
 	for _, d := range data {
@@ -341,18 +321,14 @@ func TestInvalidCurlyBracePatterns(t *testing.T) {
 			assertPatternNotMatch(t, d.pattern, d.dir)
 		})
 	}
-}
 
-func TestAnAssociatedEventTriggersTheWatcher(t *testing.T) {
-	t.Parallel()
+	for _, p := range errorPatterns {
+		t.Run(p, func(t *testing.T) {
+			t.Parallel()
 
-	w := newPattern(t, "/**/*.php")
-	w.events = make(chan eventHolder)
-
-	e := &watcher.Event{PathName: normalizePath(t, "/path/temporary_file"), AssociatedPathName: normalizePath(t, "/path/file.php")}
-	go w.handle(e)
-
-	assert.Equal(t, e, (<-w.events).event)
+			assertPatternError(t, p)
+		})
+	}
 }
 
 func relativeDir(t *testing.T, relativePath string) string {
@@ -367,23 +343,54 @@ func relativeDir(t *testing.T, relativePath string) string {
 func hasDir(t *testing.T, p string, dir string) {
 	t.Helper()
 
-	w := newPattern(t, p)
+	got, _, err := extractRootAndRegex(p)
+	require.NoError(t, err)
 
-	assert.Equal(t, normalizePath(t, dir), w.value)
+	assert.Equal(t, normalizePath(t, dir), normalizePath(t, got))
 }
 
 func assertPatternMatch(t *testing.T, p, fileName string) {
 	t.Helper()
 
-	w := newPattern(t, p)
-
-	assert.True(t, w.allowReload(&watcher.Event{PathName: normalizePath(t, fileName)}))
+	assertPattern(t, p, fileName, true)
 }
 
 func assertPatternNotMatch(t *testing.T, p, fileName string) {
 	t.Helper()
 
-	w := newPattern(t, p)
+	assertPattern(t, p, fileName, false)
+}
 
-	assert.False(t, w.allowReload(&watcher.Event{PathName: normalizePath(t, fileName)}))
+func assertPatternError(t *testing.T, p string) {
+	t.Helper()
+
+	_, _, err := extractRootAndRegex(p)
+	require.Error(t, err)
+}
+
+func assertPattern(t *testing.T, p, fileName string, want bool) {
+	t.Helper()
+
+	root, regex, err := extractRootAndRegex(p)
+	require.NoError(t, err)
+
+	// no regex, just assert the file path starts with the root
+	if regex == "" {
+		if want {
+			assert.True(t, strings.HasPrefix(normalizePath(t, fileName), normalizePath(t, root)))
+		} else {
+			assert.False(t, strings.HasPrefix(normalizePath(t, fileName), normalizePath(t, root)))
+		}
+		return
+	}
+	re := regexp.MustCompile(regex)
+
+	absFile, err := fastabs.FastAbs(normalizePath(t, fileName))
+	require.NoError(t, err)
+
+	if want {
+		assert.True(t, re.MatchString(absFile))
+	} else {
+		assert.False(t, re.MatchString(absFile))
+	}
 }
