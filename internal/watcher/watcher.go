@@ -79,7 +79,9 @@ func DrainWatcher() {
 	}
 
 	for _, pg := range activeWatcher.groups {
-		pg.fsw.Close()
+		if pg.fsw != nil {
+			pg.fsw.Close()
+		}
 		close(pg.done)
 	}
 
