@@ -68,6 +68,13 @@ func wildcardToRegex(pattern string) (string, error) {
 		return "", err
 	}
 
+	// On Windows, paths can use backslashes or forward slashes. 
+	// We can define a separator character class for regex: [/\\]
+	sep := `/`
+	if filepath.Separator == '\\' {
+		sep = `[/\\\\]`
+	}
+
 	var sb strings.Builder
 	sb.WriteString("^")
 
@@ -77,34 +84,67 @@ func wildcardToRegex(pattern string) (string, error) {
 	for i := 0; i < len(runes); i++ {
 		c := runes[i]
 
+		// Handle windows drive letter colon (e.g., "C:") so it's treated literally
+		if c == ':' && i == 1 && ((runes[0] >= 'a' && runes[0] <= 'z') || (runes[0] >= 'A' && runes[0] <= 'Z')) {
+			sb.WriteString(":")
+			continue
+		}
+
 		switch c {
-		case '*':
-			// Consume a run of stars.
-			start := i
-			for i+1 < len(runes) && runes[i+1] == '*' {
-				i++
+		case '*', '\\':
+			// If it's a backslash on Windows, treat it as a path separator or escape
+			if c == '\\' && filepath.Separator == '\\' {
+				// Check if it acts as a separator or escape
+				if i+1 < len(runes) && runes[i+1] != '*' && runes[i+1] != '?' && runes[i+1] != '{' && runes[i+1] != '}' && runes[i+1] != '[' && runes[i+1] != ']' {
+					// Treat backslash as separator equivalent to '/'
+					sb.WriteString(sep)
+					continue
+				}
 			}
-			isDouble := i > start
 
-			switch {
-			case !isDouble:
-				// plain "*" -> anything except '/'
-				sb.WriteString("[^/]*")
+			if c == '*' {
+				// Consume a run of stars.
+				start := i
+				for i+1 < len(runes) && (runes[i+1] == '*' || runes[i+1] == '\\' && filepath.Separator == '\\' && i+2 < len(runes) && runes[i+2] == '*') {
+					// Handle potential escaped stars or standard stars
+					i++
+				}
+				isDouble := i > start
 
-			case i+1 < len(runes) && runes[i+1] == '/' &&
-				(start == 0 || runes[start-1] == '/'):
-				// "**/" at a segment start -> zero or more directories,
-				// so "a/**/b" matches "a/b", "a/x/b", "a/x/y/b".
-				i++ // consume the slash
-				sb.WriteString("(?:.*/)?")
+				switch {
+				case !isDouble:
+					// plain "*" -> anything except path separator
+					sb.WriteString(fmt.Sprintf("[^%s]*", sep))
 
-			default:
-				// any other "**" -> anything, including '/'
-				sb.WriteString(".*")
+				case (i+1 < len(runes) && (string(runes[i+1]) == "/" || (filepath.Separator == '\\' && runes[i+1] == '\\')) &&
+					(start == 0 || string(runes[start-1]) == "/" || (filepath.Separator == '\\' && runes[start-1] == '\\'))):
+					// "**/" at a segment start -> zero or more directories
+					i++ // consume the separator
+					sb.WriteString(fmt.Sprintf("(?:.*%s)?", sep))
+
+				default:
+					// any other "**" -> anything, including separators
+					sb.WriteString(".*")
+				}
+				break
+			}
+
+			fallthrough // for standard backslash escaping logic if not handled above
+
+		case '/':
+			if c == '/' || (filepath.Separator == '\\' && c == '\\') {
+				sb.WriteString(sep)
+			} else {
+				if i+1 < len(runes) {
+					i++
+					sb.WriteString(regexp.QuoteMeta(string(runes[i])))
+				} else {
+					sb.WriteString(`\\`)
+				}
 			}
 
 		case '?':
-			sb.WriteString("[^/]")
+			sb.WriteString(fmt.Sprintf("[^%s]", sep))
 
 		case '{':
 			braceDepth++
@@ -156,14 +196,6 @@ func wildcardToRegex(pattern string) (string, error) {
 			}
 			sb.WriteString("]")
 			i = j
-
-		case '\\':
-			if i+1 < len(runes) {
-				i++
-				sb.WriteString(regexp.QuoteMeta(string(runes[i])))
-			} else {
-				sb.WriteString(`\\`)
-			}
 
 		default:
 			sb.WriteString(regexp.QuoteMeta(string(c)))
