@@ -4,6 +4,10 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"path/filepath"
+
+	"github.com/dunglas/frankenphp/internal/fastabs"
+
 )
 
 // ToRegex converts a glob pattern to an anchored regular expression string.
@@ -128,4 +132,25 @@ func wildcardToRegex(pattern string) (string, error) {
 
 	sb.WriteString("$")
 	return sb.String(), nil
+}
+
+
+func extractRootFromPattern(pattern string) (dir, absPattern string, err error) {
+	absPattern, err = fastabs.FastAbs(pattern) // joins with cwd if relative, and cleans
+	if err != nil {
+		return "", "", err
+	}
+
+	segs := strings.Split(filepath.ToSlash(absPattern), "/")
+	n := 0
+	// Keep static segments, but never consume the last one (the file part).
+	for n < len(segs)-1 && !strings.ContainsAny(segs[n], `*?[{\`) {
+		n++
+	}
+
+	dir = strings.Join(segs[:n], "/")
+	if dir == "" {
+		dir = "/"
+	}
+	return filepath.FromSlash(dir), absPattern, nil
 }

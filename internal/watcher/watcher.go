@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/sgtdi/fswatcher"
-	"github.com/dunglas/frankenphp/internal/fastabs"
 )
 
 const (
@@ -66,8 +65,9 @@ func InitWatcher(ct context.Context, slogger *slog.Logger, groups []*PatternGrou
 	activeWatcher = &globalWatcher{groups: groups}
 
 	for _, pg := range groups {
-		globalLogger.Warn("starting watcher", "patternGroup", pg.Patterns)
-		pg.startWatcher()
+		if len(pg.Patterns) > 0 {
+			pg.startWatcher()
+		}
 	}
 
 	return nil
@@ -95,8 +95,8 @@ func (pg *PatternGroup) startWatcher() {
 		fswatcher.WithCooldown(150*time.Millisecond),
 	}
 	for _, pattern := range pg.Patterns {
-		absPattern, err := fastabs.FastAbs(pattern)
-		if err != nil {
+		dir, absPattern, err := extractRootFromPattern(pattern)
+			if err != nil {
 			globalLogger.Error("invalid watcher pattern", "error", err, "pattern", pattern)
 			continue
 		}
@@ -107,7 +107,7 @@ func (pg *PatternGroup) startWatcher() {
 			continue
 		}
 
-		opts = append(opts, fswatcher.WithIncRegex(regex))
+		opts = append(opts, fswatcher.WithPath(dir, fswatcher.WithPathIncRegex(regex)))
 	}
 
 	fsw, err := fswatcher.New(opts...)
