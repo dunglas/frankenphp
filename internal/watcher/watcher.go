@@ -57,7 +57,7 @@ func InitWatcher(ct context.Context, slogger *slog.Logger, groups []*PatternGrou
 		return ErrAlreadyStarted
 	}
 
-	activeWatcher = &globalWatcher{groups: groups}
+	activeWatcher = &globalWatcher{groups: groups, done: make(chan any)}
 	globalContext = ct
 	globalLogger = slogger
 
@@ -88,14 +88,11 @@ func DrainWatcher() {
 		}
 	}
 
-	watcherIsActive.Store(false)
 	activeWatcher.mu.Lock()
 	activeWatcher.mu.Unlock()
-	globalLogger.Info("waiting for watcher to finish")
 	activeWatcher.waitGroup.Wait()
-	globalLogger.Info("watcher finished")
-
 	activeWatcher = nil
+	watcherIsActive.Store(false)
 }
 
 func (pg *PatternGroup) compileMatchers() {
@@ -166,7 +163,6 @@ func (gw *globalWatcher) start() error {
 	}
 
 	gw.fsw = fsw
-	gw.done = make(chan any)
 	gw.waitGroup.Add(1)
 	go gw.runWatcher()
 	go gw.listenForFileEvents()
