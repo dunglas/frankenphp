@@ -43,62 +43,6 @@ func TestQueuedRequestSurvivesReload_module(t *testing.T) {
 	`)
 }
 
-func TestQueuedRequestRejectedWhenFrankenPHPConfigChanges(t *testing.T) {
-	memoryLimit := 5000000 // ~5MB
-	initial := `
-		{
-			skip_install_trust
-			admin localhost:2999
-			http_port ` + testPort + `
-			metrics
-
-			frankenphp {
-				num_threads 1
-				max_threads 1
-				php_ini memory_limit ` + strconv.Itoa(memoryLimit) + `
-			}
-		}
-
-		localhost:` + testPort + ` {
-			route {
-				root ../testdata
-				rewrite sleep.php
-				php
-			}
-		}
-	`
-
-	tester := caddytest.NewTester(t)
-	initServer(t, tester, initial, "caddyfile")
-
-	client := &http.Client{Timeout: 30 * time.Second}
-	baseURL := "http://localhost:" + testPort + "/sleep.php"
-	requestWasRejected := atomic.Bool{}
-
-	doRequest := func(query string) {
-		go func() {
-			req, err := http.NewRequest(http.MethodGet, baseURL+"?"+query, nil)
-			require.NoError(t, err)
-			resp, err := client.Do(req)
-			require.NoError(t, err, "request must not be rejected")
-			require.NoError(t, resp.Body.Close())
-			if resp.StatusCode != http.StatusOK {
-				requestWasRejected.Store(true)
-			}
-		}()
-	}
-
-	sleepMilliseconds := 0
-	require.Eventually(t, func() bool {
-		sleepMilliseconds++
-		changedCaddyConfig := strings.Replace(initial, strconv.Itoa(memoryLimit), strconv.Itoa(memoryLimit+sleepMilliseconds), 1)
-		doRequest("sleep=" + strconv.Itoa(sleepMilliseconds))
-		doRequest("sleep=" + strconv.Itoa(sleepMilliseconds))
-		reloadCaddyConfig(t, changedCaddyConfig)
-		return requestWasRejected.Load()
-	}, 10*time.Second, time.Millisecond, "no queued request was ever rejected")
-}
-
 func TestQueuedRequestSurvivesReload_worker(t *testing.T) {
 	testQueuedRequestSurvivesReload(t, `
 		{
@@ -184,6 +128,62 @@ func testQueuedRequestSurvivesReload(t *testing.T, config string) {
 	case <-time.After(15 * time.Second):
 		t.Fatal("the queued request never completed after the reload")
 	}
+}
+
+func TestQueuedRequestRejectedWhenFrankenPHPConfigChanges(t *testing.T) {
+	memoryLimit := 5000000 // ~5MB
+	initial := `
+		{
+			skip_install_trust
+			admin localhost:2999
+			http_port ` + testPort + `
+			metrics
+
+			frankenphp {
+				num_threads 1
+				max_threads 1
+				php_ini memory_limit ` + strconv.Itoa(memoryLimit) + `
+			}
+		}
+
+		localhost:` + testPort + ` {
+			route {
+				root ../testdata
+				rewrite sleep.php
+				php
+			}
+		}
+	`
+
+	tester := caddytest.NewTester(t)
+	initServer(t, tester, initial, "caddyfile")
+
+	client := &http.Client{Timeout: 30 * time.Second}
+	baseURL := "http://localhost:" + testPort + "/sleep.php"
+	requestWasRejected := atomic.Bool{}
+
+	doRequest := func(query string) {
+		go func() {
+			req, err := http.NewRequest(http.MethodGet, baseURL+"?"+query, nil)
+			require.NoError(t, err)
+			resp, err := client.Do(req)
+			require.NoError(t, err, "request must not be rejected")
+			require.NoError(t, resp.Body.Close())
+			if resp.StatusCode != http.StatusOK {
+				requestWasRejected.Store(true)
+			}
+		}()
+	}
+
+	sleepMilliseconds := 0
+	require.Eventually(t, func() bool {
+		sleepMilliseconds++
+		changedCaddyConfig := strings.Replace(initial, strconv.Itoa(memoryLimit), strconv.Itoa(memoryLimit+sleepMilliseconds), 1)
+		doRequest("sleep=" + strconv.Itoa(sleepMilliseconds))
+		doRequest("sleep=" + strconv.Itoa(sleepMilliseconds))
+		reloadCaddyConfig(t, changedCaddyConfig)
+		return requestWasRejected.Load()
+	}, 10*time.Second, time.Millisecond, "no queued request was ever rejected")
 }
 
 func reloadCaddyConfig(t *testing.T, config string) {

@@ -479,9 +479,10 @@ func Init(options ...Option) error {
 		}
 	}
 
-	mainThread.fingerprint = opt.fingerprint
+	globalLogger.Warn("shouldRequeue", "shouldRequeue", opt.shouldRequeue)
+
 	if oldMainThread != nil {
-		mainThread.reQueueRequests(oldMainThread)
+		mainThread.handleOldRequests(oldMainThread, opt.shouldRequeue)
 	}
 
 	return nil

@@ -26,7 +26,6 @@ type phpMainThread struct {
 	maxThreads  int
 	phpIni      map[string]string
 	isRebooting atomic.Bool
-	fingerprint string
 
 	regularRequestChan chan *frankenPHPContext
 	workers            []*worker
@@ -256,9 +255,8 @@ func getInactivePHPThread() *phpThread {
 	return nil
 }
 
-func (newMainThread *phpMainThread) reQueueRequests(oldMainThread *phpMainThread) {
-	isSameConfiguration := oldMainThread.fingerprint != "" && oldMainThread.fingerprint == newMainThread.fingerprint
-	hardReloadTimeout := time.Duration(maxWaitTime.Load()) * time.Second
+func (newMainThread *phpMainThread) handleOldRequests(oldMainThread *phpMainThread, shouldRequeue bool) {
+	hardReloadTimeout := time.Duration(maxWaitTime.Load())
 	if hardReloadTimeout == 0 {
 		hardReloadTimeout = 15 * time.Second
 	}
@@ -269,7 +267,7 @@ func (newMainThread *phpMainThread) reQueueRequests(oldMainThread *phpMainThread
 			case <-newMainThread.done:
 				return
 			case fc := <-oldMainThread.regularRequestChan:
-				if isSameConfiguration {
+				if shouldRequeue {
 					select {
 					case newMainThread.regularRequestChan <- fc:
 						break
@@ -298,7 +296,7 @@ func (newMainThread *phpMainThread) reQueueRequests(oldMainThread *phpMainThread
 				case <-newMainThread.done:
 					return
 				case fc := <-oldWorker.requestChan:
-					if newWorker != nil && isSameConfiguration {
+					if newWorker != nil && shouldRequeue {
 						select {
 						case newWorker.requestChan <- fc:
 							break

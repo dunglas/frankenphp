@@ -1,8 +1,8 @@
 package caddy
 
 import (
+	"bytes"
 	"context"
-	"crypto/sha256"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -70,6 +70,7 @@ type FrankenPHPApp struct {
 	httpApp       *caddyhttp.App
 	hasStarted    atomic.Bool
 	started       chan any
+	shouldRequeue bool
 }
 
 var errIni = errors.New(`"php_ini" must be in the format: php_ini "<key>" "<value>"`)
@@ -102,6 +103,27 @@ func (f *FrankenPHPApp) Provision(ctx caddy.Context) error {
 		} else {
 			// the http module failed to provision due to invalid configuration
 			return fmt.Errorf("failed to provision caddy http: %w", err)
+		}
+	}
+
+	// if FrankenPHP was running previously and the configuration has not changed, instruct request re-queueing
+	if old := caddy.ActiveContext(); old.Context != nil {
+		if prev, err := old.AppIfConfigured("frankenphp"); err == nil && prev != nil {
+			if p, ok := prev.(*FrankenPHPApp); ok {
+				hasChanged := false
+				if !bytes.Equal(caddyconfig.JSON(p, nil), caddyconfig.JSON(f, nil)) {
+					hasChanged = true
+				}
+				for i, oldModule := range p.modules {
+					if i >= len(f.modules) {
+						break
+					}
+					if !bytes.Equal(caddyconfig.JSON(oldModule, nil), caddyconfig.JSON(f.modules[i], nil)) {
+						break
+					}
+				}
+				f.shouldRequeue = !hasChanged
+			}
 		}
 	}
 
@@ -140,6 +162,7 @@ func (f *FrankenPHPApp) collectOptions(repl *caddy.Replacer, keep bool) ([]frank
 		frankenphp.WithMaxWaitTime(f.MaxWaitTime),
 		frankenphp.WithMaxIdleTime(f.MaxIdleTime),
 		frankenphp.WithMaxRequests(f.MaxRequests),
+		frankenphp.WithRequestRequeueOnReload(f.shouldRequeue),
 	)
 
 	usedWorkerNames := make(map[string]bool, len(f.Workers))
@@ -161,16 +184,6 @@ func (f *FrankenPHPApp) collectOptions(repl *caddy.Replacer, keep bool) ([]frank
 	}
 
 	opts = append(opts, moduleOpts...)
-
-	// add a fingerprint of the current configuration to the options to detect a reload
-	if keep {
-		fingerprint := sha256.New()
-		fingerprint.Write(caddyconfig.JSON(f, nil))
-		for _, m := range f.modules {
-			fingerprint.Write(caddyconfig.JSON(m, nil))
-		}
-		opts = append(opts, frankenphp.WithFingerprint(fmt.Sprintf("%x", fingerprint.Sum(nil))))
-	}
 
 	return opts, nil
 }

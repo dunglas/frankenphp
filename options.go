@@ -26,18 +26,18 @@ type ServerOption func(*Server) error
 type opt struct {
 	hotReloadOpt
 
-	ctx         context.Context
-	numThreads  int
-	maxThreads  int
-	workers     []workerOpt
-	logger      *slog.Logger
-	metrics     Metrics
-	phpIni      map[string]string
-	maxWaitTime time.Duration
-	maxIdleTime time.Duration
-	maxRequests int
-	servers     []*Server
-	fingerprint string
+	ctx           context.Context
+	numThreads    int
+	maxThreads    int
+	workers       []workerOpt
+	logger        *slog.Logger
+	metrics       Metrics
+	phpIni        map[string]string
+	maxWaitTime   time.Duration
+	maxIdleTime   time.Duration
+	maxRequests   int
+	servers       []*Server
+	shouldRequeue bool
 }
 
 type workerOpt struct {
@@ -177,11 +177,10 @@ func WithMaxIdleTime(maxIdleTime time.Duration) Option {
 	}
 }
 
-// WithFingerprint sets a fingerprint of the FrankenPHP configuration.
-// This determines if requests should be queued on reload.
-func WithFingerprint(fingerprint string) Option {
+// WithRequestRequeueOnReload sets if requests should be queued on reload.
+func WithRequestRequeueOnReload(shouldRequeue bool) Option {
 	return func(o *opt) error {
-		o.fingerprint = fingerprint
+		o.shouldRequeue = shouldRequeue
 
 		return nil
 	}
