@@ -1522,6 +1522,17 @@ static char *frankenphp_getenv(const char *name, size_t name_len) {
   return NULL;
 }
 
+/* php.ini files and php_ini directives override these defaults. */
+static void frankenphp_ini_defaults(HashTable *configuration_hash) {
+  if (go_is_hot_reload_enabled()) {
+    /* Otherwise, a page reloaded right after a change may run the old code. */
+    zval tmp;
+    ZVAL_NEW_STR(&tmp, zend_string_init("0", sizeof("0") - 1, 1));
+    zend_hash_str_update(configuration_hash, "opcache.revalidate_freq",
+                         sizeof("opcache.revalidate_freq") - 1, &tmp);
+  }
+}
+
 sapi_module_struct frankenphp_sapi_module = {
     "frankenphp", /* name */
     "FrankenPHP", /* pretty name */
@@ -1734,11 +1745,11 @@ static void *php_thread(void *arg) {
     return NULL;
   }
 
-  frankenphp_log_message("Restarting unhealthy thread", LOG_WARNING);
+  go_log(thread_index, "Restarting unhealthy thread", LOG_WARNING);
 
   if (!frankenphp_new_php_thread(thread_index)) {
     /* probably unreachable */
-    frankenphp_log_message("Failed to restart an unhealthy thread", LOG_ERR);
+    go_log(thread_index, "Failed to restart an unhealthy thread", LOG_ERR);
   }
 
   return NULL;
@@ -1814,6 +1825,8 @@ static void *php_main(void *arg) {
   if (php_ini_overrides != NULL) {
     frankenphp_sapi_module.ini_entries = php_ini_overrides;
   }
+
+  frankenphp_sapi_module.ini_defaults = frankenphp_ini_defaults;
 
   frankenphp_init_interned_strings();
 
