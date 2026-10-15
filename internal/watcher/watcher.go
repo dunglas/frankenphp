@@ -6,11 +6,11 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"sync"
 	"sync/atomic"
-	"path/filepath"
 	"time"
 
 	"github.com/sgtdi/fswatcher"
@@ -107,14 +107,12 @@ func (pg *PatternGroup) compileMatchers() {
 		}
 
 		cp := compiledPattern{root: root}
-		if regexStr != "" {
-			re, err := regexp.Compile(regexStr)
-			if err != nil {
-				globalLogger.Error("invalid watcher pattern regex", "error", err, "pattern", pattern)
-				continue
-			}
-			cp.regex = re
+		re, err := regexp.Compile(regexStr)
+		if err != nil {
+			globalLogger.Error("invalid watcher pattern", "error", err, "pattern", pattern)
+			continue
 		}
+		cp.regex = re
 		pg.matchers = append(pg.matchers, cp)
 	}
 }
@@ -225,10 +223,6 @@ func (gw *globalWatcher) listenForFileEvents() {
 				changesDetected = true
 				pg.triggerCallbacks(matched)
 			}
-		}
-
-		if !gw.fsw.IsRunning() || !watcherIsActive.Load() {
-			break
 		}
 	}
 }

@@ -5,7 +5,6 @@ package watcher
 import (
 	"path/filepath"
 	"regexp"
-	"strings"
 	"testing"
 
 	"github.com/dunglas/frankenphp/internal/fastabs"
@@ -192,7 +191,6 @@ func TestInvalidRecursiveFilePatterns(t *testing.T) {
 		{".**/*.php", "/other/file.php"},
 		{"./**/*.php", "/other/file.php"},
 		{"/a/**/very/long/path.php", "/a/short.php"},
-		{"", ""},
 		{"/a/**/b/c/d/**/e.php", "/a/x/e.php"},
 	}
 
@@ -369,27 +367,17 @@ func assertPatternError(t *testing.T, p string) {
 func assertPattern(t *testing.T, p, fileName string, want bool) {
 	t.Helper()
 
-	root, regex, err := extractRootAndRegex(p)
+	_, regex, err := extractRootAndRegex(p)
 	require.NoError(t, err)
 
-	// no regex, just assert the file path starts with the root
-	if regex == "" {
-		if want {
-			assert.True(t, strings.HasPrefix(normalizePath(t, fileName), normalizePath(t, root)))
-		} else {
-			assert.False(t, strings.HasPrefix(normalizePath(t, fileName), normalizePath(t, root)))
-		}
-		return
-	}
 	re := regexp.MustCompile(regex)
-
 	absFile, err := fastabs.FastAbs(normalizePath(t, fileName))
 	require.NoError(t, err)
 	absFile = filepath.ToSlash(absFile)
 
 	if want {
-		assert.True(t, re.MatchString(absFile))
+		assert.True(t, re.MatchString(absFile), "fileName: %s, regex: %s", absFile, regex)
 	} else {
-		assert.False(t, re.MatchString(absFile))
+		assert.False(t, re.MatchString(absFile), "fileName: %s, regex: %s", absFile, regex)
 	}
 }

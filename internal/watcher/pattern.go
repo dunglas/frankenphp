@@ -14,10 +14,12 @@ import (
 func extractRootAndRegex(pattern string) (string, string, error) {
 	forceDir := strings.HasSuffix(pattern, "/") || strings.HasSuffix(pattern, string(filepath.Separator))
 
-	absPattern, err := fastabs.FastAbs(pattern) // joins with cwd if relative, and cleans
+	absPattern, err := fastabs.FastAbs(pattern)
 	if err != nil {
 		return "", "", err
 	}
+
+	absPattern = filepath.ToSlash(absPattern)
 
 	segs := strings.Split(filepath.ToSlash(absPattern), "/")
 	n := 0
@@ -30,11 +32,12 @@ func extractRootAndRegex(pattern string) (string, string, error) {
 		// ".x" counts as an extension, a bare "." (e.g. "foo.") does not.
 		isFile := !forceDir && len(filepath.Ext(absPattern)) > 1
 		if isFile {
-			// Watch the parent so atomic saves (write temp + rename)
-			// don't invalidate the watch; filter events by name.
-			return filepath.Dir(absPattern), "^" + regexp.QuoteMeta(filepath.ToSlash(absPattern)) + "$", nil
+			// watch the parent, but filter only for the exact filename
+			return filepath.Dir(absPattern), "^" + regexp.QuoteMeta(absPattern) + "$", nil
 		}
-		return absPattern, "", nil
+
+		// watch the whole directory
+		return absPattern, "^" + regexp.QuoteMeta(absPattern), nil
 	}
 
 	// Wildcard present: watch the topmost static directory.
@@ -141,7 +144,7 @@ func wildcardToRegex(pattern string) (string, error) {
 				class = class[1:]
 			}
 			for _, r := range class {
-				if r == '\\' || r == '[' {
+				if r == '\\' || r == '[' || r == ']' {
 					sb.WriteRune('\\')
 				}
 				sb.WriteRune(r)
