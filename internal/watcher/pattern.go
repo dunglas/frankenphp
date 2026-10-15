@@ -39,8 +39,9 @@ func extractRootAndRegex(pattern string) (string, string, error) {
 
 	// Wildcard present: watch the topmost static directory.
 	dir := strings.Join(segs[:n], "/")
-	if dir == "" {
-		dir = "/"
+	if dir == filepath.VolumeName(dir) {
+		// "" on Unix, "C:" on Windows: watch the root, not the drive's current dir
+		dir += "/"
 	}
 
 	regex, err := wildcardToRegex(absPattern)

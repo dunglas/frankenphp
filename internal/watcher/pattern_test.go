@@ -20,10 +20,9 @@ func normalizePath(t *testing.T, path string) string {
 		return path
 	}
 
-	path = filepath.FromSlash(path)
-	if strings.HasPrefix(path, "\\") {
-		path = "C:\\" + path[1:]
-	}
+	// Rooted paths without a volume resolve against the current drive
+	path, err := filepath.Abs(filepath.FromSlash(path))
+	require.NoError(t, err)
 
 	return path
 }
