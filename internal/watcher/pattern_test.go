@@ -386,6 +386,7 @@ func assertPattern(t *testing.T, p, fileName string, want bool) {
 
 	absFile, err := fastabs.FastAbs(normalizePath(t, fileName))
 	require.NoError(t, err)
+	absFile = filepath.ToSlash(absFile)
 
 	if want {
 		assert.True(t, re.MatchString(absFile))

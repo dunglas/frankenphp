@@ -10,9 +10,9 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+	"path/filepath"
 	"time"
 
-	"github.com/dunglas/frankenphp/internal/fastabs"
 	"github.com/sgtdi/fswatcher"
 )
 
@@ -120,19 +120,15 @@ func (pg *PatternGroup) compileMatchers() {
 }
 
 func (pg *PatternGroup) matchesPath(path string) bool {
-	absPath, err := fastabs.FastAbs(path)
-	if err != nil {
-		return false
-	}
-
 	for _, m := range pg.matchers {
 		if m.regex == nil {
-			if strings.HasPrefix(absPath, m.root) {
+			if strings.HasPrefix(path, m.root) {
 				return true
 			}
 			continue
 		}
-		if m.regex.MatchString(absPath) {
+		path = filepath.ToSlash(path)
+		if m.regex.MatchString(path) {
 			return true
 		}
 	}

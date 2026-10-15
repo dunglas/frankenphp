@@ -32,7 +32,7 @@ func extractRootAndRegex(pattern string) (string, string, error) {
 		if isFile {
 			// Watch the parent so atomic saves (write temp + rename)
 			// don't invalidate the watch; filter events by name.
-			return filepath.Dir(absPattern), absPattern, nil
+			return filepath.Dir(absPattern), "^" + regexp.QuoteMeta(filepath.ToSlash(absPattern)) + "$", nil
 		}
 		return absPattern, "", nil
 	}
@@ -57,14 +57,8 @@ func wildcardToRegex(pattern string) (string, error) {
 		return "", err
 	}
 
-	// Normalize pattern backslashes to forward slashes for clean parsing
+	// Paths are matched in slash form (windows compatibility)
 	pattern = filepath.ToSlash(pattern)
-
-	// Use [/\\] for Windows to support mixed slashes, and plain '/' for Unix-like systems
-	sepRegex := `/`
-	if filepath.Separator == '\\' {
-		sepRegex = `[/\\]`
-	}
 
 	var sb strings.Builder
 	sb.WriteString("^")
@@ -74,12 +68,6 @@ func wildcardToRegex(pattern string) (string, error) {
 
 	for i := 0; i < len(runes); i++ {
 		c := runes[i]
-
-		// Handle Windows drive letter colon (e.g., "C:/") so it's treated literally
-		if c == ':' && i == 1 && ((runes[0] >= 'a' && runes[0] <= 'z') || (runes[0] >= 'A' && runes[0] <= 'Z')) {
-			sb.WriteString(":")
-			continue
-		}
 
 		switch c {
 		case '*':
@@ -93,13 +81,13 @@ func wildcardToRegex(pattern string) (string, error) {
 			switch {
 			case !isDouble:
 				// plain "*" -> anything except a separator
-				fmt.Fprintf(&sb, "[^%s]*", sepRegex)
+				sb.WriteString("[^/]*")
 
 			case i+1 < len(runes) && runes[i+1] == '/' &&
 				(start == 0 || runes[start-1] == '/'):
 				// "**/" at a segment start -> zero or more directories
 				i++ // consume the slash
-				fmt.Fprintf(&sb, "(?:.*%s)?", sepRegex)
+				sb.WriteString("(?:.*/)?")
 
 			default:
 				// any other "**" -> anything, including separators
@@ -107,10 +95,7 @@ func wildcardToRegex(pattern string) (string, error) {
 			}
 
 		case '?':
-			fmt.Fprintf(&sb, "[^%s]", sepRegex)
-
-		case '/':
-			sb.WriteString(sepRegex)
+			sb.WriteString("[^/]")
 
 		case '{':
 			braceDepth++
