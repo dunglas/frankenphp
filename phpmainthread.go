@@ -265,6 +265,9 @@ func (newMainThread *phpMainThread) handleOldRequests(oldMainThread *phpMainThre
 		for {
 			select {
 			case <-newMainThread.done:
+				for _, s := range oldMainThread.servers {
+					s.isRegistered.Store(false) // unregister servers from the previous generation if we have reloaded twice
+				}
 				return
 			case fc := <-oldMainThread.regularRequestChan:
 				if shouldRequeue {
