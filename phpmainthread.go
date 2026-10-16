@@ -24,21 +24,25 @@ type phpMainThread struct {
 	done                 chan struct{}
 	numThreads           int
 	maxThreads           int
+	maxRequestsPerThread int
+	hotReloadEnabled     bool
 	phpIni               map[string]string
 	isRebooting          atomic.Bool
 	maxWaitTime          time.Duration
 	maxIdleTime          time.Duration
-	maxRequestsPerThread int
-	hotReloadEnabled     bool
 
-	regularThreads     []*phpThread
-	autoScaledThreads  []*phpThread
+	regularThreads    []*phpThread
+	autoScaledThreads []*phpThread
+
+	scaleChan          chan *frankenPHPContext
 	regularRequestChan chan *frankenPHPContext
-	workers            []*worker
-	workersByName      map[string]*worker
-	workersByPath      map[string]*worker
-	fallbackServer     *Server
-	servers            []*Server
+
+	workers       []*worker
+	workersByName map[string]*worker
+	workersByPath map[string]*worker
+
+	fallbackServer *Server
+	servers        []*Server
 }
 
 var (

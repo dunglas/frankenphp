@@ -130,9 +130,10 @@ func handleRequestWithRegularPHPThreads(fc *frankenPHPContext) error {
 
 	runtime.Gosched()
 
+	mainThread := fc.server.mainThread
 	if queuedRegularThreads.Load() == 0 {
 		regularThreadMu.RLock()
-		for _, thread := range fc.server.mainThread.regularThreads {
+		for _, thread := range mainThread.regularThreads {
 			select {
 			case thread.requestChan <- fc:
 				regularThreadMu.RUnlock()
@@ -153,7 +154,7 @@ func handleRequestWithRegularPHPThreads(fc *frankenPHPContext) error {
 
 	for {
 		select {
-		case fc.server.mainThread.regularRequestChan <- fc:
+		case mainThread.regularRequestChan <- fc:
 			queuedRegularThreads.Add(-1)
 			metrics.DequeuedRequest()
 
@@ -161,9 +162,9 @@ func handleRequestWithRegularPHPThreads(fc *frankenPHPContext) error {
 			metrics.StopRequest()
 
 			return nil
-		case scaleChan <- fc:
+		case mainThread.scaleChan <- fc:
 			// the request has triggered scaling, continue to wait for a thread
-		case <-timeoutChan(fc.server.mainThread.maxWaitTime):
+		case <-timeoutChan(mainThread.maxWaitTime):
 			// the request has timed out stalling
 			queuedRegularThreads.Add(-1)
 			metrics.DequeuedRequest()

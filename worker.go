@@ -293,7 +293,7 @@ func (worker *worker) handleRequest(fc *frankenPHPContext) error {
 	metrics.QueuedWorkerRequest(worker.name)
 
 	for {
-		workerScaleChan := scaleChan
+		workerScaleChan := fc.server.mainThread.scaleChan
 		if worker.isAtThreadLimit() {
 			workerScaleChan = nil // max_threads for this worker reached, do not attempt scaling
 		}

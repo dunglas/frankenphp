@@ -28,24 +28,19 @@ const (
 
 var (
 	ErrMaxThreadsReached = errors.New("max amount of overall threads reached")
-
-	scaleChan chan *frankenPHPContext
-	scalingMu = new(sync.RWMutex)
+	scalingMu            = new(sync.RWMutex)
 )
 
-func initAutoScaling(mainThread *phpMainThread) {
-	if mainThread.maxThreads <= mainThread.numThreads {
+func initAutoScaling(mThread *phpMainThread) {
+	if mThread.maxThreads <= mThread.numThreads {
 		return
 	}
 
-	// reused across reloads so queued requests aren't orphaned on a stale channel
-	if scaleChan == nil {
-		scaleChan = make(chan *frankenPHPContext)
-	}
+	mThread.scaleChan = make(chan *frankenPHPContext)
+	maxScaledThreads := mThread.maxThreads - mThread.numThreads
 
-	maxScaledThreads := mainThread.maxThreads - mainThread.numThreads
-	go startUpscalingThreads(maxScaledThreads, scaleChan, mainThread)
-	go startDownScalingThreads(mainThread)
+	go startUpscalingThreads(maxScaledThreads, mThread.scaleChan, mThread)
+	go startDownScalingThreads(mThread)
 }
 
 func addRegularThread(mThread *phpMainThread) (*phpThread, error) {
