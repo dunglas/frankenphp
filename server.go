@@ -23,7 +23,6 @@ type Server struct {
 	workers                   []*worker
 	workersByPath             map[string]*worker
 	workersWithRequestMatcher []*worker
-	regularRequestChan        chan *frankenPHPContext
 	mainThread                *phpMainThread
 
 	// registered while FrankenPHP runs with this server; read by concurrent
@@ -58,11 +57,9 @@ func ensureServersHaveNames(newServers []*Server) {
 // registerServers registers the servers with the main thread and lets them accept requests
 func registerServers(mthread *phpMainThread, newServers []*Server) {
 	mthread.servers = newServers
-	mthread.fallbackServer.regularRequestChan = mthread.regularRequestChan
 	mthread.fallbackServer.isRegistered.Store(true)
 	mthread.fallbackServer.mainThread = mthread
 	for _, s := range mthread.servers {
-		s.regularRequestChan = mthread.regularRequestChan
 		s.mainThread = mthread
 		s.isRegistered.Store(true)
 	}

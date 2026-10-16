@@ -23,7 +23,6 @@ type regularThread struct {
 }
 
 var (
-	regularThreads       []*phpThread
 	regularThreadMu      = &sync.RWMutex{}
 	queuedRegularThreads = atomic.Int32{}
 )
@@ -133,7 +132,7 @@ func handleRequestWithRegularPHPThreads(fc *frankenPHPContext) error {
 
 	if queuedRegularThreads.Load() == 0 {
 		regularThreadMu.RLock()
-		for _, thread := range regularThreads {
+		for _, thread := range fc.server.mainThread.regularThreads {
 			select {
 			case thread.requestChan <- fc:
 				regularThreadMu.RUnlock()
@@ -154,7 +153,7 @@ func handleRequestWithRegularPHPThreads(fc *frankenPHPContext) error {
 
 	for {
 		select {
-		case fc.server.regularRequestChan <- fc:
+		case fc.server.mainThread.regularRequestChan <- fc:
 			queuedRegularThreads.Add(-1)
 			metrics.DequeuedRequest()
 
@@ -179,15 +178,15 @@ func handleRequestWithRegularPHPThreads(fc *frankenPHPContext) error {
 
 func attachRegularThread(thread *phpThread) {
 	regularThreadMu.Lock()
-	regularThreads = append(regularThreads, thread)
+	thread.mainThread.regularThreads = append(thread.mainThread.regularThreads, thread)
 	regularThreadMu.Unlock()
 }
 
 func detachRegularThread(thread *phpThread) {
 	regularThreadMu.Lock()
-	for i, t := range regularThreads {
+	for i, t := range thread.mainThread.regularThreads {
 		if t == thread {
-			regularThreads = append(regularThreads[:i], regularThreads[i+1:]...)
+			thread.mainThread.regularThreads = append(thread.mainThread.regularThreads[:i], thread.mainThread.regularThreads[i+1:]...)
 			break
 		}
 	}

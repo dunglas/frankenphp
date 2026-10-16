@@ -423,7 +423,7 @@ func Init(options ...Option) error {
 		return err
 	}
 
-	regularThreads = make([]*phpThread, 0, opt.numThreads-workerThreadCount)
+	mThread.regularThreads = make([]*phpThread, 0, mThread.numThreads-workerThreadCount)
 	for range opt.numThreads - workerThreadCount {
 		convertToRegularThread(getInactivePHPThread(), mThread)
 	}

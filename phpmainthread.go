@@ -31,6 +31,7 @@ type phpMainThread struct {
 	maxRequestsPerThread int
 	hotReloadEnabled     bool
 
+	regularThreads     []*phpThread
 	regularRequestChan chan *frankenPHPContext
 	workers            []*worker
 	workersByName      map[string]*worker
