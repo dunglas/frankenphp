@@ -27,6 +27,7 @@ type phpMainThread struct {
 	phpIni               map[string]string
 	isRebooting          atomic.Bool
 	maxWaitTime          time.Duration
+	maxIdleTime          time.Duration
 	maxRequestsPerThread int
 	hotReloadEnabled     bool
 
@@ -53,6 +54,11 @@ var (
 // a fixed number of inactive PHP threads
 // and reserves a fixed number of possible PHP threads
 func initPHPThreads(opt *opt) (*phpMainThread, error) {
+	idleTime := defaultMaxIdleTime
+	if opt.maxIdleTime > 0 {
+		idleTime = opt.maxIdleTime
+	}
+
 	oldMainThread = mainThread
 	mainThread = &phpMainThread{
 		state:                state.NewThreadState(),
@@ -67,6 +73,7 @@ func initPHPThreads(opt *opt) (*phpMainThread, error) {
 		workersByName:        make(map[string]*worker, opt.numThreads),
 		workersByPath:        make(map[string]*worker, opt.numThreads),
 		maxWaitTime:          opt.maxWaitTime,
+		maxIdleTime:          idleTime,
 		maxRequestsPerThread: opt.maxRequests,
 		hotReloadEnabled:     opt.hasHotReload(),
 	}

@@ -382,10 +382,6 @@ func Init(options ...Option) error {
 		metrics = opt.metrics
 	}
 
-	if opt.maxIdleTime > 0 {
-		maxIdleTime = opt.maxIdleTime
-	}
-
 	ensureServersHaveNames(opt.servers)
 
 	workerThreadCount, err := calculateMaxThreads(opt)
@@ -959,5 +955,4 @@ func resetGlobals() {
 	globalCtx = context.Background()
 	globalLogger = slog.Default()
 	watcherIsEnabled = false
-	maxIdleTime = defaultMaxIdleTime
 }

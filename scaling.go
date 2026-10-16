@@ -29,7 +29,6 @@ const (
 var (
 	ErrMaxThreadsReached = errors.New("max amount of overall threads reached")
 
-	maxIdleTime       = defaultMaxIdleTime
 	scaleChan         chan *frankenPHPContext
 	autoScaledThreads = []*phpThread{}
 	scalingMu         = new(sync.RWMutex)
@@ -193,13 +192,13 @@ func startDownScalingThreads(mThread *phpMainThread) {
 		case <-mThread.done:
 			return
 		case <-time.After(downScaleCheckTime):
-			deactivateThreads()
+			deactivateThreads(mThread)
 		}
 	}
 }
 
 // deactivateThreads checks all threads and removes those that have been inactive for too long
-func deactivateThreads() {
+func deactivateThreads(mThread *phpMainThread) {
 	stoppedThreadCount := 0
 	scalingMu.Lock()
 	defer scalingMu.Unlock()
@@ -216,7 +215,7 @@ func deactivateThreads() {
 		}
 
 		// convert threads to inactive if they have been idle for too long
-		if thread.state.Is(state.Ready) && waitTime > maxIdleTime.Milliseconds() {
+		if thread.state.Is(state.Ready) && waitTime > mThread.maxIdleTime.Milliseconds() {
 			convertToInactiveThread(thread)
 			stoppedThreadCount++
 			autoScaledThreads = slices.Delete(autoScaledThreads, i, i+1)
