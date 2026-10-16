@@ -219,9 +219,6 @@ typedef enum {
   FRANKENPHP_MERCURE_UNSUPPORTED = 4,
 } frankenphp_mercure_status;
 
-/* thread index of the php-cli thread, which has no Go phpThread */
-#define FRANKENPHP_CLI_THREAD_INDEX UINTPTR_MAX
-
 void register_extensions(zend_module_entry **m, int len);
 
 #endif

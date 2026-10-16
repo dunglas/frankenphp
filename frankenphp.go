@@ -805,12 +805,6 @@ func go_read_cookies(threadIndex C.uintptr_t) *C.char {
 
 // getLogger returns the logger and context safely even if phpThreads have not been created yet
 func getLogger(threadIndex C.uintptr_t) (*slog.Logger, context.Context) {
-	if threadIndex == C.FRANKENPHP_CLI_THREAD_INDEX {
-		if l := cliLog.Load(); l != nil {
-			return l.logger, l.ctx
-		}
-	}
-
 	if threadIndex >= C.uintptr_t(len(phpThreads)) {
 		return globalLogger, globalCtx
 	}

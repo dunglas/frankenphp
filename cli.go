@@ -3,21 +3,10 @@ package frankenphp
 // #include "frankenphp.h"
 import "C"
 import (
-	"context"
 	"fmt"
-	"log/slog"
 	"os"
-	"sync/atomic"
 	"unsafe"
 )
-
-type cliLogger struct {
-	logger *slog.Logger
-	ctx    context.Context
-}
-
-// separate from globalLogger so a server running in the same process keeps its own
-var cliLog atomic.Pointer[cliLogger]
 
 // ExecuteScriptCLI executes the PHP script passed as parameter.
 // It returns the exit status code of the script.
@@ -33,14 +22,12 @@ func ExecuteScriptCLI(script string, args []string, opts ...Option) int {
 		}
 	}
 
-	l := &cliLogger{logger: o.logger, ctx: o.ctx}
-	if l.logger == nil {
-		l.logger = globalLogger
+	if o.ctx != nil {
+		globalCtx = o.ctx
 	}
-	if l.ctx == nil {
-		l.ctx = globalCtx
+	if o.logger != nil {
+		globalLogger = o.logger
 	}
-	cliLog.Store(l)
 
 	// Ensure extensions are registered before CLI execution
 	registerExtensions()

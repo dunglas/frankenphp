@@ -1022,8 +1022,7 @@ PHP_FUNCTION(mercure_publish) {
   }
 }
 
-static void frankenphp_log_to(INTERNAL_FUNCTION_PARAMETERS,
-                              uintptr_t thread_idx) {
+PHP_FUNCTION(frankenphp_log) {
   zend_string *message = NULL;
   zend_long level = 0;
   zval *context = NULL;
@@ -1036,24 +1035,12 @@ static void frankenphp_log_to(INTERNAL_FUNCTION_PARAMETERS,
   ZEND_PARSE_PARAMETERS_END();
 
   char *ret = NULL;
-  ret = go_log_attrs(thread_idx, message, level, context);
+  ret = go_log_attrs(frankenphp_thread_index(), message, level, context);
   if (ret != NULL) {
     zend_throw_exception(spl_ce_RuntimeException, ret, 0);
     free(ret);
     RETURN_THROWS();
   }
-}
-
-PHP_FUNCTION(frankenphp_log) {
-  frankenphp_log_to(INTERNAL_FUNCTION_PARAM_PASSTHRU,
-                    frankenphp_thread_index());
-}
-
-/* explicit index: in CLI, the TLS index and SG(server_context) may point to a
- * server thread of the same process */
-static PHP_FUNCTION(frankenphp_cli_log) {
-  frankenphp_log_to(INTERNAL_FUNCTION_PARAM_PASSTHRU,
-                    FRANKENPHP_CLI_THREAD_INDEX);
 }
 
 #if FRANKENPHP_OPCACHE_RESTART_HOOK
@@ -1236,8 +1223,7 @@ static zend_module_entry frankenphp_module = {
     STANDARD_MODULE_PROPERTIES};
 
 static const zend_function_entry frankenphp_cli_functions[] = {
-    ZEND_NAMED_FE(frankenphp_log, ZEND_FN(frankenphp_cli_log),
-                  arginfo_frankenphp_log) ZEND_FE_END};
+    ZEND_FE(frankenphp_log, arginfo_frankenphp_log) ZEND_FE_END};
 
 static PHP_MINIT_FUNCTION(frankenphp_cli) {
   register_frankenphp_symbols(module_number);
