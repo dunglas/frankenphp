@@ -32,6 +32,7 @@ type phpMainThread struct {
 	hotReloadEnabled     bool
 
 	regularThreads     []*phpThread
+	autoScaledThreads  []*phpThread
 	regularRequestChan chan *frankenPHPContext
 	workers            []*worker
 	workersByName      map[string]*worker
@@ -73,6 +74,7 @@ func initPHPThreads(opt *opt) (*phpMainThread, error) {
 		workers:              make([]*worker, 0, opt.numThreads),
 		workersByName:        make(map[string]*worker, opt.numThreads),
 		workersByPath:        make(map[string]*worker, opt.numThreads),
+		autoScaledThreads:    make([]*phpThread, 0, opt.numThreads),
 		maxWaitTime:          opt.maxWaitTime,
 		maxIdleTime:          idleTime,
 		maxRequestsPerThread: opt.maxRequests,
