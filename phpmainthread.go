@@ -29,6 +29,8 @@ type phpMainThread struct {
 
 	regularRequestChan chan *frankenPHPContext
 	workers            []*worker
+	workersByName      map[string]*worker
+	workersByPath      map[string]*worker
 	fallbackServer     *Server
 	servers            []*Server
 }
@@ -58,6 +60,9 @@ func initPHPThreads(numThreads int, numMaxThreads int, phpIni map[string]string)
 		regularRequestChan: make(chan *frankenPHPContext),
 		fallbackServer:     newFallbackServer(),
 		servers:            []*Server{},
+		workers:            make([]*worker, 0, numThreads),
+		workersByName:      make(map[string]*worker, numThreads),
+		workersByPath:      make(map[string]*worker, numThreads),
 	}
 
 	// initialize the first thread

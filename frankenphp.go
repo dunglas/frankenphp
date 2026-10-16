@@ -443,8 +443,7 @@ func Init(options ...Option) error {
 		convertToRegularThread(getInactivePHPThread(), mThread)
 	}
 
-	mThread.workers, err = initWorkers(opt.workers)
-	if err != nil {
+	if err := initWorkers(opt.workers, mThread); err != nil {
 		shutdown()
 
 		return err
@@ -972,10 +971,6 @@ func timeoutChan(timeout time.Duration) <-chan time.Time {
 func resetGlobals() {
 	globalCtx = context.Background()
 	globalLogger = slog.Default()
-	workers = nil
-	workersByName = nil
-	globalWorkersByPath = nil
-	mainThread.servers = nil
 	watcherIsEnabled = false
 	hotReloadEnabled = false
 	maxIdleTime = defaultMaxIdleTime
