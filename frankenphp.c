@@ -1222,16 +1222,25 @@ static zend_module_entry frankenphp_module = {
     TOSTRING(FRANKENPHP_VERSION),
     STANDARD_MODULE_PROPERTIES};
 
+static const zend_function_entry frankenphp_cli_functions[] = {
+    ZEND_FE(frankenphp_log, arginfo_frankenphp_log) ZEND_FE_END};
+
+static PHP_MINIT_FUNCTION(frankenphp_cli) {
+  register_frankenphp_symbols(module_number);
+
+  return SUCCESS;
+}
+
 /* same phpinfo section in CLI, without the server functions and hooks */
 static zend_module_entry frankenphp_cli_module = {
     STANDARD_MODULE_HEADER,
     "frankenphp-cli",
-    NULL,                  /* function table */
-    NULL,                  /* initialization */
-    NULL,                  /* shutdown */
-    NULL,                  /* request initialization */
-    NULL,                  /* request shutdown */
-    PHP_MINFO(frankenphp), /* information */
+    frankenphp_cli_functions,  /* function table */
+    PHP_MINIT(frankenphp_cli), /* initialization */
+    NULL,                      /* shutdown */
+    NULL,                      /* request initialization */
+    NULL,                      /* request shutdown */
+    PHP_MINFO(frankenphp),     /* information */
     TOSTRING(FRANKENPHP_VERSION),
     STANDARD_MODULE_PROPERTIES};
 

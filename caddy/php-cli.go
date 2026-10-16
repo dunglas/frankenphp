@@ -1,12 +1,15 @@
 package caddy
 
 import (
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
 
+	"github.com/caddyserver/caddy/v2"
 	caddycmd "github.com/caddyserver/caddy/v2/cmd"
 	"github.com/dunglas/frankenphp"
+	"go.uber.org/zap/exp/zapslog"
 
 	"github.com/spf13/cobra"
 )
@@ -35,7 +38,8 @@ func cmdPHPCLI(fs caddycmd.Flags) (int, error) {
 		}
 	}
 
-	status := frankenphp.ExecuteScriptCLI(args[0], args)
+	logger := slog.New(zapslog.NewHandler(caddy.Log().Core(), zapslog.WithName("frankenphp")))
+	status := frankenphp.ExecuteScriptCLI(args[0], args, frankenphp.WithLogger(logger))
 
 	os.Exit(status)
 
