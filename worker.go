@@ -222,7 +222,9 @@ func newWorker(o workerOpt, m *phpMainThread) (*worker, error) {
 // full duration of the syscall.
 func RestartWorkers() {
 	if mainThread != nil {
+		startupMu.Lock()
 		mainThread.rebootAllThreads()
+		startupMu.Unlock()
 	}
 }
 
