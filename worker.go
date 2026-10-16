@@ -37,8 +37,7 @@ type worker struct {
 }
 
 var (
-	watcherIsEnabled bool
-	startupFailChan  chan error
+	startupFailChan chan error
 )
 
 func initWorkers(opts []workerOpt, m *phpMainThread) error {

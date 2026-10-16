@@ -434,7 +434,7 @@ func Init(options ...Option) error {
 		return err
 	}
 
-	if err := initWatchers(opt); err != nil {
+	if err := initWatchers(opt, mThread); err != nil {
 		shutdown()
 		return err
 	}
@@ -954,5 +954,4 @@ func timeoutChan(timeout time.Duration) <-chan time.Time {
 func resetGlobals() {
 	globalCtx = context.Background()
 	globalLogger = slog.Default()
-	watcherIsEnabled = false
 }

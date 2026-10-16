@@ -26,6 +26,7 @@ type phpMainThread struct {
 	maxThreads           int
 	maxRequestsPerThread int
 	hotReloadEnabled     bool
+	watcherIsEnabled     bool
 	phpIni               map[string]string
 	isRebooting          atomic.Bool
 	maxWaitTime          time.Duration
