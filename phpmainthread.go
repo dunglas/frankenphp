@@ -26,6 +26,7 @@ type phpMainThread struct {
 	maxThreads  int
 	phpIni      map[string]string
 	isRebooting atomic.Bool
+	maxWaitTime time.Duration
 
 	regularRequestChan chan *frankenPHPContext
 	workers            []*worker
@@ -49,20 +50,21 @@ var (
 // initPHPThreads starts the main PHP thread,
 // a fixed number of inactive PHP threads
 // and reserves a fixed number of possible PHP threads
-func initPHPThreads(numThreads int, numMaxThreads int, phpIni map[string]string) (*phpMainThread, error) {
+func initPHPThreads(opt *opt) (*phpMainThread, error) {
 	oldMainThread = mainThread
 	mainThread = &phpMainThread{
 		state:              state.NewThreadState(),
 		done:               make(chan struct{}),
-		numThreads:         numThreads,
-		maxThreads:         numMaxThreads,
-		phpIni:             phpIni,
+		numThreads:         opt.numThreads,
+		maxThreads:         opt.maxThreads,
+		phpIni:             opt.phpIni,
 		regularRequestChan: make(chan *frankenPHPContext),
 		fallbackServer:     newFallbackServer(),
 		servers:            []*Server{},
-		workers:            make([]*worker, 0, numThreads),
-		workersByName:      make(map[string]*worker, numThreads),
-		workersByPath:      make(map[string]*worker, numThreads),
+		workers:            make([]*worker, 0, opt.numThreads),
+		workersByName:      make(map[string]*worker, opt.numThreads),
+		workersByPath:      make(map[string]*worker, opt.numThreads),
+		maxWaitTime:        opt.maxWaitTime,
 	}
 
 	// initialize the first thread
@@ -90,7 +92,7 @@ func initPHPThreads(numThreads int, numMaxThreads int, phpIni map[string]string)
 	// start the underlying C threads
 	var ready sync.WaitGroup
 
-	for i := range numThreads {
+	for i := range mainThread.numThreads {
 		ready.Go(phpThreads[i].boot)
 	}
 
@@ -260,8 +262,8 @@ func getInactivePHPThread() *phpThread {
 	return nil
 }
 
-func (newMainThread *phpMainThread) handleOldRequests(oldMainThread *phpMainThread, shouldRequeue bool) {
-	hardReloadTimeout := time.Duration(maxWaitTime.Load())
+func (newMainThread *phpMainThread) handleStaleRequests(oldMainThread *phpMainThread, shouldRequeue bool) {
+	hardReloadTimeout := oldMainThread.maxWaitTime
 	if hardReloadTimeout == 0 {
 		hardReloadTimeout = 15 * time.Second
 	}

@@ -70,7 +70,6 @@ var (
 	metrics Metrics = nullMetrics{}
 
 	// atomic: read by in-flight requests while a reload may rewrite it
-	maxWaitTime          atomic.Int64
 	maxRequestsPerThread int
 
 	hotReloadEnabled bool
@@ -388,7 +387,6 @@ func Init(options ...Option) error {
 		metrics = opt.metrics
 	}
 
-	maxWaitTime.Store(int64(opt.maxWaitTime))
 	maxRequestsPerThread = opt.maxRequests
 
 	if opt.maxIdleTime > 0 {
@@ -432,7 +430,7 @@ func Init(options ...Option) error {
 
 	hotReloadEnabled = opt.hasHotReload()
 
-	mThread, err := initPHPThreads(opt.numThreads, opt.maxThreads, opt.phpIni)
+	mThread, err := initPHPThreads(opt)
 	if err != nil {
 		shutdown()
 		return err
@@ -478,10 +476,8 @@ func Init(options ...Option) error {
 		}
 	}
 
-	globalLogger.Warn("shouldRequeue", "shouldRequeue", opt.shouldRequeue)
-
 	if oldMainThread != nil {
-		mainThread.handleOldRequests(oldMainThread, opt.shouldRequeue)
+		mThread.handleStaleRequests(oldMainThread, opt.shouldRequeue)
 	}
 
 	return nil
