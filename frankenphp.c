@@ -1022,7 +1022,8 @@ PHP_FUNCTION(mercure_publish) {
   }
 }
 
-PHP_FUNCTION(frankenphp_log) {
+static void frankenphp_log_to(INTERNAL_FUNCTION_PARAMETERS,
+                              uintptr_t thread_idx) {
   zend_string *message = NULL;
   zend_long level = 0;
   zval *context = NULL;
@@ -1035,12 +1036,24 @@ PHP_FUNCTION(frankenphp_log) {
   ZEND_PARSE_PARAMETERS_END();
 
   char *ret = NULL;
-  ret = go_log_attrs(frankenphp_thread_index(), message, level, context);
+  ret = go_log_attrs(thread_idx, message, level, context);
   if (ret != NULL) {
     zend_throw_exception(spl_ce_RuntimeException, ret, 0);
     free(ret);
     RETURN_THROWS();
   }
+}
+
+PHP_FUNCTION(frankenphp_log) {
+  frankenphp_log_to(INTERNAL_FUNCTION_PARAM_PASSTHRU,
+                    frankenphp_thread_index());
+}
+
+/* explicit index: in CLI, the TLS index and SG(server_context) may point to a
+ * server thread of the same process */
+static PHP_FUNCTION(frankenphp_cli_log) {
+  frankenphp_log_to(INTERNAL_FUNCTION_PARAM_PASSTHRU,
+                    FRANKENPHP_CLI_THREAD_INDEX);
 }
 
 #if FRANKENPHP_OPCACHE_RESTART_HOOK
@@ -1222,16 +1235,26 @@ static zend_module_entry frankenphp_module = {
     TOSTRING(FRANKENPHP_VERSION),
     STANDARD_MODULE_PROPERTIES};
 
+static const zend_function_entry frankenphp_cli_functions[] = {
+    ZEND_NAMED_FE(frankenphp_log, ZEND_FN(frankenphp_cli_log),
+                  arginfo_frankenphp_log) ZEND_FE_END};
+
+static PHP_MINIT_FUNCTION(frankenphp_cli) {
+  register_frankenphp_symbols(module_number);
+
+  return SUCCESS;
+}
+
 /* same phpinfo section in CLI, without the server functions and hooks */
 static zend_module_entry frankenphp_cli_module = {
     STANDARD_MODULE_HEADER,
     "frankenphp-cli",
-    NULL,                  /* function table */
-    NULL,                  /* initialization */
-    NULL,                  /* shutdown */
-    NULL,                  /* request initialization */
-    NULL,                  /* request shutdown */
-    PHP_MINFO(frankenphp), /* information */
+    frankenphp_cli_functions,  /* function table */
+    PHP_MINIT(frankenphp_cli), /* initialization */
+    NULL,                      /* shutdown */
+    NULL,                      /* request initialization */
+    NULL,                      /* request shutdown */
+    PHP_MINFO(frankenphp),     /* information */
     TOSTRING(FRANKENPHP_VERSION),
     STANDARD_MODULE_PROPERTIES};
 
