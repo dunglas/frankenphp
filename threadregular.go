@@ -126,6 +126,7 @@ func (handler *regularThread) afterRequest() {
 }
 
 func handleRequestWithRegularPHPThreads(fc *frankenPHPContext) error {
+	metrics := fc.server.metrics
 	metrics.StartRequest()
 
 	runtime.Gosched()
@@ -148,6 +149,7 @@ func handleRequestWithRegularPHPThreads(fc *frankenPHPContext) error {
 	}
 
 	// if no thread was available, mark the request as queued and fan it out to all threads
+	done := fc.server.done
 	queuedRegularThreads.Add(1)
 	metrics.QueuedRequest()
 
@@ -163,12 +165,20 @@ func handleRequestWithRegularPHPThreads(fc *frankenPHPContext) error {
 			return nil
 		case scaleChan <- fc:
 			// the request has triggered scaling, continue to wait for a thread
+		case <-done:
+			queuedRegularThreads.Add(-1)
+			metrics.DequeuedRequest()
+			metrics.StopRequest()
+			return ErrNotRunning
 		case <-timeoutChan(time.Duration(maxWaitTime.Load())):
 			// the request has timed out stalling
 			queuedRegularThreads.Add(-1)
 			metrics.DequeuedRequest()
 			metrics.StopRequest()
 
+			if !fc.server.isRegistered.Load() {
+				return ErrNotRunning
+			}
 			fc.reject(ErrMaxWaitTimeExceeded)
 
 			return ErrMaxWaitTimeExceeded

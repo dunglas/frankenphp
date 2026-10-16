@@ -34,6 +34,7 @@ type worker struct {
 	onThreadShutdown       func(int)
 	queuedRequests         atomic.Int32
 	server                 *Server
+	metrics                Metrics
 }
 
 var (
@@ -205,6 +206,7 @@ func newWorker(o workerOpt) (*worker, error) {
 		onThreadReady:          o.onThreadReady,
 		onThreadShutdown:       o.onThreadShutdown,
 		server:                 o.server,
+		metrics:                metrics,
 	}
 
 	w.configureMercure(&o)
@@ -273,6 +275,7 @@ func (worker *worker) isAtThreadLimit() bool {
 }
 
 func (worker *worker) handleRequest(fc *frankenPHPContext) error {
+	metrics := worker.metrics
 	metrics.StartWorkerRequest(worker.name)
 
 	runtime.Gosched()
@@ -296,7 +299,11 @@ func (worker *worker) handleRequest(fc *frankenPHPContext) error {
 	}
 
 	// if no thread was available, mark the request as queued and apply the scaling strategy
-	worker.queuedRequests.Add(1)
+	if worker.queuedRequests.Add(1) < 0 {
+		worker.queuedRequests.Add(-1)
+		metrics.StopWorkerRequest(worker.name, time.Since(fc.startedAt))
+		return ErrNotRunning
+	}
 	metrics.QueuedWorkerRequest(worker.name)
 
 	for {
@@ -309,10 +316,10 @@ func (worker *worker) handleRequest(fc *frankenPHPContext) error {
 		case worker.requestChan <- fc:
 			worker.queuedRequests.Add(-1)
 			metrics.DequeuedWorkerRequest(worker.name)
-			<-fc.done
+			err, _ := (<-fc.done).(error)
 			metrics.StopWorkerRequest(worker.name, time.Since(fc.startedAt))
 
-			return nil
+			return err
 		case workerScaleChan <- fc:
 			// the request has triggered scaling, continue to wait for a thread
 		case <-timeoutChan(time.Duration(maxWaitTime.Load())):
@@ -321,9 +328,23 @@ func (worker *worker) handleRequest(fc *frankenPHPContext) error {
 			metrics.DequeuedWorkerRequest(worker.name)
 			metrics.StopWorkerRequest(worker.name, time.Since(fc.startedAt))
 
+			if worker.queuedRequests.Load() < 0 || !fc.server.isRegistered.Load() {
+				return ErrNotRunning
+			}
 			fc.reject(ErrMaxWaitTimeExceeded)
 
 			return ErrMaxWaitTimeExceeded
+		}
+	}
+}
+
+func (worker *worker) drainRequests() {
+	worker.queuedRequests.Or(-1 << 31)
+	for worker.queuedRequests.Load() != -1<<31 {
+		select {
+		case fc := <-worker.requestChan:
+			fc.done <- ErrNotRunning
+		case <-time.After(time.Millisecond):
 		}
 	}
 }

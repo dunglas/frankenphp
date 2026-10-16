@@ -23,6 +23,9 @@ type Server struct {
 	workers                   []*worker
 	workersByPath             map[string]*worker
 	workersWithRequestMatcher []*worker
+	done                      chan struct{}
+	metrics                   Metrics
+	globalWorkers             map[string]*worker
 
 	// registered while FrankenPHP runs with this server; read by concurrent
 	// ServeHTTP calls while Init()/Shutdown() flip it, hence atomic
@@ -53,6 +56,7 @@ func registerServers(newServers []*Server) {
 	servers = newServers
 	fallbackServer.logger = globalLogger
 	fallbackServer.resetWorkers()
+	fallbackServer.metrics = metrics
 
 	for i, s := range servers {
 		s.idx = i
@@ -61,14 +65,17 @@ func registerServers(newServers []*Server) {
 			s.name = "server_" + strconv.Itoa(i)
 		}
 		s.resetWorkers()
+		s.done, s.metrics = make(chan struct{}), metrics
 	}
 }
 
 // activateServers lets registered servers accept requests
 // it runs once workers and threads are up, so a request cannot reach a server before them
 func activateServers() {
+	fallbackServer.globalWorkers = globalWorkersByPath
 	fallbackServer.isRegistered.Store(true)
 	for _, s := range servers {
+		s.globalWorkers = globalWorkersByPath
 		s.isRegistered.Store(true)
 	}
 }
@@ -76,7 +83,9 @@ func activateServers() {
 func unregisterServers() {
 	fallbackServer.isRegistered.Store(false)
 	for _, server := range servers {
-		server.isRegistered.Store(false)
+		if server.isRegistered.Swap(false) {
+			close(server.done)
+		}
 	}
 	servers = nil
 }

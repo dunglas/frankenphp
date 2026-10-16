@@ -23,6 +23,7 @@ import (
 var (
 	options   []frankenphp.Option
 	optionsMU sync.RWMutex
+	activeApp atomic.Pointer[FrankenPHPApp]
 )
 
 // EXPERIMENTAL: RegisterWorkers provides a way for extensions to register frankenphp.Workers
@@ -68,6 +69,7 @@ type FrankenPHPApp struct {
 	modules       []*FrankenPHPModule
 	httpApp       *caddyhttp.App
 	hasStarted    atomic.Bool
+	next          atomic.Pointer[FrankenPHPApp]
 	started       chan any
 }
 
@@ -182,8 +184,12 @@ func (f *FrankenPHPApp) Start() error {
 
 	// if FrankenPHP is currently running, shut it down first
 	// this will happen in admin API reloads and caddy tests
+	if old := activeApp.Swap(f); old != nil {
+		old.next.Store(f)
+	}
 	frankenphp.Shutdown()
 	if err := frankenphp.Init(f.opts...); err != nil {
+		activeApp.CompareAndSwap(f, nil)
 		return err
 	}
 
@@ -193,6 +199,7 @@ func (f *FrankenPHPApp) Start() error {
 }
 
 func (f *FrankenPHPApp) Stop() error {
+	activeApp.CompareAndSwap(f, nil)
 	if f.logger.Enabled(f.ctx, slog.LevelInfo) {
 		f.logger.LogAttrs(f.ctx, slog.LevelInfo, "FrankenPHP stopped 🐘")
 	}

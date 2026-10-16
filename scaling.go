@@ -89,7 +89,7 @@ func scaleWorkerThread(worker *worker, done chan struct{}, mstate *state.ThreadS
 	scalingMu.Lock()
 	defer scalingMu.Unlock()
 
-	if !mstate.Is(state.Ready) {
+	if !mstate.Is(state.Ready) || worker.queuedRequests.Load() < 0 {
 		return
 	}
 
