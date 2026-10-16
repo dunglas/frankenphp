@@ -20,13 +20,15 @@ import (
 // represents the main PHP thread
 // the thread needs to keep running as long as all other threads are running
 type phpMainThread struct {
-	state       *state.ThreadState
-	done        chan struct{}
-	numThreads  int
-	maxThreads  int
-	phpIni      map[string]string
-	isRebooting atomic.Bool
-	maxWaitTime time.Duration
+	state                *state.ThreadState
+	done                 chan struct{}
+	numThreads           int
+	maxThreads           int
+	phpIni               map[string]string
+	isRebooting          atomic.Bool
+	maxWaitTime          time.Duration
+	maxRequestsPerThread int
+	hotReloadEnabled     bool
 
 	regularRequestChan chan *frankenPHPContext
 	workers            []*worker
@@ -53,18 +55,20 @@ var (
 func initPHPThreads(opt *opt) (*phpMainThread, error) {
 	oldMainThread = mainThread
 	mainThread = &phpMainThread{
-		state:              state.NewThreadState(),
-		done:               make(chan struct{}),
-		numThreads:         opt.numThreads,
-		maxThreads:         opt.maxThreads,
-		phpIni:             opt.phpIni,
-		regularRequestChan: make(chan *frankenPHPContext),
-		fallbackServer:     newFallbackServer(),
-		servers:            []*Server{},
-		workers:            make([]*worker, 0, opt.numThreads),
-		workersByName:      make(map[string]*worker, opt.numThreads),
-		workersByPath:      make(map[string]*worker, opt.numThreads),
-		maxWaitTime:        opt.maxWaitTime,
+		state:                state.NewThreadState(),
+		done:                 make(chan struct{}),
+		numThreads:           opt.numThreads,
+		maxThreads:           opt.maxThreads,
+		phpIni:               opt.phpIni,
+		regularRequestChan:   make(chan *frankenPHPContext),
+		fallbackServer:       newFallbackServer(),
+		servers:              []*Server{},
+		workers:              make([]*worker, 0, opt.numThreads),
+		workersByName:        make(map[string]*worker, opt.numThreads),
+		workersByPath:        make(map[string]*worker, opt.numThreads),
+		maxWaitTime:          opt.maxWaitTime,
+		maxRequestsPerThread: opt.maxRequests,
+		hotReloadEnabled:     opt.hasHotReload(),
 	}
 
 	// initialize the first thread
@@ -364,7 +368,7 @@ func go_frankenphp_shutdown_main_thread() {
 
 //export go_is_hot_reload_enabled
 func go_is_hot_reload_enabled() C.bool {
-	return C.bool(hotReloadEnabled)
+	return C.bool(mainThread.hotReloadEnabled)
 }
 
 //export go_get_custom_php_ini

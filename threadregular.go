@@ -84,11 +84,12 @@ func (handler *regularThread) drain() {}
 
 func (handler *regularThread) waitForRequest() string {
 	// max_requests reached: restart the thread to clean up all ZTS state
-	if maxRequestsPerThread > 0 && handler.requestCount >= maxRequestsPerThread {
+	maxRequestCount := handler.thread.mainThread.maxRequestsPerThread
+	if maxRequestCount > 0 && handler.requestCount >= maxRequestCount {
 		if globalLogger.Enabled(globalCtx, slog.LevelDebug) {
 			globalLogger.LogAttrs(globalCtx, slog.LevelDebug, "max requests reached, restarting thread",
 				slog.Int("thread", handler.thread.threadIndex),
-				slog.Int("max_requests", maxRequestsPerThread),
+				slog.Int("max_requests", maxRequestCount),
 			)
 		}
 

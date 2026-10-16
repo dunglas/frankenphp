@@ -199,12 +199,12 @@ func (handler *workerThread) waitForWorkerRequest() (bool, any) {
 	}
 
 	// max_requests reached: signal reboot for full ZTS cleanup
-	if maxRequestsPerThread > 0 && handler.requestCount >= maxRequestsPerThread {
+	if mainThread.maxRequestsPerThread > 0 && handler.requestCount >= mainThread.maxRequestsPerThread {
 		if globalLogger.Enabled(globalCtx, slog.LevelDebug) {
 			globalLogger.LogAttrs(globalCtx, slog.LevelDebug, "max requests reached, restarting",
 				slog.String("worker", handler.worker.name),
 				slog.Int("thread", handler.thread.threadIndex),
-				slog.Int("max_requests", maxRequestsPerThread),
+				slog.Int("max_requests", mainThread.maxRequestsPerThread),
 			)
 		}
 

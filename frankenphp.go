@@ -68,11 +68,6 @@ var (
 	globalLogger = slog.Default()
 
 	metrics Metrics = nullMetrics{}
-
-	// atomic: read by in-flight requests while a reload may rewrite it
-	maxRequestsPerThread int
-
-	hotReloadEnabled bool
 )
 
 type ErrRejected struct {
@@ -387,8 +382,6 @@ func Init(options ...Option) error {
 		metrics = opt.metrics
 	}
 
-	maxRequestsPerThread = opt.maxRequests
-
 	if opt.maxIdleTime > 0 {
 		maxIdleTime = opt.maxIdleTime
 	}
@@ -428,8 +421,6 @@ func Init(options ...Option) error {
 		}
 	}
 
-	hotReloadEnabled = opt.hasHotReload()
-
 	mThread, err := initPHPThreads(opt)
 	if err != nil {
 		shutdown()
@@ -458,7 +449,7 @@ func Init(options ...Option) error {
 	registerServers(mainThread, opt.servers)
 
 	if globalLogger.Enabled(globalCtx, slog.LevelInfo) {
-		globalLogger.LogAttrs(globalCtx, slog.LevelInfo, "FrankenPHP started 🐘", slog.String("php_version", Version().Version), slog.Int("total_threads", mainThread.numThreads), slog.Int("worker_threads", workerThreadCount), slog.Int("max_threads", mainThread.maxThreads), slog.Int("max_requests", maxRequestsPerThread))
+		globalLogger.LogAttrs(globalCtx, slog.LevelInfo, "FrankenPHP started 🐘", slog.String("php_version", Version().Version), slog.Int("total_threads", mainThread.numThreads), slog.Int("worker_threads", workerThreadCount), slog.Int("max_threads", mainThread.maxThreads), slog.Int("max_requests", mainThread.maxRequestsPerThread))
 
 		if EmbeddedAppPath != "" {
 			globalLogger.LogAttrs(globalCtx, slog.LevelInfo, "embedded PHP app 📦", slog.String("path", EmbeddedAppPath))
@@ -968,7 +959,5 @@ func resetGlobals() {
 	globalCtx = context.Background()
 	globalLogger = slog.Default()
 	watcherIsEnabled = false
-	hotReloadEnabled = false
 	maxIdleTime = defaultMaxIdleTime
-	maxRequestsPerThread = 0
 }
