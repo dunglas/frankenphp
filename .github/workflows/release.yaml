@@ -168,8 +168,8 @@ jobs:
         name: Set CGO flags
         run: echo "CGO_CFLAGS=-I${PWD}/watcher/target/include $(php-config --includes)" >> "${GITHUB_ENV}"
       - if: steps.state.outputs.resume != 'true'
-        name: Install wrk
-        run: sudo apt-get update && sudo apt-get install -y wrk && sudo apt-get install --reinstall -y libbrotli-dev
+        name: Install wrk and libbrotli-dev
+        run: sudo apt-get update && sudo apt-get install -y wrk libbrotli-dev
       - if: steps.state.outputs.resume != 'true'
         name: Refresh PGO profile
         run: ./profiles/build-pgo.sh
