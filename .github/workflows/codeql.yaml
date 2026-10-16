@@ -49,10 +49,9 @@ jobs:
           cache: "false"
       - if: matrix.build-mode == 'manual'
         uses: ./.github/actions/setup-php
-      - name: Reinstall libbrotli-dev
+      - name: Install libbrotli-dev
         if: matrix.build-mode == 'manual'
-        # TODO: remove this workaround when fixed upstream
-        run: sudo apt-get install --reinstall -y libbrotli-dev
+        run: sudo apt-get install -y libbrotli-dev
       - name: Set CGO flags
         if: matrix.build-mode == 'manual'
         run: echo "CGO_CFLAGS=$(php-config --includes)" >> "${GITHUB_ENV}"
