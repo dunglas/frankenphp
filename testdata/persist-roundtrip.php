@@ -87,10 +87,9 @@ try {
     echo "OK nested stdClass rejected\n";
 }
 
-// A literal array is opcache-immutable and exposed zero-copy: opcache keeps
-// its refcount at 2, so exposing it through a refcounted zval would destroy
-// shared memory on the second release. Round-trip the same literal more
-// times than that.
+// A literal array is opcache-immutable, which the persistent tree copies
+// rather than borrows: round-trip the same literal more times than the
+// refcount of 2 opcache keeps on it, so nothing shared is ever released.
 for ($i = 0; $i < 3; ++$i) {
     $out = $rt(['immutable' => ['nested' => [1, 2, 3]], 'i' => 'literal']);
     if ($out !== ['immutable' => ['nested' => [1, 2, 3]], 'i' => 'literal']) {

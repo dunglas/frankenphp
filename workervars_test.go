@@ -92,3 +92,19 @@ func TestVarsRejectInvalidValues(t *testing.T) {
 	assert.Contains(t, result, "ValueError")
 	assert.Contains(t, result, "must be null, scalars, arrays or enums")
 }
+
+// a reboot restarts the PHP engine, and a snapshot published before it is
+// still served: it must not point into the memory of the engine that is gone
+func TestVarsSurviveAReboot(t *testing.T) {
+	server, err := frankenphp.NewServer(testDataDir)
+	require.NoError(t, err)
+	sentinel := filepath.Join(t.TempDir(), "published")
+	initServers(t, frankenphp.WithServer(server), bgWorker("once", "publish-once.php", map[string]string{"BG_SENTINEL": sentinel}, server), frankenphp.WithNumThreads(2))
+
+	before := serverGet(t, server, "http://example.com/vars.php?name=once")
+	require.JSONEq(t, `{"answer":42,"nested":{"a":1,"list":[true,null,1.5,"x"]}}`, before)
+
+	frankenphp.RestartWorkers()
+
+	assert.JSONEq(t, before, serverGet(t, server, "http://example.com/vars.php?name=once"))
+}
