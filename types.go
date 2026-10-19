@@ -17,7 +17,7 @@ package frankenphp
 #cgo noescape __zval_arr__
 #cgo noescape __emalloc__
 #cgo noescape __efree__
-#include "types.h"
+#include "frankenphp_types.h"
 */
 import "C"
 import (
