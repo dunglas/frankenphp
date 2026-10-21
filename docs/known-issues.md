@@ -25,6 +25,16 @@ The following extensions have known bugs and unexpected behaviors when used with
 | [blackfire](https://blackfire.io/) | [FrankenPHP support is in beta and not yet feature-complete](https://docs.blackfire.io/php/integrations/frankenphp).                            |
 | [imagick](https://github.com/Imagick/imagick) | ImageMagick's OpenMP threads conflict with FrankenPHP's threads, causing instability and crashes. Mitigate by disabling ImageMagick threading via `\Imagick::setResourceLimit(\Imagick::RESOURCETYPE_THREAD, 1)` or by compiling ImageMagick with `--disable-openmp`. OpenMP is already disabled in the static binaries and the official `apt`/`apk`/`rpm` packages, so only the Docker images and Homebrew installations are affected. |
 
+## Exceeding the PHP hard memory limit stops the whole server
+
+Since PHP 8.2.35, 8.3.36, 8.4.27 and 8.5.12, exceeding `memory_limit` still ends the request with the usual "Allowed memory size exhausted" fatal error,
+but an allocation that would exceed the hard memory limit makes PHP exit the process immediately.
+The hard limit defaults to twice `memory_limit` (or `memory_limit` plus 1 GiB above 1 GiB) and can be changed with the `memory_hard_limit_percent` INI setting.
+
+PHP-FPM only loses one child process.
+FrankenPHP serves all requests from threads of a single process, so every in-flight request is lost and the server stops until it is restarted.
+Run FrankenPHP under a supervisor that restarts it, such as a Docker restart policy or systemd's `Restart=` (already set in the `deb` and `rpm` packages), and keep `memory_limit` high enough for the largest legitimate payloads your app handles.
+
 ## get_browser
 
 The [get_browser()](https://www.php.net/manual/function.get-browser.php) function seems to perform badly after a while. A workaround is to cache (e.g. with [APCu](https://www.php.net/manual/book.apcu.php)) the results per user agent, as they are static.
