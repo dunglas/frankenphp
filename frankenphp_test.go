@@ -1669,31 +1669,44 @@ func TestValidateReportsDeclarationErrors(t *testing.T) {
 	), "max_threads")
 }
 
-func TestUnhealthyThreadIsRestarted(t *testing.T) {
+func TestOutOfMemory_module(t *testing.T) { testOutOfMemory(t, &testOptions{}) }
+func TestOutOfMemory_worker(t *testing.T) {
+	testOutOfMemory(t, &testOptions{workerScript: "out-of-memory.php", nbWorkers: 1})
+}
+func testOutOfMemory(t *testing.T, opts *testOptions) {
 	if os.Getenv("USE_ZEND_ALLOC") == "0" {
 		t.Skip("memory_limit is not enforced without the Zend allocator")
 	}
 
 	var buf fmt.Stringer
-	opts := &testOptions{
-		nbParallelRequests: 1,
-		initOpts:           []frankenphp.Option{frankenphp.WithNumThreads(1)},
-		phpIni:             map[string]string{"memory_limit": "8M"},
-	}
+	opts.nbParallelRequests = 1
+	opts.initOpts = []frankenphp.Option{frankenphp.WithNumThreads(2)}
+	opts.phpIni = map[string]string{"memory_limit": "8M"}
 	opts.logger, buf = newTestLogger(t)
 
 	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, _ int) {
-		// Warm-up request, so that the failing request below is not the thread's first:
+		// Also a warm-up request, so that the failing request below is not the thread's first:
 		// ext/date initializes DATEG(last_errors) only in RINIT, yet request shutdown
 		// frees it even when startup failed before RINIT ran. A new ZTS thread then
-		// frees garbage (observed with PHP 8.5.12; same GINIT in PHP 8.2 to 8.5).
-		testGet("http://example.com/hello.php", handler, t)
+		// frees garbage (same GINIT in PHP 8.2 to 8.5).
+		body, _ := testGet("http://example.com/out-of-memory.php?hard_limit", handler, t)
+		hardLimit := body == "true"
 
-		// fails request startup: $_GET is populated before the script runs
-		testGet("http://example.com/hello.php?q="+strings.Repeat("a", 16<<20), handler, t)
+		body, _ = testGet("http://example.com/out-of-memory.php?exhaust", handler, t)
+		assert.Contains(t, body, "Allowed memory size of 8388608 bytes exhausted")
+		body, _ = testGet("http://example.com/out-of-memory.php", handler, t)
+		assert.Equal(t, "ok", body)
 
-		body, _ := testGet("http://example.com/hello.php", handler, t)
-		assert.Equal(t, "Hello from PHP", body)
-		assert.Contains(t, buf.String(), "Restarting unhealthy thread")
+		// $_GET is populated before the script runs; stay under the hard limit (twice memory_limit), past which PHP exits
+		body, _ = testGet("http://example.com/out-of-memory.php?q="+strings.Repeat("a", 5<<20), handler, t)
+		if hardLimit {
+			assert.Contains(t, body, "Allowed memory size of 8388608 bytes exhausted")
+		}
+		body, _ = testGet("http://example.com/out-of-memory.php", handler, t)
+		assert.Equal(t, "ok", body)
+		if !hardLimit && opts.workerScript == "" {
+			// Older PHP versions fail the request startup instead
+			assert.Contains(t, buf.String(), "Restarting unhealthy thread")
+		}
 	}, opts)
 }
