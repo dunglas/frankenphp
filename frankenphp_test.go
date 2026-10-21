@@ -1244,6 +1244,46 @@ func TestFileStreamInWorkerMode(t *testing.T) {
 	}, &testOptions{workerScript: "file-stream.php", nbParallelRequests: 1, nbWorkers: 1})
 }
 
+func TestLastErrorsNoLeakBetweenRequests_worker(t *testing.T) {
+	type lastErrors struct {
+		LastError       *string   `json:"last_error"`
+		LibxmlErrors    *[]string `json:"libxml_errors"`
+		LibxmlLastError *string   `json:"libxml_last_error"`
+		InternalErrors  *bool     `json:"internal_errors"`
+	}
+
+	get := func(url string, handler func(http.ResponseWriter, *http.Request)) lastErrors {
+		body, _ := testGet(url, handler, t)
+
+		var e lastErrors
+		require.NoError(t, json.Unmarshal([]byte(body), &e), body)
+
+		return e
+	}
+
+	runTest(t, func(handler func(http.ResponseWriter, *http.Request), _ *httptest.Server, i int) {
+		leaked := get(fmt.Sprintf("http://example.com/worker-last-errors.php?leak=%d", i), handler)
+		require.NotNil(t, leaked.LastError)
+		assert.Equal(t, fmt.Sprintf("secret %d", i), *leaked.LastError)
+
+		e := get("http://example.com/worker-last-errors.php", handler)
+		assert.Nil(t, e.LastError)
+
+		if leaked.LibxmlErrors == nil {
+			t.Log("libxml not available, skipping libxml assertions")
+
+			return
+		}
+
+		require.NotEmpty(t, *leaked.LibxmlErrors)
+		assert.Contains(t, (*leaked.LibxmlErrors)[0], fmt.Sprintf("secret_%d", i))
+
+		assert.Empty(t, *e.LibxmlErrors)
+		assert.Nil(t, e.LibxmlLastError)
+		assert.True(t, *e.InternalErrors)
+	}, &testOptions{workerScript: "worker-last-errors.php", nbParallelRequests: 1, nbWorkers: 1})
+}
+
 // To run this fuzzing test use: go test -fuzz FuzzRequest
 // TODO: Cover more potential cases
 func FuzzRequest(f *testing.F) {
