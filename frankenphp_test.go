@@ -585,6 +585,7 @@ func testLog_frankenphp_log(t *testing.T, opts *testOptions) {
 		handler(w, req)
 
 		logs := buf.String()
+		assert.NotContains(t, logs, "some cyclic message")
 		for _, message := range []string{
 			`level=INFO msg="default level message"`,
 			fmt.Sprintf(`level=DEBUG msg="some debug message %d" "key int"=1`, i),
@@ -592,6 +593,8 @@ func testLog_frankenphp_log(t *testing.T, opts *testOptions) {
 			fmt.Sprintf(`level=WARN msg="some warn message %d"`, i),
 			fmt.Sprintf(`level=ERROR msg="some error message %d" err="[a v]"`, i),
 			fmt.Sprintf(`level=INFO msg="some null message %d" 8=<nil>`, i),
+			fmt.Sprintf(`level=INFO msg="cyclic rejected %d" err="Failed to log message: converting attrs: cannot convert a recursive array"`, i),
+			fmt.Sprintf(`level=INFO msg="some shared message %d"`, i),
 		} {
 			assert.Contains(t, logs, message)
 		}

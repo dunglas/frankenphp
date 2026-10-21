@@ -14,6 +14,18 @@ Bucket *get_ht_bucket_data(HashTable *ht, uint32_t index) {
   return NULL;
 }
 
+bool __zend_array_is_recursive__(zend_array *arr) {
+  return GC_IS_RECURSIVE(arr);
+}
+
+void __zend_array_protect_recursion__(zend_array *arr) {
+  GC_TRY_PROTECT_RECURSION(arr);
+}
+
+void __zend_array_unprotect_recursion__(zend_array *arr) {
+  GC_TRY_UNPROTECT_RECURSION(arr);
+}
+
 void *__emalloc__(size_t size) { return malloc(size); }
 
 void __efree__(void *ptr) { free(ptr); }
