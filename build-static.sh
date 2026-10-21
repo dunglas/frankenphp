@@ -9,7 +9,7 @@ set -o pipefail
 # What gets built is described in craft.yml: PHP version, extensions, libraries,
 # SAPI and build flags. craft.yml works on its own; this script copies it to
 # dist/craft.yml with a few values rewritten, fetches the `spc` binary if needed
-# and runs `spc craft`.
+# (falling back to source if the download fails) and runs `spc craft`.
 #
 # Supported variables:
 # - PHP_VERSION: PHP version to build (default: the one pinned in craft.yml)
@@ -108,12 +108,32 @@ if type "brew" >/dev/null 2>&1; then
 	fi
 fi
 
-# Fetch the spc binary if we don't have it yet
+# Fetch the spc binary if we don't have it yet, falling back to source
 spc="${DIST_DIR}/spc"
 if [ ! -x "${spc}" ]; then
 	# the nightly endpoint occasionally answers 500, retry instead of failing the build
-	curl -fsSL --retry 5 -o "${spc}" "https://dl.static-php.dev/v3/spc-bin/nightly/spc-${spc_os}-${spc_arch}"
-	chmod +x "${spc}"
+	if curl -fsSL --retry 5 -o "${spc}" "https://dl.static-php.dev/v3/spc-bin/nightly/spc-${spc_os}-${spc_arch}"; then
+		chmod +x "${spc}"
+	else
+		echo "The spc nightly download failed, falling back to static-php-cli's v3 branch."
+		rm -f "${spc}"
+		if type "brew" >/dev/null 2>&1 &&
+			{ ! type "php" >/dev/null 2>&1 || ! type "composer" >/dev/null 2>&1; }; then
+			brew install --formula --quiet php composer
+		fi
+		if ! type "php" >/dev/null 2>&1 || ! type "composer" >/dev/null 2>&1; then
+			echo "PHP 8.4+ and Composer must be installed to run static-php-cli from source."
+			exit 1
+		fi
+		spc_src="${DIST_DIR}/static-php-cli"
+		if [ ! -d "${spc_src}" ]; then
+			git clone --depth 1 --branch v3 https://github.com/crazywhalecc/static-php-cli.git "${spc_src}"
+		else
+			git -C "${spc_src}" pull --ff-only origin v3
+		fi
+		composer install --working-dir="${spc_src}" --no-dev --no-interaction --prefer-dist
+		spc="${spc_src}/bin/spc"
+	fi
 fi
 
 # Turn a potentially relative EMBED path into an absolute one
