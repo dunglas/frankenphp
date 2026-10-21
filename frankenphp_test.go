@@ -606,6 +606,8 @@ func TestConnectionAbort_worker(t *testing.T) {
 	testConnectionAbort(t, &testOptions{workerScript: "connection_status.php"})
 }
 func testConnectionAbort(t *testing.T, opts *testOptions) {
+	opts.nbParallelRequests = 1
+
 	testFinish := func(finish string) {
 		t.Run(fmt.Sprintf("finish=%s", finish), func(t *testing.T) {
 			var buf syncBuffer

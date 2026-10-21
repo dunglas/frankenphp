@@ -1,6 +1,7 @@
 package frankenphp
 
 import (
+	"context"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
@@ -12,6 +13,31 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func TestCancelledRequestLeavesWorkerQueue(t *testing.T) {
+	savedMaxWaitTime := maxWaitTime.Swap(0)
+	savedScaleChan := scaleChan
+	scaleChan = nil
+	t.Cleanup(func() {
+		maxWaitTime.Store(savedMaxWaitTime)
+		scaleChan = savedScaleChan
+	})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	req := httptest.NewRequest("GET", "/index.php", nil).WithContext(ctx)
+	cancel()
+	w := &worker{name: "test", requestChan: make(chan *frankenPHPContext), maxThreads: 1}
+
+	err := w.handleRequest(&frankenPHPContext{
+		request:   req,
+		ctx:       ctx,
+		done:      make(chan any),
+		startedAt: time.Now(),
+	})
+
+	assert.NoError(t, err)
+	assert.Zero(t, w.queuedRequests.Load())
+}
 
 // TestRestartWorkersForceKillsStuckThread verifies the drain path does
 // not hang when a worker is stuck in a blocking PHP call (sleep, etc.).
