@@ -27,13 +27,15 @@ The following extensions have known bugs and unexpected behaviors when used with
 
 ## Exceeding the PHP hard memory limit stops the whole server
 
-Since PHP 8.2.35, 8.3.36, 8.4.27 and 8.5.12, exceeding `memory_limit` still ends the request with the usual "Allowed memory size exhausted" fatal error,
-but an allocation that would exceed the hard memory limit makes PHP exit the process immediately.
+Since PHP 8.2.35, 8.3.36, 8.4.27 and 8.5.12, exceeding `memory_limit` no longer stops the script immediately: the "Allowed memory size exhausted" fatal error is raised at the next function call or loop iteration.
+If the script allocates past the hard memory limit before that, PHP exits the process.
 The hard limit defaults to twice `memory_limit` (or `memory_limit` plus 1 GiB above 1 GiB) and can be changed with the `memory_hard_limit_percent` INI setting.
+
+Code that keeps running past `memory_limit` can reach it, for instance a single allocation larger than `memory_limit` (such as `array_merge()` on large arrays) or consecutive string concatenations.
 
 PHP-FPM only loses one child process.
 FrankenPHP serves all requests from threads of a single process, so every in-flight request is lost and the server stops until it is restarted.
-Run FrankenPHP under a supervisor that restarts it, such as a Docker restart policy or systemd's `Restart=` (already set in the `deb` and `rpm` packages), and keep `memory_limit` high enough for the largest legitimate payloads your app handles.
+Run FrankenPHP under a supervisor that restarts it, such as a Docker restart policy or systemd's `Restart=` (already set in the `deb` and `rpm` packages).
 
 ## get_browser
 
