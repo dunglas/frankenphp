@@ -23,7 +23,8 @@ import (
 // When set, the embedded app is extracted to this fixed path instead of a temp
 // directory with a checksum suffix. This is useful when the app contains
 // pre-compiled artifacts (e.g. OPcache file cache) that reference absolute paths
-// and need a predictable extraction location.
+// and need a predictable extraction location. Existing files at this path are
+// kept as is, so it must only be writable by the user running the binary.
 var EmbeddedAppPath string
 
 //go:embed app.tar
@@ -39,13 +40,93 @@ func init() {
 	}
 
 	if EmbeddedAppPath == "" {
-		EmbeddedAppPath = filepath.Join(os.TempDir(), "frankenphp_"+string(embeddedAppChecksum))
+		ownerID, err := embeddedAppOwnerID()
+		if err != nil {
+			panic(err)
+		}
+
+		EmbeddedAppPath = filepath.Join(os.TempDir(), "frankenphp_"+ownerID+"_"+string(embeddedAppChecksum))
+		if err := prepareDefaultEmbeddedAppPath(EmbeddedAppPath); err != nil {
+			panic(err)
+		}
 	}
 
 	if err := untar(EmbeddedAppPath); err != nil {
 		_ = os.RemoveAll(EmbeddedAppPath)
 		panic(err)
 	}
+}
+
+// prepareDefaultEmbeddedAppPath makes sure that dir is a private directory
+// containing the embedded app. Other local users can predict its name, so an
+// existing directory is only reused if the current user owns it.
+func prepareDefaultEmbeddedAppPath(dir string) error {
+	parent := filepath.Dir(dir)
+	if err := checkEmbeddedAppParent(parent); err != nil {
+		return err
+	}
+
+	if info, err := os.Lstat(dir); err == nil {
+		return reuseEmbeddedAppPath(dir, info)
+	} else if !errors.Is(err, fs.ErrNotExist) {
+		return err
+	}
+
+	// Extract next to the final path and rename, so concurrent processes never see a partial app
+	tmp, err := os.MkdirTemp(parent, filepath.Base(dir)+".tmp")
+	if err != nil {
+		return err
+	}
+	if err := extractEmbeddedApp(tmp); err != nil {
+		_ = os.RemoveAll(tmp)
+		return err
+	}
+
+	if err := os.Rename(tmp, dir); err != nil {
+		_ = os.RemoveAll(tmp)
+
+		info, lstatErr := os.Lstat(dir)
+		if lstatErr != nil {
+			return err
+		}
+
+		return reuseEmbeddedAppPath(dir, info)
+	}
+
+	return nil
+}
+
+func extractEmbeddedApp(dir string) error {
+	if err := restrictEmbeddedAppPath(dir); err != nil {
+		return err
+	}
+
+	// untar keeps existing files: refuse anything planted before the directory was restricted
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return err
+	}
+	if len(entries) != 0 {
+		return fmt.Errorf("embedded app path %q is not empty", dir)
+	}
+
+	return untar(dir)
+}
+
+func reuseEmbeddedAppPath(dir string, info fs.FileInfo) error {
+	if !info.IsDir() {
+		return fmt.Errorf("embedded app path %q must be a directory", dir)
+	}
+
+	owned, err := embeddedAppPathOwnedByCurrentUser(dir, info)
+	if err != nil {
+		return err
+	}
+	if !owned {
+		return fmt.Errorf("embedded app path %q must be owned by the current user", dir)
+	}
+
+	return restrictEmbeddedAppPath(dir)
 }
 
 // untar reads the tar file from r and writes it into dir.
