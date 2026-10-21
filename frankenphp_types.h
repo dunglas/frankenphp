@@ -1,5 +1,5 @@
-#ifndef TYPES_H
-#define TYPES_H
+#ifndef _FRANKENPHP_TYPES_H
+#define _FRANKENPHP_TYPES_H
 
 #include "frankenphp.h"
 #include <Zend/zend.h>

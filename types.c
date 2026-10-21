@@ -1,4 +1,4 @@
-#include "types.h"
+#include "frankenphp_types.h"
 
 zval *get_ht_packed_data(HashTable *ht, uint32_t index) {
   if (ht->u.flags & HASH_FLAG_PACKED) {
