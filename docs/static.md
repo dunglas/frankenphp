@@ -142,6 +142,8 @@ script to customize the static build:
   dynamically against the system glibc. It is a shorthand for static-php-cli's `SPC_TARGET`
   and `SPC_TOOLCHAIN`, which can still be set directly; they have to be real environment
   variables because static-php-cli resolves its toolchain before reading `craft.yml`.
+  The `musl` default targets the baseline CPU of the architecture (`x86_64-linux-musl` or `aarch64-linux-musl`)
+  so the binary runs on any CPU; set `SPC_TARGET=native-native-musl` to optimize for the build machine instead.
 
 ## Loading PHP extensions dynamically in the static binary
 
