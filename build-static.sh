@@ -56,7 +56,8 @@ unset SPC_LIBC
 if [ "${bin_os}" = "linux" ]; then
 	case "${LIBC:-musl}" in
 	musl)
-		: "${SPC_TARGET:=native-native-musl}"
+		# Baseline CPU: a "native" CPU would emit the build host's SHA-NI/AVX-512 without runtime checks
+		: "${SPC_TARGET:=${spc_arch}-linux-musl}"
 		;;
 	gnu)
 		: "${SPC_TARGET:=}"
