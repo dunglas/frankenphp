@@ -97,7 +97,7 @@ docker run --rm -v "$PWD/output:/output" -e OUTPUT_DIR=/output -e SPC_LOGS_DIR=/
 > 如果 `XCADDY_ARGS` 为空或未设置，则默认包含 cbrotli、Mercure 和 Vulcain 模块。
 > 如果您自定义 `XCADDY_ARGS` 的值，则必须显式包含它们才能使其生效。
 
-另请参阅如何 [自定义 FrankenPHP 静态构建](#customizing-the-frankenphp-static-build)
+另请参阅如何 [自定义 FrankenPHP 静态构建](#自定义-frankenphp-静态构建)
 
 ### GitHub token
 
