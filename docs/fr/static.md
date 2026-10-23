@@ -97,7 +97,7 @@ Dans cet exemple, nous ajoutons le module de cache HTTP [Souin](https://souin.io
 > Les modules cbrotli, Mercure et Vulcain sont inclus par défaut si `XCADDY_ARGS` est vide ou n'est pas défini.
 > Si vous personnalisez la valeur de `XCADDY_ARGS`, vous devez les inclure explicitement si vous voulez qu'ils soient inclus.
 
-Voir aussi comment [personnaliser la construction statique de FrankenPHP](#customizing-the-frankenphp-static-build)
+Voir aussi comment [personnaliser la construction statique de FrankenPHP](#personnalisation-de-la-construction-statique-de-frankenphp)
 
 ### Jeton GitHub
 
