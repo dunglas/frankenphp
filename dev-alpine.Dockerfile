@@ -77,6 +77,9 @@ RUN git clone https://github.com/e-dant/watcher . && \
 WORKDIR /go/src/app
 COPY . .
 
+# Cache test dependencies too, so tests run offline
+RUN go mod download && go -C caddy mod download
+
 WORKDIR /go/src/app/caddy/frankenphp
 RUN ../../go.sh build -buildvcs=false
 
