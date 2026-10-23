@@ -1,6 +1,8 @@
 package frankenphp
 
 import (
+	"net/http"
+	"net/url"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -519,3 +521,68 @@ func FuzzSplitRemoteAddr(f *testing.F) {
 		splitRemoteAddr(remoteAddr)
 	})
 }
+
+func TestAssignedWorkerScriptPath(t *testing.T) {
+	t.Parallel()
+	sep := string(filepath.Separator)
+	root := filepath.Join(sep, "var", "www")
+	cases := []struct{ name, root, file string }{
+		{"inside", root, root + sep + "index.php"},
+		{"neighbor", root, root + "-other" + sep + "index.php"},
+		{"exact", root, root},
+		{"empty filename", root, ""},
+		{"empty root", "", sep + "index.php"},
+		{"empty paths", "", ""},
+		{"trailing separator", root + sep, root + sep + sep + "index.php"},
+		{"missing second separator", root + sep, root + sep + "index.php"},
+		{"filesystem root", sep, sep + sep + "index.php"},
+		{"unicode", root + sep + "приложение", root + sep + "приложение" + sep + "index.php"},
+		{"binary", root + "\x00\xff", root + "\x00\xff" + sep + "index.php"},
+		{"long root", strings.Repeat(root, 16), strings.Repeat(root, 16) + sep + "index.php"},
+	}
+	for _, tt := range cases {
+		t.Run(tt.name, func(t *testing.T) {
+			fc := frankenPHPContext{
+				documentRoot: tt.root,
+				request:      &http.Request{URL: &url.URL{Path: "/index.php/info"}},
+				worker:       &worker{fileName: tt.file},
+			}
+			splitCgiPath(&fc)
+			assert.Equal(t, tt.file, fc.scriptFilename)
+			if strings.HasPrefix(tt.file, tt.root+sep) {
+				assert.Equal(t, filepath.ToSlash(strings.TrimPrefix(tt.file, tt.root)), fc.scriptName)
+				assert.Equal(t, "/index.php", fc.docURI)
+				assert.Equal(t, "/info", fc.pathInfo)
+			} else {
+				assert.Empty(t, fc.scriptName)
+				assert.Empty(t, fc.docURI)
+				assert.Empty(t, fc.pathInfo)
+			}
+		})
+	}
+}
+
+func BenchmarkAssignedWorkerScriptPath(b *testing.B) {
+	sep := string(filepath.Separator)
+	root := filepath.Join(sep, "var", "www")
+	longRoot := filepath.Join(sep, "srv", "apps", "organization", "production", "releases", "2026", "public")
+	for _, tt := range []struct{ name, root, file string }{
+		{"short_root", root, root + sep + "index.php"},
+		{"long_root", longRoot, longRoot + sep + "index.php"},
+		{"outside_root", longRoot, filepath.Join(sep, "srv", "elsewhere", "index.php")},
+		{"empty_root", "", sep + "index.php"},
+		{"trailing_separator", root + sep, root + sep + sep + "index.php"},
+		{"exact_root", root, root},
+	} {
+		b.Run(tt.name, func(b *testing.B) {
+			fc := &frankenPHPContext{documentRoot: tt.root, request: &http.Request{URL: &url.URL{Path: "/index.php/info"}}, worker: &worker{fileName: tt.file}}
+			b.ReportAllocs()
+			for b.Loop() {
+				splitCgiPath(fc)
+			}
+			benchmarkAssignedWorkerScriptName = fc.scriptName
+		})
+	}
+}
+
+var benchmarkAssignedWorkerScriptName string
