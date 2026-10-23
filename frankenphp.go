@@ -553,9 +553,8 @@ func go_ub_write(threadIndex C.uintptr_t, cBuf *C.char, length C.size_t) (C.size
 	}
 
 	if fc.responseWriter == nil {
-		// Copy before Enabled: the C buffer may change during a logger callback.
-		message := string(unsafe.Slice((*byte)(unsafe.Pointer(cBuf)), length))
 		if fc.logger.Enabled(fc.ctx, slog.LevelInfo) {
+			message := string(unsafe.Slice((*byte)(unsafe.Pointer(cBuf)), length))
 			fc.logger.LogAttrs(fc.ctx, slog.LevelInfo, message)
 		}
 		return length, C.bool(fc.clientHasClosed())

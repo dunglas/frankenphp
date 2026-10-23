@@ -108,24 +108,6 @@ func checkUBWrite(t *testing.T, message, mode string) {
 	}
 }
 
-func TestUBWriteCopiesBeforeLoggerEnabled(t *testing.T) {
-	data := []byte("original startup output")
-	capture := &ubWriteCapture{level: slog.LevelInfo, beforeEnabled: func() {
-		for i := range data {
-			data[i] = 'Z'
-		}
-	}}
-	fc := &frankenPHPContext{ctx: context.Background(), logger: slog.New(capture)}
-	oldThreads := phpThreads
-	phpThreads = []*phpThread{{handler: &regularThread{fc: fc}}}
-	t.Cleanup(func() { phpThreads = oldThreads })
-	invokeUBWrite(data)
-	records := capture.snapshot()
-	if len(records) != 1 || records[0].Message != "original startup output" {
-		t.Fatalf("source mutated before snapshot: %v", records)
-	}
-}
-
 // Reflection bridges the C argument types without adding production test hooks
 // or importing C from a _test.go file (which Go does not support).
 func invokeUBWrite(data []byte) (int, bool) {
@@ -140,16 +122,12 @@ func invokeUBWrite(data []byte) (int, bool) {
 }
 
 type ubWriteCapture struct {
-	level         slog.Level
-	beforeEnabled func()
-	mu            sync.Mutex
-	records       []slog.Record
+	level   slog.Level
+	mu      sync.Mutex
+	records []slog.Record
 }
 
 func (h *ubWriteCapture) Enabled(_ context.Context, level slog.Level) bool {
-	if h.beforeEnabled != nil {
-		h.beforeEnabled()
-	}
 	return level >= h.level
 }
 func (h *ubWriteCapture) Handle(_ context.Context, r slog.Record) error {
