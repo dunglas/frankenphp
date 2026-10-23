@@ -1276,13 +1276,12 @@ static int frankenphp_startup(sapi_module_struct *sapi_module) {
   int result = php_module_startup(sapi_module, &frankenphp_module);
 #ifndef PHP_WIN32
   if (result == SUCCESS) {
-    const int signals[] = {SIGSEGV, SIGBUS, SIGFPE};
-    for (size_t i = 0; i < sizeof(signals) / sizeof(signals[0]); i++) {
+    for (int sig = 1; sig < NSIG; sig++) {
       struct sigaction sa;
-      if (sigaction(signals[i], NULL, &sa) == 0 && sa.sa_handler != SIG_DFL &&
+      if (sigaction(sig, NULL, &sa) == 0 && sa.sa_handler != SIG_DFL &&
           sa.sa_handler != SIG_IGN && !(sa.sa_flags & SA_ONSTACK)) {
         sa.sa_flags |= SA_ONSTACK;
-        sigaction(signals[i], &sa, NULL);
+        sigaction(sig, &sa, NULL);
       }
     }
   }
