@@ -22,6 +22,7 @@ type worker struct {
 
 	name                   string
 	fileName               string
+	declaredFileName       string
 	matchRequest           func(*http.Request) bool
 	num                    int
 	maxThreads             int
@@ -69,6 +70,7 @@ func initWorkers(opts []workerOpt) error {
 		workersByName[w.name] = w
 		if w.server == nil {
 			globalWorkersByPath[w.fileName] = w
+			globalWorkersByPath[w.declaredFileName] = w
 		} else if err := w.server.addWorker(w); err != nil {
 			return err
 		}
@@ -108,6 +110,11 @@ func initWorkers(opts []workerOpt) error {
 // This order ensures that FrankenPHP started from inside a symlinked directory will properly resolve any paths.
 // If it is started from outside a symlinked directory, it is resolved to the same path that we use in the Caddy module.
 func resolveWorkerFile(o workerOpt) (workerOpt, error) {
+	declaredFileName, err := fastabs.FastAbs(filepath.FromSlash(o.fileName))
+	if err != nil {
+		return o, fmt.Errorf("worker filename is invalid %q: %w", o.fileName, err)
+	}
+
 	absFileName, err := filepath.EvalSymlinks(filepath.FromSlash(o.fileName))
 	if err != nil {
 		return o, fmt.Errorf("worker filename is invalid %q: %w", o.fileName, err)
@@ -122,6 +129,7 @@ func resolveWorkerFile(o workerOpt) (workerOpt, error) {
 		return o, fmt.Errorf("worker file not found %q: %w", absFileName, err)
 	}
 
+	o.declaredFileName = declaredFileName
 	o.fileName = absFileName
 	if o.name == "" {
 		o.name = absFileName
@@ -195,6 +203,7 @@ func newWorker(o workerOpt) (*worker, error) {
 	w := &worker{
 		name:                   o.name,
 		fileName:               absFileName,
+		declaredFileName:       o.declaredFileName,
 		matchRequest:           o.matchRequest,
 		requestOptions:         o.requestOptions,
 		num:                    o.num,

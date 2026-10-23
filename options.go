@@ -44,6 +44,7 @@ type workerOpt struct {
 
 	name                   string
 	fileName               string
+	declaredFileName       string
 	num                    int
 	maxThreads             int
 	env                    PreparedEnv
