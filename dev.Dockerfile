@@ -41,8 +41,6 @@ RUN apt-get update && \
 	llvm \
 	gdb \
 	valgrind \
-	neovim \
-	zsh \
 	libtool-bin && \
 	echo 'set auto-load safe-path /' > /root/.gdbinit && \
 	echo '* soft core unlimited' >> /etc/security/limits.conf \
@@ -86,4 +84,4 @@ WORKDIR /go/src/app/caddy/frankenphp
 RUN ../../go.sh build -buildvcs=false
 
 WORKDIR /go/src/app
-CMD [ "zsh" ]
+CMD [ "bash" ]
