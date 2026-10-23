@@ -253,7 +253,18 @@ func splitPos(path string, splitPath []string) int {
 			continue
 		}
 
-		for i := 0; i <= pathLen-splitLen; i++ {
+		// Skip the prefix before the first possible match. Lowercase letter
+		// prefixes still need the case-insensitive scan. Search only once so
+		// paths with many partial matches keep the original linear scan.
+		start := 0
+		if first := split[0]; first < 'a' || first > 'z' {
+			start = strings.IndexByte(path[:pathLen-splitLen+1], first)
+			if start < 0 {
+				continue
+			}
+		}
+
+		for i := start; i <= pathLen-splitLen; i++ {
 			match := true
 			for j := range splitLen {
 				c := path[i+j]
