@@ -22,7 +22,6 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
-	"unicode/utf8"
 	"unsafe"
 
 	"github.com/dunglas/frankenphp/internal/phpheaders"
@@ -234,64 +233,53 @@ func splitCgiPath(fc *frankenPHPContext) {
 // example: if splitPath is [".php"]
 // "/path/to/script.php/some/path": ("/path/to/script.php", "/some/path")
 //
-// Matching is strictly ASCII case-insensitive. Bytes >= utf8.RuneSelf in path
-// never match any split entry: split strings are validated ASCII-only and
-// lower-cased in WithRequestSplitPath, so any Unicode equivalence (e.g.
-// fullwidth or mathematical letters folding to ASCII) would let an attacker
-// upload a file whose name contains such code points and have it served as
-// PHP. See GHSA-3g8v-8r37-cgjm and GHSA-v4h7-cj44-8fc8.
+// Matching is ASCII case-insensitive and requires lowercase ASCII markers from normalizeSplitPath.
 func splitPos(path string, splitPath []string) int {
 	if len(splitPath) == 0 {
 		return 0
 	}
-
-	pathLen := len(path)
-
 	for _, split := range splitPath {
-		splitLen := len(split)
-		if splitLen == 0 || splitLen > pathLen {
+		n := len(split)
+		if n == 0 || n > len(path) {
 			continue
 		}
-
-		for i := 0; i <= pathLen-splitLen; i++ {
-			match := true
-			for j := range splitLen {
-				c := path[i+j]
-				if c >= utf8.RuneSelf {
-					match = false
-
-					break
-				}
-
-				if 'A' <= c && c <= 'Z' {
-					c += 'a' - 'A'
-				}
-
-				if c != split[j] {
-					match = false
-
-					break
-				}
-			}
-
-			if match {
-				pos := i + splitLen
-				// the split must end the path or a whole path segment: without
-				// this, ".php" embedded in a filename ("/a.php.txt/b.php")
-				// would split inside that filename and run a script the router
-				// never matched. Give up on this split string entirely rather
-				// than looking for a later occurrence of it, so the result
-				// stays identical to Caddy's file matcher (firstSplit).
-				if pos != pathLen && path[pos] != '/' {
-					break
-				}
-
-				return pos
+		first, mask := split[0], foldMask(split[0])
+		last := len(path) - n
+		i := 0
+		if mask == 0 {
+			if i = strings.IndexByte(path[:last+1], first); i < 0 {
+				continue
 			}
 		}
+		for ; i <= last; i++ {
+			if path[i]|mask != first || !hasFoldedPrefix(path[i+1:i+n], split[1:]) {
+				continue
+			}
+			if pos := i + n; pos == len(path) || path[pos] == '/' {
+				return pos
+			}
+			// Stop at the first occurrence to match Caddy's file matcher.
+			break
+		}
 	}
-
 	return -1
+}
+
+// foldMask lets c|mask == s match both cases of a lowercase ASCII letter.
+func foldMask(s byte) byte {
+	if 'a' <= s && s <= 'z' {
+		return 0x20
+	}
+	return 0
+}
+
+func hasFoldedPrefix(p, split string) bool {
+	for j := 0; j < len(split); j++ {
+		if s := split[j]; p[j]|foldMask(s) != s {
+			return false
+		}
+	}
+	return true
 }
 
 // go_update_request_info updates the sapi_request_info struct
