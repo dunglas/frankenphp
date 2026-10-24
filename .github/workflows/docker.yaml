@@ -1,27 +1,15 @@
 ---
 name: Build Docker Images
-concurrency:
-  cancel-in-progress: true
-  group: ${{ github.workflow }}-${{ github.ref }}
 on:
-  pull_request:
-    types: [opened, synchronize, reopened, labeled]
-    branches:
-      - main
-  push:
-    branches:
-      - main
-    tags:
-      - v*.*.*
-  workflow_dispatch:
+  workflow_call:
     inputs:
-      #checkov:skip=CKV_GHA_7
       version:
         description: "FrankenPHP version"
         required: false
         type: string
-  schedule:
-    - cron: "0 4 * * *"
+    secrets:
+      DOCKERHUB_TOKEN:
+        required: false
 permissions:
   contents: read
 env:
