@@ -513,3 +513,14 @@ jobs:
       - uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
         with:
           subject-path: ${{ matrix.binary }}
+      - name: Generate SBOM
+        uses: anchore/sbom-action@66cbf4bc1f1c0d2edc94016e65bc221b6bb0ad6c # v0.24.3
+        with:
+          file: ${{ matrix.binary }}
+          output-file: sbom.spdx.json
+          upload-artifact: false
+          upload-release-assets: false
+      - uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: ${{ matrix.binary }}
+          sbom-path: sbom.spdx.json
