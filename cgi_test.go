@@ -561,28 +561,3 @@ func TestAssignedWorkerScriptPath(t *testing.T) {
 		})
 	}
 }
-
-func BenchmarkAssignedWorkerScriptPath(b *testing.B) {
-	sep := string(filepath.Separator)
-	root := filepath.Join(sep, "var", "www")
-	longRoot := filepath.Join(sep, "srv", "apps", "organization", "production", "releases", "2026", "public")
-	for _, tt := range []struct{ name, root, file string }{
-		{"short_root", root, root + sep + "index.php"},
-		{"long_root", longRoot, longRoot + sep + "index.php"},
-		{"outside_root", longRoot, filepath.Join(sep, "srv", "elsewhere", "index.php")},
-		{"empty_root", "", sep + "index.php"},
-		{"trailing_separator", root + sep, root + sep + sep + "index.php"},
-		{"exact_root", root, root},
-	} {
-		b.Run(tt.name, func(b *testing.B) {
-			fc := &frankenPHPContext{documentRoot: tt.root, request: &http.Request{URL: &url.URL{Path: "/index.php/info"}}, worker: &worker{fileName: tt.file}}
-			b.ReportAllocs()
-			for b.Loop() {
-				splitCgiPath(fc)
-			}
-			benchmarkAssignedWorkerScriptName = fc.scriptName
-		})
-	}
-}
-
-var benchmarkAssignedWorkerScriptName string
